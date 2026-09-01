@@ -432,7 +432,7 @@ app.post('/api/google-auth', async (req, res) => {
     }
 });
 
-// 8. Forgot Password Route 
+// 8. Forgot Password Route (Updated with Dynamic Host for Render/Production)
 app.post('/api/forgot-password', async (req, res) => {
     try {
         const { email } = req.body;
@@ -451,7 +451,9 @@ app.post('/api/forgot-password', async (req, res) => {
         user.resetTokenExpire = timestamp + (15 * 60 * 1000);
         await user.save();
 
-        const resetLink = `http://localhost:${PORT}/reset-password.html?token=${resetToken}&t=${timestamp}`;
+        const host = req.get('host');
+        const protocol = req.protocol;
+        const resetLink = `${protocol}://${host}/reset-password.html?token=${resetToken}&t=${timestamp}`;
         const uniqueId = Date.now();
 
         const mailOptions = {
