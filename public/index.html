@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TBR Exchange - Buy & Sell USDT with Ethiopian Birr | P2P Exchange</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            display: block;
+            background-color: #080808;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #fff;
+        }
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 60px;
+            border-bottom: 1px solid #1a1a1a;
+            position: sticky;
+            top: 0;
+            background: rgba(8, 8, 8, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+        }
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .nav-links {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+        .nav-links a {
+            color: #b0b0b0;
+            text-decoration: none;
+            font-size: 15px;
+            font-weight: 400;
+            transition: 0.2s;
+        }
+        .nav-links a:hover {
+            color: #d4af37;
+        }
+        .nav-right {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        .signin-link {
+            color: #fff !important;
+            font-weight: 500 !important;
+            text-decoration: none;
+        }
+        .get-started-btn {
+            background: linear-gradient(135deg, #f5d77f 0%, #d4af37 50%, #aa8621 100%);
+            color: #111 !important;
+            padding: 10px 22px;
+            border-radius: 30px;
+            font-weight: 600 !important;
+            text-decoration: none;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+        }
+        .hero-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 60px 80px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .hero-left {
+            max-width: 600px;
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #141414;
+            border: 1px solid #333;
+            padding: 6px 14px;
+            border-radius: 20px;
+            color: #d4af37;
+            font-size: 13px;
+            margin-bottom: 25px;
+        }
+        .hero-left h1 {
+            font-size: 52px;
+            line-height: 1.15;
+            color: #fff;
+            margin: 0 0 20px 0;
+            font-weight: 700;
+        }
+        .hero-left h1 span {
+            background: linear-gradient(135deg, #f3e0aa 0%, #d4af37 50%, #9a7b1c 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .hero-left p {
+            color: #999;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 35px;
+        }
+        .calculator-box {
+            background: #121212;
+            border: 1px solid #262626;
+            border-radius: 16px;
+            padding: 24px;
+            width: 460px;
+            box-sizing: border-box;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .calc-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #777;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        .calc-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .calc-tab-buy {
+            flex: 1;
+            text-align: center;
+            padding: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            background: #00c087;
+            color: #fff;
+            border: none;
+            opacity: 0.6;
+            transition: 0.2s;
+        }
+        .calc-tab-buy.active {
+            opacity: 1;
+            box-shadow: 0 0 10px rgba(0, 192, 135, 0.4);
+        }
+        .calc-tab-sell {
+            flex: 1;
+            text-align: center;
+            padding: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            background: #e95454;
+            color: #fff;
+            border: none;
+            opacity: 0.6;
+            transition: 0.2s;
+        }
+        .calc-tab-sell.active {
+            opacity: 1;
+            box-shadow: 0 0 10px rgba(233, 84, 84, 0.4);
+        }
+        .calc-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .calc-field {
+            flex: 1;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 10px 15px;
+        }
+        .calc-field label {
+            display: block;
+            font-size: 11px;
+            color: #777;
+            margin-bottom: 3px;
+        }
+        .calc-input-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .calc-input {
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-size: 18px;
+            font-weight: bold;
+            width: 70%;
+            outline: none;
+        }
+        .calc-unit {
+            font-size: 12px;
+            color: #777;
+        }
+        .calc-val-display {
+            font-size: 18px;
+            font-weight: bold;
+            color: #fff;
+            padding: 4px 0;
+        }
+        .phone-mockup {
+            width: 340px;
+            background: #141414;
+            border: 3px solid #333;
+            border-radius: 40px;
+            padding: 20px 15px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            box-sizing: border-box;
+        }
+        .phone-screen-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #aaa;
+        }
+        .wallet-card {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+        .wallet-card .bal {
+            font-size: 26px;
+            font-weight: bold;
+            color: #fff;
+            margin-top: 5px;
+        }
+        .action-icons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+        }
+        .action-item {
+            text-align: center;
+            font-size: 11px;
+            color: #aaa;
+        }
+        .action-circle-buy {
+            width: 42px;
+            height: 42px;
+            background: #00c087;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            margin-bottom: 5px;
+            font-size: 15px;
+        }
+        .action-circle-sell {
+            width: 42px;
+            height: 42px;
+            background: #e95454;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            margin-bottom: 5px;
+            font-size: 15px;
+        }
+        .action-circle-default {
+            width: 42px;
+            height: 42px;
+            background: #222;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #d4af37;
+            margin-bottom: 5px;
+            font-size: 15px;
+        }
+
+        .stats-top-bar {
+            max-width: 1300px;
+            margin: 0 auto 60px auto;
+            background: #121212;
+            border: 1px solid #262626;
+            border-radius: 16px;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            text-align: center;
+        }
+        .stat-item-top h4 {
+            font-size: 22px;
+            color: #d4af37;
+            margin: 0 0 5px 0;
+            font-weight: 700;
+        }
+        .stat-item-top span {
+            font-size: 11px;
+            color: #777;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+
+        .features-section {
+            padding: 40px 80px 80px 80px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .section-main-title {
+            font-size: 44px;
+            color: #fff;
+            margin-bottom: 50px;
+            font-weight: 700;
+            max-width: 700px;
+            line-height: 1.2;
+        }
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px;
+        }
+        .feature-card {
+            background: #121212;
+            border: 1px solid #262626;
+            border-radius: 16px;
+            padding: 35px 30px;
+            transition: 0.3s;
+        }
+        .feature-card:hover {
+            border-color: #d4af37;
+        }
+        .feature-icon {
+            width: 45px;
+            height: 45px;
+            background: rgba(212, 175, 55, 0.1);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #d4af37;
+            font-size: 18px;
+            margin-bottom: 25px;
+        }
+        .feature-card h3 {
+            color: #fff;
+            font-size: 20px;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        .feature-card p {
+            color: #888;
+            font-size: 14px;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        .steps-section {
+            background: #080808;
+            padding: 60px 80px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .steps-section h2 {
+            font-size: 38px;
+            color: #fff;
+            margin-bottom: 40px;
+            font-weight: 700;
+        }
+        .steps-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px;
+        }
+        .step-box {
+            background: #121212;
+            border: 1px solid #262626;
+            border-radius: 16px;
+            padding: 35px 30px;
+            position: relative;
+        }
+        .step-number {
+            font-size: 24px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 20px;
+        }
+        .step-box h3 {
+            color: #fff;
+            font-size: 20px;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        .step-box p {
+            color: #888;
+            font-size: 14px;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        .payment-section {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 80px 80px 80px;
+        }
+        .payment-container {
+            background: #121212;
+            border: 1px solid #262626;
+            border-radius: 16px;
+            padding: 35px 40px;
+        }
+        .payment-container h3 {
+            font-size: 22px;
+            color: #fff;
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+        .payment-logos {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .pay-badge {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            padding: 12px 24px;
+            border-radius: 10px;
+            color: #d4af37;
+            font-weight: 600;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .footer {
+            border-top: 1px solid #1a1a1a;
+            padding: 40px 80px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #666;
+            font-size: 13px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .footer-links {
+            display: flex;
+            gap: 20px;
+        }
+        .footer-links a {
+            color: #888;
+            text-decoration: none;
+        }
+        .footer-links a:hover {
+            color: #d4af37;
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="nav-left">
+            <div class="logo-symbol" style="font-size: 26px; color: #d4af37; font-weight: bold;">TBR</div>
+            <span style="font-size: 17px; font-weight: 600; color: #fff; letter-spacing: 0.5px;">TBR Exchange</span>
+        </div>
+        <div class="nav-links">
+            <a href="#features">Features</a>
+            <a href="#how-it-works">How it works</a>
+            <a href="#"><i class="fa-solid fa-mobile-screen" style="margin-right: 6px;"></i> Download App</a>
+        </div>
+        <div class="nav-right">
+            <a href="signin.html" class="signin-link">Sign in</a>
+            <a href="signup.html" class="get-started-btn">Get started</a>
+        </div>
+    </nav>
+
+    <!-- HEROS SECTION -->
+    <section class="hero-section">
+        <div class="hero-left">
+            <div class="badge">
+                <i class="fa-solid fa-circle" style="font-size: 8px; color: #d4af37;"></i> P2P USDT / ETB Exchange
+            </div>
+            <h1>Buy & Sell USDT<br>with <span>Ethiopian Birr.</span></h1>
+            <p>Peer-to-peer crypto exchange. Trade directly with verified users, secured by platform escrow and settled in minutes.</p>
+
+            <div class="calculator-box">
+                <div class="calc-header">
+                    <span>LIVE RATE P2P CALCULATOR</span>
+                    <span id="rate-display">1 USDT = 189 ETB</span>
+                </div>
+                <div class="calc-tabs">
+                    <button class="calc-tab-buy" id="tab-buy" onclick="setMode('buy')">Buy USDT</button>
+                    <button class="calc-tab-sell active" id="tab-sell" onclick="setMode('sell')">Sell USDT</button>
+                </div>
+                <div class="calc-row">
+                    <div class="calc-field">
+                        <label id="pay-label">PAY (USDT)</label>
+                        <div class="calc-input-wrapper">
+                            <input type="number" id="calc-amount" class="calc-input" value="5.20" step="0.01" oninput="calculate()">
+                            <span class="calc-unit" id="pay-unit">USDT</span>
+                        </div>
+                    </div>
+                    <div class="calc-field">
+                        <label id="receive-label">RECEIVE (ETB)</label>
+                        <div class="calc-val-display" id="calc-result" style="color: #d4af37;">982.80 <span style="font-size: 12px; color: #777; font-weight: normal;" id="receive-unit">ETB</span></div>
+                    </div>
+                </div>
+                <a href="signup.html" class="submit-btn" style="text-align: center; display: block; text-decoration: none; box-sizing: border-box; background: linear-gradient(135deg, #f5d77f 0%, #d4af37 50%, #aa8621 100%); color: #111; padding: 12px; border-radius: 10px; font-weight: bold;">Start trading free</a>
+            </div>
+        </div>
+
+        <div class="phone-mockup">
+            <div class="phone-screen-header">
+                <span>3:33</span>
+                <span><i class="fa-solid fa-signal"></i> 5G 82%</span>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 32px; height: 32px; background: #333; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #d4af37; font-weight: bold;">f</div>
+                    <span style="color: #fff; font-size: 14px;">fatuma</span>
+                </div>
+                <div style="display: flex; gap: 12px; color: #aaa;">
+                    <i class="fa-regular fa-bell"></i>
+                    <i class="fa-solid fa-bars"></i>
+                </div>
+            </div>
+
+            <div style="font-size: 12px; color: #777; margin-bottom: 5px;">Afternoon, fatuma</div>
+
+            <div class="wallet-card">
+                <div style="font-size: 11px; color: #777; font-weight: bold;">TOTAL WALLET BALANCE</div>
+                <div class="bal">500.00 <span style="font-size: 14px; font-weight: normal; color: #aaa;">USDT</span></div>
+                
+                <div class="action-icons">
+                    <div class="action-item"><div class="action-circle-buy"><i class="fa-solid fa-arrow-up-right"></i></div>Buy</div>
+                    <div class="action-item"><div class="action-circle-sell"><i class="fa-solid fa-arrow-down-left"></i></div>Sell</div>
+                    <div class="action-item"><div class="action-circle-default"><i class="fa-solid fa-arrow-down"></i></div>Deposit</div>
+                    <div class="action-item"><div class="action-circle-default"><i class="fa-solid fa-arrow-up"></i></div>Withdraw</div>
+                </div>
+            </div>
+
+            <div class="wallet-card" style="margin-bottom: 0;">
+                <div style="font-size: 11px; color: #777; font-weight: bold; margin-bottom: 5px;">LIVE INDEX RATE</div>
+                <div style="font-size: 22px; font-weight: bold; color: #fff;">189 <span style="font-size: 13px; font-weight: normal; color: #aaa;">ETB</span></div>
+                <div style="font-size: 10px; color: #666; margin-top: 5px;">PER USDT GLOBAL MARKET</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- STATS TOP BAR -->
+    <div style="padding: 0 80px;">
+        <div class="stats-top-bar">
+            <div class="stat-item-top">
+                <h4>7+</h4>
+                <span>PAYMENT METHODS</span>
+            </div>
+            <div class="stat-item-top">
+                <h4>Base + BSC</h4>
+                <span>SUPPORTED CHAINS</span>
+            </div>
+            <div class="stat-item-top">
+                <h4>24/7</h4>
+                <span>ESCROW PROTECTION</span>
+            </div>
+            <div class="stat-item-top">
+                <h4>P2P</h4>
+                <span>DIRECT SETTLEMENT</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- FEATURES SECTION -->
+    <section class="features-section" id="features">
+        <h2 class="section-main-title">A focused exchange for secure local settlement.</h2>
+        
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                <h3>Secure escrow</h3>
+                <p>Seller USDT locks automatically when a trade opens and releases only after payment is confirmed.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon"><i class="fa-solid fa-bolt"></i></div>
+                <h3>Local payment rails</h3>
+                <p>Trade with Telebirr, M-Pesa, CBE Birr, Commercial Bank of Ethiopia, Awash Bank, and more local options.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon"><i class="fa-solid fa-globe"></i></div>
+                <h3>Multi-chain USDT</h3>
+                <p>Deposit and withdraw USDT on Base and BNB Smart Chain from the same wallet seamlessly.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon"><i class="fa-solid fa-lock"></i></div>
+                <h3>Account security</h3>
+                <p>Passkeys, two-factor authentication, verification tiers, and encrypted wallet operations.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon"><i class="fa-solid fa-chart-line"></i></div>
+                <h3>Transparent pricing</h3>
+                <p>See the live market index, available orders, and the exact exchange rate before trading.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon"><i class="fa-solid fa-users"></i></div>
+                <h3>Trade support</h3>
+                <p>In-trade chat, evidence handling, and a documented dispute resolution workflow.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- HOW IT WORKS SECTION -->
+    <section class="steps-section" id="how-it-works">
+        <h2>How it works</h2>
+        <div class="steps-grid">
+            <div class="step-box">
+                <div class="step-number">1</div>
+                <h3>Create Account & Verify</h3>
+                <p>Quickly set up your profile and complete identity verification for security.</p>
+            </div>
+            <div class="step-box">
+                <div class="step-number">2</div>
+                <h3>Place or Accept Order</h3>
+                <p>Select an existing offer or create a custom order for USDT and birr.</p>
+            </div>
+            <div class="step-box">
+                <div class="step-number">3</div>
+                <h3>Instant Escrow Settlement</h3>
+                <p>Funds are securely held in escrow and instantly released upon payment confirmation.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- SUPPORTED PAYMENT METHODS -->
+    <section class="payment-section">
+        <div class="payment-container">
+            <h3>Supported Payment Methods</h3>
+            <div class="payment-logos">
+                <div class="pay-badge"><i class="fa-solid fa-mobile-screen"></i> Telebirr</div>
+                <div class="pay-badge"><i class="fa-solid fa-wallet"></i> M-PESA</div>
+                <div class="pay-badge"><i class="fa-solid fa-building-columns"></i> CBE Birr</div>
+                <div class="pay-badge"><i class="fa-solid fa-landmark"></i> Commercial Bank of Ethiopia</div>
+                <div class="pay-badge"><i class="fa-solid fa-university"></i> Awash Bank</div>
+                <div class="pay-badge"><i class="fa-solid fa-building-columns"></i> Bank of Abyssinia</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div>© 2026 TBR Exchange. All rights reserved.</div>
+        <div class="footer-links">
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms of Service</a>
+            <a href="#">Support</a>
+        </div>
+    </footer>
+
+    <script>
+        let currentMode = 'sell';
+        const rate = 189.00;
+
+        function setMode(mode) {
+            currentMode = mode;
+            const buyTab = document.getElementById('tab-buy');
+            const sellTab = document.getElementById('tab-sell');
+            const payLabel = document.getElementById('pay-label');
+            const receiveLabel = document.getElementById('receive-label');
+            const payUnit = document.getElementById('pay-unit');
+            const amountInput = document.getElementById('calc-amount');
+
+            if (mode === 'buy') {
+                buyTab.classList.add('active');
+                sellTab.classList.remove('active');
+                payLabel.innerText = "PAY (ETB)";
+                receiveLabel.innerText = "RECEIVE (USDT)";
+                payUnit.innerText = "ETB";
+                amountInput.value = "982.80";
+            } else {
+                sellTab.classList.add('active');
+                buyTab.classList.remove('active');
+                payLabel.innerText = "PAY (USDT)";
+                receiveLabel.innerText = "RECEIVE (ETB)";
+                payUnit.innerText = "USDT";
+                amountInput.value = "5.20";
+            }
+            calculate();
+        }
+
+        function calculate() {
+            const amount = parseFloat(document.getElementById('calc-amount').value) || 0;
+            const resultDisplay = document.getElementById('calc-result');
+            const receiveUnitText = currentMode === 'sell' ? 'ETB' : 'USDT';
+
+            let result = 0;
+            if (currentMode === 'sell') {
+                result = amount * rate;
+            } else {
+                result = amount / rate;
+            }
+
+            resultDisplay.innerHTML = `${result.toFixed(2)} <span style="font-size: 12px; color: #777; font-weight: normal;">${receiveUnitText}</span>`;
+        }
+    </script>
+</body>
+</html>

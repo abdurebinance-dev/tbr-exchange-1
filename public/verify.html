@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Email - TBR Exchange</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #080808;
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #fff;
+        }
+        .auth-container {
+            background: #121212;
+            border: 1px solid #262626;
+            border-radius: 24px;
+            padding: 35px 30px;
+            width: 100%;
+            max-width: 440px;
+            box-sizing: border-box;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+            text-align: center;
+        }
+        .logo-text {
+            font-size: 32px;
+            font-weight: bold;
+            color: #d4af37;
+            margin-bottom: 20px;
+            letter-spacing: 1px;
+        }
+        .icon-box {
+            width: 75px;
+            height: 75px;
+            background: rgba(212, 175, 55, 0.08);
+            border: 2px solid #d4af37;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px auto;
+            color: #d4af37;
+            font-size: 30px;
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
+        }
+        h2 {
+            font-size: 24px;
+            color: #fff;
+            margin: 0 0 8px 0;
+            font-weight: 600;
+        }
+        p {
+            color: #888;
+            font-size: 14px;
+            margin: 0 0 15px 0;
+        }
+        .step-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 25px;
+        }
+        .step-indicator span {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .step-indicator .active {
+            color: #d4af37;
+        }
+        .step-line {
+            width: 30px;
+            height: 1px;
+            background: #444;
+        }
+        .inner-box {
+            background: #18181b;
+            border: 1px solid #27272a;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .inner-box-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #aaa;
+            margin-bottom: 8px;
+        }
+        .inner-box-header i {
+            color: #d4af37;
+        }
+        .inner-box-desc {
+            font-size: 12px;
+            color: #777;
+            margin-bottom: 15px;
+        }
+        .code-inputs {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .code-input {
+            width: 45px;
+            height: 52px;
+            background: linear-gradient(135deg, #2a2415 0%, #1a1a1a 100%);
+            border: 1px solid #d4af37;
+            border-radius: 10px;
+            color: #d4af37;
+            font-size: 22px;
+            font-weight: bold;
+            text-align: center;
+            outline: none;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+            transition: 0.2s;
+        }
+        .code-input:focus {
+            border-color: #f5d77f;
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
+        }
+        .paste-btn-container {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .paste-btn {
+            background: none;
+            border: none;
+            color: #d4af37;
+            font-size: 12px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: 500;
+        }
+        .paste-btn:hover {
+            text-decoration: underline;
+        }
+        .timer-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #777;
+            align-items: center;
+        }
+        /* Resend Button Design */
+        #resendBtn {
+            background: none;
+            border: none;
+            color: #555;
+            font-size: 11px;
+            cursor: not-allowed;
+            font-weight: bold;
+            padding: 0;
+            text-decoration: none;
+        }
+        #resendBtn.active {
+            color: #d4af37;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        #resendBtn.active:hover {
+            color: #f5d77f;
+        }
+        .verify-btn {
+            background: linear-gradient(135deg, #f5d77f 0%, #d4af37 50%, #aa8621 100%);
+            color: #111;
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+            margin-bottom: 15px;
+        }
+        .verify-btn:hover {
+            opacity: 0.95;
+        }
+        .spam-notice {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .spam-notice::before, .spam-notice::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: #2a2a2a;
+        }
+        .back-link {
+            color: #888;
+            font-size: 13px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .back-link:hover {
+            color: #fff;
+        }
+        #message {
+            margin-bottom: 15px;
+            font-size: 13px;
+            text-align: center;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="auth-container">
+        <div class="logo-text">TBR</div>
+        
+        <div class="icon-box">
+            <i class="fa-solid fa-envelope"></i>
+        </div>
+
+        <h2>Verify your email</h2>
+        <p>We sent a 6-digit code to <br><strong id="userEmailDisplay" style="color: #d4af37;">ab***@gmail.com</strong></p>
+
+        <div class="step-indicator">
+            <span class="active"><i class="fa-solid fa-circle-check"></i> Account created</span>
+            <div class="step-line"></div>
+            <span class="active"><i class="fa-solid fa-envelope"></i> Verify email</span>
+        </div>
+
+        <div id="message"></div>
+
+        <form id="verifyForm">
+            <div class="inner-box">
+                <div class="inner-box-header">
+                    <i class="fa-solid fa-shield-halved"></i> Email verification code
+                </div>
+                <div class="inner-box-desc">Enter the 6-digit code from your inbox</div>
+
+                <div class="code-inputs">
+                    <input type="text" maxlength="1" class="code-input" required>
+                    <input type="text" maxlength="1" class="code-input" required>
+                    <input type="text" maxlength="1" class="code-input" required>
+                    <input type="text" maxlength="1" class="code-input" required>
+                    <input type="text" maxlength="1" class="code-input" required>
+                    <input type="text" maxlength="1" class="code-input" required>
+                </div>
+
+                <div class="paste-btn-container">
+                    <button type="button" class="paste-btn" onclick="pasteCode()"><i class="fa-regular fa-clipboard"></i> Paste</button>
+                </div>
+
+                <div class="timer-row">
+                    <span>Expires in <strong id="expireTimer" style="color: #aaa;">10:00</strong></span>
+                    <span><button type="button" id="resendBtn" disabled>Resend in <span id="resendTimer">60</span>s</button></span>
+                </div>
+            </div>
+
+            <button type="submit" class="verify-btn">Verify & Activate Account</button>
+        </form>
+
+        <div class="spam-notice">Check spam if you don't see it</div>
+
+        <a href="signup.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Back to registration</a>
+    </div>
+
+    <script>
+        // ኢሜይሉን ከ LocalStorage ማምጣትና ማስክ ማድረግ
+        const email = localStorage.getItem('signupEmail');
+        if (!email) {
+            alert('Session not found. Please sign up again.');
+            window.location.href = 'signup.html';
+        } else {
+            const masked = email.substring(0, 2) + '***' + email.substring(email.indexOf('@'));
+            document.getElementById('userEmailDisplay').innerText = masked;
+        }
+
+        // የቁጥር ሳጥኖች አቀማመጥ እና አውቶ-ፎከስ
+        const inputs = document.querySelectorAll('.code-input');
+        inputs.forEach((input, index) => {
+            input.addEventListener('input', (e) => {
+                const val = e.target.value;
+                e.target.value = val.replace(/\D/g, '');
+                if (e.target.value && index < inputs.length - 1) {
+                    inputs[index + 1].focus();
+                }
+            });
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && !input.value && index > 0) {
+                    inputs[index - 1].focus();
+                }
+            });
+        });
+
+        // የፓስት (Paste) በተን ፋንክሽን
+        async function pasteCode() {
+            try {
+                const text = await navigator.clipboard.readText();
+                const digits = text.trim().replace(/\D/g, '').split('');
+                inputs.forEach((input, idx) => {
+                    if (digits[idx]) {
+                        input.value = digits[idx];
+                    }
+                });
+                if(digits.length > 0) {
+                    inputs[Math.min(digits.length - 1, 5)].focus();
+                }
+            } catch (err) {
+                console.error('Failed to read clipboard');
+            }
+        }
+
+        // --- 1. Expiration Timer (10 minutes = 600 seconds) ---
+        let expireSeconds = 600;
+        const expireTimerEl = document.getElementById('expireTimer');
+        
+        const expireInterval = setInterval(() => {
+            if (expireSeconds <= 0) {
+                clearInterval(expireInterval);
+                expireTimerEl.innerText = "Expired";
+                expireTimerEl.style.color = "#e95454";
+            } else {
+                expireSeconds--;
+                let mins = Math.floor(expireSeconds / 60);
+                let secs = expireSeconds % 60;
+                expireTimerEl.innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+            }
+        }, 1000);
+
+        // --- 2. Resend Timer (60 seconds) & Button Activation ---
+        let resendSeconds = 60;
+        const resendBtn = document.getElementById('resendBtn');
+        const resendTimerSpan = document.getElementById('resendTimer');
+        
+        const resendInterval = setInterval(() => {
+            if (resendSeconds <= 0) {
+                clearInterval(resendInterval);
+                resendBtn.disabled = false;
+                resendBtn.classList.add('active');
+                resendBtn.innerHTML = "Resend Code";
+            } else {
+                resendSeconds--;
+                resendTimerSpan.innerText = resendSeconds;
+            }
+        }, 1000);
+
+        // Resend Button Click Event
+        resendBtn.addEventListener('click', async () => {
+            if (resendBtn.disabled) return;
+
+            const messageDiv = document.getElementById('message');
+            resendBtn.innerText = "Sending...";
+
+            try {
+                const response = await fetch('http://localhost:5000/api/resend', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    messageDiv.style.color = '#51cf66';
+                    messageDiv.innerText = 'New verification code sent successfully!';
+                    
+                    // ሰዓቱን ዳግም ወደ 60 ሰከንድ መመለስ
+                    resendBtn.disabled = true;
+                    resendBtn.classList.remove('active');
+                    resendSeconds = 60;
+                    
+                    // ቆጣሪውን እንደገና ማስጀመር
+                    const newInterval = setInterval(() => {
+                        if (resendSeconds <= 0) {
+                            clearInterval(newInterval);
+                            resendBtn.disabled = false;
+                            resendBtn.classList.add('active');
+                            resendBtn.innerHTML = "Resend Code";
+                        } else {
+                            resendSeconds--;
+                            resendBtn.innerHTML = `Resend in <span id="resendTimer">${resendSeconds}</span>s`;
+                        }
+                    }, 1000);
+
+                } else {
+                    messageDiv.style.color = '#ff6b6b';
+                    messageDiv.innerText = data.message;
+                    resendBtn.innerHTML = "Resend Code";
+                }
+            } catch (err) {
+                console.error('Resend Error:', err);
+                messageDiv.style.color = '#ff6b6b';
+                messageDiv.innerText = 'Server error while resending.';
+                resendBtn.innerHTML = "Resend Code";
+            }
+        });
+
+        // --- Verify Form Submission to Server ---
+        document.getElementById('verifyForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            let code = '';
+            inputs.forEach(input => code += input.value);
+
+            const messageDiv = document.getElementById('message');
+
+            if (code.length < 6) {
+                messageDiv.style.color = '#ff6b6b';
+                messageDiv.innerText = 'Please enter the complete 6-digit code.';
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:5000/api/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, code })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    messageDiv.style.color = '#51cf66';
+                    messageDiv.innerText = 'Account verified successfully! Redirecting...';
+                    localStorage.removeItem('signupEmail');
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 1500);
+                } else {
+                    messageDiv.style.color = '#ff6b6b';
+                    messageDiv.innerText = data.message;
+                }
+            } catch (err) {
+                console.error('Error:', err);
+                messageDiv.style.color = '#ff6b6b';
+                messageDiv.innerText = 'Error connecting to server!';
+            }
+        });
+    </script>
+</body>
+</html>

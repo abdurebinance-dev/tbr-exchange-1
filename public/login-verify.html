@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Verification - TBR Exchange</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #080808;
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #fff;
+        }
+        .auth-container {
+            background: #121212;
+            border: 1px solid #262626;
+            border-radius: 24px;
+            padding: 35px 30px;
+            width: 100%;
+            max-width: 440px;
+            box-sizing: border-box;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+            text-align: center;
+        }
+        .logo-text {
+            font-size: 32px;
+            font-weight: bold;
+            color: #d4af37;
+            margin-bottom: 20px;
+            letter-spacing: 1px;
+        }
+        .icon-box {
+            width: 75px;
+            height: 75px;
+            background: rgba(212, 175, 55, 0.08);
+            border: 2px solid #d4af37;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px auto;
+            color: #d4af37;
+            font-size: 30px;
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
+        }
+        h2 {
+            font-size: 24px;
+            color: #fff;
+            margin: 0 0 8px 0;
+            font-weight: 600;
+        }
+        p {
+            color: #888;
+            font-size: 14px;
+            margin: 0 0 15px 0;
+        }
+        .inner-box {
+            background: #18181b;
+            border: 1px solid #27272a;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 15px;
+            text-align: left;
+        }
+        .inner-box-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #aaa;
+            margin-bottom: 8px;
+        }
+        .inner-box-header i {
+            color: #d4af37;
+        }
+        .inner-box-desc {
+            font-size: 12px;
+            color: #777;
+            margin-bottom: 15px;
+        }
+        .code-inputs {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .code-input {
+            width: 45px;
+            height: 52px;
+            background: linear-gradient(135deg, #2a2415 0%, #1a1a1a 100%);
+            border: 1px solid #d4af37;
+            border-radius: 10px;
+            color: #d4af37;
+            font-size: 22px;
+            font-weight: bold;
+            text-align: center;
+            outline: none;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+            transition: 0.2s;
+        }
+        .code-input:focus {
+            border-color: #f5d77f;
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
+        }
+        .code-input:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .paste-btn-container {
+            text-align: center;
+            margin-bottom: 5px;
+        }
+        .paste-btn {
+            background: none;
+            border: none;
+            color: #d4af37;
+            font-size: 12px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: 500;
+        }
+        .paste-btn:hover {
+            text-decoration: underline;
+        }
+        .timer-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: #888;
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px solid #27272a;
+        }
+        .timer-info strong {
+            color: #f5d77f;
+        }
+        .resend-container {
+            margin-bottom: 15px;
+            font-size: 13px;
+            color: #888;
+            text-align: center;
+        }
+        .resend-btn {
+            background: none;
+            border: none;
+            color: #d4af37;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 0;
+            font-size: 13px;
+        }
+        .resend-btn:disabled {
+            color: #555;
+            cursor: not-allowed;
+        }
+        .verify-btn {
+            background: linear-gradient(135deg, #f5d77f 0%, #d4af37 50%, #aa8621 100%);
+            color: #111;
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+            margin-bottom: 15px;
+        }
+        .verify-btn:hover {
+            opacity: 0.95;
+        }
+        .verify-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .back-link {
+            color: #888;
+            font-size: 13px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .back-link:hover {
+            color: #fff;
+        }
+        #message {
+            margin-bottom: 15px;
+            font-size: 13px;
+            text-align: center;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="auth-container">
+        <div class="logo-text">TBR</div>
+        
+        <div class="icon-box">
+            <i class="fa-solid fa-shield-halved"></i>
+        </div>
+
+        <h2>Security Verification</h2>
+        <p>Enter the code sent to <br><strong id="userEmailDisplay" style="color: #d4af37;">ab***@gmail.com</strong></p>
+
+        <div id="message"></div>
+
+        <form id="verifyLoginOtpForm">
+            <div class="inner-box">
+                <div class="inner-box-header">
+                    <i class="fa-solid fa-lock"></i> Two-Factor Authentication
+                </div>
+                <div class="inner-box-desc">Enter the 6-digit code to complete login</div>
+
+                <div class="code-inputs">
+                    <input type="text" maxlength="1" class="code-input" required autocomplete="off">
+                    <input type="text" maxlength="1" class="code-input" required autocomplete="off">
+                    <input type="text" maxlength="1" class="code-input" required autocomplete="off">
+                    <input type="text" maxlength="1" class="code-input" required autocomplete="off">
+                    <input type="text" maxlength="1" class="code-input" required autocomplete="off">
+                    <input type="text" maxlength="1" class="code-input" required autocomplete="off">
+                </div>
+
+                <div class="paste-btn-container">
+                    <button type="button" class="paste-btn" onclick="pasteCode()"><i class="fa-regular fa-clipboard"></i> Paste</button>
+                </div>
+
+                <div class="timer-info">
+                    <span>Code expires in:</span>
+                    <strong id="expireTimer">10:00</strong>
+                </div>
+            </div>
+
+            <div class="resend-container">
+                Didn't receive the code? 
+                <button type="button" id="resendBtn" class="resend-btn" disabled>Resend in <span id="resendTimer">60</span>s</button>
+            </div>
+
+            <button type="submit" class="verify-btn" id="verifyBtn">Verify & Sign In</button>
+        </form>
+
+        <a href="signin.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Back to sign in</a>
+    </div>
+
+    <script>
+        const email = localStorage.getItem('verifyEmail') || localStorage.getItem('signinEmail');
+        if (!email) {
+            alert('Session not found. Please sign in again.');
+            window.location.href = 'signin.html';
+        } else {
+            const masked = email.substring(0, 2) + '***' + email.substring(email.indexOf('@'));
+            document.getElementById('userEmailDisplay').innerText = masked;
+        }
+
+        const inputs = document.querySelectorAll('.code-input');
+
+        inputs.forEach((input, index) => {
+            input.addEventListener('input', (e) => {
+                const val = e.target.value;
+                e.target.value = val.replace(/\D/g, '').slice(-1);
+                if (e.target.value && index < inputs.length - 1) {
+                    inputs[index + 1].focus();
+                }
+            });
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && !input.value && index > 0) {
+                    inputs[index - 1].focus();
+                }
+            });
+
+            input.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const text = (e.clipboardData || window.clipboardData).getData('text');
+                handlePastedText(text);
+            });
+        });
+
+        function handlePastedText(text) {
+            const digits = text.trim().replace(/\D/g, '').split('');
+            inputs.forEach((input, idx) => {
+                if (digits[idx]) {
+                    input.value = digits[idx];
+                }
+            });
+            if (digits.length > 0) {
+                inputs[Math.min(digits.length - 1, 5)].focus();
+            }
+        }
+
+        async function pasteCode() {
+            try {
+                const text = await navigator.clipboard.readText();
+                handlePastedText(text);
+            } catch (err) {
+                console.error('Failed to read clipboard');
+            }
+        }
+
+        // 10-Minute Expiration Timer
+        let expireTimeLeft = 10 * 60; 
+        const expireTimerDisplay = document.getElementById('expireTimer');
+        const messageDiv = document.getElementById('message');
+
+        const expireInterval = setInterval(() => {
+            if (expireTimeLeft <= 0) {
+                clearInterval(expireInterval);
+                expireTimerDisplay.innerText = "Expired";
+                expireTimerDisplay.style.color = "#ff6b6b";
+                inputs.forEach(input => input.disabled = true);
+                document.getElementById('verifyBtn').disabled = true;
+                messageDiv.style.color = '#ff6b6b';
+                messageDiv.innerText = 'Verification code has expired. Please request a new one.';
+                return;
+            }
+            expireTimeLeft--;
+            const minutes = Math.floor(expireTimeLeft / 60);
+            const seconds = expireTimeLeft % 60;
+            expireTimerDisplay.innerText = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+        }, 1000);
+
+        // 1-Minute Resend Timer
+        let resendCountdown = 60;
+        const resendBtn = document.getElementById('resendBtn');
+
+        function startResendTimer() {
+            resendCountdown = 60;
+            resendBtn.disabled = true;
+            resendBtn.innerHTML = `Resend in <span id="resendTimer">60</span>s`;
+            
+            const resendInterval = setInterval(() => {
+                resendCountdown--;
+                const resendTimerSpan = document.getElementById('resendTimer');
+                if (resendCountdown <= 0) {
+                    clearInterval(resendInterval);
+                    resendBtn.disabled = false;
+                    resendBtn.innerHTML = "Resend Code";
+                } else if (resendTimerSpan) {
+                    resendTimerSpan.innerText = resendCountdown;
+                }
+            }, 1000);
+        }
+
+        startResendTimer();
+
+        resendBtn.addEventListener('click', async () => {
+            if (resendBtn.disabled) return;
+
+            try {
+                const response = await fetch('/api/resend-code', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    messageDiv.style.color = '#51cf66';
+                    messageDiv.innerText = 'New verification code sent successfully!';
+                    
+                    expireTimeLeft = 10 * 60;
+                    inputs.forEach(input => {
+                        input.disabled = false;
+                        input.value = '';
+                    });
+                    document.getElementById('verifyBtn').disabled = false;
+                    inputs[0].focus();
+
+                    startResendTimer();
+                } else {
+                    messageDiv.style.color = '#ff6b6b';
+                    messageDiv.innerText = data.message || 'Failed to resend code.';
+                }
+            } catch (err) {
+                messageDiv.style.color = '#ff6b6b';
+                messageDiv.innerText = 'Error connecting to server!';
+            }
+        });
+
+        // Form Submit
+        document.getElementById('verifyLoginOtpForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            let code = '';
+            inputs.forEach(input => code += input.value);
+
+            if (code.length < 6) {
+                messageDiv.style.color = '#ff6b6b';
+                messageDiv.innerText = 'Please enter the complete 6-digit code.';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/verify-login-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, otp: code })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    messageDiv.style.color = '#51cf66';
+                    messageDiv.innerText = 'Verification successful! Redirecting...';
+                    localStorage.removeItem('verifyEmail');
+                    setTimeout(() => {
+                        window.location.href = data.redirectUrl || 'dashboard.html';
+                    }, 1200);
+                } else {
+                    messageDiv.style.color = '#ff6b6b';
+                    messageDiv.innerText = data.message || 'Invalid verification code.';
+                }
+            } catch (err) {
+                console.error('Error:', err);
+                messageDiv.style.color = '#ff6b6b';
+                messageDiv.innerText = 'Error connecting to server!';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - TBR Exchange</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #080808;
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #fff;
+        }
+        .auth-container {
+            background: #121212;
+            border: 1px solid #262626;
+            border-radius: 20px;
+            padding: 40px;
+            width: 100%;
+            max-width: 420px;
+            box-sizing: border-box;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.7);
+        }
+        .auth-header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        .auth-header .logo-text {
+            font-size: 28px;
+            font-weight: bold;
+            color: #d4af37;
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+        }
+        .auth-header h2 {
+            font-size: 22px;
+            color: #fff;
+            margin: 0 0 8px 0;
+            font-weight: 600;
+        }
+        .auth-header p {
+            color: #888;
+            font-size: 14px;
+            margin: 0;
+        }
+        .divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+            margin: 20px 0;
+        }
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #262626;
+        }
+        .divider span {
+            padding: 0 10px;
+        }
+        .form-group {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            color: #aaa;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .input-wrapper i.field-icon {
+            position: absolute;
+            left: 15px;
+            color: #666;
+            font-size: 15px;
+            z-index: 2;
+        }
+        .input-wrapper i.toggle-eye {
+            position: absolute;
+            right: 15px;
+            color: #666;
+            font-size: 15px;
+            cursor: pointer;
+            transition: 0.2s;
+            z-index: 2;
+        }
+        .input-wrapper i.toggle-eye:hover {
+            color: #fff;
+        }
+        .form-control {
+            width: 100%;
+            background: #1a1a1a !important;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 14px 15px 14px 45px;
+            color: #fff !important;
+            font-size: 15px;
+            box-sizing: border-box;
+            outline: none;
+            transition: 0.2s;
+        }
+        .form-control:focus {
+            border-color: #d4af37;
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
+        }
+        .form-control:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .error-toast {
+            position: fixed;
+            top: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1e1e1e;
+            border: 1px solid #ff4d4d;
+            color: #fff;
+            font-size: 13px;
+            padding: 14px 20px;
+            border-radius: 10px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.7);
+            display: none;
+            align-items: center;
+            gap: 12px;
+            z-index: 9999;
+            width: 420px;
+            max-width: 90vw;
+            box-sizing: border-box;
+        }
+        .error-toast i.error-icon {
+            color: #ff4d4d;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .error-toast span {
+            flex: 1;
+            line-height: 1.4;
+        }
+        .error-toast .close-toast {
+            color: #888;
+            cursor: pointer;
+            font-size: 14px;
+            margin-left: 5px;
+            flex-shrink: 0;
+        }
+        .error-toast .close-toast:hover {
+            color: #fff;
+        }
+        .password-strength-container {
+            display: none;
+            margin-top: 10px;
+            margin-bottom: 20px;
+        }
+        .strength-meter {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 6px;
+        }
+        .strength-bar {
+            flex: 1;
+            height: 4px;
+            background: #262626;
+            border-radius: 2px;
+            transition: 0.3s;
+        }
+        .strength-text {
+            text-align: right;
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .requirements-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .requirements-list li {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .requirements-list li.valid {
+            color: #00c087;
+        }
+        .referral-toggle {
+            margin-bottom: 20px;
+        }
+        .referral-toggle a {
+            color: #00c087;
+            font-size: 14px;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .referral-toggle a:hover {
+            text-decoration: underline;
+        }
+        #referral-group {
+            display: none;
+            margin-bottom: 20px;
+        }
+        .terms-box {
+            background: #161a16;
+            border: 1px solid #1e3a29;
+            border-radius: 12px;
+            padding: 14px 16px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .terms-box input[type="checkbox"] {
+            accent-color: #00c087;
+            width: 18px;
+            height: 18px;
+            margin-top: 2px;
+            cursor: pointer;
+        }
+        .terms-box label {
+            font-size: 13px;
+            color: #aaa;
+            line-height: 1.5;
+            cursor: pointer;
+        }
+        .cloudflare-box {
+            background: #181818;
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .cloudflare-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .cloudflare-check {
+            width: 26px;
+            height: 26px;
+            background: #00c087;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #111;
+            font-size: 14px;
+        }
+        .cloudflare-text {
+            font-size: 15px;
+            color: #fff;
+            font-weight: 500;
+        }
+        .cloudflare-logo {
+            font-size: 11px;
+            font-weight: bold;
+            color: #f48120;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .cloudflare-links {
+            font-size: 10px;
+            color: #888;
+            margin-top: 2px;
+        }
+        .submit-btn {
+            background: linear-gradient(135deg, #f5d77f 0%, #d4af37 50%, #aa8621 100%);
+            color: #111;
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+        }
+        .submit-btn:hover {
+            opacity: 0.95;
+        }
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .auth-footer {
+            text-align: center;
+            margin-top: 25px;
+            font-size: 14px;
+            color: #888;
+        }
+        .auth-footer a {
+            color: #d4af37;
+            text-decoration: none;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="errorToast" class="error-toast">
+        <i class="fa-solid fa-triangle-exclamation error-icon"></i>
+        <span id="toastMessage">Error message goes here</span>
+        <i class="fa-solid fa-xmark close-toast" onclick="hideErrorToast()"></i>
+    </div>
+
+    <div class="auth-container">
+        <div class="auth-header">
+            <div class="logo-text">TBR Exchange</div>
+            <h2>Create Account</h2>
+            <p>Start trading USDT with Ethiopian Birr securely</p>
+        </div>
+
+        <div id="googleSignUpBtnContainer" style="display: flex; justify-content: center; width: 100%; margin-bottom: 5px;"></div>
+
+        <div class="divider"><span>OR</span></div>
+
+        <form id="signupForm">
+            <div class="form-group">
+                <label>Email Address</label>
+                <div class="input-wrapper">
+                    <i class="fa-regular fa-envelope field-icon"></i>
+                    <input type="email" id="email" name="email" class="form-control" placeholder="name@example.com" required>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 5px;">
+                <label>Password</label>
+                <div class="input-wrapper">
+                    <i class="fa-solid fa-lock field-icon"></i>
+                    <input type="password" id="password-input" name="password" class="form-control" style="padding-right: 45px;" placeholder="Create a strong password" required>
+                    <i class="fa-regular fa-eye-slash toggle-eye" id="toggle-password"></i>
+                </div>
+            </div>
+
+            <div class="password-strength-container" id="strength-container">
+                <div class="strength-meter">
+                    <div class="strength-bar" id="bar-1"></div>
+                    <div class="strength-bar" id="bar-2"></div>
+                    <div class="strength-bar" id="bar-3"></div>
+                    <div class="strength-bar" id="bar-4"></div>
+                    <div class="strength-bar" id="bar-5"></div>
+                </div>
+                <div class="strength-text" id="strength-text"></div>
+
+                <ul class="requirements-list">
+                    <li id="req-length"><i class="fa-solid fa-circle-check"></i> At least 8 characters</li>
+                    <li id="req-upper"><i class="fa-solid fa-circle-check"></i> One uppercase letter (A–Z)</li>
+                    <li id="req-lower"><i class="fa-solid fa-circle-check"></i> One lowercase letter (a–z)</li>
+                    <li id="req-number"><i class="fa-solid fa-circle-check"></i> One number (0–9)</li>
+                    <li id="req-special"><i class="fa-solid fa-circle-check"></i> One special character (!@#$%...)</li>
+                </ul>
+            </div>
+
+            <div class="form-group" style="margin-top: 20px;">
+                <label>Confirm Password</label>
+                <div class="input-wrapper">
+                    <i class="fa-solid fa-lock field-icon"></i>
+                    <input type="password" id="confirm-password-input" class="form-control" style="padding-right: 45px;" placeholder="Repeat your password" required>
+                    <i class="fa-regular fa-eye-slash toggle-eye" id="toggle-confirm"></i>
+                </div>
+            </div>
+
+            <div class="referral-toggle">
+                <a href="javascript:void(0);" id="referralToggleBtn">Have a referral code?</a>
+            </div>
+            <div class="form-group" id="referral-group">
+                <label>Referral Code (Optional)</label>
+                <div class="input-wrapper">
+                    <i class="fa-solid fa-tag field-icon"></i>
+                    <input type="text" id="referralCode" name="referralCode" class="form-control" placeholder="Enter referral code">
+                </div>
+            </div>
+
+            <div class="terms-box">
+                <input type="checkbox" id="terms-check" required>
+                <label for="terms-check">
+                    I am at least <strong>18 years old</strong> and I agree to TBR's Terms of Service and Privacy Policy.
+                </label>
+            </div>
+
+            <div class="cloudflare-box">
+                <div class="cloudflare-left">
+                    <div class="cloudflare-check"><i class="fa-solid fa-check"></i></div>
+                    <div class="cloudflare-text">Success!</div>
+                </div>
+                <div class="cloudflare-right">
+                    <div class="cloudflare-logo"><i class="fa-solid fa-cloud"></i> CLOUDFLARE</div>
+                    <div class="cloudflare-links">
+                        <a href="https://www.cloudflare.com/privacypolicy/" target="_blank">Privacy</a>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn" id="submitBtn">Create Account</button>
+        </form>
+
+        <div class="auth-footer">
+            Already have an account? <a href="signin.html">Sign in</a>
+        </div>
+    </div>
+
+    <script>
+        window.onload = function () {
+            if (typeof google !== 'undefined' && google.accounts) {
+                google.accounts.id.initialize({
+                    client_id: "661544926174-8kp01crhke9m1vmjf6kcts5o2e7sqek8.apps.googleusercontent.com",
+                    callback: handleGoogleResponse
+                });
+
+                google.accounts.id.renderButton(
+                    document.getElementById("googleSignUpBtnContainer"),
+                    { 
+                        theme: "filled_black", 
+                        size: "large", 
+                        width: "340",
+                        shape: "rectangular",
+                        text: "continue_with"
+                    }
+                );
+            }
+
+            // Check local storage lockout on page load if email is filled or saved
+            const savedEmail = localStorage.getItem('signupEmail');
+            if (savedEmail) {
+                document.getElementById('email').value = savedEmail;
+                checkRateLimitStatus(savedEmail);
+            }
+        };
+
+        document.getElementById('email').addEventListener('input', function() {
+            const email = this.value.trim();
+            if (email) {
+                checkRateLimitStatus(email);
+            }
+        });
+
+        let countdownInterval = null;
+
+        function checkRateLimitStatus(email) {
+            const lockoutKey = 'signup_lockout_' + email;
+            const lockoutUntil = localStorage.getItem(lockoutKey);
+            
+            if (lockoutUntil) {
+                const remainingTime = parseInt(lockoutUntil, 10) - new Date().getTime();
+                if (remainingTime > 0) {
+                    lockForm(remainingTime);
+                } else {
+                    localStorage.removeItem(lockoutKey);
+                    unlockForm();
+                }
+            } else {
+                unlockForm();
+            }
+        }
+
+        function lockForm(durationMs) {
+            const submitBtn = document.getElementById('submitBtn');
+            const passwordInput = document.getElementById('password-input');
+            const confirmPasswordInput = document.getElementById('confirm-password-input');
+            const referralCode = document.getElementById('referralCode');
+
+            passwordInput.disabled = true;
+            confirmPasswordInput.disabled = true;
+            referralCode.disabled = true;
+            submitBtn.disabled = true;
+
+            if (countdownInterval) clearInterval(countdownInterval);
+
+            const lockoutEnd = new Date().getTime() + durationMs;
+
+            countdownInterval = setInterval(() => {
+                const now = new Date().getTime();
+                const distance = lockoutEnd - now;
+
+                if (distance <= 0) {
+                    clearInterval(countdownInterval);
+                    const email = document.getElementById('email').value.trim();
+                    if (email) localStorage.removeItem('signup_lockout_' + email);
+                    unlockForm();
+                } else {
+                    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                    showErrorToast(`Too many attempts. Please try again in ${minutes}m ${seconds}s.`);
+                }
+            }, 1000);
+        }
+
+        function unlockForm() {
+            if (countdownInterval) clearInterval(countdownInterval);
+            const submitBtn = document.getElementById('submitBtn');
+            const emailInput = document.getElementById('email');
+            const passwordInput = document.getElementById('password-input');
+            const confirmPasswordInput = document.getElementById('confirm-password-input');
+            const referralCode = document.getElementById('referralCode');
+
+            emailInput.disabled = false;
+            passwordInput.disabled = false;
+            confirmPasswordInput.disabled = false;
+            referralCode.disabled = false;
+            submitBtn.disabled = false;
+            hideErrorToast();
+        }
+
+        async function handleGoogleResponse(response) {
+            try {
+                const res = await fetch('/api/google-auth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: response.credential })
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    if (data.exists) {
+                        showErrorToast('Account already exists! Please sign in.');
+                        setTimeout(() => window.location.href = 'signin.html', 1500);
+                    } else {
+                        window.location.href = 'dashboard.html';
+                    }
+                } else {
+                    showErrorToast(data.message || 'Google authentication failed.');
+                }
+            } catch (err) {
+                console.error('Error:', err);
+                showErrorToast('Server error during Google sign-up.');
+            }
+        }
+
+        let toastTimer = null;
+
+        function showErrorToast(message) {
+            const toast = document.getElementById('errorToast');
+            const toastMsg = document.getElementById('toastMessage');
+            
+            toastMsg.innerText = message;
+            toast.style.display = 'flex';
+
+            if (toastTimer) {
+                clearTimeout(toastTimer);
+            }
+
+            // Keep toast active if it's a lockout message
+            if (!message.includes('try again in')) {
+                toastTimer = setTimeout(() => {
+                    hideErrorToast();
+                }, 4000);
+            }
+        }
+
+        function hideErrorToast() {
+            const toast = document.getElementById('errorToast');
+            toast.style.display = 'none';
+        }
+
+        const passwordInput = document.getElementById('password-input');
+        passwordInput.addEventListener('input', function() {
+            const pwd = this.value;
+            const container = document.getElementById('strength-container');
+            
+            if (pwd.length > 0) {
+                container.style.display = 'block';
+            } else {
+                container.style.display = 'none';
+                return;
+            }
+
+            const hasLength = pwd.length >= 8;
+            const hasUpper = /[A-Z]/.test(pwd);
+            const hasLower = /[a-z]/.test(pwd);
+            const hasNumber = /[0-9]/.test(pwd);
+            const hasSpecial = /[^A-Za-z0-9]/.test(pwd);
+
+            updateReq('req-length', hasLength);
+            updateReq('req-upper', hasUpper);
+            updateReq('req-lower', hasLower);
+            updateReq('req-number', hasNumber);
+            updateReq('req-special', hasSpecial);
+
+            let score = 0;
+            if (hasLength) score++;
+            if (hasUpper) score++;
+            if (hasLower) score++;
+            if (hasNumber) score++;
+            if (hasSpecial) score++;
+
+            const bars = [
+                document.getElementById('bar-1'),
+                document.getElementById('bar-2'),
+                document.getElementById('bar-3'),
+                document.getElementById('bar-4'),
+                document.getElementById('bar-5')
+            ];
+            
+            const strengthText = document.getElementById('strength-text');
+
+            bars.forEach(bar => bar.style.background = '#262626');
+            strengthText.innerText = '';
+
+            let color = '#e95454';
+            let text = 'Weak';
+            if (score >= 3 && score < 5) {
+                color = '#f5d77f';
+                text = 'Medium';
+            } else if (score === 5) {
+                color = '#00c087';
+                text = 'Strong';
+            }
+
+            for (let i = 0; i < score; i++) {
+                bars[i].style.background = color;
+            }
+            strengthText.style.color = color;
+            strengthText.innerText = text;
+        });
+
+        function updateReq(elementId, isValid) {
+            const el = document.getElementById(elementId);
+            if (isValid) {
+                el.classList.add('valid');
+            } else {
+                el.classList.remove('valid');
+            }
+        }
+
+        document.getElementById('toggle-password').addEventListener('click', function() {
+            togglePasswordVisibility('password-input', this);
+        });
+
+        document.getElementById('toggle-confirm').addEventListener('click', function() {
+            togglePasswordVisibility('confirm-password-input', this);
+        });
+
+        function togglePasswordVisibility(fieldId, toggleIcon) {
+            const pwdInput = document.getElementById(fieldId);
+            if (pwdInput.type === 'password') {
+                pwdInput.type = 'text';
+                toggleIcon.classList.remove('fa-eye-slash');
+                toggleIcon.classList.add('fa-eye');
+            } else {
+                pwdInput.type = 'password';
+                toggleIcon.classList.remove('fa-eye');
+                toggleIcon.classList.add('fa-eye-slash');
+            }
+        }
+
+        document.getElementById('referralToggleBtn').addEventListener('click', function(e) {
+            e.preventDefault();
+            const refGroup = document.getElementById('referral-group');
+            refGroup.style.display = refGroup.style.display === 'block' ? 'none' : 'block';
+        });
+
+        document.getElementById('signupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const password = document.getElementById('password-input').value;
+            const confirmPassword = document.getElementById('confirm-password-input').value;
+            const email = document.getElementById('email').value.trim();
+            const referralCode = document.getElementById('referralCode').value;
+
+            if (password !== confirmPassword) {
+                showErrorToast("Passwords do not match!");
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password, referralCode })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    localStorage.setItem('signupEmail', email);
+                    window.location.href = 'verify.html';
+                } else {
+                    // 429 ሲሆን (Too Many Requests / Rate limit ሲመታ) ብቻ ፎርሙን እንቆልፋለን
+                    if (response.status === 429 && data.lockUntil) {
+                        const remainingMs = data.lockUntil - new Date().getTime();
+                        localStorage.setItem('signup_lockout_' + email, data.lockUntil);
+                        lockForm(remainingMs);
+                    } else {
+                        // እንደ Email already registered የመሳሰሉ ስህተቶች ሲመጡ ታስ ብቻ እናሳይ እንጂ ፎርሙን አንቆልፍም
+                        showErrorToast(data.message || "Something went wrong. Please try again.");
+                        document.getElementById('email').style.borderColor = '#ff4d4d';
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+                showErrorToast("Error connecting to server!");
+            }
+        });
+    </script>
+</body>
+</html>
