@@ -7,13 +7,15 @@ body {
     justify-content: center;
     align-items: center;
     min-height: 100vh;
+    box-sizing: border-box;
 }
 
 .form-container {
     background: #141414;
     padding: 35px 30px;
     border-radius: 20px;
-    width: 440px;
+    width: 100%;
+    max-width: 440px;
     border: 1px solid #d4af3744;
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.9);
     box-sizing: border-box;
@@ -260,4 +262,27 @@ input:focus {
 
 .forgot-container a:hover {
     text-decoration: underline;
+}
+
+/* ========================================================= */
+/* MOBILE RESPONSIVE FIXES (ስልክ ላይ የሚያጋጩትን ለማስተካከል) */
+/* ========================================================= */
+@media (max-width: 480px) {
+    body {
+        align-items: flex-start;
+        padding: 15px;
+    }
+
+    .form-container {
+        width: 100% !important;
+        padding: 25px 18px !important;
+        margin-top: 10px;
+    }
+
+    /* የላይኛው የናቪጌሽን ወይም ሜኑ ጽሁፎች ከተጨናነቁ የሚቀነሱበት */
+    header, .navbar, .nav-links {
+        flex-direction: column;
+        gap: 8px;
+        text-align: center;
+    }
 }
