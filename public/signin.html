@@ -238,7 +238,7 @@
 
         <div id="googleSignInBtnContainer" style="display: flex; justify-content: center; width: 100%; margin-bottom: 10px;"></div>
 
-        <button type="button" class="passkey-btn" style="margin-bottom: 15px;">
+        <button type="button" class="passkey-btn" id="passkeyBtn" style="margin-bottom: 15px;">
             <i class="fa-solid fa-key" style="color: #d4af37;"></i> Sign in with Passkey
         </button>
 
@@ -294,6 +294,11 @@
     </div>
 
     <script>
+        // Backend API Base URL Configuration (Automatic detection for Local vs Production/Vercel)
+        const API_BASE_URL = window.location.hostname.includes('localhost') 
+            ? '' 
+            : 'https://tbr-exchange-backend.onrender.com';
+
         function togglePass(id, icon) {
             const input = document.getElementById(id);
             if (input.type === "password") {
@@ -333,6 +338,27 @@
             }
         };
 
+        // Passkey Authentication Handler
+        document.getElementById('passkeyBtn').addEventListener('click', async () => {
+            try {
+                showError("Passkey", "Connecting to biometric / passkey device...");
+                const response = await fetch(`${API_BASE_URL}/api/passkey-signin`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                const data = await response.json();
+                if (data.success) {
+                    window.location.href = data.redirectUrl || 'dashboard.html';
+                } else {
+                    showError("Passkey Failed", data.message || "Passkey sign-in failed.");
+                }
+            } catch (err) {
+                console.error('Passkey error:', err);
+                showError("Passkey Error", "Passkey authentication is not supported or cancelled.");
+            }
+        });
+
         document.getElementById('signin-email').addEventListener('input', function() {
             const identifier = this.value.trim();
             if (identifier) {
@@ -351,7 +377,6 @@
                 if (remainingTime > 0) {
                     startCountdown(remainingTime);
                 } else {
-                    // ሰዓቱ ሲያልቅ የቆለፍ መረጃውን እና የሙከራ ቆጠራውን (Attempts) በአንድ ላይ እናጠፋዋለን
                     localStorage.removeItem(lockoutKey);
                     localStorage.removeItem('tbr_signin_attempts_' + identifier);
                     unlockSignInForm();
@@ -380,7 +405,6 @@
                     clearInterval(countdownInterval);
                     const identifier = document.getElementById('signin-email').value.trim();
                     if (identifier) {
-                        // 25 ደቂቃው ሲያልቅ ሎኩን እና የተሳሳቱበትን ቆጠራ (Attempts) ሙሉ በሙሉ እናጸዳዋለን
                         localStorage.removeItem('tbr_signin_lockout_' + identifier);
                         localStorage.removeItem('tbr_signin_attempts_' + identifier);
                     }
@@ -410,7 +434,7 @@
 
         async function handleGoogleResponse(response) {
             try {
-                const res = await fetch('/api/google-auth', {
+                const res = await fetch(`${API_BASE_URL}/api/google-auth`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ token: response.credential })
@@ -418,7 +442,12 @@
 
                 const data = await res.json();
                 if (data.success) {
-                    window.location.href = data.redirectUrl || 'dashboard.html';
+                    if (data.exists) {
+                        window.location.href = data.redirectUrl || 'dashboard.html';
+                    } else {
+                        localStorage.setItem('signupEmail', data.email);
+                        window.location.href = 'signup.html';
+                    }
                 } else {
                     showError("Authentication Failed", data.message || 'Google authentication failed.');
                 }
@@ -454,9 +483,8 @@
             currentAttempts++;
             localStorage.setItem(attemptsKey, currentAttempts);
 
-            // ከ 5 ጊዜ በላይ ከተሳሳተ 25 ደቂቃ መቆለፊያ ይጀምራል
             if (currentAttempts > 5) {
-                const lockoutDurationMs = 25 * 60 * 1000; // 25 minutes
+                const lockoutDurationMs = 25 * 60 * 1000;
                 const lockoutEndTime = new Date().getTime() + lockoutDurationMs;
                 localStorage.setItem('tbr_signin_lockout_' + identifier, lockoutEndTime);
                 startCountdown(lockoutDurationMs);
@@ -468,7 +496,7 @@
             hideError();
 
             try {
-                const response = await fetch('/api/signin', {
+                const response = await fetch(`${API_BASE_URL}/api/signin`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: identifier, password })

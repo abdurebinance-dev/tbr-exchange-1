@@ -338,7 +338,7 @@
                 <label>Email Address</label>
                 <div class="input-wrapper">
                     <i class="fa-regular fa-envelope field-icon"></i>
-                    <input type="email" id="email" name="email" class="form-control" placeholder="name@example.com" required>
+                    <input type="email" id="signup-email" name="email" class="form-control" placeholder="name@example.com" required>
                 </div>
             </div>
 
@@ -419,7 +419,22 @@
     </div>
 
     <script>
+        // Backend API Base URL Configuration (Automatic detection for Local vs Production/Vercel)
+        const API_BASE_URL = window.location.hostname.includes('localhost') 
+            ? '' 
+            : 'https://tbr-exchange-backend.onrender.com';
+
         window.onload = function () {
+            const savedEmail = localStorage.getItem('signupEmail');
+            if (savedEmail) {
+                const emailInput = document.getElementById('signup-email');
+                if (emailInput) {
+                    emailInput.value = savedEmail;
+                }
+                checkRateLimitStatus(savedEmail);
+                localStorage.removeItem('signupEmail');
+            }
+
             if (typeof google !== 'undefined' && google.accounts) {
                 google.accounts.id.initialize({
                     client_id: "661544926174-8kp01crhke9m1vmjf6kcts5o2e7sqek8.apps.googleusercontent.com",
@@ -437,16 +452,9 @@
                     }
                 );
             }
-
-            // Check local storage lockout on page load if email is filled or saved
-            const savedEmail = localStorage.getItem('signupEmail');
-            if (savedEmail) {
-                document.getElementById('email').value = savedEmail;
-                checkRateLimitStatus(savedEmail);
-            }
         };
 
-        document.getElementById('email').addEventListener('input', function() {
+        document.getElementById('signup-email').addEventListener('input', function() {
             const email = this.value.trim();
             if (email) {
                 checkRateLimitStatus(email);
@@ -493,7 +501,7 @@
 
                 if (distance <= 0) {
                     clearInterval(countdownInterval);
-                    const email = document.getElementById('email').value.trim();
+                    const email = document.getElementById('signup-email').value.trim();
                     if (email) localStorage.removeItem('signup_lockout_' + email);
                     unlockForm();
                 } else {
@@ -507,7 +515,7 @@
         function unlockForm() {
             if (countdownInterval) clearInterval(countdownInterval);
             const submitBtn = document.getElementById('submitBtn');
-            const emailInput = document.getElementById('email');
+            const emailInput = document.getElementById('signup-email');
             const passwordInput = document.getElementById('password-input');
             const confirmPasswordInput = document.getElementById('confirm-password-input');
             const referralCode = document.getElementById('referralCode');
@@ -522,7 +530,7 @@
 
         async function handleGoogleResponse(response) {
             try {
-                const res = await fetch('/api/google-auth', {
+                const res = await fetch(`${API_BASE_URL}/api/google-auth`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ token: response.credential })
@@ -534,7 +542,7 @@
                         showErrorToast('Account already exists! Please sign in.');
                         setTimeout(() => window.location.href = 'signin.html', 1500);
                     } else {
-                        window.location.href = 'dashboard.html';
+                        window.location.href = data.redirectUrl || 'dashboard.html';
                     }
                 } else {
                     showErrorToast(data.message || 'Google authentication failed.');
@@ -558,7 +566,6 @@
                 clearTimeout(toastTimer);
             }
 
-            // Keep toast active if it's a lockout message
             if (!message.includes('try again in')) {
                 toastTimer = setTimeout(() => {
                     hideErrorToast();
@@ -673,7 +680,7 @@
 
             const password = document.getElementById('password-input').value;
             const confirmPassword = document.getElementById('confirm-password-input').value;
-            const email = document.getElementById('email').value.trim();
+            const email = document.getElementById('signup-email').value.trim();
             const referralCode = document.getElementById('referralCode').value;
 
             if (password !== confirmPassword) {
@@ -682,7 +689,7 @@
             }
 
             try {
-                const response = await fetch('/api/signup', {
+                const response = await fetch(`${API_BASE_URL}/api/signup`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password, referralCode })
@@ -694,15 +701,13 @@
                     localStorage.setItem('signupEmail', email);
                     window.location.href = 'verify.html';
                 } else {
-                    // 429 ሲሆን (Too Many Requests / Rate limit ሲመታ) ብቻ ፎርሙን እንቆልፋለን
                     if (response.status === 429 && data.lockUntil) {
                         const remainingMs = data.lockUntil - new Date().getTime();
                         localStorage.setItem('signup_lockout_' + email, data.lockUntil);
                         lockForm(remainingMs);
                     } else {
-                        // እንደ Email already registered የመሳሰሉ ስህተቶች ሲመጡ ታስ ብቻ እናሳይ እንጂ ፎርሙን አንቆልፍም
                         showErrorToast(data.message || "Something went wrong. Please try again.");
-                        document.getElementById('email').style.borderColor = '#ff4d4d';
+                        document.getElementById('signup-email').style.borderColor = '#ff4d4d';
                     }
                 }
             } catch (err) {

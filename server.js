@@ -1,12 +1,12 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
-const nodemailer = require('nodemailer');
 const cors = require('cors');
 const path = require('path');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { OAuth2Client } = require('google-auth-library');
+const { Resend } = require('resend');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -14,6 +14,13 @@ const PORT = process.env.PORT || 5000;
 // Google OAuth Client Setup
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '661544926174-8kp01crhke9m1vmjf6kcts5o2e7sqek8.apps.googleusercontent.com';
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
+
+// Safe Resend Client Helper to prevent ByteString/encoding crash
+const getResendClient = () => {
+    const apiKey = process.env.RESEND_API_KEY ? process.env.RESEND_API_KEY.trim() : '';
+    return new Resend(apiKey);
+};
+const EMAIL_FROM = process.env.EMAIL_FROM || 'onboarding@resend.dev';
 
 // Middleware
 app.use(cors({
@@ -29,7 +36,7 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/tbr_exchang
 .then(() => console.log('MongoDB Database Connected Successfully!'))
 .catch(err => console.log('MongoDB Connection Error:', err));
 
-// User Schema & Model (Added loginAttempts and lockUntil)
+// User Schema & Model
 const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true, index: true, lowercase: true, trim: true },
     phone: { type: String, index: true }, 
@@ -45,19 +52,10 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model('User', userSchema);
 
-// Nodemailer Transporter Setup
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER || 'tbrexchange@gmail.com',
-        pass: process.env.EMAIL_PASS || 'rvmjvpknysxcsptw'
-    }
-});
-
 // Temporary memory to store verification codes and signup attempts/lockout
 const pendingUsers = {};
 
-// Function to generate and send email
+// Function to generate and send email using Resend
 async function sendVerificationEmail(email, verificationCode) {
     const uniqueId = Date.now(); 
     const htmlContent = `
@@ -69,15 +67,15 @@ async function sendVerificationEmail(email, verificationCode) {
         </div>
     </div>`;
 
-    await transporter.sendMail({
-        from: process.env.EMAIL_USER || 'tbrexchange@gmail.com',
+    await getResendClient().emails.send({
+        from: EMAIL_FROM,
         to: email,
         subject: `${verificationCode} — Your TBR Verification Code (${uniqueId})`,
         html: htmlContent
     });
 }
 
-// 1. Signup Route (Updated with Auto-Unlock & Lock check)
+// 1. Signup Route
 app.post('/api/signup', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -94,7 +92,6 @@ app.post('/api/signup', async (req, res) => {
         const currentTime = Date.now();
         const pendingUser = pendingUsers[cleanEmail];
 
-        // Check if locked out during signup attempt, with auto-unlock after 1 hour
         if (pendingUser && pendingUser.lockUntil) {
             if (currentTime < pendingUser.lockUntil) {
                 return res.status(400).json({ 
@@ -135,7 +132,7 @@ app.post('/api/signup', async (req, res) => {
     }
 });
 
-// 2. Resend Code Route (For Signup)
+// 2. Resend Code Route
 app.post('/api/resend', async (req, res) => {
     try {
         const { email } = req.body;
@@ -179,7 +176,7 @@ app.post('/api/resend', async (req, res) => {
     }
 });
 
-// 3. Verify Code Route (For Signup with 5-Attempt Lock & Auto-Unlock)
+// 3. Verify Code Route
 app.post('/api/verify', async (req, res) => {
     try {
         const { email, code } = req.body;
@@ -215,7 +212,7 @@ app.post('/api/verify', async (req, res) => {
             pendingUser.signupAttempts = (pendingUser.signupAttempts || 0) + 1;
             
             if (pendingUser.signupAttempts >= 5) {
-                pendingUser.lockUntil = currentTime + (60 * 60 * 1000); // Lock for 1 hour
+                pendingUser.lockUntil = currentTime + (60 * 60 * 1000);
                 return res.status(400).json({ 
                     success: false, 
                     message: 'Too many incorrect attempts.',
@@ -240,7 +237,7 @@ app.post('/api/verify', async (req, res) => {
     }
 });
 
-// 4. Signin Route (With 5-Attempt 1-Hour Lock & Auto-Unlock Fix)
+// 4. Signin Route
 app.post('/api/signin', async (req, res) => {
     try {
         const { email, password } = req.body; 
@@ -277,7 +274,7 @@ app.post('/api/signin', async (req, res) => {
         if (!isMatch) {
             user.loginAttempts = (user.loginAttempts || 0) + 1;
             if (user.loginAttempts >= 5) {
-                user.lockUntil = currentTime + (60 * 60 * 1000); // Lock for 1 hour
+                user.lockUntil = currentTime + (60 * 60 * 1000);
             }
             await user.save();
             
@@ -302,8 +299,8 @@ app.post('/api/signin', async (req, res) => {
         user.verificationCodeExpire = currentTime + (10 * 60 * 1000); 
         await user.save();
 
-        const mailOptions = {
-            from: '"TBR" <tbrexchange@gmail.com>',
+        const emailPayload = {
+            from: EMAIL_FROM,
             to: user.email, 
             subject: `Sign In Verification — Code: ${loginOtp} (#${uniqueId})`,
             html: `
@@ -317,7 +314,7 @@ app.post('/api/signin', async (req, res) => {
             </div>`
         };
 
-        transporter.sendMail(mailOptions).catch(err => console.error('Email send error:', err));
+        getResendClient().emails.send(emailPayload).catch(err => console.error('Email send error:', err));
 
         return res.status(200).json({ 
             success: true, 
@@ -389,8 +386,8 @@ app.post('/api/resend-code', async (req, res) => {
         user.verificationCodeExpire = Date.now() + (10 * 60 * 1000); 
         await user.save();
 
-        const mailOptions = {
-            from: '"TBR" <tbrexchange@gmail.com>',
+        const emailPayload = {
+            from: EMAIL_FROM,
             to: user.email,
             subject: `Resend Sign In Verification — Code: ${newLoginOtp} (#${uniqueId})`,
             html: `
@@ -404,7 +401,7 @@ app.post('/api/resend-code', async (req, res) => {
             </div>`
         };
 
-        transporter.sendMail(mailOptions).catch(err => console.error('Resend Email error:', err));
+        getResendClient().emails.send(emailPayload).catch(err => console.error('Resend Email error:', err));
 
         res.json({ success: true, message: 'New verification code sent successfully.' });
     } catch (error) {
@@ -422,9 +419,9 @@ app.post('/api/google-auth', async (req, res) => {
 
         let user = await User.findOne({ email });
         if (user) {
-            return res.json({ success: true, exists: true, email, message: 'Account exists.' });
+            return res.json({ success: true, exists: true, email, redirectUrl: 'dashboard.html', message: 'Account exists.' });
         } else {
-            return res.json({ success: true, exists: false, email, message: 'Account not found.' });
+            return res.json({ success: true, exists: false, email, redirectUrl: 'signup.html', message: 'Account not found.' });
         }
     } catch (error) {
         console.error('Google Auth Error:', error);
@@ -432,7 +429,7 @@ app.post('/api/google-auth', async (req, res) => {
     }
 });
 
-// 8. Forgot Password Route (Updated with Dynamic Host for Render/Production)
+// 8. Forgot Password Route
 app.post('/api/forgot-password', async (req, res) => {
     try {
         const { email } = req.body;
@@ -456,8 +453,8 @@ app.post('/api/forgot-password', async (req, res) => {
         const resetLink = `${protocol}://${host}/reset-password.html?token=${resetToken}&t=${timestamp}`;
         const uniqueId = Date.now();
 
-        const mailOptions = {
-            from: 'tbrexchange@gmail.com',
+        const emailPayload = {
+            from: EMAIL_FROM,
             to: cleanEmail,
             subject: `Password Reset Request (#${uniqueId})`,
             html: `
@@ -473,7 +470,7 @@ app.post('/api/forgot-password', async (req, res) => {
             </div>`
         };
 
-        transporter.sendMail(mailOptions).catch(err => console.error('Reset Email error:', err));
+        getResendClient().emails.send(emailPayload).catch(err => console.error('Reset Email error:', err));
         res.json({ success: true, message: 'Password reset link sent to your email.' });
     } catch (error) {
         console.error('Forgot Password Error:', error);

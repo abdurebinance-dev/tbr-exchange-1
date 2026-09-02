@@ -154,7 +154,6 @@
             color: #777;
             align-items: center;
         }
-        /* Resend Button Design */
         #resendBtn {
             background: none;
             border: none;
@@ -234,7 +233,7 @@
         </div>
 
         <h2>Verify your email</h2>
-        <p>We sent a 6-digit code to <br><strong id="userEmailDisplay" style="color: #d4af37;">ab***@gmail.com</strong></p>
+        <p>We sent a 6-digit code to <br><strong id="userEmailDisplay" style="color: #d4af37;">...</strong></p>
 
         <div class="step-indicator">
             <span class="active"><i class="fa-solid fa-circle-check"></i> Account created</span>
@@ -279,6 +278,11 @@
     </div>
 
     <script>
+        // API URL Configuration
+        const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://localhost:5000' 
+            : 'https://tbr-exchange-backend.onrender.com';
+
         // ኢሜይሉን ከ LocalStorage ማምጣትና ማስክ ማድረግ
         const email = localStorage.getItem('signupEmail');
         if (!email) {
@@ -366,7 +370,7 @@
             resendBtn.innerText = "Sending...";
 
             try {
-                const response = await fetch('http://localhost:5000/api/resend', {
+                const response = await fetch(`${API_URL}/api/resend`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email })
@@ -423,7 +427,7 @@
             }
 
             try {
-                const response = await fetch('http://localhost:5000/api/verify', {
+                const response = await fetch(`${API_URL}/api/verify`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, code })

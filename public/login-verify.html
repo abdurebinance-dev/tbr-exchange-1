@@ -253,7 +253,13 @@
     </div>
 
     <script>
-        const email = localStorage.getItem('verifyEmail') || localStorage.getItem('signinEmail');
+        // API URL Configuration
+        const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://localhost:5000' 
+            : 'https://tbr-exchange-backend.onrender.com';
+
+        // ኢሜይሉን ከ LocalStorage ማምጣት (verify, signin, login ወይም signup)
+        const email = localStorage.getItem('verifyEmail') || localStorage.getItem('signinEmail') || localStorage.getItem('loginEmail') || localStorage.getItem('signupEmail');
         if (!email) {
             alert('Session not found. Please sign in again.');
             window.location.href = 'signin.html';
@@ -357,7 +363,7 @@
             if (resendBtn.disabled) return;
 
             try {
-                const response = await fetch('/api/resend-code', {
+                const response = await fetch(`${API_URL}/api/resend-code`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email })
@@ -401,7 +407,7 @@
             }
 
             try {
-                const response = await fetch('/api/verify-login-otp', {
+                const response = await fetch(`${API_URL}/api/verify-login-otp`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, otp: code })
@@ -413,6 +419,7 @@
                     messageDiv.style.color = '#51cf66';
                     messageDiv.innerText = 'Verification successful! Redirecting...';
                     localStorage.removeItem('verifyEmail');
+                    localStorage.removeItem('loginEmail');
                     setTimeout(() => {
                         window.location.href = data.redirectUrl || 'dashboard.html';
                     }, 1200);
