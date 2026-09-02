@@ -6,7 +6,6 @@ const path = require('path');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { OAuth2Client } = require('google-auth-library');
-const { Resend } = require('resend');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -15,12 +14,9 @@ const PORT = process.env.PORT || 5000;
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '661544926174-8kp01crhke9m1vmjf6kcts5o2e7sqek8.apps.googleusercontent.com';
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
-// Safe Resend Client Helper to prevent ByteString/encoding crash
-const getResendClient = () => {
-    const apiKey = process.env.RESEND_API_KEY ? process.env.RESEND_API_KEY.trim() : '';
-    return new Resend(apiKey);
-};
-const EMAIL_FROM = process.env.EMAIL_FROM || 'onboarding@resend.dev';
+// Brevo API Key & Sender Email Setup
+const BREVO_API_KEY = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : '';
+const EMAIL_FROM = process.env.EMAIL_FROM || 'tbrexchange@gmail.com';
 
 // Middleware
 app.use(cors({
@@ -55,7 +51,36 @@ const User = mongoose.model('User', userSchema);
 // Temporary memory to store verification codes and signup attempts/lockout
 const pendingUsers = {};
 
-// Function to generate and send email using Resend
+// Helper Function to send email using Brevo API
+async function sendEmailViaBrevo({ to, subject, htmlContent }) {
+    if (!BREVO_API_KEY) {
+        throw new Error('BREVO_API_KEY is missing in environment variables.');
+    }
+
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+            'accept': 'application/json',
+            'api-key': BREVO_API_KEY,
+            'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+            sender: { email: EMAIL_FROM, name: 'TBR Exchange' },
+            to: [{ email: to }],
+            subject: subject,
+            htmlContent: htmlContent
+        })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to send email via Brevo');
+    }
+
+    return await response.json();
+}
+
+// Function to generate and send verification email
 async function sendVerificationEmail(email, verificationCode) {
     const uniqueId = Date.now(); 
     const htmlContent = `
@@ -67,11 +92,10 @@ async function sendVerificationEmail(email, verificationCode) {
         </div>
     </div>`;
 
-    await getResendClient().emails.send({
-        from: EMAIL_FROM,
+    await sendEmailViaBrevo({
         to: email,
         subject: `${verificationCode} — Your TBR Verification Code (${uniqueId})`,
-        html: htmlContent
+        htmlContent
     });
 }
 
@@ -299,22 +323,21 @@ app.post('/api/signin', async (req, res) => {
         user.verificationCodeExpire = currentTime + (10 * 60 * 1000); 
         await user.save();
 
-        const emailPayload = {
-            from: EMAIL_FROM,
-            to: user.email, 
-            subject: `Sign In Verification — Code: ${loginOtp} (#${uniqueId})`,
-            html: `
-            <div style="background-color: #0c0c0c; padding: 40px 20px; font-family: sans-serif; color: #ffffff;">
-                <div style="max-width: 550px; margin: auto; background-color: #141414; border: 1px solid #262626; border-radius: 12px; padding: 30px; text-align: center;">
-                    <h2 style="color: #d4af37;">Sign In Verification</h2>
-                    <p style="color: #b0b0b0;">Your verification code to complete sign in is:</p>
-                    <h1 style="color: #f3c653; font-size: 38px; letter-spacing: 5px; margin: 20px 0;">${loginOtp}</h1>
-                    <p style="color: #b0b0b0;">This code expires in 10 minutes.</p>
-                </div>
-            </div>`
-        };
+        const htmlContent = `
+        <div style="background-color: #0c0c0c; padding: 40px 20px; font-family: sans-serif; color: #ffffff;">
+            <div style="max-width: 550px; margin: auto; background-color: #141414; border: 1px solid #262626; border-radius: 12px; padding: 30px; text-align: center;">
+                <h2 style="color: #d4af37;">Sign In Verification</h2>
+                <p style="color: #b0b0b0;">Your verification code to complete sign in is:</p>
+                <h1 style="color: #f3c653; font-size: 38px; letter-spacing: 5px; margin: 20px 0;">${loginOtp}</h1>
+                <p style="color: #b0b0b0;">This code expires in 10 minutes.</p>
+            </div>
+        </div>`;
 
-        getResendClient().emails.send(emailPayload).catch(err => console.error('Email send error:', err));
+        sendEmailViaBrevo({
+            to: user.email,
+            subject: `Sign In Verification — Code: ${loginOtp} (#${uniqueId})`,
+            htmlContent
+        }).catch(err => console.error('Email send error:', err));
 
         return res.status(200).json({ 
             success: true, 
@@ -386,22 +409,21 @@ app.post('/api/resend-code', async (req, res) => {
         user.verificationCodeExpire = Date.now() + (10 * 60 * 1000); 
         await user.save();
 
-        const emailPayload = {
-            from: EMAIL_FROM,
+        const htmlContent = `
+        <div style="background-color: #0c0c0c; padding: 40px 20px; font-family: sans-serif; color: #ffffff;">
+            <div style="max-width: 550px; margin: auto; background-color: #141414; border: 1px solid #262626; border-radius: 12px; padding: 30px; text-align: center;">
+                <h2 style="color: #d4af37;">Sign In Verification</h2>
+                <p style="color: #b0b0b0;">Your new verification code is:</p>
+                <h1 style="color: #f3c653; font-size: 38px; letter-spacing: 5px; margin: 20px 0;">${newLoginOtp}</h1>
+                <p style="color: #b0b0b0;">This code expires in 10 minutes.</p>
+            </div>
+        </div>`;
+
+        sendEmailViaBrevo({
             to: user.email,
             subject: `Resend Sign In Verification — Code: ${newLoginOtp} (#${uniqueId})`,
-            html: `
-            <div style="background-color: #0c0c0c; padding: 40px 20px; font-family: sans-serif; color: #ffffff;">
-                <div style="max-width: 550px; margin: auto; background-color: #141414; border: 1px solid #262626; border-radius: 12px; padding: 30px; text-align: center;">
-                    <h2 style="color: #d4af37;">Sign In Verification</h2>
-                    <p style="color: #b0b0b0;">Your new verification code is:</p>
-                    <h1 style="color: #f3c653; font-size: 38px; letter-spacing: 5px; margin: 20px 0;">${newLoginOtp}</h1>
-                    <p style="color: #b0b0b0;">This code expires in 10 minutes.</p>
-                </div>
-            </div>`
-        };
-
-        getResendClient().emails.send(emailPayload).catch(err => console.error('Resend Email error:', err));
+            htmlContent
+        }).catch(err => console.error('Resend Email error:', err));
 
         res.json({ success: true, message: 'New verification code sent successfully.' });
     } catch (error) {
@@ -453,24 +475,24 @@ app.post('/api/forgot-password', async (req, res) => {
         const resetLink = `${protocol}://${host}/reset-password.html?token=${resetToken}&t=${timestamp}`;
         const uniqueId = Date.now();
 
-        const emailPayload = {
-            from: EMAIL_FROM,
+        const htmlContent = `
+        <style>
+            .reset-btn { background-color: #d4af37; color: #111; padding: 12px 20px; text-decoration: none; font-weight: bold; border-radius: 8px; display: inline-block; margin-top: 20px; }
+        </style>
+        <div style="background-color: #0c0c0c; padding: 40px 20px; font-family: sans-serif; color: #ffffff;">
+            <div style="max-width: 550px; margin: auto; background-color: #141414; border: 1px solid #262626; border-radius: 12px; padding: 30px; text-align: center;">
+                <h2 style="color: #d4af37;">Password Reset Request</h2>
+                <p style="color: #b0b0b0;">Click the button below to reset your password. This link expires in 15 minutes.</p>
+                <a href="${resetLink}" class="reset-btn">Reset Password</a>
+            </div>
+        </div>`;
+
+        sendEmailViaBrevo({
             to: cleanEmail,
             subject: `Password Reset Request (#${uniqueId})`,
-            html: `
-            <style>
-                .reset-btn { background-color: #d4af37; color: #111; padding: 12px 20px; text-decoration: none; font-weight: bold; border-radius: 8px; display: inline-block; margin-top: 20px; }
-            </style>
-            <div style="background-color: #0c0c0c; padding: 40px 20px; font-family: sans-serif; color: #ffffff;">
-                <div style="max-width: 550px; margin: auto; background-color: #141414; border: 1px solid #262626; border-radius: 12px; padding: 30px; text-align: center;">
-                    <h2 style="color: #d4af37;">Password Reset Request</h2>
-                    <p style="color: #b0b0b0;">Click the button below to reset your password. This link expires in 15 minutes.</p>
-                    <a href="${resetLink}" class="reset-btn">Reset Password</a>
-                </div>
-            </div>`
-        };
-
-        getResendClient().emails.send(emailPayload).catch(err => console.error('Reset Email error:', err));
+            htmlContent
+        }).catch(err => console.error('Reset Email error:', err));
+        
         res.json({ success: true, message: 'Password reset link sent to your email.' });
     } catch (error) {
         console.error('Forgot Password Error:', error);
