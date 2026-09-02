@@ -373,9 +373,10 @@
             const lockoutUntil = localStorage.getItem(lockoutKey);
             
             if (lockoutUntil) {
-                const remainingTime = parseInt(lockoutUntil, 10) - new Date().getTime();
-                if (remainingTime > 0) {
-                    startCountdown(remainingTime);
+                const lockoutTimeNum = Number(lockoutUntil);
+                const remainingTime = lockoutTimeNum - new Date().getTime();
+                if (!isNaN(remainingTime) && remainingTime > 0) {
+                    startCountdownFromTarget(lockoutTimeNum);
                 } else {
                     localStorage.removeItem(lockoutKey);
                     localStorage.removeItem('tbr_signin_attempts_' + identifier);
@@ -387,6 +388,12 @@
         }
 
         function startCountdown(durationMs) {
+            const lockoutEnd = new Date().getTime() + Number(durationMs);
+            localStorage.setItem('tbr_signin_lockout_' + document.getElementById('signin-email').value.trim(), lockoutEnd);
+            startCountdownFromTarget(lockoutEnd);
+        }
+
+        function startCountdownFromTarget(lockoutEndTime) {
             const submitBtn = document.getElementById('submitBtn');
             const passInput = document.getElementById('signin-pass');
 
@@ -395,13 +402,11 @@
 
             if (countdownInterval) clearInterval(countdownInterval);
 
-            const lockoutEnd = new Date().getTime() + durationMs;
-
             countdownInterval = setInterval(() => {
                 const now = new Date().getTime();
-                const distance = lockoutEnd - now;
+                const distance = Number(lockoutEndTime) - now;
 
-                if (distance <= 0) {
+                if (isNaN(distance) || distance <= 0) {
                     clearInterval(countdownInterval);
                     const identifier = document.getElementById('signin-email').value.trim();
                     if (identifier) {
@@ -485,8 +490,6 @@
 
             if (currentAttempts > 5) {
                 const lockoutDurationMs = 25 * 60 * 1000;
-                const lockoutEndTime = new Date().getTime() + lockoutDurationMs;
-                localStorage.setItem('tbr_signin_lockout_' + identifier, lockoutEndTime);
                 startCountdown(lockoutDurationMs);
                 return;
             }
@@ -516,9 +519,13 @@
                     const errorMsg = data.message ? data.message.toLowerCase() : '';
                     
                     if (currentAttempts >= 5 || errorMsg.includes('too many') || response.status === 429) {
-                        const lockoutDurationMs = data.lockUntil ? (data.lockUntil - new Date().getTime()) : (25 * 60 * 1000);
-                        const lockoutEndTime = new Date().getTime() + lockoutDurationMs;
-                        localStorage.setItem('tbr_signin_lockout_' + identifier, lockoutEndTime);
+                        let lockoutDurationMs = 25 * 60 * 1000;
+                        if (data.lockUntil) {
+                            const serverLockTime = new Date(data.lockUntil).getTime();
+                            if (!isNaN(serverLockTime)) {
+                                lockoutDurationMs = Math.max(serverLockTime - new Date().getTime(), lockoutDurationMs);
+                            }
+                        }
                         startCountdown(lockoutDurationMs);
                     } else {
                         showError("Sign in failed", data.message || 'Incorrect email or password.');
