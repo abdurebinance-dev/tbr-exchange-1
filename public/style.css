@@ -3,11 +3,45 @@ body {
     color: #e0e0e0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     margin: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
+    padding: 0;
     box-sizing: border-box;
+    overflow-x: hidden;
+}
+
+/* ሄደር እና ናቪጌሽን */
+header, .navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 40px;
+    background-color: #0b0b0b;
+    border-bottom: 1px solid #1f1f1f;
+    width: 100%;
+    box-sizing: border-box;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.nav-links {
+    display: flex;
+    gap: 25px;
+}
+
+.nav-links a {
+    color: #888;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.nav-links a:hover {
+    color: #fff;
+}
+
+.auth-buttons, .header-buttons {
+    display: flex;
+    gap: 12px;
+    align-items: center;
 }
 
 .form-container {
@@ -19,6 +53,7 @@ body {
     border: 1px solid #d4af3744;
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.9);
     box-sizing: border-box;
+    margin: 40px auto; /* ፎርሙ መሃል ላይ እንዲሆን ግን ከላይና ከታች ቦታ እንዲኖረው */
 }
 
 .logo-header {
@@ -265,31 +300,31 @@ input:focus {
 }
 
 /* ========================================================= */
-/* MOBILE RESPONSIVE FIXES (የተስተካከለ የሞባይል አቀማመጥ) */
+/* MOBILE RESPONSIVE FIXES (ለሞባይል ስክሪኖች ትክክለኛ አቀማመጥ) */
 /* ========================================================= */
 @media (max-width: 768px) {
     body {
-        align-items: flex-start;
-        padding: 10px;
+        padding: 0;
         overflow-x: hidden;
     }
 
     .form-container {
-        width: 100% !important;
+        width: 92% !important;
         max-width: 100% !important;
         padding: 20px 15px !important;
-        margin-top: 10px;
+        margin: 20px auto !important;
         border-radius: 12px;
     }
 
-    /* የናቪጌሽን ባር እና ሄደር መደራረብን መከላከል */
+    /* የናቪጌሽን ባር እና ሄደር በስልክ ላይ ተደራርበው እንዳይበላሹ */
     header, .navbar {
         display: flex !important;
         flex-direction: column !important;
         align-items: center !important;
         justify-content: center !important;
         width: 100% !important;
-        gap: 8px !important;
+        gap: 12px !important;
+        padding: 15px 10px !important;
         text-align: center !important;
     }
 
@@ -297,27 +332,28 @@ input:focus {
         display: flex !important;
         flex-wrap: wrap !important;
         justify-content: center !important;
-        gap: 12px !important;
+        gap: 15px !important;
         width: 100% !important;
     }
 
-    /* ቁልፎች እና ሎጎዎች ስልክ ላይ ተጨናንቀው እንዳይበላሹ */
+    /* ቁልፎች በሞባይል ስክሪን ጎን ለጎን ተዘርግተው ውብ እንዲሆኑ */
     .auth-buttons, .header-buttons {
         display: flex !important;
         flex-direction: row !important;
-        gap: 8px !important;
+        gap: 10px !important;
         width: 100% !important;
+        max-width: 320px;
         justify-content: center !important;
     }
 
-    .auth-buttons a, .header-buttons a {
+    .auth-buttons a, .header-buttons a, .auth-buttons button, .header-buttons button {
         flex: 1 !important;
         padding: 10px 5px !important;
         font-size: 13px !important;
         text-align: center !important;
+        box-sizing: border-box;
     }
 
-    /* የቅርጸ-ቁጥር (Font Size) ማስተካከያ */
     h1 {
         font-size: 24px !important;
         line-height: 1.2 !important;
