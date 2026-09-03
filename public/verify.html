@@ -251,12 +251,12 @@
                 <div class="inner-box-desc">Enter the 6-digit code from your inbox</div>
 
                 <div class="code-inputs">
-                    <input type="text" maxlength="1" class="code-input" required>
-                    <input type="text" maxlength="1" class="code-input" required>
-                    <input type="text" maxlength="1" class="code-input" required>
-                    <input type="text" maxlength="1" class="code-input" required>
-                    <input type="text" maxlength="1" class="code-input" required>
-                    <input type="text" maxlength="1" class="code-input" required>
+                    <input type="text" maxlength="1" class="code-input" inputmode="numeric" pattern="[0-9]*" required>
+                    <input type="text" maxlength="1" class="code-input" inputmode="numeric" pattern="[0-9]*" required>
+                    <input type="text" maxlength="1" class="code-input" inputmode="numeric" pattern="[0-9]*" required>
+                    <input type="text" maxlength="1" class="code-input" inputmode="numeric" pattern="[0-9]*" required>
+                    <input type="text" maxlength="1" class="code-input" inputmode="numeric" pattern="[0-9]*" required>
+                    <input type="text" maxlength="1" class="code-input" inputmode="numeric" pattern="[0-9]*" required>
                 </div>
 
                 <div class="paste-btn-container">
@@ -293,19 +293,36 @@
             document.getElementById('userEmailDisplay').innerText = masked;
         }
 
-        // የቁጥር ሳጥኖች አቀማመጥ እና አውቶ-ፎከስ
+        // የተስተካከለ የቁጥር ሳጥኖች አቀማመጥ እና አውቶ-ፎከስ (Focus & Navigation Logic)
         const inputs = document.querySelectorAll('.code-input');
+
         inputs.forEach((input, index) => {
+            // ሳጥኑ ላይ ሲጫኑ የነበረውን ቁጥር ቶሎ እንዲመርጥና አዲስ ለመጻፍ እንዲመች ማድረግ
+            input.addEventListener('focus', () => input.select());
+
             input.addEventListener('input', (e) => {
                 const val = e.target.value;
-                e.target.value = val.replace(/\D/g, '');
-                if (e.target.value && index < inputs.length - 1) {
-                    inputs[index + 1].focus();
+                const numericVal = val.replace(/\D/g, ''); // ቁጥር ብቻ እንዲቀበል
+                
+                if (numericVal) {
+                    e.target.value = numericVal.slice(-1); // የአንድ ሳጥን ገደብ እንዲጠበቅ
+                    if (index < inputs.length - 1) {
+                        inputs[index + 1].focus();
+                    }
+                } else {
+                    e.target.value = '';
                 }
             });
+
             input.addEventListener('keydown', (e) => {
-                if (e.key === 'Backspace' && !input.value && index > 0) {
-                    inputs[index - 1].focus();
+                if (e.key === 'Backspace') {
+                    e.preventDefault();
+                    if (input.value !== '') {
+                        input.value = '';
+                    } else if (index > 0) {
+                        inputs[index - 1].focus();
+                        inputs[index - 1].value = '';
+                    }
                 }
             });
         });
@@ -381,12 +398,10 @@
                     messageDiv.style.color = '#51cf66';
                     messageDiv.innerText = 'New verification code sent successfully!';
                     
-                    // ሰዓቱን ዳግም ወደ 60 ሰከንድ መመለስ
                     resendBtn.disabled = true;
                     resendBtn.classList.remove('active');
                     resendSeconds = 60;
                     
-                    // ቆጣሪውን እንደገና ማስጀመር
                     const newInterval = setInterval(() => {
                         if (resendSeconds <= 0) {
                             clearInterval(newInterval);
@@ -427,13 +442,14 @@
             }
 
             try {
-                const response = await fetch(`${API_URL}/api/verify`, {
+                const response = `${API_URL}/api/verify`;
+                const res = await fetch(response, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, code })
                 });
 
-                const data = await response.json();
+                const data = await res.json();
 
                 if (data.success) {
                     messageDiv.style.color = '#51cf66';
