@@ -27,9 +27,14 @@
             gap: 40px;
         }
         .logo {
-            font-size: 26px;
-            font-weight: bold;
-            color: #d4af37;
+            font-size: 22px;
+            font-weight: 900;
+            color: #111;
+            background: linear-gradient(135deg, #f5d77f 0%, #d4af37 50%, #aa8621 100%);
+            padding: 4px 12px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
             letter-spacing: 1px;
         }
         .nav-links {
@@ -451,7 +456,6 @@
     </div>
 
     <script>
-        // የተጠቃሚውን ኢሜይል ከ localStorage አምጥቶ ስሙን ወይም አድራሻውን በGreeting ቦታ ማሳየት
         const email = localStorage.getItem('signupEmail');
         if (email) {
             const username = email.split('@')[0].toUpperCase();

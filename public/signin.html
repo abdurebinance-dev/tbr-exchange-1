@@ -228,9 +228,10 @@
 </head>
 <body>
     <div class="form-container">
-        <div class="logo-header" style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-bottom: 20px;">
-            <div class="logo-symbol" style="font-size: 28px; color: #d4af37; font-weight: bold;">TBR</div>
-            <span style="font-size: 18px; font-weight: 600; color: #fff; letter-spacing: 0.5px;">TBR Exchange</span>
+        <!-- ሎጎው አስተካክሎ ተቀምጧል -->
+        <div class="logo-header" style="display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 20px;">
+            <div class="logo-symbol" style="font-size: 26px; color: #111; font-weight: 900; background: linear-gradient(135deg, #f5d77f 0%, #d4af37 50%, #aa8621 100%); padding: 4px 10px; border-radius: 8px;">TBR</div>
+            <span style="font-size: 20px; font-weight: 700; color: #fff; letter-spacing: 0.5px;">Exchange</span>
         </div>
         
         <h2 style="margin: 0 0 5px 0; font-size: 22px; text-align: center;">Welcome back</h2>
@@ -294,7 +295,6 @@
     </div>
 
     <script>
-        // Backend API Base URL Configuration (Automatic detection for Local vs Production/Vercel)
         const API_BASE_URL = window.location.hostname.includes('localhost') 
             ? '' 
             : 'https://tbr-exchange-backend.onrender.com';
@@ -338,7 +338,6 @@
             }
         };
 
-        // Passkey Authentication Handler
         document.getElementById('passkeyBtn').addEventListener('click', async () => {
             try {
                 showError("Passkey", "Connecting to biometric / passkey device...");
