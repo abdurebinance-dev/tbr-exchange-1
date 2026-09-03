@@ -306,7 +306,6 @@
                 const numericVal = val.replace(/\D/g, '');
                 
                 if (numericVal) {
-                    // Handle multi-character input (e.g. autofill or typing fast)
                     const chars = numericVal.split('');
                     let currentIndex = index;
                     for (let i = 0; i < chars.length && currentIndex < inputs.length; i++) {
@@ -332,6 +331,23 @@
                         inputs[index - 1].focus();
                         inputs[index - 1].value = '';
                     }
+                }
+            });
+
+            // በሳጥኖቹ ላይ በቀጥታ ፔስት (Ctrl+V) ሲደረግ 6ቱን ቁጥሮች በቅደም ተከተል እንዲቀበል
+            input.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const pasteData = e.clipboardData.getData('text').trim();
+                const digits = pasteData.replace(/\D/g, '').split('');
+                
+                inputs.forEach((inp, idx) => {
+                    if (digits[idx]) {
+                        inp.value = digits[idx];
+                    }
+                });
+                
+                if (digits.length > 0) {
+                    inputs[Math.min(digits.length - 1, 5)].focus();
                 }
             });
         });
