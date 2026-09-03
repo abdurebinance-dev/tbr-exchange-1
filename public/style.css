@@ -265,18 +265,20 @@ input:focus {
 }
 
 /* ========================================================= */
-/* MOBILE RESPONSIVE FIXES (ስልክ ላይ የጽሁፍ መደራረብን ለማስተካከል) */
+/* MOBILE RESPONSIVE FIXES (ስልክ ላይ የፎርም እና የናቪጌሽን መደራረብን ማስተካከል) */
 /* ========================================================= */
 @media (max-width: 768px) {
     body {
         align-items: flex-start;
-        padding: 10px;
+        padding: 15px;
+        overflow-x: hidden;
     }
 
     .form-container {
         width: 100% !important;
+        max-width: 100% !important;
         padding: 20px 15px !important;
-        margin-top: 10px;
+        margin-top: 20px;
     }
 
     /* የናቪጌሽን ባር እና ሜኑዎች በስልክ ላይ ተደራርበው እንዳይበላሹ */
@@ -289,8 +291,12 @@ input:focus {
 
     /* በስልክ ስክሪን ላይ ግዙፍ ጽሁፎች ተጣብቀው እንዳይጠፉ የቅርጸ-ቁጥር (Font Size) ማስተካከያ */
     h1 {
-        font-size: 28px !important;
+        font-size: 26px !important;
         line-height: 1.2 !important;
+    }
+
+    h2 {
+        font-size: 20px !important;
     }
 
     p, .hero-description {

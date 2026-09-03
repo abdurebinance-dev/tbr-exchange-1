@@ -284,7 +284,6 @@
             margin-bottom: 5px;
             font-size: 15px;
         }
-
         .stats-top-bar {
             max-width: 1300px;
             margin: 0 auto 60px auto;
@@ -309,7 +308,6 @@
             letter-spacing: 1px;
             font-weight: 600;
         }
-
         .features-section {
             padding: 40px 80px 80px 80px;
             max-width: 1400px;
@@ -362,7 +360,6 @@
             line-height: 1.6;
             margin: 0;
         }
-
         .steps-section {
             background: #080808;
             padding: 60px 80px;
@@ -405,7 +402,6 @@
             line-height: 1.6;
             margin: 0;
         }
-
         .payment-section {
             max-width: 1400px;
             margin: 0 auto;
@@ -442,7 +438,6 @@
             align-items: center;
             gap: 10px;
         }
-
         .footer {
             border-top: 1px solid #1a1a1a;
             padding: 40px 80px;
@@ -485,7 +480,7 @@
         </div>
     </nav>
 
-    <!-- HEROS SECTION -->
+    <!-- HERO SECTION -->
     <section class="hero-section">
         <div class="hero-left">
             <div class="badge">
@@ -507,7 +502,7 @@
                     <div class="calc-field">
                         <label id="pay-label">PAY (USDT)</label>
                         <div class="calc-input-wrapper">
-                            <input type="number" id="calc-amount" class="calc-input" value="5.20" step="0.01" oninput="calculate()">
+                            <input type="number" id="calc-amount" class="calc-input" value="5.20" step="0.01">
                             <span class="calc-unit" id="pay-unit">USDT</span>
                         </div>
                     </div>
@@ -527,8 +522,8 @@
             </div>
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <div style="width: 32px; height: 32px; background: #333; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #d4af37; font-weight: bold;">f</div>
-                    <span style="color: #fff; font-size: 14px;">fatuma</span>
+                    <div style="width: 32px; height: 32px; background: #333; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #d4af37; font-weight: bold;">A</div>
+                    <span style="color: #fff; font-size: 14px;">Abdurahman</span>
                 </div>
                 <div style="display: flex; gap: 12px; color: #aaa;">
                     <i class="fa-regular fa-bell"></i>
@@ -536,7 +531,7 @@
                 </div>
             </div>
 
-            <div style="font-size: 12px; color: #777; margin-bottom: 5px;">Afternoon, fatuma</div>
+            <div style="font-size: 12px; color: #777; margin-bottom: 5px;">Afternoon, Abdurahman</div>
 
             <div class="wallet-card">
                 <div style="font-size: 11px; color: #777; font-weight: bold;">TOTAL WALLET BALANCE</div>
@@ -665,51 +660,7 @@
         </div>
     </footer>
 
-    <script>
-        let currentMode = 'sell';
-        const rate = 189.00;
-
-        function setMode(mode) {
-            currentMode = mode;
-            const buyTab = document.getElementById('tab-buy');
-            const sellTab = document.getElementById('tab-sell');
-            const payLabel = document.getElementById('pay-label');
-            const receiveLabel = document.getElementById('receive-label');
-            const payUnit = document.getElementById('pay-unit');
-            const amountInput = document.getElementById('calc-amount');
-
-            if (mode === 'buy') {
-                buyTab.classList.add('active');
-                sellTab.classList.remove('active');
-                payLabel.innerText = "PAY (ETB)";
-                receiveLabel.innerText = "RECEIVE (USDT)";
-                payUnit.innerText = "ETB";
-                amountInput.value = "982.80";
-            } else {
-                sellTab.classList.add('active');
-                buyTab.classList.remove('active');
-                payLabel.innerText = "PAY (USDT)";
-                receiveLabel.innerText = "RECEIVE (ETB)";
-                payUnit.innerText = "USDT";
-                amountInput.value = "5.20";
-            }
-            calculate();
-        }
-
-        function calculate() {
-            const amount = parseFloat(document.getElementById('calc-amount').value) || 0;
-            const resultDisplay = document.getElementById('calc-result');
-            const receiveUnitText = currentMode === 'sell' ? 'ETB' : 'USDT';
-
-            let result = 0;
-            if (currentMode === 'sell') {
-                result = amount * rate;
-            } else {
-                result = amount / rate;
-            }
-
-            resultDisplay.innerHTML = `${result.toFixed(2)} <span style="font-size: 12px; color: #777; font-weight: normal;">${receiveUnitText}</span>`;
-        }
-    </script>
+    <!-- Link the external script.js -->
+    <script src="script.js"></script>
 </body>
 </html>
