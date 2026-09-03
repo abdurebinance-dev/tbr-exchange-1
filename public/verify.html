@@ -253,7 +253,7 @@
                 <div class="inner-box-desc">Enter the 6-digit code from your inbox</div>
 
                 <div class="code-inputs">
-                    <input type="text" maxlength="1" class="code-input" inputmode="numeric" pattern="[0-9]*" required>
+                    <input type="text" maxlength="1" class="code-input" inputmode="numeric" pattern="[0-9]*" required autocomplete="one-time-code">
                     <input type="text" maxlength="1" class="code-input" inputmode="numeric" pattern="[0-9]*" required>
                     <input type="text" maxlength="1" class="code-input" inputmode="numeric" pattern="[0-9]*" required>
                     <input type="text" maxlength="1" class="code-input" inputmode="numeric" pattern="[0-9]*" required>
@@ -306,9 +306,17 @@
                 const numericVal = val.replace(/\D/g, '');
                 
                 if (numericVal) {
-                    e.target.value = numericVal.slice(-1);
-                    if (index < inputs.length - 1) {
-                        inputs[index + 1].focus();
+                    // Handle multi-character input (e.g. autofill or typing fast)
+                    const chars = numericVal.split('');
+                    let currentIndex = index;
+                    for (let i = 0; i < chars.length && currentIndex < inputs.length; i++) {
+                        inputs[currentIndex].value = chars[i];
+                        currentIndex++;
+                    }
+                    if (currentIndex < inputs.length) {
+                        inputs[currentIndex].focus();
+                    } else {
+                        inputs[inputs.length - 1].focus();
                     }
                 } else {
                     e.target.value = '';
@@ -376,7 +384,9 @@
                 resendBtn.innerHTML = "Resend Code";
             } else {
                 resendSeconds--;
-                resendTimerSpan.innerText = resendSeconds;
+                if (resendTimerSpan) {
+                    resendTimerSpan.innerText = resendSeconds;
+                }
             }
         }, 1000);
 
@@ -443,8 +453,8 @@
             }
 
             try {
-                const response = `${API_URL}/api/verify`;
-                const res = await fetch(response, {
+                const endpoint = `${API_URL}/api/verify`;
+                const res = await fetch(endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, code })
