@@ -265,12 +265,12 @@ input:focus {
 }
 
 /* ========================================================= */
-/* MOBILE RESPONSIVE FIXES (ስልክ ላይ የፎርም እና የናቪጌሽን መደራረብን ማስተካከል) */
+/* MOBILE RESPONSIVE FIXES (የተስተካከለ የሞባይል አቀማመጥ) */
 /* ========================================================= */
 @media (max-width: 768px) {
     body {
         align-items: flex-start;
-        padding: 15px;
+        padding: 10px;
         overflow-x: hidden;
     }
 
@@ -278,20 +278,48 @@ input:focus {
         width: 100% !important;
         max-width: 100% !important;
         padding: 20px 15px !important;
-        margin-top: 20px;
+        margin-top: 10px;
+        border-radius: 12px;
     }
 
-    /* የናቪጌሽን ባር እና ሜኑዎች በስልክ ላይ ተደራርበው እንዳይበላሹ */
-    header, .navbar, .nav-links {
+    /* የናቪጌሽን ባር እና ሄደር መደራረብን መከላከል */
+    header, .navbar {
+        display: flex !important;
         flex-direction: column !important;
         align-items: center !important;
-        gap: 10px !important;
+        justify-content: center !important;
+        width: 100% !important;
+        gap: 8px !important;
         text-align: center !important;
     }
 
-    /* በስልክ ስክሪን ላይ ግዙፍ ጽሁፎች ተጣብቀው እንዳይጠፉ የቅርጸ-ቁጥር (Font Size) ማስተካከያ */
+    .nav-links {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        gap: 12px !important;
+        width: 100% !important;
+    }
+
+    /* ቁልፎች እና ሎጎዎች ስልክ ላይ ተጨናንቀው እንዳይበላሹ */
+    .auth-buttons, .header-buttons {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 8px !important;
+        width: 100% !important;
+        justify-content: center !important;
+    }
+
+    .auth-buttons a, .header-buttons a {
+        flex: 1 !important;
+        padding: 10px 5px !important;
+        font-size: 13px !important;
+        text-align: center !important;
+    }
+
+    /* የቅርጸ-ቁጥር (Font Size) ማስተካከያ */
     h1 {
-        font-size: 26px !important;
+        font-size: 24px !important;
         line-height: 1.2 !important;
     }
 
@@ -300,7 +328,7 @@ input:focus {
     }
 
     p, .hero-description {
-        font-size: 14px !important;
+        font-size: 13px !important;
         line-height: 1.4 !important;
     }
 }
