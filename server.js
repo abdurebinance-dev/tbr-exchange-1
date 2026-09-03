@@ -26,8 +26,9 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// ሰርቨሩ ስታቲክ ፋይሎችን ከ public ፎልደር እንዲያነብ የሚያደርገው ትክክለኛ ትዕዛዝ
-app.use(express.static(path.join(__dirname, 'public')));
+// 1. ስታቲክ ፋይሎችን በግልጽ እና በትክክለኛ አቅጣጫ ማስቀመጥ
+const publicPath = path.join(process.cwd(), 'public');
+app.use(express.static(publicPath));
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/tbr_exchange')
@@ -530,6 +531,11 @@ app.post('/api/reset-password', async (req, res) => {
         console.error('Reset Password Error:', error);
         res.status(500).json({ success: false, message: error.message || 'Server error during password reset.' });
     }
+});
+
+// 10. Fallback Route ለ SPA / HTML ፋይሎች (ከሰርቨሩ መጨረሻ ላይ የሚቀመጥ)
+app.get('*', (req, res) => {
+    res.sendFile(path.join(publicPath, 'index.html'));
 });
 
 // Start Server
