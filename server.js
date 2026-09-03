@@ -25,6 +25,8 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
+
+// ሰርቨሩ ስታቲክ ፋይሎችን ከ public ፎልደር እንዲያነብ የሚያደርገው ትክክለኛ ትዕዛዝ
 app.use(express.static(path.join(__dirname, 'public')));
 
 // MongoDB Connection
