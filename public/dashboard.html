@@ -26,16 +26,11 @@
             align-items: center;
             gap: 40px;
         }
-        .logo {
-            font-size: 22px;
-            font-weight: 900;
-            color: #111;
-            background: linear-gradient(135deg, #f5d77f 0%, #d4af37 50%, #aa8621 100%);
-            padding: 4px 12px;
-            border-radius: 8px;
-            display: inline-flex;
-            align-items: center;
-            letter-spacing: 1px;
+        .logo-container img {
+            height: 38px;
+            width: auto;
+            object-fit: contain;
+            display: block;
         }
         .nav-links {
             display: flex;
@@ -323,7 +318,9 @@
     <!-- Navbar -->
     <div class="navbar">
         <div class="nav-left">
-            <div class="logo">TBR</div>
+            <div class="logo-container">
+                <img src="logo.png" alt="TBR Exchange Logo">
+            </div>
             <div class="nav-links">
                 <a href="#" class="active"><i class="fa-solid fa-house"></i> Dashboard</a>
                 <a href="#"><i class="fa-solid fa-store"></i> Market</a>
@@ -451,7 +448,9 @@
                     <p>Protect your account with an authenticator app</p>
                 </div>
             </div>
-            <i class="fa-solid fa-chevron-right" style="color: #444; font-size: 14px;"></i>
+            <div class="banner-right">
+                <i class="fa-solid fa-chevron-right" style="color: #444; font-size: 14px;"></i>
+            </div>
         </div>
     </div>
 
