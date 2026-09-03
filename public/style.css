@@ -26,7 +26,21 @@ header, .navbar {
 .nav-left {
     display: flex;
     align-items: center;
+    gap: 12px;
+}
+
+/* የናቭ ሎጎ ምስል ትክክለኛ መጠን */
+.logo-container {
+    display: flex;
+    align-items: center;
     gap: 10px;
+    text-decoration: none;
+}
+
+.logo-img {
+    height: 36px;
+    width: auto;
+    object-fit: contain;
 }
 
 .nav-links {
@@ -87,6 +101,23 @@ header, .navbar {
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.9);
     box-sizing: border-box;
     margin: 40px auto;
+}
+
+/* ለሁሉም ፎርሞች (Sign in, Sign up, Verification) ሎጎ ማስተካከያ */
+.form-logo-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.form-logo-img {
+    height: 48px;
+    width: auto;
+    object-fit: contain;
 }
 
 .logo-header {
@@ -333,7 +364,7 @@ input:focus {
 }
 
 /* ========================================================= */
-/* MOBILE RESPONSIVE FIXES (ግራ ሎጎ እና በቀኝ ቁልፎች እንዲሆኑ የተስተካከለ) */
+/* MOBILE RESPONSIVE FIXES */
 /* ========================================================= */
 @media (max-width: 768px) {
     body {
@@ -349,7 +380,6 @@ input:focus {
         border-radius: 12px;
     }
 
-    /* ሄደሩ በሞባይል ስክሪን ላይ ግራና በቀኝ ብቻ እንዲሆን (flex-direction: row) */
     header, .navbar {
         display: flex !important;
         flex-direction: row !important;
@@ -360,12 +390,10 @@ input:focus {
         box-sizing: border-box !important;
     }
 
-    /* መሀል ላይ ያሉትን ሊንኮች በሞባይል ስክሪን ላይ እንሰውራቸዋለን */
     .nav-links {
         display: none !important;
     }
 
-    /* በቀኝ በኩል ያሉት ቁልፎች በንጽህና ጎን ለጎን እንዲቀመጡ */
     .auth-buttons, .header-buttons, .nav-right {
         display: flex !important;
         flex-direction: row !important;
