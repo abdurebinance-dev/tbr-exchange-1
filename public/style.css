@@ -23,6 +23,12 @@ header, .navbar {
     z-index: 1000;
 }
 
+.nav-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
 .nav-links {
     display: flex;
     gap: 25px;
@@ -38,10 +44,36 @@ header, .navbar {
     color: #fff;
 }
 
-.auth-buttons, .header-buttons {
+.auth-buttons, .header-buttons, .nav-right {
     display: flex;
     gap: 12px;
     align-items: center;
+}
+
+.signin-link {
+    color: #e0e0e0;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.signin-link:hover {
+    color: #fff;
+}
+
+.get-started-btn {
+    background: linear-gradient(135deg, #f5d77f 0%, #d4af37 50%, #aa8621 100%);
+    color: #111;
+    padding: 9px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: bold;
+    text-decoration: none;
+    transition: 0.2s;
+}
+
+.get-started-btn:hover {
+    opacity: 0.95;
 }
 
 .form-container {
@@ -53,7 +85,7 @@ header, .navbar {
     border: 1px solid #d4af3744;
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.9);
     box-sizing: border-box;
-    margin: 40px auto; /* ፎርሙ መሃል ላይ እንዲሆን ግን ከላይና ከታች ቦታ እንዲኖረው */
+    margin: 40px auto;
 }
 
 .logo-header {
@@ -300,7 +332,7 @@ input:focus {
 }
 
 /* ========================================================= */
-/* MOBILE RESPONSIVE FIXES (ለሞባይል ስክሪኖች ትክክለኛ አቀማመጥ) */
+/* MOBILE RESPONSIVE FIXES (ግራ ሎጎ እና በቀኝ ቁልፎች እንዲሆኑ የተስተካከለ) */
 /* ========================================================= */
 @media (max-width: 768px) {
     body {
@@ -316,42 +348,37 @@ input:focus {
         border-radius: 12px;
     }
 
-    /* የናቪጌሽን ባር እና ሄደር በስልክ ላይ ተደራርበው እንዳይበላሹ */
+    /* ሄደሩ ልክ እንደ ሁለተኛው ምስል ግራና በቀኝ ብቻ እንዲሆን (flex-direction: row) */
     header, .navbar {
         display: flex !important;
-        flex-direction: column !important;
+        flex-direction: row !important;
+        justify-content: space-between !important;
         align-items: center !important;
-        justify-content: center !important;
         width: 100% !important;
-        gap: 12px !important;
-        padding: 15px 10px !important;
-        text-align: center !important;
+        padding: 12px 16px !important;
     }
 
+    /* መሃል ላይ ያሉትን ሊንኮች በሞባይል ስክሪን ላይ እንሰውራቸዋለን */
     .nav-links {
-        display: flex !important;
-        flex-wrap: wrap !important;
-        justify-content: center !important;
-        gap: 15px !important;
-        width: 100% !important;
+        display: none !important;
     }
 
-    /* ቁልፎች በሞባይል ስክሪን ጎን ለጎን ተዘርግተው ውብ እንዲሆኑ */
-    .auth-buttons, .header-buttons {
+    /* በቀኝ በኩል ያሉት ቁልፎች በንጽህና እንዲቀመጡ */
+    .auth-buttons, .header-buttons, .nav-right {
         display: flex !important;
         flex-direction: row !important;
-        gap: 10px !important;
-        width: 100% !important;
-        max-width: 320px;
-        justify-content: center !important;
+        gap: 8px !important;
+        align-items: center !important;
     }
 
-    .auth-buttons a, .header-buttons a, .auth-buttons button, .header-buttons button {
-        flex: 1 !important;
-        padding: 10px 5px !important;
-        font-size: 13px !important;
-        text-align: center !important;
-        box-sizing: border-box;
+    .signin-link {
+        font-size: 12px !important;
+    }
+
+    .get-started-btn {
+        padding: 7px 12px !important;
+        font-size: 12px !important;
+        border-radius: 6px !important;
     }
 
     h1 {
