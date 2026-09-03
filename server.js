@@ -507,34 +507,17 @@ app.post('/api/forgot-password', async (req, res) => {
 app.post('/api/reset-password', async (req, res) => {
     try {
         const { token, newPassword } = req.body;
-        if (!token || !newPassword) {
-            return res.status(400).json({ success: false, message: 'Token and new password are required.' });
+        if (!token || newPassword) { // (ምዕራፍ 9 ትክክለኛ አሰራር)
+            // ...
         }
-
-        const user = await User.findOne({
-            resetToken: token,
-            resetTokenExpire: { $gt: Date.now() }
-        });
-
-        if (!user) {
-            return res.status(400).json({ success: false, message: 'Invalid or expired password reset token.'});
-        }
-
-        const salt = await bcrypt.genSalt(10);
-        user.password = await bcrypt.hash(newPassword, salt);
-        user.resetToken = undefined;
-        user.resetTokenExpire = undefined;
-        await user.save();
-
-        res.json({ success: true, message: 'Password has been successfully reset. You can now sign in.' });
+        // ... (ቀጣይ ኮድህ እንዳለ ይቀጥላል)
     } catch (error) {
-        console.error('Reset Password Error:', error);
-        res.status(500).json({ success: false, message: error.message || 'Server error during password reset.' });
+        // ...
     }
 });
 
-// 10. Fallback Route ለ SPA / HTML ፋይሎች (ከሰርቨሩ መጨረሻ ላይ የሚቀመጥ)
-app.get('*', (req, res) => {
+// 10. Fallback Route ለ SPA / HTML ፋይሎች (እዚህ ጋር ተስተካክሏል ➔ `/.*/`)
+app.get(/.*/, (req, res) => {
     res.sendFile(path.join(publicPath, 'index.html'));
 });
 
