@@ -108,17 +108,19 @@
         .code-inputs {
             display: flex;
             justify-content: space-between;
-            gap: 8px;
+            gap: 6px;
             margin-bottom: 12px;
+            width: 100%;
         }
         .code-input {
-            width: 45px;
-            height: 52px;
+            flex: 1;
+            height: 48px;
+            min-width: 0;
             background: linear-gradient(135deg, #2a2415 0%, #1a1a1a 100%);
             border: 1px solid #d4af37;
             border-radius: 10px;
             color: #d4af37;
-            font-size: 22px;
+            font-size: 20px;
             font-weight: bold;
             text-align: center;
             outline: none;
@@ -297,15 +299,14 @@
         const inputs = document.querySelectorAll('.code-input');
 
         inputs.forEach((input, index) => {
-            // ሳጥኑ ላይ ሲጫኑ የነበረውን ቁጥር ቶሎ እንዲመርጥና አዲስ ለመጻፍ እንዲመች ማድረግ
             input.addEventListener('focus', () => input.select());
 
             input.addEventListener('input', (e) => {
                 const val = e.target.value;
-                const numericVal = val.replace(/\D/g, ''); // ቁጥር ብቻ እንዲቀበል
+                const numericVal = val.replace(/\D/g, '');
                 
                 if (numericVal) {
-                    e.target.value = numericVal.slice(-1); // የአንድ ሳጥን ገደብ እንዲጠበቅ
+                    e.target.value = numericVal.slice(-1);
                     if (index < inputs.length - 1) {
                         inputs[index + 1].focus();
                     }
