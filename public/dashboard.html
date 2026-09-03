@@ -11,8 +11,9 @@
             margin: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             color: #fff;
-            padding-bottom: 70px; /* ለሞባይል ታችኛው ናቪጌሽን የሚሆን ቦታ */
+            padding-bottom: 70px;
         }
+
         /* Navbar */
         .navbar {
             background: #121212;
@@ -60,13 +61,11 @@
             gap: 20px;
             color: #aaa;
             font-size: 18px;
-            cursor: pointer;
         }
 
-        /* ፒሲ እና ሞባይል አቀማመጥ ማስተካከያ (Desktop & Mobile View Fix) */
         @media(max-width: 900px) {
             .navbar .nav-links {
-                display: none; /* በስልክ ሰዓት የላይኛውን ሊንኮች ደብቅ */
+                display: none;
             }
             .navbar {
                 padding: 15px 20px;
@@ -97,7 +96,7 @@
         @media(max-width: 900px) {
             .top-grid { grid-template-columns: 1fr; }
             .container {
-                padding: 0 15px; /* በስልክ ሰዓት ጠርዙ እንዳይጨናነቅ ማስተካከያ */
+                padding: 0 15px;
                 margin: 15px auto;
             }
         }
@@ -241,7 +240,7 @@
             margin-bottom: 25px;
         }
         @media(max-width: 900px) {
-            .middle-grid { grid-template-columns: 1fr; } /* በስልክ ሰዓት እያንዳንዱን ካርድ በሙሉ መስመር (Full width) አድርገው */
+            .middle-grid { grid-template-columns: 1fr; }
         }
         .menu-card {
             background: #121212;
@@ -327,7 +326,7 @@
             color: #777;
         }
 
-        /* Mobile Bottom Navigation Bar (በሞባይል ስክሪን ግርጌ የሚታየው) */
+        /* Mobile Bottom Navigation Bar */
         .mobile-bottom-nav {
             display: none;
             position: fixed;
@@ -359,14 +358,47 @@
 
         @media(max-width: 900px) {
             .mobile-bottom-nav {
-                display: flex; /* በስልክ ስክሪን ላይ ብቻ እንዲታይ አድርግ */
+                display: flex;
             }
+        }
+
+        /* Light Mode Styles */
+        body.light-mode {
+            background-color: #f4f5f7 !important;
+            color: #111 !important;
+        }
+        body.light-mode .navbar, 
+        body.light-mode .balance-card, 
+        body.light-mode .rate-card,
+        body.light-mode .menu-card,
+        body.light-mode .banner-2fa,
+        body.light-mode .mobile-bottom-nav {
+            background: #ffffff !important;
+            border-color: #e2e8f0 !important;
+            color: #111 !important;
+        }
+        body.light-mode .card-title,
+        body.light-mode .greeting,
+        body.light-mode .rate-subtext,
+        body.light-mode .menu-card p,
+        body.light-mode .banner-text p {
+            color: #555 !important;
+        }
+        body.light-mode .balance-amount,
+        body.light-mode .rate-value,
+        body.light-mode .menu-card h4,
+        body.light-mode .banner-text h4 {
+            color: #111 !important;
+        }
+        body.light-mode .action-btn {
+            background: #f8fafc !important;
+            border-color: #e2e8f0 !important;
+            color: #111 !important;
         }
     </style>
 </head>
 <body>
 
-    <!-- Navbar -->
     <div class="navbar">
         <div class="nav-left">
             <div class="logo-container">
@@ -374,29 +406,26 @@
             </div>
             <div class="nav-links">
                 <a href="#" class="active"><i class="fa-solid fa-house"></i> Dashboard</a>
-                <a href="#"><i class="fa-solid fa-store"></i> Market</a>
+                <a href="market.html"><i class="fa-solid fa-store"></i> Market</a>
                 <a href="#"><i class="fa-solid fa-bullhorn"></i> My Ads</a>
                 <a href="#"><i class="fa-solid fa-right-left"></i> Trades</a>
-                <a href="#"><i class="fa-solid fa-wallet"></i> Wallet</a>
+                <a href="wallet.html"><i class="fa-solid fa-wallet"></i> Wallet</a>
                 <a href="#"><i class="fa-solid fa-trophy"></i> Top Traders</a>
             </div>
         </div>
         <div class="nav-right">
-            <i class="fa-regular fa-moon"></i>
-            <i class="fa-regular fa-bell"></i>
-            <i class="fa-solid fa-bars"></i>
+            <i id="theme-toggle" class="fa-solid fa-moon" style="color: #d4af37; cursor: pointer;" title="Toggle Theme"></i>
+            <i class="fa-regular fa-bell" style="cursor: pointer;"></i>
+            <a href="profile.html" style="color: inherit; text-decoration: none;"><i class="fa-solid fa-user-circle" style="color: #d4af37;"></i></a>
         </div>
     </div>
 
-    <!-- Main Container -->
     <div class="container">
         <div class="greeting" id="userGreeting">Evening, USER</div>
 
-        <!-- Top Grid -->
         <div class="top-grid">
-            <!-- Balance Card -->
             <div class="balance-card">
-                <div class="card-title">TOTAL BALANCE <i class="fa-regular fa-eye"></i></div>
+                <div class="card-title">TOTAL BALANCE <i class="fa-regular fa-eye" style="cursor: pointer;"></i></div>
                 <div class="balance-amount">0.00 <span>USDT</span></div>
 
                 <div class="actions-row">
@@ -419,7 +448,6 @@
                 </div>
             </div>
 
-            <!-- Live Rate Card -->
             <div class="rate-card">
                 <div>
                     <div class="rate-header">
@@ -443,7 +471,6 @@
             </div>
         </div>
 
-        <!-- Middle Menu Grid -->
         <div class="middle-grid">
             <div class="menu-card">
                 <div class="menu-card-top">
@@ -490,7 +517,6 @@
             </div>
         </div>
 
-        <!-- 2FA Banner -->
         <div class="banner-2fa">
             <div class="banner-left">
                 <div class="banner-icon"><i class="fa-solid fa-shield-halved"></i></div>
@@ -505,17 +531,16 @@
         </div>
     </div>
 
-    <!-- Mobile Bottom Navigation Bar (የተስተካከለው የሞባይል ታችኛው මෙනു) -->
     <div class="mobile-bottom-nav">
-        <a href="#" class="active">
+        <a href="dashboard.html" class="active">
             <i class="fa-solid fa-house"></i>
             <span>Home</span>
         </a>
-        <a href="#">
+        <a href="wallet.html">
             <i class="fa-solid fa-wallet"></i>
             <span>Wallet</span>
         </a>
-        <a href="#">
+        <a href="market.html">
             <i class="fa-solid fa-store"></i>
             <span>Market</span>
         </a>
@@ -523,18 +548,39 @@
             <i class="fa-solid fa-comments"></i>
             <span>Chat</span>
         </a>
-        <a href="#">
+        <a href="profile.html">
             <i class="fa-solid fa-user"></i>
             <span>Profile</span>
         </a>
     </div>
 
     <script>
+        // Username Greeting Script
         const email = localStorage.getItem('signupEmail');
         if (email) {
             const username = email.split('@')[0].toUpperCase();
             document.getElementById('userGreeting').innerText = `Evening, ${username}`;
         }
+
+        // Dark / Light Mode Toggle Script
+        const themeToggle = document.getElementById('theme-toggle');
+        
+        if (localStorage.getItem('theme') === 'light') {
+            document.body.classList.add('light-mode');
+            themeToggle.classList.replace('fa-moon', 'fa-sun');
+        }
+
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('light-mode');
+            
+            if (document.body.classList.contains('light-mode')) {
+                localStorage.setItem('theme', 'light');
+                themeToggle.classList.replace('fa-moon', 'fa-sun');
+            } else {
+                localStorage.setItem('theme', 'dark');
+                themeToggle.classList.replace('fa-sun', 'fa-moon');
+            }
+        });
     </script>
 </body>
 </html>
