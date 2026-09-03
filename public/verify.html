@@ -27,12 +27,13 @@
             box-shadow: 0 20px 40px rgba(0,0,0,0.8);
             text-align: center;
         }
-        .logo-text {
-            font-size: 32px;
-            font-weight: bold;
-            color: #d4af37;
+        .logo-img-container {
             margin-bottom: 20px;
-            letter-spacing: 1px;
+        }
+        .logo-img {
+            height: 45px;
+            width: auto;
+            object-fit: contain;
         }
         .icon-box {
             width: 75px;
@@ -228,7 +229,9 @@
 <body>
 
     <div class="auth-container">
-        <div class="logo-text">TBR</div>
+        <div class="logo-img-container">
+            <img src="logo.png" alt="TBR Exchange Logo" class="logo-img">
+        </div>
         
         <div class="icon-box">
             <i class="fa-solid fa-envelope"></i>
@@ -280,12 +283,10 @@
     </div>
 
     <script>
-        // API URL Configuration
         const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
             ? 'http://localhost:5000' 
             : 'https://tbr-exchange-backend.onrender.com';
 
-        // ኢሜይሉን ከ LocalStorage ማምጣትና ማስክ ማድረግ
         const email = localStorage.getItem('signupEmail');
         if (!email) {
             alert('Session not found. Please sign up again.');
@@ -295,7 +296,6 @@
             document.getElementById('userEmailDisplay').innerText = masked;
         }
 
-        // የተስተካከለ የቁጥር ሳጥኖች አቀማመጥ እና አውቶ-ፎከስ (Focus & Navigation Logic)
         const inputs = document.querySelectorAll('.code-input');
 
         inputs.forEach((input, index) => {
@@ -334,7 +334,6 @@
                 }
             });
 
-            // በሳጥኖቹ ላይ በቀጥታ ፔስት (Ctrl+V) ሲደረግ 6ቱን ቁጥሮች በቅደም ተከተል እንዲቀበል
             input.addEventListener('paste', (e) => {
                 e.preventDefault();
                 const pasteData = e.clipboardData.getData('text').trim();
@@ -352,7 +351,6 @@
             });
         });
 
-        // የፓስት (Paste) በተን ፋንክሽን
         async function pasteCode() {
             try {
                 const text = await navigator.clipboard.readText();
@@ -370,7 +368,6 @@
             }
         }
 
-        // --- 1. Expiration Timer (10 minutes = 600 seconds) ---
         let expireSeconds = 600;
         const expireTimerEl = document.getElementById('expireTimer');
         
@@ -387,7 +384,6 @@
             }
         }, 1000);
 
-        // --- 2. Resend Timer (60 seconds) & Button Activation ---
         let resendSeconds = 60;
         const resendBtn = document.getElementById('resendBtn');
         const resendTimerSpan = document.getElementById('resendTimer');
@@ -406,7 +402,6 @@
             }
         }, 1000);
 
-        // Resend Button Click Event
         resendBtn.addEventListener('click', async () => {
             if (resendBtn.disabled) return;
 
@@ -454,7 +449,6 @@
             }
         });
 
-        // --- Verify Form Submission to Server ---
         document.getElementById('verifyForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             let code = '';
