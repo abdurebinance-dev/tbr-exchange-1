@@ -72,14 +72,16 @@
         .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
         .upload-box, .upload-box-full {
             background: #181818; border: 1px dashed #333; border-radius: 12px;
-            padding: 25px 20px; text-align: center; cursor: pointer;
+            padding: 25px 20px; text-align: center; cursor: pointer; transition: 0.2s;
         }
+        .upload-box:hover, .upload-box-full:hover { border-color: #d4af37; background: #1a1a1a; }
         .upload-box-full { margin-bottom: 20px; }
         .submit-btn {
             width: 100%; background: #10b981; color: #fff; border: none; border-radius: 12px;
-            padding: 14px; font-size: 15px; font-weight: bold; cursor: pointer;
+            padding: 14px; font-size: 15px; font-weight: bold; cursor: pointer; transition: 0.2s;
         }
         .submit-btn:hover { background: #059669; }
+        .preview-text { font-size: 11px; color: #10b981; margin-top: 5px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -112,60 +114,107 @@
 
             <div class="form-group">
                 <label>Document type</label>
-                <select class="select-box">
-                    <option>National ID</option>
-                    <option>Passport</option>
-                    <option>Driver's License</option>
+                <select class="select-box" id="docType">
+                    <option value="National ID">National ID</option>
+                    <option value="Passport">Passport</option>
+                    <option value="Driver's License">Driver's License</option>
                 </select>
             </div>
 
             <div class="form-row">
-                <div class="form-group"><label>ID Number</label><input type="text" class="input-box" placeholder="e.g. 123456"></div>
-                <div class="form-group"><label>Date of Birth</label><input type="text" class="input-box" placeholder="dd/mm/yyyy"></div>
+                <div class="form-group"><label>ID Number</label><input type="text" class="input-box" id="idNumber" placeholder="e.g. 123456"></div>
+                <div class="form-group"><label>Date of Birth</label><input type="text" class="input-box" id="dob" placeholder="dd/mm/yyyy"></div>
             </div>
 
             <div class="upload-grid">
-                <div class="upload-box"><i class="fa-solid fa-id-card" style="color:#888; font-size:18px;"></i><div style="font-size:12px; color:#aaa; margin-top:8px;">Front side</div></div>
-                <div class="upload-box"><i class="fa-solid fa-file-lines" style="color:#888; font-size:18px;"></i><div style="font-size:12px; color:#aaa; margin-top:8px;">Back side</div></div>
+                <div class="upload-box" onclick="document.getElementById('frontFile').click()">
+                    <i class="fa-solid fa-id-card" style="color:#888; font-size:18px;"></i>
+                    <div style="font-size:12px; color:#aaa; margin-top:8px;">Front side</div>
+                    <div id="frontStatus" class="preview-text"></div>
+                    <input type="file" id="frontFile" accept="image/*" style="display:none;" onchange="handleFileSelect(this, 'frontStatus')">
+                </div>
+                <div class="upload-box" onclick="document.getElementById('backFile').click()">
+                    <i class="fa-solid fa-file-lines" style="color:#888; font-size:18px;"></i>
+                    <div style="font-size:12px; color:#aaa; margin-top:8px;">Back side</div>
+                    <div id="backStatus" class="preview-text"></div>
+                    <input type="file" id="backFile" accept="image/*" style="display:none;" onchange="handleFileSelect(this, 'backStatus')">
+                </div>
             </div>
 
-            <div class="upload-box-full"><i class="fa-solid fa-camera" style="color:#888; font-size:18px;"></i><div style="font-size:12px; color:#aaa; margin-top:8px;">Selfie with ID</div></div>
+            <div class="upload-box-full" onclick="document.getElementById('selfieFile').click()">
+                <i class="fa-solid fa-camera" style="color:#888; font-size:18px;"></i>
+                <div style="font-size:12px; color:#aaa; margin-top:8px;">Selfie with ID</div>
+                <div id="selfieStatus" class="preview-text"></div>
+                <input type="file" id="selfieFile" accept="image/*" style="display:none;" onchange="handleFileSelect(this, 'selfieStatus')">
+            </div>
 
-            <button class="submit-btn"><i class="fa-solid fa-paper-plane"></i> Submit for Review</button>
+            <button class="submit-btn"><i class="fa-solid fa-paper-plane"></i> Submit for AI Verification</button>
         </div>
     </div>
 
-    <!-- 📌 ከዚህ በታች ያለው ስክሪፕት አውቶማቲክ/ማኑዋል ቼክ እንዲያደርግ ያደርጋል -->
     <script>
+        let uploadedFiles = { front: '', back: '', selfie: '' };
+
+        function handleFileSelect(input, statusId) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    if (statusId === 'frontStatus') uploadedFiles.front = e.target.result;
+                    if (statusId === 'backStatus') uploadedFiles.back = e.target.result;
+                    if (statusId === 'selfieStatus') uploadedFiles.selfie = e.target.result;
+                    
+                    document.getElementById(statusId).innerText = '✓ ' + file.name;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
         document.querySelector('.submit-btn').addEventListener('click', async function(e) {
             e.preventDefault();
-            this.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing Verification...';
+            
+            const idNumber = document.getElementById('idNumber').value;
+            if (!idNumber) {
+                alert('Please enter your ID number.');
+                return;
+            }
+
+            if (!uploadedFiles.front || !uploadedFiles.selfie) {
+                alert('Please upload both Front ID and Selfie images.');
+                return;
+            }
+
+            this.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing AI Verification...';
             this.disabled = true;
 
             try {
-                const response = await fetch('/api/kyc/submit', {
+                const response = await fetch('/api/kyc/verify-ai', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        userId: 'TBR-1042',
-                        documentType: document.querySelector('.select-box').value,
-                        frontImage: 'front_data',
-                        backImage: 'back_data',
-                        selfieImage: 'selfie_data'
+                        userId: 'TBR-' + Math.floor(1000 + Math.random() * 9000),
+                        documentType: document.getElementById('docType').value,
+                        idNumber: idNumber,
+                        dob: document.getElementById('dob').value,
+                        frontImage: uploadedFiles.front,
+                        backImage: uploadedFiles.back,
+                        selfieImage: uploadedFiles.selfie
                     })
                 });
 
                 const data = await response.json();
-                if (data.status === 'Verified') {
-                    alert('Congratulations! Your account is automatically verified.');
+                
+                if (data.success && data.status === 'Verified') {
+                    alert('🎉 ' + data.message);
                     window.location.href = 'dashboard.html';
                 } else {
-                    alert('Documents sent to compliance team for manual review.');
+                    alert('⚠️ ' + (data.message || 'Documents submitted for manual review.'));
                     window.location.href = 'dashboard.html';
                 }
             } catch (err) {
-                alert('Connection error occurred.');
-                this.innerHTML = 'Submit for Review';
+                console.error('Error:', err);
+                alert('Connection error occurred during verification.');
+                this.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit for AI Verification';
                 this.disabled = false;
             }
         });
