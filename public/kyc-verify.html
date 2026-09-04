@@ -379,7 +379,7 @@
     <div class="container">
         <div class="page-title">
             Verification
-            <div class="status-badge"><i class="fa-solid fa-circle" style="font-size: 8px; color: #f0b90b;"></i> Basic</div>
+            <div class="status-badge" id="pageStatusBadge"><i class="fa-solid fa-circle" style="font-size: 8px; color: #f0b90b;"></i> Basic</div>
         </div>
 
         <div class="steps-container">
@@ -599,7 +599,7 @@
             }
 
             if (!frontImageBase64 || !selfieImageBase64) {
-                alert('እባክዎ የ መታወቂያ ፊት (Front ID) እና የሰልፊ ፎቶ (Selfie) ማያያዝዎን ያረጋግጡ!');
+                alert('እባክዎ የመታወቂያ ፊት (Front ID) እና የሰልፊ ፎቶ (Selfie) ማያያዝዎን ያረጋግጡ!');
                 return;
             }
 
@@ -621,6 +621,9 @@
 
                 const result = await response.json();
                 if (response.ok) {
+                    // ዩዘሩ ፎርሙን ልኮ 200 OK ሲመጣለት kycStatus በ localStorage ውስጥ pending እንዲሆን ተደረገ
+                    localStorage.setItem('kycStatus', 'pending');
+                    
                     alert('KYC documents submitted successfully! Your account is now under review.');
                     window.location.href = 'dashboard.html';
                 } else {

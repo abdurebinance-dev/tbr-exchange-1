@@ -5,10 +5,12 @@ const cors = require('cors');
 const path = require('path');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken'); // የቶከን ማረጋገጫ እንዲሰራ ጨምረነዋል
 const { OAuth2Client } = require('google-auth-library');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const JWT_SECRET = process.env.JWT_SECRET || 'tbr_exchange_secret_key_2026';
 
 // Google OAuth Client Setup
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '661544926174-8kp01crhke9m1vmjf6kcts5o2e7sqek8.apps.googleusercontent.com';
@@ -68,6 +70,24 @@ const KYC = mongoose.models.KYC || mongoose.model('KYC', kycSchema);
 
 // Temporary memory to store verification codes and signup attempts/lockout
 const pendingUsers = {};
+
+// Helper Function: Verify Token Middleware
+function verifyToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer <token>
+    
+    if (!token) {
+        return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
+    }
+
+    try {
+        const verified = jwt.verify(token, JWT_SECRET);
+        req.user = verified; // { id: user._id }
+        next();
+    } catch (err) {
+        res.status(403).json({ success: false, message: 'Invalid or expired token.' });
+    }
+}
 
 // Helper Function to send email using Brevo API
 async function sendEmailViaBrevo({ to, subject, htmlContent }) {
@@ -393,8 +413,12 @@ app.post('/api/verify-login-otp', async (req, res) => {
         user.verificationCodeExpire = undefined;
         await user.save();
 
+        // Generate JWT Token so user authenticated requests can work
+        const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '7d' });
+
         res.json({ 
             success: true, 
+            token, // ቶከኑን ለፍሮንትንድ እንልካለን
             message: 'Sign in verified successfully.',
             redirectUrl: 'dashboard.html' 
         });
@@ -549,10 +573,27 @@ app.post('/api/reset-password', async (req, res) => {
 });
 
 // ==========================================
-// TBR Exchange - KYC & Admin Backend Logic
+// TBR Exchange - KYC & User Profile Routes
 // ==========================================
 
-// 1. Smart AI Verification & Admin Forwarding Endpoint
+// 1. ዩዘሩ የ KYC ስቴተስ እና ፕሮፋይል እንዲያይ የሚረዳ ራውት (አዲሱ የተጨመረው)
+app.get('/api/user/profile', verifyToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+        
+        res.json({
+            fullName: user.fullName || 'User',
+            email: user.email,
+            kycStatus: user.kycStatus // 'unverified', 'pending', 'verified', 'rejected'
+        });
+    } catch (err) {
+        console.error('Profile Fetch Error:', err);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// 2. Smart AI Verification & Admin Forwarding Endpoint
 app.post('/api/kyc/verify-ai', async (req, res) => {
     try {
         const { userId, documentType, frontImage, selfieImage, fullName, email } = req.body;
@@ -565,12 +606,9 @@ app.post('/api/kyc/verify-ai', async (req, res) => {
             });
         }
 
-        // Smart Logic: ፎቶዎቹ ከተሟሉ እና ርዝመታቸው በቂ ከሆነ (ለምሳሌ ትክክለኛ ምስል ከመሆኑ አንፃር) በአውቶማቲክ Verified ይደረጋል
-        // ካልተሟሉ ግን ወደ አድሚን ዳሽቦርድ (Pending) ይላካሉ
         const isDataValid = frontImage.length > 50 && selfieImage.length > 50;
 
         if (isDataValid) {
-            // ተጠቃሚው ካለ አካውንቱን በቀጥታ Verified እናደርገዋለን
             if (userId) {
                 await User.findByIdAndUpdate(userId, { kycStatus: 'verified' });
             }
@@ -582,7 +620,6 @@ app.post('/api/kyc/verify-ai', async (req, res) => {
                 message: 'AI Auto-Approval Successful! Your account is now Verified.'
             });
         } else {
-            // መረጃው አጠራጣሪ ከሆነ ወይም ካልተሟላ ለአድሚን ዳሽቦርድ (Pending) እናስቀምጠዋለን
             const newKyc = new KYC({
                 userId: userId || null,
                 fullName: fullName || 'Abdurahman Ashebir',
@@ -612,7 +649,7 @@ app.post('/api/kyc/verify-ai', async (req, res) => {
     }
 });
 
-// Get Pending KYC Submissions for Admin Dashboard (`admin.html` የሚጠራው)
+// Get Pending KYC Submissions for Admin Dashboard
 app.get('/api/admin/kyc-list', async (req, res) => {
     try {
         const pendingList = await KYC.find({ status: 'Pending' }).sort({ createdAt: -1 });
@@ -623,7 +660,7 @@ app.get('/api/admin/kyc-list', async (req, res) => {
     }
 });
 
-// Admin Action Route: Approve or Reject KYC (ከአድሚን ዳሽቦርድ የሚላኩ Green Check ወይም Red Cross በተጫኑ ቁጥር የሚሰራ)
+// Admin Action Route: Approve or Reject KYC
 app.post('/api/admin/kyc-action', async (req, res) => {
     try {
         const { kycId, action } = req.body; // action: 'approve' ወይም 'reject'
@@ -686,7 +723,7 @@ app.post('/api/kyc/submit', async (req, res) => {
     }
 });
 
-// 2. Admin Market Rate & Account Control API
+// Admin Market Rate & Account Control API
 app.post('/api/admin/update-rate', async (req, res) => {
     try {
         const { newRate } = req.body;
@@ -696,9 +733,9 @@ app.post('/api/admin/update-rate', async (req, res) => {
     }
 });
 
-// 10. Fallback Route ለ SPA / HTML ፋይሎች (ከላይ ስታቲክ ፋይሎችና ኤፒአይዎች ከሠሩ በኋላ መጨረሻ ላይ መቀመጥ አለበት)
+// 10. Fallback Route ለ SPA / HTML ፋይሎች (ሁልጊዜ መጨረሻ ላይ መሆን አለበት)
 app.get(/.*/, (req, res) => {
-    res.sendFile(path.json(publicPath, 'index.html'));
+    res.sendFile(path.join(publicPath, 'index.html'));
 });
 
 // Start Server

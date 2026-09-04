@@ -71,20 +71,6 @@
             position: relative;
         }
 
-        /* Static Unverified Status Badge on Navbar (No Link) */
-        .unverified-badge-static {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            color: #ef4444;
-            padding: 5px 10px;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
         @media(max-width: 900px) {
             .navbar .nav-links {
                 display: none;
@@ -484,10 +470,10 @@
             </div>
         </div>
         <div class="nav-right">
-            <!-- Static Unverified Status Badge (No link, just display status) -->
-            <div class="unverified-badge-static">
-                <i class="fa-solid fa-triangle-exclamation"></i> Unverified
-            </div>
+            <!-- Dynamic KYC Status Button (Clickable, color-changing based on state) -->
+            <button id="kycStatusBtn" onclick="goToKycPage()" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: bold; display: flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-triangle-exclamation" id="kycIcon"></i> <span id="kycBtnText">Unverified</span>
+            </button>
 
             <i id="theme-toggle" class="fa-solid fa-moon" style="color: #d4af37; cursor: pointer;" title="Toggle Theme"></i>
             <a href="notifications.html" style="color: inherit; text-decoration: none;"><i class="fa-regular fa-bell" style="cursor: pointer;"></i></a>
@@ -717,6 +703,54 @@
             localStorage.removeItem('theme');
             window.location.href = 'login.html';
         });
+
+        // KYC Status & Dynamic Button Script
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const res = await fetch('/api/user/profile');
+                if (res.ok) {
+                    const data = await res.json();
+                    updateKycButtonUI(data.kycStatus);
+                } else {
+                    const localStatus = localStorage.getItem('kycStatus') || 'unverified';
+                    updateKycButtonUI(localStatus);
+                }
+            } catch (err) {
+                console.log("Using local storage state check.");
+                const localStatus = localStorage.getItem('kycStatus') || 'unverified';
+                updateKycButtonUI(localStatus);
+            }
+        });
+
+        function updateKycButtonUI(status) {
+            const btn = document.getElementById('kycStatusBtn');
+            const icon = document.getElementById('kycIcon');
+            const text = document.getElementById('kycBtnText');
+
+            if (status === 'pending' || status === 'Under Review') {
+                btn.style.background = 'rgba(234, 179, 8, 0.1)';
+                btn.style.color = '#eab308';
+                btn.style.border = '1px solid rgba(234, 179, 8, 0.2)';
+                icon.className = 'fa-solid fa-clock';
+                text.innerText = 'Under Review';
+            } else if (status === 'verified' || status === 'Approved') {
+                btn.style.background = 'rgba(16, 185, 129, 0.1)';
+                btn.style.color = '#10b981';
+                btn.style.border = '1px solid rgba(16, 185, 129, 0.2)';
+                icon.className = 'fa-solid fa-circle-check';
+                text.innerText = 'Verified';
+            } else {
+                btn.style.background = 'rgba(239, 68, 68, 0.1)';
+                btn.style.color = '#ef4444';
+                btn.style.border = '1px solid rgba(239, 68, 68, 0.2)';
+                icon.className = 'fa-solid fa-triangle-exclamation';
+                text.innerText = 'Unverified';
+            }
+        }
+
+        function goToKycPage() {
+            window.location.href = 'kyc.html';
+        }
     </script>
 </body>
 </html>
