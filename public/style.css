@@ -29,18 +29,23 @@ header, .navbar {
     gap: 12px;
 }
 
-/* የናቭ ሎጎ ምስል ትክክለኛ መጠን */
+/* የናቭ ሎጎ ምስል ትክክለኛ መጠን እና የባክግራውንድ ሳጥን እንዳይኖር ማስተካከያ */
 .logo-container {
     display: flex;
     align-items: center;
     gap: 10px;
     text-decoration: none;
+    background: transparent !important;
 }
 
-.logo-img {
+.logo-img, .nav-left img, .navbar img {
     height: 36px;
     width: auto;
     object-fit: contain;
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
 }
 
 .nav-links {
@@ -112,12 +117,16 @@ header, .navbar {
     gap: 8px;
     margin-bottom: 15px;
     text-align: center;
+    background: transparent !important;
 }
 
 .form-logo-img {
     height: 48px;
     width: auto;
     object-fit: contain;
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
 }
 
 .logo-header {
@@ -397,7 +406,7 @@ input:focus {
     .auth-buttons, .header-buttons, .nav-right {
         display: flex !important;
         flex-direction: row !important;
-        gap: 6px !important;
+        gap: 8px !important;
         align-items: center !important;
     }
 
