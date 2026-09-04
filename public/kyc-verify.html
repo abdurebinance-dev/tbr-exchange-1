@@ -296,6 +296,49 @@
             color: #848e9c;
         }
 
+        /* Camera Modal / Container Styles */
+        #cameraContainer {
+            display: none;
+            position: relative;
+            background: #0b0e11;
+            border: 2px solid #f0b90b;
+            border-radius: 12px;
+            overflow: hidden;
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 10px;
+        }
+        #videoElement {
+            width: 100%;
+            max-height: 350px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+        .camera-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        .cam-btn {
+            background: #f0b90b;
+            color: #0b0e11;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .cam-btn-cancel {
+            background: #23272f;
+            color: #eaecef;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
         .footer-note {
             display: flex;
             justify-content: space-between;
@@ -416,14 +459,24 @@
                 <input type="file" id="backInput" style="display: none;" accept="image/*">
             </div>
 
-            <!-- Selfie with ID (Directs to front camera / capture user) -->
+            <!-- Selfie with ID (Live Camera Capture) -->
             <div class="section-title">Selfie with ID *</div>
-            <div class="upload-box" style="margin-bottom: 20px;" onclick="document.getElementById('selfieInput').click()">
+            
+            <!-- Clickable Box to Open Live Camera -->
+            <div class="upload-box" id="selfieTriggerBox" style="margin-bottom: 20px;" onclick="startCamera()">
                 <i class="fa-solid fa-camera"></i>
-                <span>Hold ID next to your face</span>
+                <span id="selfieStatusText">Hold ID next to your face</span>
             </div>
-            <!-- Added capture="user" to invoke front camera directly on mobile devices -->
-            <input type="file" id="selfieInput" style="display: none;" accept="image/*" capture="user">
+
+            <!-- Live Camera Stream UI -->
+            <div id="cameraContainer">
+                <video id="videoElement" autoplay playsinline></video>
+                <div class="camera-actions">
+                    <button type="button" class="cam-btn" onclick="captureSelfie()"><i class="fa-solid fa-camera"></i> Capture Photo</button>
+                    <button type="button" class="cam-btn-cancel" onclick="stopCamera()">Cancel</button>
+                </div>
+            </div>
+            <canvas id="canvasElement" style="display: none;"></canvas>
 
             <!-- Full Name field -->
             <div class="form-group">
@@ -457,6 +510,64 @@
             <button class="verify-main-btn"><i class="fa-solid fa-arrow-up-from-bracket"></i> Submit for Review</button>
         </div>
     </div>
+
+    <!-- Live Camera JavaScript Integration -->
+    <script>
+        let videoStream = null;
+        const videoElement = document.getElementById('videoElement');
+        const cameraContainer = document.getElementById('cameraContainer');
+        const selfieTriggerBox = document.getElementById('selfieTriggerBox');
+        const selfieStatusText = document.getElementById('selfieStatusText');
+        const canvasElement = document.getElementById('canvasElement');
+
+        async function startCamera() {
+            try {
+                cameraContainer.style.display = 'block';
+                selfieTriggerBox.style.display = 'none';
+                
+                // Request front camera stream
+                videoStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'user' }, 
+                    audio: false 
+                });
+                videoElement.srcObject = videoStream;
+            } catch (err) {
+                alert("Camera access denied or not available!");
+                console.error(err);
+                stopCamera();
+            }
+        }
+
+        function stopCamera() {
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+            }
+            cameraContainer.style.display = 'none';
+            selfieTriggerBox.style.display = 'block';
+        }
+
+        function captureSelfie() {
+            const context = canvasElement.getContext('2d');
+            canvasElement.width = videoElement.videoWidth || 640;
+            canvasElement.height = videoElement.videoHeight || 480;
+            
+            // Draw current video frame to canvas
+            context.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+            
+            // Convert canvas to image URL data
+            const imageDataUrl = canvasElement.toDataURL('image/jpeg');
+            
+            // Update UI to show success
+            selfieStatusText.innerHTML = '<i class="fa-solid fa-check-circle" style="color: #0ecb81;"></i> Selfie Captured Successfully!';
+            selfieTriggerBox.style.borderColor = '#0ecb81';
+            
+            // Stop stream and hide video container
+            stopCamera();
+            
+            // Optional: You can store imageDataUrl into a hidden input or pass it to your submit logic
+        }
+    </script>
 
 </body>
 </html>
