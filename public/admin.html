@@ -123,7 +123,6 @@
         .btn-reject { background: #ef4444; color: #fff; margin-left: 5px; }
         .btn-reject:hover { background: #dc2626; }
 
-        /* Control Forms Card */
         .control-card {
             background: #121212;
             border: 1px solid #222;
@@ -178,7 +177,7 @@
         </div>
         <div class="stat-card">
             <div class="label">Pending KYC</div>
-            <div class="value" id="pendingKycCount" style="color: #eab308;">3</div>
+            <div class="value" id="pendingKycCount" style="color: #eab308;">0</div>
         </div>
         <div class="stat-card">
             <div class="label">Today's Volume</div>
@@ -205,20 +204,7 @@
                         </tr>
                     </thead>
                     <tbody id="kycTableBody">
-                        <!-- Dynamic rows from Server or fallback sample data -->
-                        <tr>
-                            <td>
-                                <div style="font-weight: bold;">Abdurahman Ashebir</div>
-                                <div style="font-size: 11px; color: #777;">ID: #TBR-1042</div>
-                            </td>
-                            <td>National ID</td>
-                            <td><span class="badge-pending">Pending</span></td>
-                            <td>
-                                <button class="btn btn-view" onclick="openKycModal('65f1234567890abcdef12345')"><i class="fa-solid fa-eye"></i></button>
-                                <button class="btn btn-approve" onclick="approveUser(this, '65f1234567890abcdef12345')"><i class="fa-solid fa-check"></i></button>
-                                <button class="btn btn-reject" onclick="rejectUser(this, '65f1234567890abcdef12345')"><i class="fa-solid fa-xmark"></i></button>
-                            </td>
-                        </tr>
+                        <!-- Dynamic rows from Server -->
                     </tbody>
                 </table>
             </div>
@@ -248,7 +234,7 @@
         </div>
     </div>
 
-    <!-- የሰነድ ማሳያ ሞዳል (KYC Document Review Modal) -->
+    <!-- KYC Document Review Modal -->
     <div id="adminKycModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center;">
         <div style="background:#181a20; padding:25px; border-radius:14px; max-width:650px; width:100%; border:1px solid #23272f; color:#fff; box-sizing: border-box;">
             <h3 style="margin-top:0; color:#d4af37;"><i class="fa-solid fa-id-card"></i> Review User KYC Documents</h3>
@@ -273,10 +259,11 @@
     </div>
 
     <script>
-        // ገጹ ሲጫን የ KYC መረጃዎችን ከሰርቨር ማምጣት (ግንኙነት ከሌለ በናሙናው ይሰራል)
+        // ገጹ ሲጫን የ KYC መረጃዎችን ከሰርቨር ማምጣት
         window.addEventListener('DOMContentLoaded', async () => {
             try {
-                const res = await fetch('/api/kyc/admin/pending');
+                // ትክክለኛው የሰርቨር ራውት ዩአርኤል (ከዚህ በፊት ከሰራነው ጋር የተስተካከለ)
+                const res = await fetch('/api/admin/kyc/pending');
                 if (res.ok) {
                     const data = await res.json();
                     if (data && data.length > 0) {
@@ -285,8 +272,8 @@
                             rows += `
                                 <tr>
                                     <td>
-                                        <div style="font-weight: bold;">${item.fullName}</div>
-                                        <div style="font-size: 11px; color: #777;">ID: #${item.userId || '1042'}</div>
+                                        <div style="font-weight: bold;">${item.fullName || 'Unknown'}</div>
+                                        <div style="font-size: 11px; color: #777;">ID: #${item._id.substring(0, 8)}</div>
                                     </td>
                                     <td>${item.docType || 'National ID'}</td>
                                     <td><span class="badge-pending">Pending</span></td>
@@ -300,34 +287,33 @@
                         });
                         document.getElementById('kycTableBody').innerHTML = rows;
                         document.getElementById('pendingKycCount').innerText = data.length;
+                    } else {
+                        document.getElementById('kycTableBody').innerHTML = '<tr><td colspan="4" style="text-align:center; color:#777;">No pending KYC requests found.</td></tr>';
                     }
                 }
             } catch (err) {
-                console.log("Using local offline sample data for admin dashboard.");
+                console.error("Error fetching KYC list:", err);
+                document.getElementById('kycTableBody').innerHTML = '<tr><td colspan="4" style="text-align:center; color:#ef4444;">Failed to connect to server.</td></tr>';
             }
         });
 
         // የሰነድ ፎቶዎችን ከሰርቨር አምጥቶ በሞዳል ለማሳየት
         async function openKycModal(kycId) {
             try {
-                const res = await fetch(`/api/kyc/admin/details/${kycId}`);
+                const res = await fetch(`/api/admin/kyc/details/${kycId}`);
                 const data = await res.json();
                 if (res.ok) {
                     document.getElementById('mFullName').innerText = data.fullName;
                     document.getElementById('mIdNumber').innerText = data.idNumber || 'N/A';
-                    document.getElementById('mFrontImg').src = data.frontImage;
-                    document.getElementById('mSelfieImg').src = data.selfieImage;
+                    document.getElementById('mFrontImg').src = data.frontImage || '';
+                    document.getElementById('mSelfieImg').src = data.selfieImage || '';
                     document.getElementById('adminKycModal').style.display = 'flex';
                 } else {
                     alert('KYC details not found');
                 }
             } catch (err) {
                 console.error(err);
-                document.getElementById('mFullName').innerText = "Abdurahman Ashebir";
-                document.getElementById('mIdNumber').innerText = "ET-94827106";
-                document.getElementById('mFrontImg').src = "https://via.placeholder.com/300x180?text=Front+ID";
-                document.getElementById('mSelfieImg').src = "https://via.placeholder.com/300x180?text=Selfie";
-                document.getElementById('adminKycModal').style.display = 'flex';
+                alert('Error loading KYC details');
             }
         }
 
@@ -335,7 +321,7 @@
             document.getElementById('adminKycModal').style.display = 'none';
         }
 
-        // KYC አፕሩቭ ሲደረግ (Manual & API Sync)
+        // KYC አፕሩቭ ሲደረግ
         async function approveUser(btn, kycId) {
             try {
                 const res = await fetch(`/api/admin/kyc/approve/${kycId}`, {
@@ -344,17 +330,17 @@
                 });
                 
                 const data = await res.json();
-                const row = btn.closest('tr');
-                row.querySelector('td:nth-child(3)').innerHTML = '<span class="badge-approved">Approved</span>';
-                // አክሽኑ ከጸደቀ በኋላ ቁልፎቹን ማጥፋት ወይም ሪፍሬሽ ማድረግ ይቻላል
-                btn.closest('td').innerHTML = '<span style="color: #10b981; font-size: 12px; font-weight: bold;"><i class="fa-solid fa-check-circle"></i> Done</span>';
-                alert('KYC Approved successfully! User status is now Verified.');
+                if (res.ok) {
+                    const row = btn.closest('tr');
+                    row.querySelector('td:nth-child(3)').innerHTML = '<span class="badge-approved">Approved</span>';
+                    btn.closest('td').innerHTML = '<span style="color: #10b981; font-size: 12px; font-weight: bold;"><i class="fa-solid fa-check-circle"></i> Done</span>';
+                    alert('KYC Approved successfully!');
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to approve'));
+                }
             } catch (err) {
                 console.error(err);
-                const row = btn.closest('tr');
-                row.querySelector('td:nth-child(3)').innerHTML = '<span class="badge-approved">Approved</span>';
-                btn.closest('td').innerHTML = '<span style="color: #10b981; font-size: 12px; font-weight: bold;"><i class="fa-solid fa-check-circle"></i> Done</span>';
-                alert('KYC Approved successfully!');
+                alert('Server connection error during approval.');
             }
         }
 
@@ -370,16 +356,18 @@
                     body: JSON.stringify({ reason })
                 });
                 
-                const row = btn.closest('tr');
-                row.querySelector('td:nth-child(3)').innerHTML = '<span class="badge-rejected">Rejected</span>';
-                btn.closest('td').innerHTML = '<span style="color: #ef4444; font-size: 12px; font-weight: bold;">Rejected</span>';
-                alert('KYC Rejected.');
+                const data = await res.json();
+                if (res.ok) {
+                    const row = btn.closest('tr');
+                    row.querySelector('td:nth-child(3)').innerHTML = '<span class="badge-rejected">Rejected</span>';
+                    btn.closest('td').innerHTML = '<span style="color: #ef4444; font-size: 12px; font-weight: bold;">Rejected</span>';
+                    alert('KYC Rejected.');
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to reject'));
+                }
             } catch (err) {
                 console.error(err);
-                const row = btn.closest('tr');
-                row.querySelector('td:nth-child(3)').innerHTML = '<span class="badge-rejected">Rejected</span>';
-                btn.closest('td').innerHTML = '<span style="color: #ef4444; font-size: 12px; font-weight: bold;">Rejected</span>';
-                alert('KYC Rejected.');
+                alert('Server connection error during rejection.');
             }
         }
 

@@ -31,6 +31,7 @@ app.use(express.json({ limit: '10mb' })); // የምስል ዴታዎችን በሰ
 // 1. ስታቲክ ፋይሎችን በግልጽ እና በትክክለኛ አቅጣጫ ማስቀመጥ
 const publicPath = path.join(process.cwd(), 'public');
 app.use(express.static(publicPath));
+app.use('/uploads', express.static('uploads'));
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/tbr_exchange')
@@ -59,10 +60,15 @@ const kycSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     fullName: { type: String, default: 'User' },
     email: { type: String, default: '' },
-    documentType: { type: String, default: 'National ID' },
+    idNumber: { type: String, default: '' },
+    dob: { type: String, default: '' },
+    address: { type: String, default: '' },
+    docType: { type: String, default: 'National ID' },
     frontImage: String,
+    backImage: String,
     selfieImage: String,
-    status: { type: String, default: 'Pending' }, // Pending, Verified, Rejected
+    status: { type: String, default: 'pending' }, // pending, approved, rejected
+    rejectionReason: { type: String, default: '' },
     createdAt: { type: Date, default: Date.now }
 });
 
@@ -575,7 +581,7 @@ app.post('/api/reset-password', async (req, res) => {
 // TBR Exchange - KYC & User Profile Routes
 // ==========================================
 
-// 1. ዩዘሩ የ KYC ስቴተስ እና ፕሮፋይል እንዲያይ የሚረዳ ራውት (የተስተካከለው)
+// 1. ዩዘሩ የ KYC ስቴተስ እና ፕሮፋይል እንዲያይ የሚረዳ ራውት
 app.get('/api/user/profile', verifyToken, async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
@@ -595,92 +601,73 @@ app.get('/api/user/profile', verifyToken, async (req, res) => {
     }
 });
 
-// 2. Smart AI Verification & Admin Forwarding Endpoint
-app.post('/api/kyc/verify-ai', async (req, res) => {
+// 2. ተጠቃሚው KYC ሲልክ የሚቀበለው
+app.post('/api/kyc/submit', async (req, res) => {
     try {
-        const { userId, documentType, frontImage, selfieImage, fullName, email } = req.body;
+        const { userId, fullName, idNumber, dob, address, docType, frontImage, backImage, selfieImage, email } = req.body;
 
-        if (!frontImage || !selfieImage) {
-            return res.status(400).json({ 
-                success: false, 
-                status: 'Manual Review Needed', 
-                message: 'ID and Selfie images are required.' 
-            });
+        if (!fullName || !frontImage || !selfieImage) {
+            return res.status(400).json({ success: false, message: 'እባክዎ አስፈላጊዎቹን መረጃዎች እና ፎቶዎች በትክክል ይሙሉ!' });
         }
 
-        const isDataValid = frontImage.length > 50 && selfieImage.length > 50;
+        const newKyc = new KYC({
+            userId: userId || null,
+            fullName,
+            idNumber,
+            dob,
+            address,
+            docType: docType || 'National ID',
+            frontImage,
+            backImage,
+            selfieImage,
+            email: email || '',
+            status: 'pending'
+        });
 
-        if (isDataValid) {
-            if (userId) {
-                await User.findByIdAndUpdate(userId, { kycStatus: 'verified' });
-            }
+        await newKyc.save();
 
-            return res.json({
-                success: true,
-                status: 'Verified',
-                confidence: 95.0,
-                message: 'AI Auto-Approval Successful! Your account is now Verified.'
-            });
-        } else {
-            const newKyc = new KYC({
-                userId: userId || null,
-                fullName: fullName || 'Abdurahman Ashebir',
-                email: email || '',
-                documentType: documentType || 'National ID',
-                frontImage,
-                selfieImage,
-                status: 'Pending'
-            });
-
-            await newKyc.save();
-
-            if (userId) {
-                await User.findByIdAndUpdate(userId, { kycStatus: 'pending' });
-            }
-
-            return res.json({
-                success: true,
-                status: 'Pending',
-                confidence: 45.0,
-                message: 'Image quality low or unclear. Forwarded to Admin for Manual Review.'
-            });
+        if (userId) {
+            await User.findByIdAndUpdate(userId, { kycStatus: 'pending' });
         }
-    } catch (error) {
-        console.error('AI KYC Error:', error);
-        res.status(500).json({ success: false, status: 'Manual Review Needed', error: error.message });
+
+        res.status(200).json({ success: true, status: 'pending', message: 'KYC submitted successfully' });
+    } catch (err) {
+        console.error('KYC Submit Error:', err);
+        res.status(500).json({ success: false, message: 'ሰርቨር ላይ ስህተት ተፈጥሯል' });
     }
 });
 
-// Get Pending KYC Submissions for Admin Dashboard
+// 3. አድሚኑ ያልጸደቁትን (Pending) እንዲያይ
 app.get('/api/admin/kyc-list', async (req, res) => {
     try {
-        const pendingList = await KYC.find({ status: 'Pending' }).sort({ createdAt: -1 });
-        res.json({ success: true, data: pendingList });
+        const pendingList = await KYC.find({ status: 'pending' }).sort({ createdAt: -1 });
+        res.status(200).json({ success: true, data: pendingList });
     } catch (error) {
         console.error('Fetch KYC Error:', error);
-        res.status(500).json({ success: false, message: 'Server error' });
+        res.status(500).json({ success: false, message: 'መረጃዎችን ማምጣት አልተቻለም' });
     }
 });
 
-// Admin Action Route: Approve or Reject KYC
+// 4. አድሚኑ KYC ሲያጸድቅ ወይም ውድቅ ሲያደርግ (Admin Action Route)
 app.post('/api/admin/kyc-action', async (req, res) => {
     try {
-        const { kycId, action } = req.body; 
+        const { kycId, action, reason } = req.body; 
         const kycRecord = await KYC.findById(kycId);
         
         if (!kycRecord) {
-            return res.status(404).json({ success: false, message: 'KYC record not found.' });
+            return res.status(404).json({ success: false, message: 'የ KYC መዝገብ አልተገኘም' });
         }
 
         if (action === 'approve') {
-            kycRecord.status = 'Verified';
+            kycRecord.status = 'approved';
             await kycRecord.save();
             if (kycRecord.userId) {
                 await User.findByIdAndUpdate(kycRecord.userId, { kycStatus: 'verified' });
             }
             return res.json({ success: true, message: 'KYC approved successfully.' });
         } else if (action === 'reject') {
-            kycRecord.status = 'Rejected';
+            kycRecord.status = 'rejected';
+            kycRecord.rejectionReason = reason || '';
             await kycRecord.save();
             if (kycRecord.userId) {
                 await User.findByIdAndUpdate(kycRecord.userId, { kycStatus: 'rejected' });
@@ -691,36 +678,6 @@ app.post('/api/admin/kyc-action', async (req, res) => {
         res.status(400).json({ success: false, message: 'Invalid action.' });
     } catch (error) {
         console.error('Admin KYC Action Error:', error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// General KYC Submit Route (Fallback for standard form submits)
-app.post('/api/kyc/submit', async (req, res) => {
-    try {
-        const { userId, documentType, frontImage, backImage, selfieImage, fullName, email } = req.body;
-        const isComplete = frontImage && selfieImage;
-
-        if (isComplete && frontImage.length > 50) {
-            if (userId) await User.findByIdAndUpdate(userId, { kycStatus: 'verified' });
-            return res.json({ success: true, status: 'Verified', message: 'Automatically approved.' });
-        } else {
-            const newKyc = new KYC({
-                userId: userId || null,
-                fullName: fullName || 'User',
-                email: email || '',
-                documentType: documentType || 'National ID',
-                frontImage: frontImage || '',
-                selfieImage: selfieImage || '',
-                status: 'Pending'
-            });
-            await newKyc.save();
-
-            if (userId) await User.findByIdAndUpdate(userId, { kycStatus: 'pending' });
-
-            return res.json({ success: true, status: 'Pending', message: 'Forwarded to Admin review.' });
-        }
-    } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -743,83 +700,4 @@ app.get(/.*/, (req, res) => {
 // Start Server
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
-});
-const KYC = require('./models/KycModel');
-
-// 1. ተጠቃሚው KYC ሲልክ የሚቀበለው
-app.post('/api/kyc/submit', async (req, res) => {
-    try {
-        const { fullName, idNumber, dob, address, docType, frontImage, backImage, selfieImage } = req.body;
-
-        if (!fullName || !frontImage || !selfieImage) {
-            return res.status(400).json({ message: 'እባክዎ አስፈላጊዎቹን መረጃዎች እና ፎቶዎች በትክክል ይሙሉ!' });
-        }
-
-        const newKyc = new KYC({
-            fullName,
-            idNumber,
-            dob,
-            address,
-            docType,
-            frontImage,
-            backImage,
-            selfieImage,
-            status: 'pending'
-        });
-
-        await newKyc.save();
-        res.status(200).json({ message: 'KYC submitted successfully' });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'ሰርቨር ላይ ስህተት ተፈጥሯል' });
-    }
-});
-
-// 2. አድሚኑ ያልጸደቁትን (Pending) እንዲያይ
-app.get('/api/kyc/admin/pending', async (req, res) => {
-    try {
-        const pendingList = await KYC.find({ status: 'pending' });
-        res.status(200).json(pendingList);
-    } catch (err) {
-        res.status(500).json({ error: 'መረጃዎችን ማምጣት አልተቻለም' });
-    }
-});
-
-// 3. አድሚኑ KYC ሲያጸድቅ
-app.put('/api/admin/kyc/approve/:id', async (req, res) => {
-    try {
-        const updatedKyc = await KYC.findByIdAndUpdate(
-            req.params.id, 
-            { status: 'approved' }, 
-            { new: true }
-        );
-
-        if (!updatedKyc) {
-            return res.status(404).json({ error: 'የ KYC መዝገብ አልተገኘም' });
-        }
-
-        res.status(200).json({ message: 'Approved' });
-    } catch (err) {
-        res.status(500).json({ error: 'ሰርቨር ላይ ስህተት ተፈጥሯል' });
-    }
-});
-
-// 4. አድሚኑ KYC ውድቅ ሲያደርግ
-app.put('/api/admin/kyc/reject/:id', async (req, res) => {
-    try {
-        const { reason } = req.body;
-        const updatedKyc = await KYC.findByIdAndUpdate(
-            req.params.id, 
-            { status: 'rejected', rejectionReason: reason },
-            { new: true }
-        );
-
-        if (!updatedKyc) {
-            return res.status(404).json({ error: 'የ KYC መዝገብ አልተገኘም' });
-        }
-
-        res.status(200).json({ message: 'Rejected' });
-    } catch (err) {
-        res.status(500).json({ error: 'ሰርቨር ላይ ስህተት ተፈጥሯል' });
-    }
 });
