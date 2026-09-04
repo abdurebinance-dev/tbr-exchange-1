@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - TBR Exchange</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #080808;
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #fff;
+            padding: 20px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            border-bottom: 1px solid #222;
+            padding-bottom: 15px;
+        }
+        .header h2 {
+            color: #d4af37;
+            margin: 0;
+            font-size: 22px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: #121212;
+            border: 1px solid #222;
+            padding: 20px;
+            border-radius: 12px;
+        }
+        .stat-card .label { font-size: 12px; color: #777; margin-bottom: 6px; }
+        .stat-card .value { font-size: 20px; font-weight: bold; color: #fff; }
+
+        .section-title {
+            font-size: 16px;
+            color: #d4af37;
+            margin-bottom: 15px;
+            margin-top: 30px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+
+        .table-container {
+            background: #121212;
+            border: 1px solid #222;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 13px;
+        }
+        th, td {
+            padding: 14px 18px;
+            border-bottom: 1px solid #1a1a1a;
+        }
+        th {
+            background: #181818;
+            color: #888;
+            font-weight: 500;
+        }
+        tr:hover { background: #161616; }
+
+        .badge-pending {
+            background: rgba(234, 179, 8, 0.1);
+            color: #eab308;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            border: 1px solid rgba(234, 179, 8, 0.2);
+        }
+        .btn {
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            border: none;
+        }
+        .btn-approve { background: #10b981; color: #fff; }
+        .btn-approve:hover { background: #059669; }
+        .btn-reject { background: #ef4444; color: #fff; margin-left: 5px; }
+        .btn-reject:hover { background: #dc2626; }
+
+        /* Control Forms Card */
+        .control-card {
+            background: #121212;
+            border: 1px solid #222;
+            padding: 20px;
+            border-radius: 12px;
+        }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 12px; color: #888; margin-bottom: 6px; }
+        .input-box {
+            width: 100%;
+            background: #181818;
+            border: 1px solid #262626;
+            border-radius: 8px;
+            padding: 10px 12px;
+            color: #fff;
+            font-size: 13px;
+            box-sizing: border-box;
+            outline: none;
+        }
+        .input-box:focus { border-color: #d4af37; }
+        .action-btn {
+            width: 100%;
+            background: #d4af37;
+            color: #000;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .action-btn:hover { background: #c19b2e; }
+
+        @media(max-width: 1024px) {
+            .panel-grid { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2><i class="fa-solid fa-gauge-high"></i> TBR Exchange Admin Control Center</h2>
+        <div style="font-size: 13px; color: #10b981;"><i class="fa-solid fa-circle" style="font-size: 8px;"></i> System Online</div>
+    </div>
+
+    <!-- System Stats -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="label">Total Users</div>
+            <div class="value">1,428</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Pending KYC</div>
+            <div class="value" style="color: #eab308;">3</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Today's Volume</div>
+            <div class="value" style="color: #10b981;">$42,500</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Active Disputes</div>
+            <div class="value" style="color: #ef4444;">0</div>
+        </div>
+    </div>
+
+    <div class="panel-grid">
+        <!-- Left Side: KYC Approvals & User Management -->
+        <div>
+            <div class="section-title"><i class="fa-solid fa-user-shield"></i> Pending KYC Approvals</div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>User Details</th>
+                            <th>Document</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <div style="font-weight: bold;">Abdurahman Ashebir</div>
+                                <div style="font-size: 11px; color: #777;">ID: #TBR-1042</div>
+                            </td>
+                            <td>National ID</td>
+                            <td><span class="badge-pending">Pending</span></td>
+                            <td>
+                                <button class="btn btn-approve" onclick="approveUser(this)"><i class="fa-solid fa-check"></i></button>
+                                <button class="btn btn-reject" onclick="rejectUser(this)"><i class="fa-solid fa-xmark"></i></button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Right Side: Market Rates & Account Unlock Controls -->
+        <div>
+            <div class="section-title"><i class="fa-solid fa-sliders"></i> Market & Account Controls</div>
+            
+            <div class="control-card" style="margin-bottom: 20px;">
+                <div style="font-size: 13px; font-weight: bold; color: #fff; margin-bottom: 12px;"><i class="fa-solid fa-chart-line"></i> Set Daily Market Rate (USDT)</div>
+                <div class="form-group">
+                    <label>Current Buy / Sell Rate (ETB)</label>
+                    <input type="text" class="input-box" value="138.50" id="marketRateInput">
+                </div>
+                <button class="action-btn" onclick="updateRate()">Update Rate</button>
+            </div>
+
+            <div class="control-card">
+                <div style="font-size: 13px; font-weight: bold; color: #fff; margin-bottom: 12px;"><i class="fa-solid fa-lock-open"></i> Unlock User / Resolve Limit</div>
+                <div class="form-group">
+                    <label>User ID or Email</label>
+                    <input type="text" class="input-box" placeholder="e.g. #TBR-1042">
+                </div>
+                <button class="action-btn" style="background: #2563eb; color: #fff;" onclick="unlockAccount()">Unlock Account / Reset Limits</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function approveUser(btn) {
+            const row = btn.closest('tr');
+            row.querySelector('td:nth-child(3)').innerHTML = '<span style="color: #10b981; font-weight: bold;">Approved</span>';
+            row.querySelector('td:nth-child(4)').innerHTML = '<span style="color: #777; font-size: 12px;">Completed</span>';
+            alert('KYC Approved successfully!');
+        }
+
+        function rejectUser(btn) {
+            const row = btn.closest('tr');
+            row.querySelector('td:nth-child(3)').innerHTML = '<span style="color: #ef4444; font-weight: bold;">Rejected</span>';
+            row.querySelector('td:nth-child(4)').innerHTML = '<span style="color: #777; font-size: 12px;">Completed</span>';
+            alert('KYC Rejected.');
+        }
+
+        function updateRate() {
+            const rate = document.getElementById('marketRateInput').value;
+            alert('Market rate updated successfully to ' + rate + ' ETB');
+        }
+
+        function unlockAccount() {
+            alert('User account unlocked and limits restored successfully!');
+        }
+    </script>
+</body>
+</html>
