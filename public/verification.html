@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verification - TBR Exchange</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #080808;
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #fff;
+            padding-top: 75px;
+            padding-bottom: 70px;
+        }
+
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: #121212;
+            border-bottom: 1px solid #262626;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            box-sizing: border-box;
+        }
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .logo-container img {
+            height: 32px;
+            width: auto;
+            object-fit: contain;
+            display: block;
+        }
+        .nav-links {
+            display: flex;
+            gap: 15px;
+        }
+        .nav-links a {
+            color: #888;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: 8px;
+            transition: 0.2s;
+        }
+        .nav-links a.active, .nav-links a:hover {
+            color: #d4af37;
+            background: rgba(212, 175, 55, 0.08);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+        }
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            color: #aaa;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        .page-header h2 {
+            margin: 0;
+            font-size: 24px;
+            color: #fff;
+        }
+        .badge-tag {
+            background: #121212;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            color: #d4af37;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Verification Steps Indicator */
+        .steps-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            position: relative;
+            padding: 0 30px;
+        }
+        .step-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            z-index: 2;
+        }
+        .step-circle {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: #121212;
+            border: 2px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #777;
+            font-size: 14px;
+        }
+        .step-item.active .step-circle {
+            border-color: #d4af37;
+            color: #d4af37;
+            background: rgba(212, 175, 55, 0.1);
+        }
+        .step-label {
+            font-size: 11px;
+            color: #777;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+        .step-item.active .step-label {
+            color: #d4af37;
+        }
+        .step-line {
+            position: absolute;
+            top: 19px;
+            left: 80px;
+            right: 80px;
+            height: 2px;
+            background: #222;
+            z-index: 1;
+        }
+
+        /* Main Box */
+        .verify-card {
+            background: #121212;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            border-radius: 18px;
+            padding: 30px;
+        }
+        .verify-top-info {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            margin-bottom: 25px;
+        }
+        .verify-shield {
+            width: 44px;
+            height: 44px;
+            background: rgba(212, 175, 55, 0.1);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #d4af37;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .verify-top-info h3 {
+            margin: 0 0 5px 0;
+            font-size: 18px;
+            color: #fff;
+        }
+        .verify-top-info p {
+            margin: 0;
+            font-size: 13px;
+            color: #888;
+            line-height: 1.4;
+        }
+
+        .limits-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+            background: #181818;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #222;
+        }
+        .limit-item {
+            text-align: center;
+        }
+        .limit-item .label {
+            font-size: 11px;
+            color: #777;
+            margin-bottom: 5px;
+        }
+        .limit-item .val {
+            font-size: 14px;
+            font-weight: bold;
+            color: #d4af37;
+        }
+
+        /* Action Options */
+        .option-box {
+            background: #181818;
+            border: 1px solid #262626;
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+            text-decoration: none;
+            color: inherit;
+        }
+        .option-box:hover {
+            border-color: #d4af37;
+            background: #1c1c1c;
+        }
+        .option-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .option-icon {
+            color: #d4af37;
+            font-size: 18px;
+        }
+        .option-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #fff;
+            margin-bottom: 3px;
+        }
+        .option-sub {
+            font-size: 12px;
+            color: #888;
+        }
+        .status-pill {
+            font-size: 11px;
+            background: rgba(245, 158, 11, 0.1);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        @media(max-width: 900px) {
+            .limits-grid { grid-template-columns: 1fr; }
+            .option-box { flex-direction: column; align-items: flex-start; gap: 12px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="navbar">
+        <div class="nav-left">
+            <div class="logo-container">
+                <img src="logo.png" alt="TBR Exchange Logo">
+            </div>
+            <div class="nav-links">
+                <a href="dashboard.html"><i class="fa-solid fa-house"></i> Dashboard</a>
+                <a href="market.html"><i class="fa-solid fa-store"></i> Market</a>
+                <a href="my-ads.html"><i class="fa-solid fa-bullhorn"></i> My Ads</a>
+                <a href="trades.html"><i class="fa-solid fa-right-left"></i> Trades</a>
+                <a href="wallet.html"><i class="fa-solid fa-wallet"></i> Wallet</a>
+            </div>
+        </div>
+        <div class="nav-right">
+            <div class="badge-tag"><i class="fa-solid fa-shield"></i> Basic</div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="page-header">
+            <h2>Verification</h2>
+        </div>
+
+        <div class="steps-container">
+            <div class="step-line"></div>
+            <div class="step-item active">
+                <div class="step-circle"><i class="fa-solid fa-check"></i></div>
+                <div class="step-label">Basic</div>
+            </div>
+            <div class="step-item active">
+                <div class="step-circle"><i class="fa-solid fa-shield-halved"></i></div>
+                <div class="step-label">Verified</div>
+            </div>
+            <div class="step-item">
+                <div class="step-circle"><i class="fa-solid fa-star"></i></div>
+                <div class="step-label">Merchant</div>
+            </div>
+        </div>
+
+        <div class="verify-card">
+            <div class="verify-top-info">
+                <div class="verify-shield"><i class="fa-solid fa-shield-halved"></i></div>
+                <div>
+                    <h3>Upgrade to Verified</h3>
+                    <p>Submit a government ID to unlock 10× higher limits and the ability to post advertisements.</p>
+                </div>
+            </div>
+
+            <div class="limits-grid">
+                <div class="limit-item">
+                    <div class="label">Daily trade</div>
+                    <div class="val">5K USDT</div>
+                </div>
+                <div class="limit-item">
+                    <div class="label">Withdrawal</div>
+                    <div class="val">5K USDT</div>
+                </div>
+                <div class="limit-item">
+                    <div class="label">Post ads</div>
+                    <div class="val" style="color: #22c55e;">Unlocked</div>
+                </div>
+            </div>
+
+            <div class="option-box">
+                <div class="option-left">
+                    <div class="option-icon"><i class="fa-solid fa-circle-pause"></i></div>
+                    <div>
+                        <div class="option-title">Verify with Didit</div>
+                        <div class="option-sub">Automated verification is currently paused</div>
+                    </div>
+                </div>
+                <div class="status-pill">TEMPORARILY UNAVAILABLE</div>
+            </div>
+
+            <a href="upload-id.html" class="option-box">
+                <div class="option-left">
+                    <div class="option-icon"><i class="fa-solid fa-upload"></i></div>
+                    <div>
+                        <div class="option-title">Upload documents</div>
+                        <div class="option-sub">Manual review · 1–2 business days</div>
+                    </div>
+                </div>
+                <i class="fa-solid fa-chevron-right" style="color: #666; font-size: 14px;"></i>
+            </a>
+        </div>
+    </div>
+</body>
+</html>

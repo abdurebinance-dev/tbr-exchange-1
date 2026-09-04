@@ -68,7 +68,6 @@
             gap: 15px;
             color: #aaa;
             font-size: 16px;
-            position: relative;
         }
 
         @media(max-width: 900px) {
@@ -140,6 +139,64 @@
             color: #d4af37;
         }
 
+        /* Verification Banner (Like 1233.PNG) */
+        .verification-banner {
+            background: #121212;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: 16px;
+            padding: 20px 25px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+        }
+        .verification-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .verification-icon {
+            width: 44px;
+            height: 44px;
+            background: rgba(212, 175, 55, 0.1);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #d4af37;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .verification-text h4 {
+            margin: 0 0 4px 0;
+            font-size: 15px;
+            color: #d4af37;
+        }
+        .verification-text p {
+            margin: 0;
+            font-size: 12px;
+            color: #888;
+        }
+        .verify-action-btn {
+            background: transparent;
+            border: 1px solid #d4af37;
+            color: #d4af37;
+            padding: 9px 18px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            transition: 0.2s;
+            white-space: nowrap;
+        }
+        .verify-action-btn:hover {
+            background: #d4af37;
+            color: #111;
+        }
+
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -186,16 +243,9 @@
             border-bottom: 1px solid #1a1a1a;
             font-size: 13px;
         }
-        .info-row:last-child {
-            border-bottom: none;
-        }
-        .info-row span:first-child {
-            color: #888;
-        }
-        .info-row span:last-child {
-            color: #fff;
-            font-weight: 500;
-        }
+        .info-row:last-child { border-bottom: none; }
+        .info-row span:first-child { color: #888; }
+        .info-row span:last-child { color: #fff; font-weight: 500; }
 
         .mobile-bottom-nav {
             display: none;
@@ -219,13 +269,13 @@
             align-items: center;
             gap: 3px;
         }
-        .mobile-bottom-nav a.active {
-            color: #d4af37;
-        }
+        .mobile-bottom-nav a.active { color: #d4af37; }
         @media(max-width: 900px) {
             .mobile-bottom-nav { display: flex; }
             .stats-grid { grid-template-columns: repeat(2, 1fr); }
             .profile-card { flex-direction: column; align-items: flex-start; gap: 15px; }
+            .verification-banner { flex-direction: column; align-items: flex-start; }
+            .verify-action-btn { width: 100%; text-align: center; box-sizing: border-box; }
         }
     </style>
 </head>
@@ -261,6 +311,18 @@
                 </div>
             </div>
             <a href="settings.html" class="settings-btn"><i class="fa-solid fa-gear"></i> Settings</a>
+        </div>
+
+        <!-- Identity Not Verified Banner -->
+        <div class="verification-banner">
+            <div class="verification-left">
+                <div class="verification-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                <div class="verification-text">
+                    <h4>Identity not verified</h4>
+                    <p>Verify your ID to post ads and unlock 10× higher limits.</p>
+                </div>
+            </div>
+            <a href="verification.html" class="verify-action-btn">VERIFY IDENTITY</a>
         </div>
 
         <div class="stats-grid">
@@ -309,7 +371,8 @@
             <span>Wallet</span>
         </a>
         <a href="market.html">
-            <i class="fa-solid fa-store"><span>Market</span></i>
+            <i class="fa-solid fa-store"></i>
+            <span>Market</span>
         </a>
         <a href="profile.html" class="active">
             <i class="fa-solid fa-user"></i>
@@ -318,7 +381,6 @@
     </div>
 
     <script>
-        // Load user info from localStorage if available
         const email = localStorage.getItem('signupEmail');
         if (email) {
             const username = email.split('@')[0].toUpperCase();
