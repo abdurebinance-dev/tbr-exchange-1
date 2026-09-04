@@ -210,6 +210,14 @@
             font-weight: bold;
             color: #d4af37;
         }
+        /* Strikethrough style for the previous limit values */
+        .limit-item .old-val {
+            text-decoration: line-through;
+            color: #777;
+            margin-right: 6px;
+            font-size: 12px;
+            font-weight: normal;
+        }
 
         /* Action Options */
         .option-box {
@@ -248,15 +256,6 @@
         .option-sub {
             font-size: 12px;
             color: #888;
-        }
-        .status-pill {
-            font-size: 11px;
-            background: rgba(245, 158, 11, 0.1);
-            color: #f59e0b;
-            border: 1px solid rgba(245, 158, 11, 0.3);
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-weight: bold;
         }
 
         @media(max-width: 900px) {
@@ -315,14 +314,19 @@
                 </div>
             </div>
 
+            <!-- Limits grid with 1K crossed out and 10K horizontally side-by-side -->
             <div class="limits-grid">
                 <div class="limit-item">
                     <div class="label">Daily trade</div>
-                    <div class="val">5K USDT</div>
+                    <div class="val">
+                        <span class="old-val">1K USDT</span> 10K USDT
+                    </div>
                 </div>
                 <div class="limit-item">
                     <div class="label">Withdrawal</div>
-                    <div class="val">5K USDT</div>
+                    <div class="val">
+                        <span class="old-val">1K USDT</span> 10K USDT
+                    </div>
                 </div>
                 <div class="limit-item">
                     <div class="label">Post ads</div>
@@ -330,17 +334,7 @@
                 </div>
             </div>
 
-            <div class="option-box">
-                <div class="option-left">
-                    <div class="option-icon"><i class="fa-solid fa-circle-pause"></i></div>
-                    <div>
-                        <div class="option-title">Verify with Didit</div>
-                        <div class="option-sub">Automated verification is currently paused</div>
-                    </div>
-                </div>
-                <div class="status-pill">TEMPORARILY UNAVAILABLE</div>
-            </div>
-
+            <!-- Upload Documents Option -->
             <a href="upload-id.html" class="option-box">
                 <div class="option-left">
                     <div class="option-icon"><i class="fa-solid fa-upload"></i></div>
