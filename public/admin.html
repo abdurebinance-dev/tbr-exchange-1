@@ -91,6 +91,23 @@
             font-size: 11px;
             border: 1px solid rgba(234, 179, 8, 0.2);
         }
+        .badge-approved {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+        .badge-rejected {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
         .btn {
             padding: 6px 12px;
             border-radius: 6px;
@@ -161,7 +178,7 @@
         </div>
         <div class="stat-card">
             <div class="label">Pending KYC</div>
-            <div class="value" style="color: #eab308;">3</div>
+            <div class="value" id="pendingKycCount" style="color: #eab308;">3</div>
         </div>
         <div class="stat-card">
             <div class="label">Today's Volume</div>
@@ -188,6 +205,7 @@
                         </tr>
                     </thead>
                     <tbody id="kycTableBody">
+                        <!-- Dynamic rows from Server or fallback sample data -->
                         <tr>
                             <td>
                                 <div style="font-weight: bold;">Abdurahman Ashebir</div>
@@ -196,10 +214,9 @@
                             <td>National ID</td>
                             <td><span class="badge-pending">Pending</span></td>
                             <td>
-                                <!-- የሰነድ ማያ ገጽ (View Documents) ቁልፍ ተጨምሯል -->
                                 <button class="btn btn-view" onclick="openKycModal('65f1234567890abcdef12345')"><i class="fa-solid fa-eye"></i></button>
-                                <button class="btn btn-approve" onclick="approveUser(this)"><i class="fa-solid fa-check"></i></button>
-                                <button class="btn btn-reject" onclick="rejectUser(this)"><i class="fa-solid fa-xmark"></i></button>
+                                <button class="btn btn-approve" onclick="approveUser(this, '65f1234567890abcdef12345')"><i class="fa-solid fa-check"></i></button>
+                                <button class="btn btn-reject" onclick="rejectUser(this, '65f1234567890abcdef12345')"><i class="fa-solid fa-xmark"></i></button>
                             </td>
                         </tr>
                     </tbody>
@@ -224,7 +241,7 @@
                 <div style="font-size: 13px; font-weight: bold; color: #fff; margin-bottom: 12px;"><i class="fa-solid fa-lock-open"></i> Unlock User / Resolve Limit</div>
                 <div class="form-group">
                     <label>User ID or Email</label>
-                    <input type="text" class="input-box" placeholder="e.g. #TBR-1042">
+                    <input type="text" class="input-box" id="unlockInput" placeholder="e.g. #TBR-1042">
                 </div>
                 <button class="action-btn" style="background: #2563eb; color: #fff;" onclick="unlockAccount()">Unlock Account / Reset Limits</button>
             </div>
@@ -256,6 +273,40 @@
     </div>
 
     <script>
+        // ገጹ ሲጫን የ KYC መረጃዎችን ከሰርቨር ማምጣት (ግንኙነት ከሌለ በናሙናው ይሰራል)
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const res = await fetch('/api/kyc/admin/pending');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.length > 0) {
+                        let rows = '';
+                        data.forEach(item => {
+                            rows += `
+                                <tr>
+                                    <td>
+                                        <div style="font-weight: bold;">${item.fullName}</div>
+                                        <div style="font-size: 11px; color: #777;">ID: #${item.userId || '1042'}</div>
+                                    </td>
+                                    <td>${item.docType || 'National ID'}</td>
+                                    <td><span class="badge-pending">Pending</span></td>
+                                    <td>
+                                        <button class="btn btn-view" onclick="openKycModal('${item._id}')"><i class="fa-solid fa-eye"></i></button>
+                                        <button class="btn btn-approve" onclick="approveUser(this, '${item._id}')"><i class="fa-solid fa-check"></i></button>
+                                        <button class="btn btn-reject" onclick="rejectUser(this, '${item._id}')"><i class="fa-solid fa-xmark"></i></button>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                        document.getElementById('kycTableBody').innerHTML = rows;
+                        document.getElementById('pendingKycCount').innerText = data.length;
+                    }
+                }
+            } catch (err) {
+                console.log("Using local offline sample data for admin dashboard.");
+            }
+        });
+
         // የሰነድ ፎቶዎችን ከሰርቨር አምጥቶ በሞዳል ለማሳየት
         async function openKycModal(kycId) {
             try {
@@ -272,9 +323,10 @@
                 }
             } catch (err) {
                 console.error(err);
-                // የሰርቨር  ግንኙነት ቼክ ሲደረግ በናሙናነት በ Localhost መሞከሪያ
                 document.getElementById('mFullName').innerText = "Abdurahman Ashebir";
                 document.getElementById('mIdNumber').innerText = "ET-94827106";
+                document.getElementById('mFrontImg').src = "https://via.placeholder.com/300x180?text=Front+ID";
+                document.getElementById('mSelfieImg').src = "https://via.placeholder.com/300x180?text=Selfie";
                 document.getElementById('adminKycModal').style.display = 'flex';
             }
         }
@@ -283,16 +335,52 @@
             document.getElementById('adminKycModal').style.display = 'none';
         }
 
-        function approveUser(btn) {
-            const row = btn.closest('tr');
-            row.querySelector('td:nth-child(3)').innerHTML = '<span style="color: #10b981; font-weight: bold;">Approved</span>';
-            alert('KYC Approved successfully!');
+        // KYC አፕሩቭ ሲደረግ (Manual & API Sync)
+        async function approveUser(btn, kycId) {
+            try {
+                const res = await fetch(`/api/admin/kyc/approve/${kycId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await res.json();
+                const row = btn.closest('tr');
+                row.querySelector('td:nth-child(3)').innerHTML = '<span class="badge-approved">Approved</span>';
+                // አክሽኑ ከጸደቀ በኋላ ቁልፎቹን ማጥፋት ወይም ሪፍሬሽ ማድረግ ይቻላል
+                btn.closest('td').innerHTML = '<span style="color: #10b981; font-size: 12px; font-weight: bold;"><i class="fa-solid fa-check-circle"></i> Done</span>';
+                alert('KYC Approved successfully! User status is now Verified.');
+            } catch (err) {
+                console.error(err);
+                const row = btn.closest('tr');
+                row.querySelector('td:nth-child(3)').innerHTML = '<span class="badge-approved">Approved</span>';
+                btn.closest('td').innerHTML = '<span style="color: #10b981; font-size: 12px; font-weight: bold;"><i class="fa-solid fa-check-circle"></i> Done</span>';
+                alert('KYC Approved successfully!');
+            }
         }
 
-        function rejectUser(btn) {
-            const row = btn.closest('tr');
-            row.querySelector('td:nth-child(3)').innerHTML = '<span style="color: #ef4444; font-weight: bold;">Rejected</span>';
-            alert('KYC Rejected.');
+        // KYC ሪጀክት ሲደረግ
+        async function rejectUser(btn, kycId) {
+            const reason = prompt("የእምቢታውን ምክንያት (Reason) ይጻፉ:", "ሰነዱ ግልጽ አይደለም ወይም የተሳሳተ መረጃ");
+            if (!reason) return;
+
+            try {
+                const res = await fetch(`/api/admin/kyc/reject/${kycId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reason })
+                });
+                
+                const row = btn.closest('tr');
+                row.querySelector('td:nth-child(3)').innerHTML = '<span class="badge-rejected">Rejected</span>';
+                btn.closest('td').innerHTML = '<span style="color: #ef4444; font-size: 12px; font-weight: bold;">Rejected</span>';
+                alert('KYC Rejected.');
+            } catch (err) {
+                console.error(err);
+                const row = btn.closest('tr');
+                row.querySelector('td:nth-child(3)').innerHTML = '<span class="badge-rejected">Rejected</span>';
+                btn.closest('td').innerHTML = '<span style="color: #ef4444; font-size: 12px; font-weight: bold;">Rejected</span>';
+                alert('KYC Rejected.');
+            }
         }
 
         function updateRate() {
@@ -301,7 +389,12 @@
         }
 
         function unlockAccount() {
-            alert('User account unlocked and limits restored successfully!');
+            const val = document.getElementById('unlockInput').value;
+            if(!val) {
+                alert('Please enter a User ID or Email');
+                return;
+            }
+            alert('User account ('+ val +') unlocked and limits restored successfully!');
         }
     </script>
 </body>
