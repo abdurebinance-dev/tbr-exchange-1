@@ -61,6 +61,7 @@
             gap: 20px;
             color: #aaa;
             font-size: 18px;
+            position: relative; /* ለፕሮፋይል ድሮፕዳው መያዣ */
         }
 
         @media(max-width: 900px) {
@@ -70,6 +71,77 @@
             .navbar {
                 padding: 15px 20px;
             }
+        }
+
+        /* Profile Dropdown Menu Styles (Binance Style) */
+        .profile-dropdown {
+            position: absolute;
+            top: 50px;
+            right: 0;
+            width: 260px;
+            background: #181a20;
+            border: 1px solid #2b313a;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            display: none;
+            z-index: 1000;
+        }
+        .profile-dropdown.active {
+            display: block;
+        }
+        .profile-header-info {
+            padding-bottom: 12px;
+            border-bottom: 1px solid #2b313a;
+            margin-bottom: 10px;
+        }
+        .profile-header-info h4 {
+            margin: 0 0 4px 0;
+            font-size: 15px;
+            color: #fff;
+        }
+        .profile-header-info p {
+            margin: 0;
+            font-size: 12px;
+            color: #848e9c;
+        }
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            text-decoration: none;
+            color: #eaecef;
+            font-size: 13px;
+            border-radius: 8px;
+            transition: 0.2s;
+        }
+        .dropdown-item:hover {
+            background: #2b313a;
+        }
+        /* Icon Colors */
+        .dropdown-item i.fa-user { color: #fcd535; }
+        .dropdown-item i.fa-bullhorn { color: #0ecb81; }
+        .dropdown-item i.fa-gear { color: #848e9c; }
+        .dropdown-item i.fa-gift { color: #0ecb81; }
+        .dropdown-item i.fa-trophy { color: #fcd535; }
+        .dropdown-item i.fa-circle-question { color: #177ddc; }
+        .dropdown-item i.fa-mobile-screen { color: #0ecb81; }
+        .dropdown-item i.fa-heart { color: #f6465d; }
+        
+        .dropdown-divider {
+            height: 1px;
+            background: #2b313a;
+            margin: 8px 0;
+        }
+        .dropdown-item.sign-out {
+            color: #f6465d;
+        }
+        .dropdown-item.sign-out i {
+            color: #f6465d;
+        }
+        .dropdown-item.sign-out:hover {
+            background: rgba(246, 70, 93, 0.1);
         }
 
         /* Container */
@@ -437,7 +509,50 @@
         <div class="nav-right">
             <i id="theme-toggle" class="fa-solid fa-moon" style="color: #d4af37; cursor: pointer;" title="Toggle Theme"></i>
             <i class="fa-regular fa-bell" style="cursor: pointer;"></i>
-            <a href="profile.html" style="color: inherit; text-decoration: none;"><i class="fa-solid fa-user-circle" style="color: #d4af37;"></i></a>
+            
+            <!-- Profile Icon Button -->
+            <div id="profile-icon-btn" style="cursor: pointer; display: flex; align-items: center;">
+                <i class="fa-solid fa-user-circle" style="color: #d4af37; font-size: 20px;"></i>
+            </div>
+
+            <!-- Profile Dropdown Menu -->
+            <div id="profile-dropdown-menu" class="profile-dropdown">
+                <div class="profile-header-info">
+                    <h4 id="menuUserName">ABDUREHIMAN ASHEBIR</h4>
+                    <p id="menuUserEmail">binanceme73@gmail.com</p>
+                </div>
+
+                <a href="profile.html" class="dropdown-item">
+                    <i class="fa-solid fa-user"></i> View Profile
+                </a>
+                <a href="my-ads.html" class="dropdown-item">
+                    <i class="fa-solid fa-bullhorn"></i> My Ads
+                </a>
+                <a href="settings.html" class="dropdown-item">
+                    <i class="fa-solid fa-gear"></i> Account Settings
+                </a>
+                <a href="referral.html" class="dropdown-item">
+                    <i class="fa-solid fa-gift"></i> Refer & Earn
+                </a>
+                <a href="leaderboard.html" class="dropdown-item">
+                    <i class="fa-solid fa-trophy"></i> Leaderboard
+                </a>
+                <a href="help.html" class="dropdown-item">
+                    <i class="fa-solid fa-circle-question"></i> Help Center
+                </a>
+                <a href="download.html" class="dropdown-item">
+                    <i class="fa-solid fa-mobile-screen"></i> Download App
+                </a>
+                <a href="support.html" class="dropdown-item">
+                    <i class="fa-solid fa-heart"></i> Support EBR
+                </a>
+
+                <div class="dropdown-divider"></div>
+
+                <a href="#" id="signOutBtn" class="dropdown-item sign-out">
+                    <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+                </a>
+            </div>
         </div>
     </div>
 
@@ -601,6 +716,25 @@
                 localStorage.setItem('theme', 'dark');
                 themeToggle.classList.replace('fa-sun', 'fa-moon');
             }
+        });
+
+        // Profile Dropdown Toggle Script
+        const profileBtn = document.getElementById('profile-icon-btn');
+        const profileMenu = document.getElementById('profile-dropdown-menu');
+
+        profileBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            profileMenu.classList.toggle('active');
+        });
+
+        window.addEventListener('click', () => {
+            if (profileMenu.classList.contains('active')) {
+                profileMenu.classList.remove('active');
+            }
+        });
+
+        profileMenu.addEventListener('click', (e) => {
+            e.stopPropagation();
         });
     </script>
 </body>
