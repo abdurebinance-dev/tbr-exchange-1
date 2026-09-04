@@ -11,43 +11,50 @@
             margin: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             color: #fff;
+            padding-top: 75px; /* Navbar fixed ስለሆነ ከላይ እንዳይደራረብ */
             padding-bottom: 70px;
         }
 
-        /* Navbar */
+        /* Fixed Navbar with proper spacing for mobile icons */
         .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
             background: #121212;
             border-bottom: 1px solid #262626;
-            padding: 15px 40px;
+            padding: 12px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            z-index: 1000;
+            box-sizing: border-box;
         }
         .nav-left {
             display: flex;
             align-items: center;
-            gap: 40px;
+            gap: 20px;
         }
         .logo-container img {
-            height: 38px;
+            height: 32px;
             width: auto;
             object-fit: contain;
             display: block;
         }
         .nav-links {
             display: flex;
-            gap: 25px;
+            gap: 15px;
         }
         .nav-links a {
             color: #888;
             text-decoration: none;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 500;
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 8px 14px;
-            border-radius: 10px;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: 8px;
             transition: 0.2s;
         }
         .nav-links a.active, .nav-links a:hover {
@@ -55,12 +62,14 @@
             background: rgba(212, 175, 55, 0.08);
             border: 1px solid rgba(212, 175, 55, 0.2);
         }
+        
+        /* Fixed right icons layout to prevent crushing on mobile */
         .nav-right {
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 15px;
             color: #aaa;
-            font-size: 18px;
+            font-size: 16px;
             position: relative;
         }
 
@@ -69,23 +78,26 @@
                 display: none;
             }
             .navbar {
-                padding: 15px 20px;
+                padding: 12px 15px;
+            }
+            .nav-right {
+                gap: 14px; /* በሞባይል ላይ ክፍተቱን አስተካክለናል */
             }
         }
 
-        /* Profile Dropdown Menu Styles (Binance Style) */
+        /* Profile Dropdown Menu Styles */
         .profile-dropdown {
             position: absolute;
-            top: 50px;
+            top: 45px;
             right: 0;
-            width: 260px;
+            width: 250px;
             background: #181a20;
             border: 1px solid #2b313a;
             border-radius: 12px;
             padding: 15px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.5);
             display: none;
-            z-index: 1000;
+            z-index: 1100;
         }
         .profile-dropdown.active {
             display: block;
@@ -97,19 +109,19 @@
         }
         .profile-header-info h4 {
             margin: 0 0 4px 0;
-            font-size: 15px;
+            font-size: 14px;
             color: #fff;
         }
         .profile-header-info p {
             margin: 0;
-            font-size: 12px;
+            font-size: 11px;
             color: #848e9c;
         }
         .dropdown-item {
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 10px 12px;
+            padding: 9px 10px;
             text-decoration: none;
             color: #eaecef;
             font-size: 13px;
@@ -119,7 +131,6 @@
         .dropdown-item:hover {
             background: #2b313a;
         }
-        /* Icon Colors */
         .dropdown-item i.fa-user { color: #fcd535; }
         .dropdown-item i.fa-bullhorn { color: #0ecb81; }
         .dropdown-item i.fa-gear { color: #848e9c; }
@@ -132,7 +143,7 @@
         .dropdown-divider {
             height: 1px;
             background: #2b313a;
-            margin: 8px 0;
+            margin: 6px 0;
         }
         .dropdown-item.sign-out {
             color: #f6465d;
@@ -147,13 +158,13 @@
         /* Container */
         .container {
             max-width: 1200px;
-            margin: 30px auto;
+            margin: 20px auto;
             padding: 0 20px;
         }
         .greeting {
-            font-size: 15px;
+            font-size: 14px;
             color: #888;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
@@ -162,62 +173,59 @@
         .top-grid {
             display: grid;
             grid-template-columns: 2fr 1fr;
-            gap: 25px;
-            margin-bottom: 25px;
+            gap: 20px;
+            margin-bottom: 20px;
         }
         @media(max-width: 900px) {
             .top-grid { grid-template-columns: 1fr; }
-            .container {
-                padding: 0 15px;
-                margin: 15px auto;
-            }
+            .container { padding: 0 15px; }
         }
 
         .balance-card {
             background: #121212;
             border: 1px solid #262626;
-            border-radius: 20px;
-            padding: 30px;
+            border-radius: 18px;
+            padding: 25px;
             position: relative;
         }
         .card-title {
-            font-size: 13px;
+            font-size: 12px;
             color: #777;
             letter-spacing: 0.5px;
             display: flex;
             align-items: center;
             gap: 8px;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
         }
         .balance-amount {
-            font-size: 42px;
+            font-size: 36px;
             font-weight: bold;
             color: #fff;
-            margin-bottom: 30px;
+            margin-bottom: 25px;
             display: flex;
             align-items: baseline;
             gap: 10px;
         }
         .balance-amount span {
-            font-size: 20px;
+            font-size: 18px;
             color: #d4af37;
             font-weight: normal;
         }
 
         .actions-row {
             display: flex;
-            gap: 15px;
+            gap: 12px;
         }
         .action-btn {
             flex: 1;
             background: #1a1a1a;
             border: 1px solid #333;
-            border-radius: 14px;
-            padding: 15px;
+            border-radius: 12px;
+            padding: 12px 8px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             cursor: pointer;
             transition: 0.2s;
             text-decoration: none;
@@ -227,7 +235,6 @@
             border-color: #d4af37;
             background: #222;
         }
-        
         .action-btn.buy-btn:hover {
             border-color: #22c55e;
             background: rgba(34, 197, 94, 0.05);
@@ -236,7 +243,6 @@
             background: rgba(34, 197, 94, 0.1);
             color: #22c55e;
         }
-
         .action-btn.sell-btn:hover {
             border-color: #ef4444;
             background: rgba(239, 68, 68, 0.05);
@@ -245,20 +251,19 @@
             background: rgba(239, 68, 68, 0.1);
             color: #ef4444;
         }
-
         .action-icon {
-            width: 40px;
-            height: 40px;
+            width: 36px;
+            height: 36px;
             background: rgba(212, 175, 55, 0.1);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             color: #d4af37;
-            font-size: 16px;
+            font-size: 15px;
         }
         .action-btn span {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 500;
         }
 
@@ -266,8 +271,8 @@
         .rate-card {
             background: #121212;
             border: 1px solid #262626;
-            border-radius: 20px;
-            padding: 30px;
+            border-radius: 18px;
+            padding: 25px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -281,44 +286,44 @@
             background: linear-gradient(135deg, #f5d77f 0%, #d4af37 50%, #aa8621 100%);
             color: #111;
             border: none;
-            padding: 8px 18px;
-            border-radius: 10px;
+            padding: 6px 14px;
+            border-radius: 8px;
             font-weight: bold;
-            font-size: 13px;
+            font-size: 12px;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
         }
         .rate-value {
-            font-size: 32px;
+            font-size: 28px;
             font-weight: bold;
             color: #fff;
-            margin: 15px 0 5px 0;
+            margin: 12px 0 4px 0;
         }
         .rate-value span {
-            font-size: 16px;
+            font-size: 15px;
             color: #d4af37;
             font-weight: normal;
         }
         .rate-subtext {
-            font-size: 12px;
+            font-size: 11px;
             color: #777;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         .rate-stats {
             display: flex;
             justify-content: space-between;
             border-top: 1px solid #222;
-            padding-top: 15px;
+            padding-top: 12px;
         }
         .rate-stat-item div:first-child {
-            font-size: 11px;
+            font-size: 10px;
             color: #666;
-            margin-bottom: 4px;
+            margin-bottom: 3px;
         }
         .rate-stat-item div:last-child {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: bold;
             color: #aaa;
         }
@@ -327,8 +332,8 @@
         .middle-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
-            margin-bottom: 25px;
+            gap: 15px;
+            margin-bottom: 20px;
         }
         @media(max-width: 900px) {
             .middle-grid { grid-template-columns: 1fr; }
@@ -336,14 +341,14 @@
         .menu-card {
             background: #121212;
             border: 1px solid #262626;
-            border-radius: 16px;
-            padding: 20px;
+            border-radius: 14px;
+            padding: 18px;
             cursor: pointer;
             transition: 0.2s;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            min-height: 100px;
+            min-height: 90px;
         }
         .menu-card:hover {
             border-color: #d4af37;
@@ -355,24 +360,24 @@
             align-items: flex-start;
         }
         .menu-icon {
-            width: 36px;
-            height: 36px;
+            width: 32px;
+            height: 32px;
             background: rgba(212, 175, 55, 0.08);
-            border-radius: 10px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
             color: #d4af37;
-            font-size: 15px;
+            font-size: 14px;
         }
         .menu-card h4 {
-            margin: 15px 0 5px 0;
-            font-size: 15px;
+            margin: 12px 0 4px 0;
+            font-size: 14px;
             color: #fff;
         }
         .menu-card p {
             margin: 0;
-            font-size: 12px;
+            font-size: 11px;
             color: #777;
         }
 
@@ -380,8 +385,8 @@
         .banner-2fa {
             background: #121212;
             border: 1px solid #262626;
-            border-radius: 16px;
-            padding: 20px 25px;
+            border-radius: 14px;
+            padding: 18px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -394,11 +399,11 @@
         .banner-left {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 14px;
         }
         .banner-icon {
-            width: 40px;
-            height: 40px;
+            width: 36px;
+            height: 36px;
             background: rgba(212, 175, 55, 0.1);
             border-radius: 50%;
             display: flex;
@@ -407,13 +412,13 @@
             color: #d4af37;
         }
         .banner-text h4 {
-            margin: 0 0 4px 0;
-            font-size: 15px;
+            margin: 0 0 3px 0;
+            font-size: 14px;
             color: #fff;
         }
         .banner-text p {
             margin: 0;
-            font-size: 12px;
+            font-size: 11px;
             color: #777;
         }
 
@@ -426,7 +431,7 @@
             width: 100%;
             background: #121212;
             border-top: 1px solid #262626;
-            padding: 10px 0;
+            padding: 8px 0;
             justify-content: space-around;
             align-items: center;
             z-index: 1000;
@@ -438,13 +443,13 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 4px;
+            gap: 3px;
         }
         .mobile-bottom-nav a.active {
             color: #d4af37;
         }
         .mobile-bottom-nav a i {
-            font-size: 18px;
+            font-size: 16px;
         }
 
         @media(max-width: 900px) {
@@ -716,7 +721,7 @@
             }
         });
 
-        // Profile Dropdown Toggle Script (Fixed)
+        // Profile Dropdown Toggle Script
         const profileBtn = document.getElementById('profile-icon-btn');
         const profileMenu = document.getElementById('profile-dropdown-menu');
 
@@ -725,12 +730,10 @@
             profileMenu.classList.toggle('active');
         });
 
-        // Dropdown ውስጥ ሲጫኑ እንዳይዘጋ
         profileMenu.addEventListener('click', (e) => {
             e.stopPropagation();
         });
 
-        // ከሜኑ ውጭ ሲጫኑ እንዲዘጋ
         window.addEventListener('click', () => {
             if (profileMenu.classList.contains('active')) {
                 profileMenu.classList.remove('active');
