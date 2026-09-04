@@ -472,6 +472,7 @@
 
             <div class="form-group">
                 <div class="section-title" style="margin-bottom: 6px;">Full Name *</div>
+                <!-- ዩዘሩ የራሱን ስም እንዲጽፍ ባዶ እንዲሆን ተደርጓል -->
                 <input type="text" id="fullNameInput" class="form-control" placeholder="Enter your full name as on ID">
             </div>
 
@@ -508,10 +509,27 @@
         const selfieStatusText = document.getElementById('selfieStatusText');
         const canvasElement = document.getElementById('canvasElement');
 
-        // የማከማቻ ተለዋዋጮች (Base64 strings for images)
         let frontImageBase64 = null;
         let backImageBase64 = null;
         let selfieImageBase64 = null;
+
+        // ዩዘሩ ሲገባ የፕሮፋይል መረጃውን ከ ሰርቨር አምጥቶ በራስ-ሰር ስሙን መሙላት ከፈለጉ (አማራጭ)
+        window.addEventListener('DOMContentLoaded', async () => {
+            const token = localStorage.getItem('token');
+            if (token) {
+                try {
+                    const res = await fetch('/api/user/profile', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    const data = await res.json();
+                    if (data.success && data.user && data.user.fullName && data.user.fullName !== 'User') {
+                        document.getElementById('fullNameInput').value = data.user.fullName;
+                    }
+                } catch (e) {
+                    console.error('Could not fetch profile', e);
+                }
+            }
+        });
 
         async function startCamera() {
             try {
@@ -544,7 +562,6 @@
             canvasElement.height = videoElement.videoHeight || 480;
             context.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
             
-            // የሰልፊ ፎቶውን ወደ Base64 መቀየር
             selfieImageBase64 = canvasElement.toDataURL('image/jpeg');
 
             selfieStatusText.innerHTML = '<i class="fa-solid fa-check-circle" style="color: #0ecb81;"></i> Selfie Captured Successfully!';
@@ -557,16 +574,10 @@
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    frontImageBase64 = e.target.result; // የፊት ፎቶ Base64
+                    frontImageBase64 = e.target.result;
                     document.getElementById('frontText').innerHTML = '<span style="color: #0ecb81;">Front Uploaded ✓</span>';
                     document.getElementById('frontBox').style.borderColor = '#0ecb81';
-
-                    setTimeout(() => {
-                        document.getElementById('fullNameInput').value = "Abdurahman Ashebir Yimam";
-                        document.getElementById('idNumberInput').value = "ET-94827106";
-                        document.getElementById('dobInput').value = "2005-08-15";
-                        document.getElementById('addressInput').value = "Woldia, Amhara, Ethiopia";
-                    }, 600);
+                    // የተሳሳተውን Hardcoded ስም (Abdurahman Ashebir Yimam) እዚህጋ ከሰርቨሩ አጥፍተነዋል!
                 };
                 reader.readAsDataURL(file);
             }
@@ -577,7 +588,7 @@
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    backImageBase64 = e.target.result; // የኋላ ፎቶ Base64
+                    backImageBase64 = e.target.result;
                     document.getElementById('backText').innerHTML = '<span style="color: #0ecb81;">Back Uploaded ✓</span>';
                     document.getElementById('backBox').style.borderColor = '#0ecb81';
                 };
@@ -603,10 +614,17 @@
                 return;
             }
 
+            const token = localStorage.getItem('token');
+            let userId = null;
+            // ቶከኑን በመበተን የዩዘር ID ማግኘት ይቻላል (ወይም ሰርቨሩ ራሱ ከ Token እንዲቀበለው ማድረግ ይቻላል)
+            
             try {
                 const response = await fetch('/api/kyc/submit', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': token ? `Bearer ${token}` : '' 
+                    },
                     body: JSON.stringify({ 
                         fullName, 
                         idNumber, 
@@ -621,9 +639,7 @@
 
                 const result = await response.json();
                 if (response.ok) {
-                    // ዩዘሩ ፎርሙን ልኮ 200 OK ሲመጣለት kycStatus በ localStorage ውስጥ pending እንዲሆን ተደረገ
                     localStorage.setItem('kycStatus', 'pending');
-                    
                     alert('KYC documents submitted successfully! Your account is now under review.');
                     window.location.href = 'dashboard.html';
                 } else {
