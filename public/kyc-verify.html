@@ -339,6 +339,7 @@
             <div class="status-badge"><i class="fa-solid fa-circle" style="font-size: 8px; color: #f0b90b;"></i> Basic</div>
         </div>
 
+        <!-- Steps Tracker -->
         <div class="steps-container">
             <div class="step-item active">
                 <div class="step-circle"><i class="fa-solid fa-check"></i></div>
@@ -354,6 +355,7 @@
             </div>
         </div>
 
+        <!-- Upgrade Banner -->
         <div class="top-banner-box">
             <div class="banner-header">
                 <div class="banner-icon"><i class="fa-solid fa-shield-halved"></i></div>
@@ -386,6 +388,7 @@
             </button>
         </div>
 
+        <!-- Main Form Section -->
         <div class="form-card" id="kycFormSection">
             <div class="section-title">Document type</div>
             <div class="form-group">
@@ -396,6 +399,7 @@
                 </select>
             </div>
 
+            <!-- Documents (Front & Back) -->
             <div class="section-title" style="margin-top: 20px;">Documents — <span style="color: #f0b90b;">* required</span></div>
             
             <div class="upload-grid">
@@ -412,18 +416,22 @@
                 <input type="file" id="backInput" style="display: none;" accept="image/*">
             </div>
 
+            <!-- Selfie with ID (Directs to front camera / capture user) -->
             <div class="section-title">Selfie with ID *</div>
             <div class="upload-box" style="margin-bottom: 20px;" onclick="document.getElementById('selfieInput').click()">
                 <i class="fa-solid fa-camera"></i>
                 <span>Hold ID next to your face</span>
             </div>
-            <input type="file" id="selfieInput" style="display: none;" accept="image/*">
+            <!-- Added capture="user" to invoke front camera directly on mobile devices -->
+            <input type="file" id="selfieInput" style="display: none;" accept="image/*" capture="user">
 
+            <!-- Full Name field -->
             <div class="form-group">
                 <div class="section-title" style="margin-bottom: 6px;">Full Name *</div>
                 <input type="text" class="form-control" placeholder="Enter your full name as on ID">
             </div>
 
+            <!-- ID Number & Date of Birth -->
             <div class="form-row">
                 <div class="form-group">
                     <div class="section-title" style="margin-bottom: 6px;">ID Number <span style="color: #555;">(opt.)</span></div>
@@ -435,6 +443,7 @@
                 </div>
             </div>
 
+            <!-- Residential Address -->
             <div class="form-group">
                 <div class="section-title" style="margin-bottom: 6px;">Residential Address <span style="color: #555;">(opt.)</span></div>
                 <input type="text" class="form-control" placeholder="e.g. Bole Sub-city, Addis Ababa, Ethiopia">
