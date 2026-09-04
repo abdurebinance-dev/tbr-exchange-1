@@ -682,6 +682,48 @@ app.post('/api/admin/kyc-action', async (req, res) => {
     }
 });
 
+// ==========================================
+// Admin Control & Dashboard Extra Routes
+// ==========================================
+
+// አጠቃላይ ተጠቃሚዎችን ዝርዝር ለማየት (Admin Users List)
+app.get('/api/admin/users', async (req, res) => {
+    try {
+        const users = await User.find({}, '-password').sort({ _id: -1 });
+        res.json({ success: true, users });
+    } catch (error) {
+        console.error('Admin Users Fetch Error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// የተቆለፈ አካውንት ለመክፈት (Unlock User Account API)
+app.post('/api/admin/unlock-account', async (req, res) => {
+    try {
+        const { identifier } = req.body; // email or phone or userId
+        if (!identifier) {
+            return res.status(400).json({ success: false, message: 'User identifier is required.' });
+        }
+
+        const user = await User.findOne({
+            $or: [{ email: identifier.trim().toLowerCase() }, { phone: identifier.trim() }, { _id: identifier.match(/^[0-9a-fA-F]{24}$/) ? identifier : null }]
+        });
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
+
+        user.loginAttempts = 0;
+        user.lockUntil = undefined;
+        await user.save();
+
+        res.json({ success: true, message: `User account (${user.email}) unlocked successfully.` });
+    } catch (error) {
+        console.error('Unlock Account Error:', error);
+        res.status(500).json({ success: false, message: error.message || 'Server error' });
+    }
+});
+
 // Admin Market Rate & Account Control API
 app.post('/api/admin/update-rate', async (req, res) => {
     try {
