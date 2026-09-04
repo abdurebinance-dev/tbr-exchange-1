@@ -11,11 +11,10 @@
             margin: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             color: #fff;
-            padding-top: 75px; /* Navbar fixed ስለሆነ ከላይ እንዳይደራረብ */
+            padding-top: 75px;
             padding-bottom: 70px;
         }
 
-        /* Fixed Navbar with proper spacing for mobile icons */
         .navbar {
             position: fixed;
             top: 0;
@@ -63,7 +62,6 @@
             border: 1px solid rgba(212, 175, 55, 0.2);
         }
         
-        /* Fixed right icons layout to prevent crushing on mobile */
         .nav-right {
             display: flex;
             align-items: center;
@@ -81,11 +79,10 @@
                 padding: 12px 15px;
             }
             .nav-right {
-                gap: 14px; /* በሞባይል ላይ ክፍተቱን አስተካክለናል */
+                gap: 14px;
             }
         }
 
-        /* Profile Dropdown Menu Styles */
         .profile-dropdown {
             position: absolute;
             top: 45px;
@@ -154,7 +151,6 @@
             background: rgba(246, 70, 93, 0.1);
         }
 
-        /* Container */
         .container {
             max-width: 1200px;
             margin: 20px auto;
@@ -168,7 +164,6 @@
             letter-spacing: 0.5px;
         }
 
-        /* Top Grid */
         .top-grid {
             display: grid;
             grid-template-columns: 2fr 1fr;
@@ -266,7 +261,6 @@
             font-weight: 500;
         }
 
-        /* Live Rate Card */
         .rate-card {
             background: #121212;
             border: 1px solid #262626;
@@ -327,7 +321,6 @@
             color: #aaa;
         }
 
-        /* Middle Grid */
         .middle-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -348,6 +341,7 @@
             flex-direction: column;
             justify-content: space-between;
             min-height: 90px;
+            text-decoration: none;
         }
         .menu-card:hover {
             border-color: #d4af37;
@@ -380,7 +374,6 @@
             color: #777;
         }
 
-        /* 2FA Banner */
         .banner-2fa {
             background: #121212;
             border: 1px solid #262626;
@@ -391,6 +384,8 @@
             align-items: center;
             cursor: pointer;
             transition: 0.2s;
+            text-decoration: none;
+            color: inherit;
         }
         .banner-2fa:hover {
             border-color: #d4af37;
@@ -421,7 +416,6 @@
             color: #777;
         }
 
-        /* Mobile Bottom Navigation Bar */
         .mobile-bottom-nav {
             display: none;
             position: fixed;
@@ -457,7 +451,6 @@
             }
         }
 
-        /* Light Mode Styles */
         body.light-mode {
             background-color: #f4f5f7 !important;
             color: #111 !important;
@@ -500,21 +493,21 @@
                 <img src="logo.png" alt="TBR Exchange Logo">
             </div>
             <div class="nav-links">
-                <a href="#" class="active"><i class="fa-solid fa-house"></i> Dashboard</a>
+                <a href="dashboard.html" class="active"><i class="fa-solid fa-house"></i> Dashboard</a>
                 <a href="market.html"><i class="fa-solid fa-store"></i> Market</a>
-                <a href="#"><i class="fa-solid fa-bullhorn"></i> My Ads</a>
-                <a href="#"><i class="fa-solid fa-right-left"></i> Trades</a>
+                <a href="my-ads.html"><i class="fa-solid fa-bullhorn"></i> My Ads</a>
+                <a href="trades.html"><i class="fa-solid fa-right-left"></i> Trades</a>
                 <a href="wallet.html"><i class="fa-solid fa-wallet"></i> Wallet</a>
-                <a href="#"><i class="fa-solid fa-trophy"></i> Top Traders</a>
+                <a href="leaderboard.html"><i class="fa-solid fa-trophy"></i> Top Traders</a>
             </div>
         </div>
         <div class="nav-right">
             <i id="theme-toggle" class="fa-solid fa-moon" style="color: #d4af37; cursor: pointer;" title="Toggle Theme"></i>
-            <i class="fa-regular fa-bell" style="cursor: pointer;"></i>
+            <a href="notifications.html" style="color: inherit; text-decoration: none;"><i class="fa-regular fa-bell" style="cursor: pointer;"></i></a>
             
-            <!-- Profile Icon Button -->
+            <!-- Menu Icon Button (የተስተካከለ - የፕሮፋይል ምልክቱ ወደ የምናሌ አዶ ተቀይሯል) -->
             <div id="profile-icon-btn" style="cursor: pointer; display: flex; align-items: center;">
-                <i class="fa-solid fa-user-circle" style="color: #d4af37; font-size: 20px;"></i>
+                <i class="fa-solid fa-bars" style="color: #d4af37; font-size: 20px;"></i>
             </div>
 
             <!-- Profile Dropdown Menu -->
@@ -556,7 +549,7 @@
     </div>
 
     <div class="container">
-        <div class="greeting" id="userGreeting">Evening, USER</div>
+        <div class="greeting" id="userGreeting">Evening, ABDUREHIMAN</div>
 
         <div class="top-grid">
             <div class="balance-card">
@@ -564,19 +557,19 @@
                 <div class="balance-amount">0.00 <span>USDT</span></div>
 
                 <div class="actions-row">
-                    <a href="#" class="action-btn buy-btn">
+                    <a href="market.html?type=buy" class="action-btn buy-btn">
                         <div class="action-icon"><i class="fa-solid fa-arrow-up-right-dots"></i></div>
                         <span>Buy</span>
                     </a>
-                    <a href="#" class="action-btn sell-btn">
+                    <a href="market.html?type=sell" class="action-btn sell-btn">
                         <div class="action-icon"><i class="fa-solid fa-arrow-down-wide-short"></i></div>
                         <span>Sell</span>
                     </a>
-                    <a href="#" class="action-btn">
+                    <a href="wallet.html?action=deposit" class="action-btn">
                         <div class="action-icon"><i class="fa-solid fa-arrow-down"></i></div>
                         <span>Deposit</span>
                     </a>
-                    <a href="#" class="action-btn">
+                    <a href="wallet.html?action=withdraw" class="action-btn">
                         <div class="action-icon"><i class="fa-solid fa-arrow-up"></i></div>
                         <span>Withdraw</span>
                     </a>
@@ -587,7 +580,7 @@
                 <div>
                     <div class="rate-header">
                         <div class="card-title" style="margin: 0;"><i class="fa-solid fa-chart-line"></i> Live Rate</div>
-                        <button class="trade-quick-btn">Trade <i class="fa-solid fa-arrow-right"></i></button>
+                        <button class="trade-quick-btn" onclick="window.location.href='market.html'">Trade <i class="fa-solid fa-arrow-right"></i></button>
                     </div>
                     <div class="rate-value">189.00 <span>ETB</span></div>
                     <div class="rate-subtext">PER USDT</div>
@@ -607,7 +600,7 @@
         </div>
 
         <div class="middle-grid">
-            <div class="menu-card">
+            <a href="my-ads.html?action=create" class="menu-card">
                 <div class="menu-card-top">
                     <div class="menu-icon"><i class="fa-solid fa-bullhorn"></i></div>
                     <i class="fa-solid fa-chevron-right" style="color: #444; font-size: 12px;"></i>
@@ -616,9 +609,9 @@
                     <h4>Post a New Ad</h4>
                     <p>Create custom sell or buy orders</p>
                 </div>
-            </div>
+            </a>
 
-            <div class="menu-card">
+            <a href="wallet.html?action=transfer" class="menu-card">
                 <div class="menu-card-top">
                     <div class="menu-icon"><i class="fa-solid fa-money-bill-transfer"></i></div>
                     <i class="fa-solid fa-chevron-right" style="color: #444; font-size: 12px;"></i>
@@ -627,9 +620,9 @@
                     <h4>Transfer USDT</h4>
                     <p>Send instant funds to users</p>
                 </div>
-            </div>
+            </a>
 
-            <div class="menu-card">
+            <a href="leaderboard.html" class="menu-card">
                 <div class="menu-card-top">
                     <div class="menu-icon"><i class="fa-solid fa-trophy"></i></div>
                     <i class="fa-solid fa-chevron-right" style="color: #444; font-size: 12px;"></i>
@@ -638,9 +631,9 @@
                     <h4>Leaderboard</h4>
                     <p>View top volume traders</p>
                 </div>
-            </div>
+            </a>
 
-            <div class="menu-card">
+            <a href="referral.html" class="menu-card">
                 <div class="menu-card-top">
                     <div class="menu-icon"><i class="fa-solid fa-gift"></i></div>
                     <i class="fa-solid fa-chevron-right" style="color: #444; font-size: 12px;"></i>
@@ -649,10 +642,10 @@
                     <h4>Refer & Earn</h4>
                     <p>Invite friends, earn USDT</p>
                 </div>
-            </div>
+            </a>
         </div>
 
-        <div class="banner-2fa">
+        <a href="settings.html?tab=security" class="banner-2fa">
             <div class="banner-left">
                 <div class="banner-icon"><i class="fa-solid fa-shield-halved"></i></div>
                 <div class="banner-text">
@@ -663,7 +656,7 @@
             <div class="banner-right">
                 <i class="fa-solid fa-chevron-right" style="color: #444; font-size: 14px;"></i>
             </div>
-        </div>
+        </a>
     </div>
 
     <div class="mobile-bottom-nav">
@@ -679,7 +672,7 @@
             <i class="fa-solid fa-store"></i>
             <span>Market</span>
         </a>
-        <a href="#">
+        <a href="chat.html">
             <i class="fa-solid fa-comments"></i>
             <span>Chat</span>
         </a>
@@ -734,6 +727,14 @@
             if (profileMenu.classList.contains('active')) {
                 profileMenu.classList.remove('active');
             }
+        });
+
+        // Sign Out Logic
+        document.getElementById('signOutBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            localStorage.removeItem('signupEmail');
+            localStorage.removeItem('theme');
+            window.location.href = 'login.html'; // ወደ መግቢያ ገጽ እንዲመለስ
         });
     </script>
 </body>
