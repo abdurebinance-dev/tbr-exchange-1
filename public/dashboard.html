@@ -552,8 +552,8 @@
 
         <div class="top-grid">
             <div class="balance-card">
-                <div class="card-title">TOTAL BALANCE <i class="fa-regular fa-eye" style="cursor: pointer;"></i></div>
-                <div class="balance-amount">0.00 <span>USDT</span></div>
+                <div class="card-title">TOTAL BALANCE <i id="balance-eye-btn" class="fa-regular fa-eye" style="cursor: pointer;"></i></div>
+                <div class="balance-amount"><span id="balanceValue">0.00</span> <span>USDT</span></div>
 
                 <div class="actions-row">
                     <a href="market.html?type=buy" class="action-btn buy-btn">
@@ -581,18 +581,18 @@
                         <div class="card-title" style="margin: 0;"><i class="fa-solid fa-chart-line"></i> Live Rate</div>
                         <button class="trade-quick-btn" onclick="window.location.href='market.html'">Trade <i class="fa-solid fa-arrow-right"></i></button>
                     </div>
-                    <div class="rate-value">189.00 <span>ETB</span></div>
+                    <div class="rate-value"><span id="liveRateValue">189.00</span> <span>ETB</span></div>
                     <div class="rate-subtext">PER USDT</div>
                 </div>
 
                 <div class="rate-stats">
                     <div class="rate-stat-item">
                         <div>BEST BUY</div>
-                        <div>189.50 ETB</div>
+                        <div id="bestBuyValue">189.50 ETB</div>
                     </div>
                     <div class="rate-stat-item">
                         <div>BEST SELL</div>
-                        <div>188.50 ETB</div>
+                        <div id="bestSellValue">188.50 ETB</div>
                     </div>
                 </div>
             </div>
@@ -683,13 +683,30 @@
 
     <script>
         // Dynamic User Info and Greeting Script
-        const email = localStorage.getItem('signupEmail');
+        const email = localStorage.getItem('signupEmail') || localStorage.getItem('userEmail');
         if (email) {
             const username = email.split('@')[0].toUpperCase();
             document.getElementById('userGreeting').innerText = `Evening, ${username}`;
             document.getElementById('menuUserName').innerText = username;
             document.getElementById('menuUserEmail').innerText = email;
         }
+
+        // Balance Visibility Toggle Logic
+        let isBalanceHidden = false;
+        const balanceEyeBtn = document.getElementById('balance-eye-btn');
+        const balanceValueEl = document.getElementById('balanceValue');
+        let actualBalance = "0.00"; // Can be updated dynamically from backend/localStorage later
+
+        balanceEyeBtn.addEventListener('click', () => {
+            isBalanceHidden = !isBalanceHidden;
+            if (isBalanceHidden) {
+                balanceValueEl.innerText = '******';
+                balanceEyeBtn.classList.replace('fa-eye', 'fa-eye-slash');
+            } else {
+                balanceValueEl.innerText = actualBalance;
+                balanceEyeBtn.classList.replace('fa-eye-slash', 'fa-eye');
+            }
+        });
 
         // Dark / Light Mode Toggle Script
         const themeToggle = document.getElementById('theme-toggle');
@@ -734,6 +751,7 @@
         document.getElementById('signOutBtn').addEventListener('click', (e) => {
             e.preventDefault();
             localStorage.removeItem('signupEmail');
+            localStorage.removeItem('userEmail');
             localStorage.removeItem('theme');
             window.location.href = 'login.html';
         });
