@@ -296,7 +296,7 @@
             color: #848e9c;
         }
 
-        /* Camera Modal / Container Styles */
+        /* Camera Container Styles */
         #cameraContainer {
             display: none;
             position: relative;
@@ -544,14 +544,12 @@
             stopCamera();
         }
 
-        // Auto-fill form fields when Front ID is uploaded
         function handleFrontIdUpload(event) {
             const file = event.target.files[0];
             if (file) {
                 document.getElementById('frontText').innerHTML = '<span style="color: #0ecb81;">Front Uploaded ✓</span>';
                 document.getElementById('frontBox').style.borderColor = '#0ecb81';
 
-                // Simulating OCR extraction from ID image
                 setTimeout(() => {
                     document.getElementById('fullNameInput').value = "Abdurahman Ashebir Yimam";
                     document.getElementById('idNumberInput').value = "ET-94827106";
@@ -569,12 +567,12 @@
             }
         }
 
-        // Handle Submit Button Click Event
-        document.getElementById('submitReviewBtn').addEventListener('click', () => {
+        document.getElementById('submitReviewBtn').addEventListener('click', async () => {
             const fullName = document.getElementById('fullNameInput').value.trim();
             const idNumber = document.getElementById('idNumberInput').value.trim();
             const dob = document.getElementById('dobInput').value;
             const address = document.getElementById('addressInput').value.trim();
+            const docType = document.getElementById('docTypeInput').value;
 
             if (!fullName) {
                 alert('እባክዎ ሙሉ ስምዎን (Full Name) ያስገቡ!');
@@ -582,13 +580,25 @@
                 return;
             }
 
-            // መረጃው በተሳካ ሁኔታ ሲገባ የሚታይ መልዕክት
-            alert('KYC documents submitted successfully! Your account is now under review.');
-            
-            // ወደ ዴሽቦርድ ገጽ (Dashboard) መውሰድ
-            window.location.href = 'dashboard.html';
+            try {
+                const response = await fetch('/api/kyc/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fullName, idNumber, dob, address, docType })
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    alert('KYC documents submitted successfully! Your account is now under review.');
+                    window.location.href = 'dashboard.html';
+                } else {
+                    alert(result.message || 'ማረጋገጫውን መላክ አልተቻለም። እባክዎ እንደገና ይሞክሩ።');
+                }
+            } catch (error) {
+                console.error('Error submitting KYC:', error);
+                alert('የሰርቨር ችግር አጋጥሟል።');
+            }
         });
     </script>
-
 </body>
 </html>
