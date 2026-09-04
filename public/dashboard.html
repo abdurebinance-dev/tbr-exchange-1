@@ -71,6 +71,26 @@
             position: relative;
         }
 
+        /* Verified Badge Button Style */
+        .verified-badge-btn {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            color: #22c55e;
+            padding: 5px 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            text-decoration: none;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .verified-badge-btn:hover {
+            background: rgba(34, 197, 94, 0.2);
+        }
+
         @media(max-width: 900px) {
             .navbar .nav-links {
                 display: none;
@@ -503,6 +523,11 @@
             </div>
         </div>
         <div class="nav-right">
+            <!-- Updated Verification Link pointing to kyc-verify.html -->
+            <a href="kyc-verify.html" class="verified-badge-btn">
+                <i class="fa-solid fa-circle-check"></i> Verified
+            </a>
+
             <i id="theme-toggle" class="fa-solid fa-moon" style="color: #d4af37; cursor: pointer;" title="Toggle Theme"></i>
             <a href="notifications.html" style="color: inherit; text-decoration: none;"><i class="fa-regular fa-bell" style="cursor: pointer;"></i></a>
             
@@ -695,7 +720,7 @@
         let isBalanceHidden = false;
         const balanceEyeBtn = document.getElementById('balance-eye-btn');
         const balanceValueEl = document.getElementById('balanceValue');
-        let actualBalance = "0.00"; // Can be updated dynamically from backend/localStorage later
+        let actualBalance = "0.00";
 
         balanceEyeBtn.addEventListener('click', () => {
             isBalanceHidden = !isBalanceHidden;
