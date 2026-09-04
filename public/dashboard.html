@@ -71,7 +71,7 @@
             position: relative;
         }
 
-        /* Verified Badge Button Style */
+        /* Verified Badge Button Style -> Points to kyc-verify.html */
         .verified-badge-btn {
             background: rgba(34, 197, 94, 0.1);
             border: 1px solid rgba(34, 197, 94, 0.3);
@@ -523,7 +523,7 @@
             </div>
         </div>
         <div class="nav-right">
-            <!-- Updated Verification Link pointing to kyc-verify.html -->
+            <!-- Verified Badge pointing directly to kyc-verify.html -->
             <a href="kyc-verify.html" class="verified-badge-btn">
                 <i class="fa-solid fa-circle-check"></i> Verified
             </a>
@@ -707,7 +707,6 @@
     </div>
 
     <script>
-        // Dynamic User Info and Greeting Script
         const email = localStorage.getItem('signupEmail') || localStorage.getItem('userEmail');
         if (email) {
             const username = email.split('@')[0].toUpperCase();
@@ -716,7 +715,6 @@
             document.getElementById('menuUserEmail').innerText = email;
         }
 
-        // Balance Visibility Toggle Logic
         let isBalanceHidden = false;
         const balanceEyeBtn = document.getElementById('balance-eye-btn');
         const balanceValueEl = document.getElementById('balanceValue');
@@ -733,9 +731,7 @@
             }
         });
 
-        // Dark / Light Mode Toggle Script
         const themeToggle = document.getElementById('theme-toggle');
-        
         if (localStorage.getItem('theme') === 'light') {
             document.body.classList.add('light-mode');
             themeToggle.classList.replace('fa-moon', 'fa-sun');
@@ -743,7 +739,6 @@
 
         themeToggle.addEventListener('click', () => {
             document.body.classList.toggle('light-mode');
-            
             if (document.body.classList.contains('light-mode')) {
                 localStorage.setItem('theme', 'light');
                 themeToggle.classList.replace('fa-moon', 'fa-sun');
@@ -753,7 +748,6 @@
             }
         });
 
-        // Profile Dropdown Toggle Script
         const profileBtn = document.getElementById('profile-icon-btn');
         const profileMenu = document.getElementById('profile-dropdown-menu');
 
@@ -772,7 +766,6 @@
             }
         });
 
-        // Sign Out Logic
         document.getElementById('signOutBtn').addEventListener('click', (e) => {
             e.preventDefault();
             localStorage.removeItem('signupEmail');
