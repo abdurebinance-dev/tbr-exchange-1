@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - TBR Exchange</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #080808;
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #fff;
+            padding-top: 75px;
+            padding-bottom: 70px;
+        }
+
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: #121212;
+            border-bottom: 1px solid #262626;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            box-sizing: border-box;
+        }
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .logo-container img {
+            height: 32px;
+            width: auto;
+            object-fit: contain;
+            display: block;
+        }
+        .nav-links {
+            display: flex;
+            gap: 15px;
+        }
+        .nav-links a {
+            color: #888;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: 8px;
+            transition: 0.2s;
+        }
+        .nav-links a.active, .nav-links a:hover {
+            color: #d4af37;
+            background: rgba(212, 175, 55, 0.08);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+        }
+        
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            color: #aaa;
+            font-size: 16px;
+            position: relative;
+        }
+
+        @media(max-width: 900px) {
+            .navbar .nav-links { display: none; }
+            .navbar { padding: 12px 15px; }
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .profile-card {
+            background: #121212;
+            border: 1px solid #262626;
+            border-radius: 18px;
+            padding: 30px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .profile-info-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .profile-avatar {
+            width: 70px;
+            height: 70px;
+            background: rgba(212, 175, 55, 0.1);
+            border: 2px solid #d4af37;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #d4af37;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .profile-details h2 {
+            margin: 0 0 5px 0;
+            font-size: 20px;
+            color: #fff;
+            text-transform: uppercase;
+        }
+        .profile-details p {
+            margin: 0;
+            font-size: 13px;
+            color: #888;
+        }
+        .settings-btn {
+            background: transparent;
+            border: 1px solid #333;
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 10px;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+            transition: 0.2s;
+        }
+        .settings-btn:hover {
+            border-color: #d4af37;
+            color: #d4af37;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: #121212;
+            border: 1px solid #262626;
+            border-radius: 14px;
+            padding: 20px;
+            text-align: center;
+        }
+        .stat-card .label {
+            font-size: 11px;
+            color: #777;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+        .stat-card .value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #d4af37;
+        }
+
+        .section-box {
+            background: #121212;
+            border: 1px solid #262626;
+            border-radius: 18px;
+            padding: 25px;
+        }
+        .section-box h3 {
+            margin: 0 0 20px 0;
+            font-size: 16px;
+            color: #fff;
+            border-bottom: 1px solid #222;
+            padding-bottom: 12px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #1a1a1a;
+            font-size: 13px;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .info-row span:first-child {
+            color: #888;
+        }
+        .info-row span:last-child {
+            color: #fff;
+            font-weight: 500;
+        }
+
+        .mobile-bottom-nav {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: #121212;
+            border-top: 1px solid #262626;
+            padding: 8px 0;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 1000;
+        }
+        .mobile-bottom-nav a {
+            color: #888;
+            text-decoration: none;
+            font-size: 11px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+        }
+        .mobile-bottom-nav a.active {
+            color: #d4af37;
+        }
+        @media(max-width: 900px) {
+            .mobile-bottom-nav { display: flex; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .profile-card { flex-direction: column; align-items: flex-start; gap: 15px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="navbar">
+        <div class="nav-left">
+            <div class="logo-container">
+                <img src="logo.png" alt="TBR Exchange Logo">
+            </div>
+            <div class="nav-links">
+                <a href="dashboard.html"><i class="fa-solid fa-house"></i> Dashboard</a>
+                <a href="market.html"><i class="fa-solid fa-store"></i> Market</a>
+                <a href="my-ads.html"><i class="fa-solid fa-bullhorn"></i> My Ads</a>
+                <a href="trades.html"><i class="fa-solid fa-right-left"></i> Trades</a>
+                <a href="wallet.html"><i class="fa-solid fa-wallet"></i> Wallet</a>
+                <a href="leaderboard.html"><i class="fa-solid fa-trophy"></i> Top Traders</a>
+            </div>
+        </div>
+        <div class="nav-right">
+            <a href="notifications.html" style="color: inherit; text-decoration: none;"><i class="fa-regular fa-bell"></i></a>
+            <a href="dashboard.html" style="color: #d4af37; text-decoration: none; font-size: 18px;"><i class="fa-solid fa-house"></i></a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="profile-card">
+            <div class="profile-info-left">
+                <div class="profile-avatar" id="avatarInitial">A</div>
+                <div class="profile-details">
+                    <h2 id="profileName">ABDURAHMAN ASHEBIR</h2>
+                    <p id="profileEmail">binanceme73@gmail.com</p>
+                </div>
+            </div>
+            <a href="settings.html" class="settings-btn"><i class="fa-solid fa-gear"></i> Settings</a>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="label">Reputation</div>
+                <div class="value">100%</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Total Trades</div>
+                <div class="value">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Completion Rate</div>
+                <div class="value">100%</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Volume</div>
+                <div class="value">0 USDT</div>
+            </div>
+        </div>
+
+        <div class="section-box">
+            <h3>Account Details</h3>
+            <div class="info-row">
+                <span>KYC Verification</span>
+                <span style="color: #f6465d;">Not Submitted</span>
+            </div>
+            <div class="info-row">
+                <span>Two-Factor Auth (2FA)</span>
+                <span style="color: #f6465d;">Disabled</span>
+            </div>
+            <div class="info-row">
+                <span>Member Since</span>
+                <span>2026</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="mobile-bottom-nav">
+        <a href="dashboard.html">
+            <i class="fa-solid fa-house"></i>
+            <span>Home</span>
+        </a>
+        <a href="wallet.html">
+            <i class="fa-solid fa-wallet"></i>
+            <span>Wallet</span>
+        </a>
+        <a href="market.html">
+            <i class="fa-solid fa-store"><span>Market</span></i>
+        </a>
+        <a href="profile.html" class="active">
+            <i class="fa-solid fa-user"></i>
+            <span>Profile</span>
+        </a>
+    </div>
+
+    <script>
+        // Load user info from localStorage if available
+        const email = localStorage.getItem('signupEmail');
+        if (email) {
+            const username = email.split('@')[0].toUpperCase();
+            document.getElementById('profileName').innerText = username;
+            document.getElementById('profileEmail').innerText = email;
+            document.getElementById('avatarInitial').innerText = username.charAt(0);
+        }
+    </script>
+</body>
+</html>
