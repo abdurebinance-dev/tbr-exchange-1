@@ -744,3 +744,82 @@ app.get(/.*/, (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });
+const KYC = require('./models/KycModel');
+
+// 1. ተጠቃሚው KYC ሲልክ የሚቀበለው
+app.post('/api/kyc/submit', async (req, res) => {
+    try {
+        const { fullName, idNumber, dob, address, docType, frontImage, backImage, selfieImage } = req.body;
+
+        if (!fullName || !frontImage || !selfieImage) {
+            return res.status(400).json({ message: 'እባክዎ አስፈላጊዎቹን መረጃዎች እና ፎቶዎች በትክክል ይሙሉ!' });
+        }
+
+        const newKyc = new KYC({
+            fullName,
+            idNumber,
+            dob,
+            address,
+            docType,
+            frontImage,
+            backImage,
+            selfieImage,
+            status: 'pending'
+        });
+
+        await newKyc.save();
+        res.status(200).json({ message: 'KYC submitted successfully' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'ሰርቨር ላይ ስህተት ተፈጥሯል' });
+    }
+});
+
+// 2. አድሚኑ ያልጸደቁትን (Pending) እንዲያይ
+app.get('/api/kyc/admin/pending', async (req, res) => {
+    try {
+        const pendingList = await KYC.find({ status: 'pending' });
+        res.status(200).json(pendingList);
+    } catch (err) {
+        res.status(500).json({ error: 'መረጃዎችን ማምጣት አልተቻለም' });
+    }
+});
+
+// 3. አድሚኑ KYC ሲያጸድቅ
+app.put('/api/admin/kyc/approve/:id', async (req, res) => {
+    try {
+        const updatedKyc = await KYC.findByIdAndUpdate(
+            req.params.id, 
+            { status: 'approved' }, 
+            { new: true }
+        );
+
+        if (!updatedKyc) {
+            return res.status(404).json({ error: 'የ KYC መዝገብ አልተገኘም' });
+        }
+
+        res.status(200).json({ message: 'Approved' });
+    } catch (err) {
+        res.status(500).json({ error: 'ሰርቨር ላይ ስህተት ተፈጥሯል' });
+    }
+});
+
+// 4. አድሚኑ KYC ውድቅ ሲያደርግ
+app.put('/api/admin/kyc/reject/:id', async (req, res) => {
+    try {
+        const { reason } = req.body;
+        const updatedKyc = await KYC.findByIdAndUpdate(
+            req.params.id, 
+            { status: 'rejected', rejectionReason: reason },
+            { new: true }
+        );
+
+        if (!updatedKyc) {
+            return res.status(404).json({ error: 'የ KYC መዝገብ አልተገኘም' });
+        }
+
+        res.status(200).json({ message: 'Rejected' });
+    } catch (err) {
+        res.status(500).json({ error: 'ሰርቨር ላይ ስህተት ተፈጥሯል' });
+    }
+});
