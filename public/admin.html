@@ -99,6 +99,8 @@
             font-weight: bold;
             border: none;
         }
+        .btn-view { background: #3b82f6; color: #fff; margin-right: 5px; }
+        .btn-view:hover { background: #2563eb; }
         .btn-approve { background: #10b981; color: #fff; }
         .btn-approve:hover { background: #059669; }
         .btn-reject { background: #ef4444; color: #fff; margin-left: 5px; }
@@ -185,7 +187,7 @@
                             <th>Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="kycTableBody">
                         <tr>
                             <td>
                                 <div style="font-weight: bold;">Abdurahman Ashebir</div>
@@ -194,6 +196,8 @@
                             <td>National ID</td>
                             <td><span class="badge-pending">Pending</span></td>
                             <td>
+                                <!-- የሰነድ ማያ ገጽ (View Documents) ቁልፍ ተጨምሯል -->
+                                <button class="btn btn-view" onclick="openKycModal('65f1234567890abcdef12345')"><i class="fa-solid fa-eye"></i></button>
                                 <button class="btn btn-approve" onclick="approveUser(this)"><i class="fa-solid fa-check"></i></button>
                                 <button class="btn btn-reject" onclick="rejectUser(this)"><i class="fa-solid fa-xmark"></i></button>
                             </td>
@@ -227,18 +231,67 @@
         </div>
     </div>
 
+    <!-- የሰነድ ማሳያ ሞዳል (KYC Document Review Modal) -->
+    <div id="adminKycModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center;">
+        <div style="background:#181a20; padding:25px; border-radius:14px; max-width:650px; width:100%; border:1px solid #23272f; color:#fff; box-sizing: border-box;">
+            <h3 style="margin-top:0; color:#d4af37;"><i class="fa-solid fa-id-card"></i> Review User KYC Documents</h3>
+            <p><strong>Name:</strong> <span id="mFullName"></span></p>
+            <p><strong>ID Number:</strong> <span id="mIdNumber"></span></p>
+            
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0;">
+                <div>
+                    <p style="font-size:12px; color:#848e9c; margin-bottom: 5px;">Front ID</p>
+                    <img id="mFrontImg" src="" style="width:100%; height:180px; object-fit:cover; border-radius:8px; border:1px solid #333; background:#000;" />
+                </div>
+                <div>
+                    <p style="font-size:12px; color:#848e9c; margin-bottom: 5px;">Selfie with ID</p>
+                    <img id="mSelfieImg" src="" style="width:100%; height:180px; object-fit:cover; border-radius:8px; border:1px solid #333; background:#000;" />
+                </div>
+            </div>
+
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button onclick="closeAdminModal()" style="background:#23272f; color:#fff; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight: bold;">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        // የሰነድ ፎቶዎችን ከሰርቨር አምጥቶ በሞዳል ለማሳየት
+        async function openKycModal(kycId) {
+            try {
+                const res = await fetch(`/api/kyc/admin/details/${kycId}`);
+                const data = await res.json();
+                if (res.ok) {
+                    document.getElementById('mFullName').innerText = data.fullName;
+                    document.getElementById('mIdNumber').innerText = data.idNumber || 'N/A';
+                    document.getElementById('mFrontImg').src = data.frontImage;
+                    document.getElementById('mSelfieImg').src = data.selfieImage;
+                    document.getElementById('adminKycModal').style.display = 'flex';
+                } else {
+                    alert('KYC details not found');
+                }
+            } catch (err) {
+                console.error(err);
+                // የሰርቨር  ግንኙነት ቼክ ሲደረግ በናሙናነት በ Localhost መሞከሪያ
+                document.getElementById('mFullName').innerText = "Abdurahman Ashebir";
+                document.getElementById('mIdNumber').innerText = "ET-94827106";
+                document.getElementById('adminKycModal').style.display = 'flex';
+            }
+        }
+
+        function closeAdminModal() {
+            document.getElementById('adminKycModal').style.display = 'none';
+        }
+
         function approveUser(btn) {
             const row = btn.closest('tr');
             row.querySelector('td:nth-child(3)').innerHTML = '<span style="color: #10b981; font-weight: bold;">Approved</span>';
-            row.querySelector('td:nth-child(4)').innerHTML = '<span style="color: #777; font-size: 12px;">Completed</span>';
             alert('KYC Approved successfully!');
         }
 
         function rejectUser(btn) {
             const row = btn.closest('tr');
             row.querySelector('td:nth-child(3)').innerHTML = '<span style="color: #ef4444; font-weight: bold;">Rejected</span>';
-            row.querySelector('td:nth-child(4)').innerHTML = '<span style="color: #777; font-size: 12px;">Completed</span>';
             alert('KYC Rejected.');
         }
 

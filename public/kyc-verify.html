@@ -508,6 +508,11 @@
         const selfieStatusText = document.getElementById('selfieStatusText');
         const canvasElement = document.getElementById('canvasElement');
 
+        // የማከማቻ ተለዋዋጮች (Base64 strings for images)
+        let frontImageBase64 = null;
+        let backImageBase64 = null;
+        let selfieImageBase64 = null;
+
         async function startCamera() {
             try {
                 cameraContainer.style.display = 'block';
@@ -539,6 +544,9 @@
             canvasElement.height = videoElement.videoHeight || 480;
             context.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
             
+            // የሰልፊ ፎቶውን ወደ Base64 መቀየር
+            selfieImageBase64 = canvasElement.toDataURL('image/jpeg');
+
             selfieStatusText.innerHTML = '<i class="fa-solid fa-check-circle" style="color: #0ecb81;"></i> Selfie Captured Successfully!';
             selfieTriggerBox.style.borderColor = '#0ecb81';
             stopCamera();
@@ -547,23 +555,33 @@
         function handleFrontIdUpload(event) {
             const file = event.target.files[0];
             if (file) {
-                document.getElementById('frontText').innerHTML = '<span style="color: #0ecb81;">Front Uploaded ✓</span>';
-                document.getElementById('frontBox').style.borderColor = '#0ecb81';
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    frontImageBase64 = e.target.result; // የፊት ፎቶ Base64
+                    document.getElementById('frontText').innerHTML = '<span style="color: #0ecb81;">Front Uploaded ✓</span>';
+                    document.getElementById('frontBox').style.borderColor = '#0ecb81';
 
-                setTimeout(() => {
-                    document.getElementById('fullNameInput').value = "Abdurahman Ashebir Yimam";
-                    document.getElementById('idNumberInput').value = "ET-94827106";
-                    document.getElementById('dobInput').value = "2005-08-15";
-                    document.getElementById('addressInput').value = "Woldia, Amhara, Ethiopia";
-                }, 600);
+                    setTimeout(() => {
+                        document.getElementById('fullNameInput').value = "Abdurahman Ashebir Yimam";
+                        document.getElementById('idNumberInput').value = "ET-94827106";
+                        document.getElementById('dobInput').value = "2005-08-15";
+                        document.getElementById('addressInput').value = "Woldia, Amhara, Ethiopia";
+                    }, 600);
+                };
+                reader.readAsDataURL(file);
             }
         }
 
         function handleBackIdUpload(event) {
             const file = event.target.files[0];
             if (file) {
-                document.getElementById('backText').innerHTML = '<span style="color: #0ecb81;">Back Uploaded ✓</span>';
-                document.getElementById('backBox').style.borderColor = '#0ecb81';
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    backImageBase64 = e.target.result; // የኋላ ፎቶ Base64
+                    document.getElementById('backText').innerHTML = '<span style="color: #0ecb81;">Back Uploaded ✓</span>';
+                    document.getElementById('backBox').style.borderColor = '#0ecb81';
+                };
+                reader.readAsDataURL(file);
             }
         }
 
@@ -580,11 +598,25 @@
                 return;
             }
 
+            if (!frontImageBase64 || !selfieImageBase64) {
+                alert('እባክዎ የ መታወቂያ ፊት (Front ID) እና የሰልፊ ፎቶ (Selfie) ማያያዝዎን ያረጋግጡ!');
+                return;
+            }
+
             try {
                 const response = await fetch('/api/kyc/submit', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ fullName, idNumber, dob, address, docType })
+                    body: JSON.stringify({ 
+                        fullName, 
+                        idNumber, 
+                        dob, 
+                        address, 
+                        docType,
+                        frontImage: frontImageBase64,
+                        backImage: backImageBase64 || '',
+                        selfieImage: selfieImageBase64
+                    })
                 });
 
                 const result = await response.json();
