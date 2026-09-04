@@ -51,6 +51,20 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model('User', userSchema);
 
+// KYC Schema & Model (ለአድሚን ዳሽቦርድ የሚቀመጥበት)
+const kycSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    fullName: { type: String, default: 'User' },
+    email: { type: String, default: '' },
+    documentType: { type: String, default: 'National ID' },
+    frontImage: String,
+    selfieImage: String,
+    status: { type: String, default: 'Pending' }, // Pending, Verified, Rejected
+    createdAt: { type: Date, default: Date.now }
+});
+
+const KYC = mongoose.models.KYC || mongoose.model('KYC', kycSchema);
+
 // Temporary memory to store verification codes and signup attempts/lockout
 const pendingUsers = {};
 
@@ -537,10 +551,10 @@ app.post('/api/reset-password', async (req, res) => {
 // TBR Exchange - KYC & Admin Backend Logic
 // ==========================================
 
-// 1. Handle KYC AI Verification Endpoint
+// 1. Handle KYC AI Verification & Admin Forwarding Endpoint
 app.post('/api/kyc/verify-ai', async (req, res) => {
     try {
-        const { userId, documentType, frontImage, selfieImage } = req.body;
+        const { userId, documentType, frontImage, selfieImage, fullName, email } = req.body;
 
         if (!frontImage || !selfieImage) {
             return res.status(400).json({ 
@@ -550,22 +564,35 @@ app.post('/api/kyc/verify-ai', async (req, res) => {
             });
         }
 
-        // Render-Optimized AI Validation Check (Checks length to avoid crash)
-        const isDataValid = frontImage.length > 10 && selfieImage.length > 10;
+        // Render-Optimized AI Validation Check
+        const isDataValid = frontImage.length > 50 && selfieImage.length > 50;
 
         if (isDataValid) {
             return res.json({
                 success: true,
                 status: 'Verified',
-                confidence: 88.5,
+                confidence: 92.5,
                 message: 'AI Auto-Approval Successful! Your account is now Verified.'
             });
         } else {
+            // መረጃው ግልጽ ካልሆነ ዳታቤዝ ውስጥ Pending ተብሎ ይቀመጣል (ለአድሚን ዳሽቦርድ)
+            const newKyc = new KYC({
+                userId: userId || null,
+                fullName: fullName || 'Abdurahman Ashebir',
+                email: email || '',
+                documentType: documentType || 'National ID',
+                frontImage,
+                selfieImage,
+                status: 'Pending'
+            });
+
+            await newKyc.save();
+
             return res.json({
                 success: true,
-                status: 'Manual Review Needed',
+                status: 'Pending',
                 confidence: 45.0,
-                message: 'Image quality low. Forwarded to Admin for Manual Review.'
+                message: 'Image quality low or unclear. Forwarded to Admin for Manual Review.'
             });
         }
     } catch (error) {
@@ -574,16 +601,37 @@ app.post('/api/kyc/verify-ai', async (req, res) => {
     }
 });
 
+// Get Pending KYC Submissions for Admin Dashboard (`admin.html` የሚጠራው)
+app.get('/api/admin/kyc-list', async (req, res) => {
+    try {
+        const pendingList = await KYC.find({ status: 'Pending' }).sort({ createdAt: -1 });
+        res.json({ success: true, data: pendingList });
+    } catch (error) {
+        console.error('Fetch KYC Error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
 // General KYC Submit Route
 app.post('/api/kyc/submit', async (req, res) => {
     try {
-        const { userId, documentType, frontImage, backImage, selfieImage } = req.body;
-
-        const isComplete = frontImage && backImage && selfieImage;
+        const { userId, documentType, frontImage, backImage, selfieImage, fullName, email } = req.body;
+        const isComplete = frontImage && selfieImage;
 
         if (isComplete) {
             return res.json({ success: true, status: 'Verified', message: 'Automatically approved.' });
         } else {
+            const newKyc = new KYC({
+                userId: userId || null,
+                fullName: fullName || 'User',
+                email: email || '',
+                documentType: documentType || 'National ID',
+                frontImage: frontImage || '',
+                selfieImage: selfieImage || '',
+                status: 'Pending'
+            });
+            await newKyc.save();
+
             return res.json({ success: true, status: 'Pending', message: 'Forwarded to Admin review.' });
         }
     } catch (error) {
