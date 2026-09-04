@@ -155,6 +155,27 @@
             border-color: #d4af37;
             background: #222;
         }
+        
+        /* Buy Button Custom Color (Green) */
+        .action-btn.buy-btn:hover {
+            border-color: #22c55e;
+            background: rgba(34, 197, 94, 0.05);
+        }
+        .action-btn.buy-btn .action-icon {
+            background: rgba(34, 197, 94, 0.1);
+            color: #22c55e;
+        }
+
+        /* Sell Button Custom Color (Red) */
+        .action-btn.sell-btn:hover {
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.05);
+        }
+        .action-btn.sell-btn .action-icon {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+        }
+
         .action-icon {
             width: 40px;
             height: 40px;
@@ -429,11 +450,11 @@
                 <div class="balance-amount">0.00 <span>USDT</span></div>
 
                 <div class="actions-row">
-                    <a href="#" class="action-btn">
+                    <a href="#" class="action-btn buy-btn">
                         <div class="action-icon"><i class="fa-solid fa-arrow-up-right-dots"></i></div>
                         <span>Buy</span>
                     </a>
-                    <a href="#" class="action-btn">
+                    <a href="#" class="action-btn sell-btn">
                         <div class="action-icon"><i class="fa-solid fa-arrow-down-wide-short"></i></div>
                         <span>Sell</span>
                     </a>
