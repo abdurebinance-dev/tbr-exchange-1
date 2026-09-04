@@ -413,12 +413,11 @@ app.post('/api/verify-login-otp', async (req, res) => {
         user.verificationCodeExpire = undefined;
         await user.save();
 
-        // Generate JWT Token so user authenticated requests can work
         const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '7d' });
 
         res.json({ 
             success: true, 
-            token, // ቶከኑን ለፍሮንትንድ እንልካለን
+            token, 
             message: 'Sign in verified successfully.',
             redirectUrl: 'dashboard.html' 
         });
@@ -576,20 +575,23 @@ app.post('/api/reset-password', async (req, res) => {
 // TBR Exchange - KYC & User Profile Routes
 // ==========================================
 
-// 1. ዩዘሩ የ KYC ስቴተስ እና ፕሮፋይል እንዲያይ የሚረዳ ራውት (አዲሱ የተጨመረው)
+// 1. ዩዘሩ የ KYC ስቴተስ እና ፕሮፋይል እንዲያይ የሚረዳ ራውት (የተስተካከለው)
 app.get('/api/user/profile', verifyToken, async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
-        if (!user) return res.status(404).json({ message: 'User not found' });
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
         
         res.json({
-            fullName: user.fullName || 'User',
-            email: user.email,
-            kycStatus: user.kycStatus // 'unverified', 'pending', 'verified', 'rejected'
+            success: true,
+            user: {
+                fullName: user.fullName || 'User',
+                email: user.email,
+                kycStatus: user.kycStatus || 'unverified'
+            }
         });
     } catch (err) {
         console.error('Profile Fetch Error:', err);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ success: false, message: 'Server error' });
     }
 });
 
@@ -663,7 +665,7 @@ app.get('/api/admin/kyc-list', async (req, res) => {
 // Admin Action Route: Approve or Reject KYC
 app.post('/api/admin/kyc-action', async (req, res) => {
     try {
-        const { kycId, action } = req.body; // action: 'approve' ወይም 'reject'
+        const { kycId, action } = req.body; 
         const kycRecord = await KYC.findById(kycId);
         
         if (!kycRecord) {

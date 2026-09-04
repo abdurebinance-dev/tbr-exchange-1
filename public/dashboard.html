@@ -700,17 +700,25 @@
             e.preventDefault();
             localStorage.removeItem('signupEmail');
             localStorage.removeItem('userEmail');
+            localStorage.removeItem('token');
             localStorage.removeItem('theme');
             window.location.href = 'login.html';
         });
 
-        // KYC Status & Dynamic Button Script
+        // KYC Status & Dynamic Button Script with Authorization Token
         window.addEventListener('DOMContentLoaded', async () => {
             try {
-                const res = await fetch('/api/user/profile');
+                const token = localStorage.getItem('token');
+                const headers = { 'Content-Type': 'application/json' };
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+
+                const res = await fetch('/api/user/profile', { headers });
                 if (res.ok) {
                     const data = await res.json();
-                    updateKycButtonUI(data.kycStatus);
+                    const kycStatus = data.user ? data.user.kycStatus : data.kycStatus;
+                    updateKycButtonUI(kycStatus);
                 } else {
                     const localStatus = localStorage.getItem('kycStatus') || 'unverified';
                     updateKycButtonUI(localStatus);
@@ -749,7 +757,7 @@
         }
 
         function goToKycPage() {
-            window.location.href = 'kyc.html';
+            window.location.href = 'kyc-verify.html';
         }
     </script>
 </body>
