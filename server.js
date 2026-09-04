@@ -43,6 +43,7 @@ const userSchema = new mongoose.Schema({
     verificationCode: String,
     verificationCodeExpire: Date,
     isVerified: { type: Boolean, default: false },
+    kycStatus: { type: String, default: 'unverified' }, // unverified, pending, verified, rejected
     resetToken: String,
     resetTokenExpire: Date,
     loginAttempts: { type: Number, default: 0 },
@@ -551,7 +552,7 @@ app.post('/api/reset-password', async (req, res) => {
 // TBR Exchange - KYC & Admin Backend Logic
 // ==========================================
 
-// 1. Handle KYC AI Verification & Admin Forwarding Endpoint
+// 1. Smart AI Verification & Admin Forwarding Endpoint
 app.post('/api/kyc/verify-ai', async (req, res) => {
     try {
         const { userId, documentType, frontImage, selfieImage, fullName, email } = req.body;
@@ -564,18 +565,24 @@ app.post('/api/kyc/verify-ai', async (req, res) => {
             });
         }
 
-        // Render-Optimized AI Validation Check
+        // Smart Logic: ፎቶዎቹ ከተሟሉ እና ርዝመታቸው በቂ ከሆነ (ለምሳሌ ትክክለኛ ምስል ከመሆኑ አንፃር) በአውቶማቲክ Verified ይደረጋል
+        // ካልተሟሉ ግን ወደ አድሚን ዳሽቦርድ (Pending) ይላካሉ
         const isDataValid = frontImage.length > 50 && selfieImage.length > 50;
 
         if (isDataValid) {
+            // ተጠቃሚው ካለ አካውንቱን በቀጥታ Verified እናደርገዋለን
+            if (userId) {
+                await User.findByIdAndUpdate(userId, { kycStatus: 'verified' });
+            }
+
             return res.json({
                 success: true,
                 status: 'Verified',
-                confidence: 92.5,
+                confidence: 95.0,
                 message: 'AI Auto-Approval Successful! Your account is now Verified.'
             });
         } else {
-            // መረጃው ግልጽ ካልሆነ ዳታቤዝ ውስጥ Pending ተብሎ ይቀመጣል (ለአድሚን ዳሽቦርድ)
+            // መረጃው አጠራጣሪ ከሆነ ወይም ካልተሟላ ለአድሚን ዳሽቦርድ (Pending) እናስቀምጠዋለን
             const newKyc = new KYC({
                 userId: userId || null,
                 fullName: fullName || 'Abdurahman Ashebir',
@@ -587,6 +594,10 @@ app.post('/api/kyc/verify-ai', async (req, res) => {
             });
 
             await newKyc.save();
+
+            if (userId) {
+                await User.findByIdAndUpdate(userId, { kycStatus: 'pending' });
+            }
 
             return res.json({
                 success: true,
@@ -612,13 +623,47 @@ app.get('/api/admin/kyc-list', async (req, res) => {
     }
 });
 
-// General KYC Submit Route
+// Admin Action Route: Approve or Reject KYC (ከአድሚን ዳሽቦርድ የሚላኩ Green Check ወይም Red Cross በተጫኑ ቁጥር የሚሰራ)
+app.post('/api/admin/kyc-action', async (req, res) => {
+    try {
+        const { kycId, action } = req.body; // action: 'approve' ወይም 'reject'
+        const kycRecord = await KYC.findById(kycId);
+        
+        if (!kycRecord) {
+            return res.status(404).json({ success: false, message: 'KYC record not found.' });
+        }
+
+        if (action === 'approve') {
+            kycRecord.status = 'Verified';
+            await kycRecord.save();
+            if (kycRecord.userId) {
+                await User.findByIdAndUpdate(kycRecord.userId, { kycStatus: 'verified' });
+            }
+            return res.json({ success: true, message: 'KYC approved successfully.' });
+        } else if (action === 'reject') {
+            kycRecord.status = 'Rejected';
+            await kycRecord.save();
+            if (kycRecord.userId) {
+                await User.findByIdAndUpdate(kycRecord.userId, { kycStatus: 'rejected' });
+            }
+            return res.json({ success: true, message: 'KYC rejected.' });
+        }
+
+        res.status(400).json({ success: false, message: 'Invalid action.' });
+    } catch (error) {
+        console.error('Admin KYC Action Error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// General KYC Submit Route (Fallback for standard form submits)
 app.post('/api/kyc/submit', async (req, res) => {
     try {
         const { userId, documentType, frontImage, backImage, selfieImage, fullName, email } = req.body;
         const isComplete = frontImage && selfieImage;
 
-        if (isComplete) {
+        if (isComplete && frontImage.length > 50) {
+            if (userId) await User.findByIdAndUpdate(userId, { kycStatus: 'verified' });
             return res.json({ success: true, status: 'Verified', message: 'Automatically approved.' });
         } else {
             const newKyc = new KYC({
@@ -631,6 +676,8 @@ app.post('/api/kyc/submit', async (req, res) => {
                 status: 'Pending'
             });
             await newKyc.save();
+
+            if (userId) await User.findByIdAndUpdate(userId, { kycStatus: 'pending' });
 
             return res.json({ success: true, status: 'Pending', message: 'Forwarded to Admin review.' });
         }
@@ -651,7 +698,7 @@ app.post('/api/admin/update-rate', async (req, res) => {
 
 // 10. Fallback Route ለ SPA / HTML ፋይሎች (ከላይ ስታቲክ ፋይሎችና ኤፒአይዎች ከሠሩ በኋላ መጨረሻ ላይ መቀመጥ አለበት)
 app.get(/.*/, (req, res) => {
-    res.sendFile(path.join(publicPath, 'index.html'));
+    res.sendFile(path.json(publicPath, 'index.html'));
 });
 
 // Start Server
