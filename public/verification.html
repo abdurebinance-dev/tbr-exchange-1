@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verification - TBR Exchange</title>
+    <title>Identity Verification - TBR Exchange</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body {
@@ -69,32 +69,9 @@
         }
 
         .container {
-            max-width: 900px;
+            max-width: 800px;
             margin: 30px auto;
             padding: 0 20px;
-        }
-
-        .page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-        }
-        .page-header h2 {
-            margin: 0;
-            font-size: 24px;
-            color: #fff;
-        }
-        .badge-tag {
-            background: #121212;
-            border: 1px solid rgba(212, 175, 55, 0.3);
-            color: #d4af37;
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
         }
 
         /* Verification Steps Indicator */
@@ -102,7 +79,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 30px;
+            margin-bottom: 25px;
             position: relative;
             padding: 0 30px;
         }
@@ -110,12 +87,12 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             z-index: 2;
         }
         .step-circle {
-            width: 38px;
-            height: 38px;
+            width: 34px;
+            height: 34px;
             border-radius: 50%;
             background: #121212;
             border: 2px solid #333;
@@ -123,7 +100,7 @@
             align-items: center;
             justify-content: center;
             color: #777;
-            font-size: 14px;
+            font-size: 13px;
         }
         .step-item.active .step-circle {
             border-color: #d4af37;
@@ -141,7 +118,7 @@
         }
         .step-line {
             position: absolute;
-            top: 19px;
+            top: 17px;
             left: 80px;
             right: 80px;
             height: 2px;
@@ -149,51 +126,14 @@
             z-index: 1;
         }
 
-        /* Main Box */
-        .verify-card {
-            background: #121212;
-            border: 1px solid rgba(212, 175, 55, 0.2);
-            border-radius: 18px;
-            padding: 30px;
-        }
-        .verify-top-info {
-            display: flex;
-            align-items: flex-start;
-            gap: 16px;
-            margin-bottom: 25px;
-        }
-        .verify-shield {
-            width: 44px;
-            height: 44px;
-            background: rgba(212, 175, 55, 0.1);
-            border: 1px solid rgba(212, 175, 55, 0.3);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #d4af37;
-            font-size: 18px;
-            flex-shrink: 0;
-        }
-        .verify-top-info h3 {
-            margin: 0 0 5px 0;
-            font-size: 18px;
-            color: #fff;
-        }
-        .verify-top-info p {
-            margin: 0;
-            font-size: 13px;
-            color: #888;
-            line-height: 1.4;
-        }
-
+        /* Limits Grid Info */
         .limits-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-            margin-bottom: 25px;
+            gap: 12px;
+            margin-bottom: 20px;
             background: #181818;
-            padding: 20px;
+            padding: 15px;
             border-radius: 12px;
             border: 1px solid #222;
         }
@@ -203,63 +143,155 @@
         .limit-item .label {
             font-size: 11px;
             color: #777;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
         }
         .limit-item .val {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: bold;
             color: #d4af37;
         }
         .limit-item .old-val {
             text-decoration: line-through;
             color: #777;
-            margin-right: 6px;
-            font-size: 12px;
+            margin-right: 4px;
+            font-size: 11px;
             font-weight: normal;
         }
 
-        /* Action Options */
-        .option-box {
+        /* KYC Card */
+        .kyc-card {
+            background: #121212;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            border-radius: 18px;
+            padding: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 8px;
+        }
+        .form-group label span {
+            color: #10b981;
+        }
+
+        .select-box, .input-box {
+            width: 100%;
             background: #181818;
             border: 1px solid #262626;
+            border-radius: 10px;
+            padding: 12px 16px;
+            color: #fff;
+            font-size: 14px;
+            box-sizing: border-box;
+            outline: none;
+            transition: 0.2s;
+        }
+        .select-box:focus, .input-box:focus {
+            border-color: #d4af37;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        /* Upload Zones */
+        .upload-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .upload-box {
+            background: #181818;
+            border: 1px dashed #333;
             border-radius: 12px;
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
+            padding: 35px 20px;
+            text-align: center;
             cursor: pointer;
             transition: 0.2s;
-            text-decoration: none;
-            color: inherit;
         }
-        .option-box:hover {
+        .upload-box:hover {
             border-color: #d4af37;
             background: #1c1c1c;
         }
-        .option-left {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-        }
-        .option-icon {
-            color: #d4af37;
-            font-size: 18px;
-        }
-        .option-title {
-            font-size: 14px;
-            font-weight: bold;
-            color: #fff;
-            margin-bottom: 3px;
-        }
-        .option-sub {
-            font-size: 12px;
+        .upload-box i {
+            font-size: 20px;
             color: #888;
+            margin-bottom: 10px;
+            display: block;
+        }
+        .upload-box .upload-title {
+            font-size: 13px;
+            color: #aaa;
         }
 
-        @media(max-width: 900px) {
-            .limits-grid { grid-template-columns: 1fr; }
-            .option-box { flex-direction: column; align-items: flex-start; gap: 12px; }
+        .upload-box-full {
+            background: #181818;
+            border: 1px dashed #333;
+            border-radius: 12px;
+            padding: 30px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-bottom: 20px;
+        }
+        .upload-box-full:hover {
+            border-color: #d4af37;
+            background: #1c1c1c;
+        }
+        .upload-box-full i {
+            font-size: 20px;
+            color: #888;
+            margin-bottom: 10px;
+            display: block;
+        }
+        .upload-box-full .upload-title {
+            font-size: 13px;
+            color: #aaa;
+        }
+
+        .security-note {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 25px;
+        }
+        .security-note a {
+            color: #d4af37;
+            text-decoration: none;
+        }
+
+        .submit-btn {
+            width: 100%;
+            background: #10b981;
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            padding: 14px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: 0.2s;
+        }
+        .submit-btn:hover {
+            background: #059669;
+        }
+
+        @media(max-width: 768px) {
+            .form-row, .upload-grid, .limits-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -279,15 +311,12 @@
             </div>
         </div>
         <div class="nav-right">
-            <div class="badge-tag"><i class="fa-solid fa-shield"></i> Basic</div>
+            <div style="color: #d4af37; font-size: 13px;"><i class="fa-solid fa-shield-halved"></i> Verified</div>
         </div>
     </div>
 
     <div class="container">
-        <div class="page-header">
-            <h2>Verification</h2>
-        </div>
-
+        <!-- Verification Steps Indicator -->
         <div class="steps-container">
             <div class="step-line"></div>
             <div class="step-item active">
@@ -304,28 +333,16 @@
             </div>
         </div>
 
-        <div class="verify-card">
-            <div class="verify-top-info">
-                <div class="verify-shield"><i class="fa-solid fa-shield-halved"></i></div>
-                <div>
-                    <h3>Upgrade to Verified</h3>
-                    <p>Submit a government ID to unlock 10× higher limits and the ability to post advertisements.</p>
-                </div>
-            </div>
-
-            <!-- Limits grid -->
+        <div class="kyc-card">
+            <!-- Limits Grid Info -->
             <div class="limits-grid">
                 <div class="limit-item">
                     <div class="label">Daily trade</div>
-                    <div class="val">
-                        <span class="old-val">1K USDT</span> 10K USDT
-                    </div>
+                    <div class="val"><span class="old-val">1K USDT</span> 10K USDT</div>
                 </div>
                 <div class="limit-item">
                     <div class="label">Withdrawal</div>
-                    <div class="val">
-                        <span class="old-val">1K USDT</span> 10K USDT
-                    </div>
+                    <div class="val"><span class="old-val">1K USDT</span> 10K USDT</div>
                 </div>
                 <div class="limit-item">
                     <div class="label">Post ads</div>
@@ -333,17 +350,60 @@
                 </div>
             </div>
 
-            <!-- Upload Documents Option with updated text -->
-            <a href="upload-id.html" class="option-box">
-                <div class="option-left">
-                    <div class="option-icon"><i class="fa-solid fa-upload"></i></div>
-                    <div>
-                        <div class="option-title">Upload documents</div>
-                        <div class="option-sub">Automatic review · 10-15 minutes</div>
-                    </div>
+            <div class="form-group">
+                <label>Document type</label>
+                <select class="select-box">
+                    <option>National ID</option>
+                    <option>Passport</option>
+                    <option>Driver's License</option>
+                </select>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>ID Number <span style="color:#666;">(opt.)</span></label>
+                    <input type="text" class="input-box" placeholder="e.g. 1234567890">
                 </div>
-                <i class="fa-solid fa-chevron-right" style="color: #666; font-size: 14px;"></i>
-            </a>
+                <div class="form-group">
+                    <label>Date of Birth <span style="color:#666;">(opt.)</span></label>
+                    <input type="text" class="input-box" placeholder="dd/mm/yyyy">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Residential Address <span style="color:#666;">(opt.)</span></label>
+                <input type="text" class="input-box" placeholder="e.g. Bole Sub-city, Addis Ababa, Ethiopia">
+            </div>
+
+            <div class="form-group" style="margin-top: 25px;">
+                <label>Documents <span>* required</span></label>
+            </div>
+
+            <div class="upload-grid">
+                <div class="upload-box">
+                    <i class="fa-solid fa-id-card"></i>
+                    <div class="upload-title">Front side</div>
+                </div>
+                <div class="upload-box">
+                    <i class="fa-solid fa-file-lines"></i>
+                    <div class="upload-title">Back side</div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Selfie with ID <span>* required</span></label>
+            </div>
+            <div class="upload-box-full">
+                <i class="fa-solid fa-camera"></i>
+                <div class="upload-title">Hold ID next to your face</div>
+            </div>
+
+            <div class="security-note">
+                <span><i class="fa-solid fa-lock"></i> Encrypted · viewed only by compliance · never shared</span>
+                <a href="#">Why KYC?</a>
+            </div>
+
+            <button class="submit-btn"><i class="fa-solid fa-paper-plane"></i> Submit for Review</button>
         </div>
     </div>
 </body>
