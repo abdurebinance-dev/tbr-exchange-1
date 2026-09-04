@@ -71,8 +71,8 @@
             position: relative;
         }
 
-        /* Verification Status Badge on Navbar */
-        .unverified-badge-btn {
+        /* Static Unverified Status Badge on Navbar (No Link) */
+        .unverified-badge-static {
             background: rgba(239, 68, 68, 0.1);
             border: 1px solid rgba(239, 68, 68, 0.3);
             color: #ef4444;
@@ -83,12 +83,6 @@
             display: flex;
             align-items: center;
             gap: 5px;
-            text-decoration: none;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .unverified-badge-btn:hover {
-            background: rgba(239, 68, 68, 0.2);
         }
 
         @media(max-width: 900px) {
@@ -490,10 +484,10 @@
             </div>
         </div>
         <div class="nav-right">
-            <!-- Unverified Status Badge linking to kyc-verify.html -->
-            <a href="kyc-verify.html" class="unverified-badge-btn">
+            <!-- Static Unverified Status Badge (No link, just display status) -->
+            <div class="unverified-badge-static">
                 <i class="fa-solid fa-triangle-exclamation"></i> Unverified
-            </a>
+            </div>
 
             <i id="theme-toggle" class="fa-solid fa-moon" style="color: #d4af37; cursor: pointer;" title="Toggle Theme"></i>
             <a href="notifications.html" style="color: inherit; text-decoration: none;"><i class="fa-regular fa-bell" style="cursor: pointer;"></i></a>
