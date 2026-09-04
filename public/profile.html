@@ -139,7 +139,6 @@
             color: #d4af37;
         }
 
-        /* Verification Banner (Like 1233.PNG) */
         .verification-banner {
             background: #121212;
             border: 1px solid rgba(212, 175, 55, 0.3);
@@ -322,7 +321,8 @@
                     <p>Verify your ID to post ads and unlock 10× higher limits.</p>
                 </div>
             </div>
-            <a href="verification.html" class="verify-action-btn">VERIFY IDENTITY</a>
+            <!-- እዚህ ጋር ወደ kyc-verify.html እንዲወስድ ተስተካክሏል -->
+            <a href="kyc-verify.html" class="verify-action-btn">VERIFY IDENTITY</a>
         </div>
 
         <div class="stats-grid">
@@ -348,7 +348,8 @@
             <h3>Account Details</h3>
             <div class="info-row">
                 <span>KYC Verification</span>
-                <span style="color: #f6465d;">Not Submitted</span>
+                <!-- እዚህ ጋም ሲጫኑ ወደ kyc-verify.html እንዲወስድ ሊንክ ማድረግ ይቻላል -->
+                <a href="kyc-verify.html" style="color: #f6465d; text-decoration: none;">Not Submitted <i class="fa-solid fa-chevron-right" style="font-size: 10px;"></i></a>
             </div>
             <div class="info-row">
                 <span>Two-Factor Auth (2FA)</span>
@@ -381,7 +382,7 @@
     </div>
 
     <script>
-        const email = localStorage.getItem('signupEmail');
+        const email = localStorage.getItem('signupEmail') || localStorage.getItem('userEmail');
         if (email) {
             const username = email.split('@')[0].toUpperCase();
             document.getElementById('profileName').innerText = username;
