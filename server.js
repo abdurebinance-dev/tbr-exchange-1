@@ -643,9 +643,10 @@ app.post('/api/kyc/submit', async (req, res) => {
     }
 });
 
+// Admin: Get all KYC requests (Both pending and all records)
 app.get('/api/admin/kyc/pending', async (req, res) => {
     try {
-        const pendingList = await KYC.find({ status: 'pending' }).sort({ createdAt: -1 });
+        const pendingList = await KYC.find({}).sort({ createdAt: -1 });
         res.status(200).json({ success: true, data: pendingList });
     } catch (error) {
         console.error('Fetch KYC Error:', error);
@@ -653,9 +654,28 @@ app.get('/api/admin/kyc/pending', async (req, res) => {
     }
 });
 
-app.post('/api/admin/kyc-action', async (req, res) => {
+// Admin: Get specific KYC details by ID (ማየት (View) እንዲሰራ የተጨመረ ራውት)
+app.get('/api/admin/kyc/:id', async (req, res) => {
     try {
-        const { kycId, action, reason } = req.body; 
+        const kyc = await KYC.findById(req.params.id);
+        if (!kyc) return res.status(404).json({ success: false, message: 'KYC record not found' });
+        res.status(200).json({ success: true, data: kyc });
+    } catch (error) {
+        console.error('Fetch Single KYC Error:', error);
+        res.status(500).json({ success: false, message: 'Server error loading KYC details' });
+    }
+});
+
+// Admin: KYC Actions (Approve / Reject) - Support both endpoint patterns
+app.post(['/api/admin/kyc-action', '/api/admin/kyc/approve', '/api/admin/kyc/reject'], async (req, res) => {
+    try {
+        const kycId = req.body.kycId || req.body.id;
+        let action = req.body.action;
+
+        // URL ላይ action explicitly ከተጠየቀ መለየት
+        if (req.url.includes('approve')) action = 'approve';
+        if (req.url.includes('reject')) action = 'reject';
+
         const kycRecord = await KYC.findById(kycId);
         
         if (!kycRecord) {
@@ -664,6 +684,7 @@ app.post('/api/admin/kyc-action', async (req, res) => {
 
         if (action === 'approve') {
             kycRecord.status = 'approved';
+            kycRecord.rejectionReason = '';
             await kycRecord.save();
             if (kycRecord.userId) {
                 await User.findByIdAndUpdate(kycRecord.userId, { kycStatus: 'verified' });
@@ -671,7 +692,7 @@ app.post('/api/admin/kyc-action', async (req, res) => {
             return res.json({ success: true, message: 'KYC approved successfully.' });
         } else if (action === 'reject') {
             kycRecord.status = 'rejected';
-            kycRecord.rejectionReason = reason || '';
+            kycRecord.rejectionReason = req.body.reason || 'Rejected by admin';
             await kycRecord.save();
             if (kycRecord.userId) {
                 await User.findByIdAndUpdate(kycRecord.userId, { kycStatus: 'rejected' });
