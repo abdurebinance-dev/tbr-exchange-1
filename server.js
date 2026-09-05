@@ -643,13 +643,16 @@ app.post('/api/kyc/submit', async (req, res) => {
     }
 });
 
-// Admin: Get all KYC requests (AllowDiskUse በመጨመር ሜሞሪ እንዳይከለክለው አድርገናል)
+// Admin: Get all KYC requests (በ JavaScript እንድናስተካክለው ከሞንጎዲቢ ሰርት አጥፍተናል)
 app.get('/api/admin/kyc/pending', async (req, res) => {
     try {
         const pendingList = await KYC.find({})
-            .sort({ createdAt: -1 })
-            .allowDiskUse(true); // የሜሞሪ ገደብ እንዳይኖረው ሃርድዲስክ እንዲጠቀም እናደርጋለን
+            .select('-frontImage -backImage -selfieImage') // ግዙፍ ፎቶዎችን አናመጣም
+            .lean(); // ፈጣን እንዲሆን
             
+        // በ Node.js / JavaScript በኩል በሰዓት እንደረድረዋለን (የማስታወሻ ገደብ ችግር ፈጽሞ አያመጣም)
+        pendingList.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
         res.status(200).json({ success: true, data: pendingList });
     } catch (error) {
         console.error('Fetch KYC Error:', error);
