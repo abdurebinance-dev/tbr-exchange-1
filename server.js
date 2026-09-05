@@ -643,7 +643,7 @@ app.post('/api/kyc/submit', async (req, res) => {
     }
 });
 
-// Admin: Get all KYC requests (Both pending and all records)
+// Admin: Get all KYC requests
 app.get('/api/admin/kyc/pending', async (req, res) => {
     try {
         const pendingList = await KYC.find({}).sort({ createdAt: -1 });
@@ -654,7 +654,7 @@ app.get('/api/admin/kyc/pending', async (req, res) => {
     }
 });
 
-// Admin: Get specific KYC details by ID (ማየት (View) እንዲሰራ የተጨመረ ራውት)
+// Admin: Get specific KYC details by ID
 app.get('/api/admin/kyc/:id', async (req, res) => {
     try {
         const kyc = await KYC.findById(req.params.id);
@@ -666,13 +666,12 @@ app.get('/api/admin/kyc/:id', async (req, res) => {
     }
 });
 
-// Admin: KYC Actions (Approve / Reject) - Support both endpoint patterns
+// Admin: KYC Actions (Approve / Reject)
 app.post(['/api/admin/kyc-action', '/api/admin/kyc/approve', '/api/admin/kyc/reject'], async (req, res) => {
     try {
         const kycId = req.body.kycId || req.body.id;
         let action = req.body.action;
 
-        // URL ላይ action explicitly ከተጠየቀ መለየት
         if (req.url.includes('approve')) action = 'approve';
         if (req.url.includes('reject')) action = 'reject';
 
@@ -773,7 +772,7 @@ app.get('/signup.html', (req, res) => {
     res.sendFile(path.join(publicPath, 'signup.html'));
 });
 
-// 10. Fallback Route ለ SPA / HTML ፋይሎች (ሁልጊዜ መጨረሻ ላይ መሆን አለበት)
+// 10. Fallback Route ለ SPA / HTML ፋይሎች
 app.get(/.*/, (req, res) => {
     res.sendFile(path.join(publicPath, 'index.html'));
 });
