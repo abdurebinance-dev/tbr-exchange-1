@@ -581,7 +581,7 @@ app.post('/api/reset-password', async (req, res) => {
 });
 
 // ==========================================
-// TBR Exchange - KYC & User Profile Routes
+// TBR Exchange - KYC & User Profile Routes (Smart Auto & Admin Fallback)
 // ==========================================
 
 // 1. ዩዘሩ የ KYC ስቴተስ እና ፕሮፋይል እንዲያይ የሚረዳ ራውት
@@ -604,7 +604,7 @@ app.get('/api/user/profile', verifyToken, async (req, res) => {
     }
 });
 
-// 2. ተጠቃሚው KYC ሲልክ የሚቀበለው
+// 2. ተጠቃሚው KYC ሲልክ (አውቶማቲክ እና አጠራጣሪ ሲሆን ወደ አድሚን የሚልክ)
 app.post('/api/kyc/submit', async (req, res) => {
     try {
         const { userId, fullName, idNumber, dob, address, docType, frontImage, backImage, selfieImage, email } = req.body;
@@ -612,6 +612,18 @@ app.post('/api/kyc/submit', async (req, res) => {
         if (!fullName || !frontImage || !selfieImage) {
             return res.status(400).json({ success: false, message: 'እባክዎ አስፈላጊዎቹን መረጃዎች እና ፎቶዎች በትክክል ይሙሉ!' });
         }
+
+        // ስማርት ቼኪንግ (Smart Validation): ፎቶዎቹ ባዶ/የተበላሹ ወይም መታወቂያ ቁጥሩ የሌለ/ያነሰ ከሆነ ለአድሚን ፔንዲንግ ይልካል
+        let isSuspicious = false;
+        if (frontImage.length < 200 || selfieImage.length < 200) {
+            isSuspicious = true; // የፎቶ ውሂብ የተሟላ አይደለም
+        }
+        if (!idNumber || idNumber.trim().length < 4) {
+            isSuspicious = true; // ትክክለኛ መታወቂያ ቁጥር የለውም
+        }
+
+        const kycStatusToSet = isSuspicious ? 'pending' : 'approved';
+        const userStatusToSet = isSuspicious ? 'pending' : 'verified';
 
         const newKyc = new KYC({
             userId: userId || null,
@@ -624,16 +636,28 @@ app.post('/api/kyc/submit', async (req, res) => {
             backImage,
             selfieImage,
             email: email || '',
-            status: 'pending'
+            status: kycStatusToSet
         });
 
         await newKyc.save();
 
         if (userId) {
-            await User.findByIdAndUpdate(userId, { kycStatus: 'pending' });
+            await User.findByIdAndUpdate(userId, { kycStatus: userStatusToSet });
         }
 
-        res.status(200).json({ success: true, status: 'pending', message: 'KYC submitted successfully' });
+        if (isSuspicious) {
+            return res.status(200).json({ 
+                success: true, 
+                status: 'pending', 
+                message: 'መረጃዎ በጥራት/በማስረጃ እጦት ምክንያት ለአድሚን ግምገማ ተልኳል (Pending).' 
+            });
+        }
+
+        res.status(200).json({ 
+            success: true, 
+            status: 'approved', 
+            message: 'KYC verified automatically successfully!' 
+        });
     } catch (err) {
         console.error('KYC Submit Error:', err);
         res.status(500).json({ success: false, message: 'ሰርቨር ላይ ስህተት ተፈጥሯል' });
