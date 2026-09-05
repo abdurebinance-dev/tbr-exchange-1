@@ -643,10 +643,14 @@ app.post('/api/kyc/submit', async (req, res) => {
     }
 });
 
-// Admin: Get all KYC requests
+// Admin: Get all KYC requests (ፎቶዎችን በመተው ሜሞሪ እንዳይጨናነቅ አድርገናል)
 app.get('/api/admin/kyc/pending', async (req, res) => {
     try {
-        const pendingList = await KYC.find({}).sort({ createdAt: -1 });
+        const pendingList = await KYC.find({})
+            .select('-frontImage -backImage -selfieImage') // ግዙፍ የሆኑትን ፎቶዎች አናመጣም
+            .sort({ createdAt: -1 })
+            .limit(50); // እስከ 50 ብቻ እንዲያመጣ ገደብ እናበጅለት
+            
         res.status(200).json({ success: true, data: pendingList });
     } catch (error) {
         console.error('Fetch KYC Error:', error);
