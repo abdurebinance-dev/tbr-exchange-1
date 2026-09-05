@@ -192,7 +192,7 @@
     <div class="panel-grid">
         <!-- Left Side: KYC Approvals & User Management -->
         <div>
-            <div class="section-title"><i class="fa-solid fa-user-shield"></i> Pending KYC Approvals</div>
+            <div class="section-title"><i class="fa-solid fa-user-shield"></i> KYC Submissions & Approvals</div>
             <div class="table-container">
                 <table>
                     <thead>
@@ -261,7 +261,6 @@
     <script>
         const API_BASE_URL = 'https://tbr-exchange-backend.onrender.com';
         
-        // Helper to retrieve auth headers if using admin JWT tokens
         function getAuthHeaders() {
             const token = localStorage.getItem('adminToken') || '';
             return {
@@ -285,8 +284,35 @@
                     
                     if (data && data.length > 0) {
                         let rows = '';
+                        let pendingCount = 0;
+
                         data.forEach(item => {
                             const itemId = item._id ? item._id.toString() : '';
+                            const status = item.status ? item.status.toLowerCase() : 'pending';
+
+                            if (status === 'pending') {
+                                pendingCount++;
+                            }
+
+                            // Dynamic Status Badge and Actions generator
+                            let statusBadge = '';
+                            let actionButtons = '';
+
+                            if (status === 'approved') {
+                                statusBadge = '<span class="badge-approved">Approved</span>';
+                                actionButtons = '<span style="color: #10b981; font-size: 12px; font-weight: bold;"><i class="fa-solid fa-check-circle"></i> Done</span>';
+                            } else if (status === 'rejected') {
+                                statusBadge = '<span class="badge-rejected">Rejected</span>';
+                                actionButtons = '<span style="color: #ef4444; font-size: 12px; font-weight: bold;">Rejected</span>';
+                            } else {
+                                statusBadge = '<span class="badge-pending">Pending</span>';
+                                actionButtons = `
+                                    <button class="btn btn-view" onclick="openKycModal('${itemId}')"><i class="fa-solid fa-eye"></i></button>
+                                    <button class="btn btn-approve" onclick="approveUser(this, '${itemId}')"><i class="fa-solid fa-check"></i></button>
+                                    <button class="btn btn-reject" onclick="rejectUser(this, '${itemId}')"><i class="fa-solid fa-xmark"></i></button>
+                                `;
+                            }
+
                             rows += `
                                 <tr>
                                     <td>
@@ -294,19 +320,16 @@
                                         <div style="font-size: 11px; color: #777;">ID: #${itemId ? itemId.substring(0, 8) : 'N/A'}</div>
                                     </td>
                                     <td>${item.docType || 'National ID'}</td>
-                                    <td><span class="badge-pending">Pending</span></td>
-                                    <td>
-                                        <button class="btn btn-view" onclick="openKycModal('${itemId}')"><i class="fa-solid fa-eye"></i></button>
-                                        <button class="btn btn-approve" onclick="approveUser(this, '${itemId}')"><i class="fa-solid fa-check"></i></button>
-                                        <button class="btn btn-reject" onclick="rejectUser(this, '${itemId}')"><i class="fa-solid fa-xmark"></i></button>
-                                    </td>
+                                    <td>${statusBadge}</td>
+                                    <td>${actionButtons}</td>
                                 </tr>
                             `;
                         });
+
                         document.getElementById('kycTableBody').innerHTML = rows;
-                        document.getElementById('pendingKycCount').innerText = data.length;
+                        document.getElementById('pendingKycCount').innerText = pendingCount;
                     } else {
-                        document.getElementById('kycTableBody').innerHTML = '<tr><td colspan="4" style="text-align:center; color:#777;">No pending KYC requests found.</td></tr>';
+                        document.getElementById('kycTableBody').innerHTML = '<tr><td colspan="4" style="text-align:center; color:#777;">No KYC requests found.</td></tr>';
                         document.getElementById('pendingKycCount').innerText = '0';
                     }
                 } else {
@@ -356,7 +379,7 @@
                     row.querySelector('td:nth-child(3)').innerHTML = '<span class="badge-approved">Approved</span>';
                     btn.closest('td').innerHTML = '<span style="color: #10b981; font-size: 12px; font-weight: bold;"><i class="fa-solid fa-check-circle"></i> Done</span>';
                     alert('KYC Approved successfully!');
-                    loadPendingKyc(); // Refresh list stats
+                    loadPendingKyc(); 
                 } else {
                     alert('Error: ' + (data.error || data.message || 'Failed to approve'));
                 }
@@ -382,7 +405,7 @@
                     row.querySelector('td:nth-child(3)').innerHTML = '<span class="badge-rejected">Rejected</span>';
                     btn.closest('td').innerHTML = '<span style="color: #ef4444; font-size: 12px; font-weight: bold;">Rejected</span>';
                     alert('KYC Rejected.');
-                    loadPendingKyc(); // Refresh list stats
+                    loadPendingKyc(); 
                 } else {
                     alert('Error: ' + (data.error || data.message || 'Failed to reject'));
                 }
