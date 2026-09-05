@@ -472,7 +472,6 @@
 
             <div class="form-group">
                 <div class="section-title" style="margin-bottom: 6px;">Full Name *</div>
-                <!-- ዩዘሩ የራሱን ስም እንዲጽፍ ባዶ እንዲሆን ተደርጓል -->
                 <input type="text" id="fullNameInput" class="form-control" placeholder="Enter your full name as on ID">
             </div>
 
@@ -513,12 +512,11 @@
         let backImageBase64 = null;
         let selfieImageBase64 = null;
 
-        // ዩዘሩ ሲገባ የፕሮፋይል መረጃውን ከ ሰርቨር አምጥቶ በራስ-ሰር ስሙን መሙላት ከፈለጉ (አማራጭ)
         window.addEventListener('DOMContentLoaded', async () => {
             const token = localStorage.getItem('token');
             if (token) {
                 try {
-                    const res = await fetch('/api/user/profile', {
+                    const res = await fetch('https://tbr-exchange-backend.onrender.com/api/user/profile', {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
                     const data = await res.json();
@@ -565,7 +563,7 @@
             selfieImageBase64 = canvasElement.toDataURL('image/jpeg');
 
             selfieStatusText.innerHTML = '<i class="fa-solid fa-check-circle" style="color: #0ecb81;"></i> Selfie Captured Successfully!';
-            selfieTriggerBox.style.borderColor = '#0ecb81';
+            selffileTriggerBoxBorder = '#0ecb81';
             stopCamera();
         }
 
@@ -577,7 +575,6 @@
                     frontImageBase64 = e.target.result;
                     document.getElementById('frontText').innerHTML = '<span style="color: #0ecb81;">Front Uploaded ✓</span>';
                     document.getElementById('frontBox').style.borderColor = '#0ecb81';
-                    // የተሳሳተውን Hardcoded ስም (Abdurahman Ashebir Yimam) እዚህጋ ከሰርቨሩ አጥፍተነዋል!
                 };
                 reader.readAsDataURL(file);
             }
@@ -615,11 +612,9 @@
             }
 
             const token = localStorage.getItem('token');
-            let userId = null;
-            // ቶከኑን በመበተን የዩዘር ID ማግኘት ይቻላል (ወይም ሰርቨሩ ራሱ ከ Token እንዲቀበለው ማድረግ ይቻላል)
             
             try {
-                const response = await fetch('/api/kyc/submit', {
+                const response = await fetch('https://tbr-exchange-backend.onrender.com/api/kyc/submit', {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
