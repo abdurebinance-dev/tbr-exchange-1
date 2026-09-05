@@ -5,7 +5,7 @@ const cors = require('cors');
 const path = require('path');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken'); // የቶከን ማረጋገጫ እንዲሰራ ጨምረነዋል
+const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 
 const app = express();
@@ -26,7 +26,9 @@ app.use(cors({
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(express.json({ limit: '10mb' })); // የምስል ዴታዎችን በሰፊው መቀበል እንዲችል (Payload Limit)
+// የ Base64 ምስሎች ትልቅ መጠን ስላቸው ገደቡን ወደ 50mb ከፍ አድርገነዋል (BadRequestError እንዳይመጣ)
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // 1. ስታቲክ ፋይሎችን በግልጽ እና በትክክለኛ አቅጣጫ ማስቀመጥ
 const publicPath = path.join(process.cwd(), 'public');
@@ -43,6 +45,7 @@ const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true, index: true, lowercase: true, trim: true },
     phone: { type: String, index: true }, 
     password: { type: String, required: true },
+    fullName: { type: String, default: 'User' },
     verificationCode: String,
     verificationCodeExpire: Date,
     isVerified: { type: Boolean, default: false },
@@ -55,18 +58,18 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model('User', userSchema);
 
-// KYC Schema & Model (ለአድሚን ዳሽቦርድ የሚቀመጥበት)
+// KYC Schema & Model (ከቀድሞው KycModel.js ጋር የተጣጣመ)
 const kycSchema = new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    fullName: { type: String, default: 'User' },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
+    fullName: { type: String, required: true },
     email: { type: String, default: '' },
-    idNumber: { type: String, default: '' },
-    dob: { type: String, default: '' },
-    address: { type: String, default: '' },
-    docType: { type: String, default: 'National ID' },
-    frontImage: String,
-    backImage: String,
-    selfieImage: String,
+    idNumber: { type: String },
+    dob: { type: String },
+    address: { type: String },
+    docType: { type: String, default: 'national_id' },
+    frontImage: { type: String, required: true }, // Base64 String
+    backImage: { type: String },                  // Base64 String
+    selfieImage: { type: String, required: true }, // Base64 String
     status: { type: String, default: 'pending' }, // pending, approved, rejected
     rejectionReason: { type: String, default: '' },
     createdAt: { type: Date, default: Date.now }
@@ -616,7 +619,7 @@ app.post('/api/kyc/submit', async (req, res) => {
             idNumber,
             dob,
             address,
-            docType: docType || 'National ID',
+            docType: docType || 'national_id',
             frontImage,
             backImage,
             selfieImage,
