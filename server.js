@@ -643,13 +643,12 @@ app.post('/api/kyc/submit', async (req, res) => {
     }
 });
 
-// Admin: Get all KYC requests (ፎቶዎችን በመተው ሜሞሪ እንዳይጨናነቅ አድርገናል)
+// Admin: Get all KYC requests (AllowDiskUse በመጨመር ሜሞሪ እንዳይከለክለው አድርገናል)
 app.get('/api/admin/kyc/pending', async (req, res) => {
     try {
         const pendingList = await KYC.find({})
-            .select('-frontImage -backImage -selfieImage') // ግዙፍ የሆኑትን ፎቶዎች አናመጣም
             .sort({ createdAt: -1 })
-            .limit(50); // እስከ 50 ብቻ እንዲያመጣ ገደብ እናበጅለት
+            .allowDiskUse(true); // የሜሞሪ ገደብ እንዳይኖረው ሃርድዲስክ እንዲጠቀም እናደርጋለን
             
         res.status(200).json({ success: true, data: pendingList });
     } catch (error) {
