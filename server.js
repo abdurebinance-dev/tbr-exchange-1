@@ -26,6 +26,7 @@ app.use(cors({
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
 // የ Base64 ምስሎች ትልቅ መጠን ስላቸው ገደቡን ወደ 50mb ከፍ አድርገነዋል (BadRequestError እንዳይመጣ)
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -581,10 +582,9 @@ app.post('/api/reset-password', async (req, res) => {
 });
 
 // ==========================================
-// TBR Exchange - KYC & User Profile Routes (Manual Admin Review Mode)
+// TBR Exchange - KYC & User Profile Routes
 // ==========================================
 
-// 1. ዩዘሩ የ KYC ስቴተስ እና ፕሮፋይል እንዲያይ የሚረዳ ራውት
 app.get('/api/user/profile', verifyToken, async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
@@ -604,7 +604,6 @@ app.get('/api/user/profile', verifyToken, async (req, res) => {
     }
 });
 
-// 2. ተጠቃሚው KYC ሲልክ ሁልጊዜም ወደ አድሚን ኪው (Pending) ብቻ እንዲሄድ የተደረገበት ራውት
 app.post('/api/kyc/submit', async (req, res) => {
     try {
         const { userId, fullName, idNumber, dob, address, docType, frontImage, backImage, selfieImage, email } = req.body;
@@ -613,7 +612,6 @@ app.post('/api/kyc/submit', async (req, res) => {
             return res.status(400).json({ success: false, message: 'እባክዎ አስፈላጊዎቹን መረጃዎች እና ፎቶዎች በትክክል ይሙሉ!' });
         }
 
-        // አውቶማቲክ ማረጋገጫውን (Auto-verification) በማጥፋት ሁሉም ጥያቄዎች ወደ ፔንዲንግ እንዲሄዱ ተደርጓል
         const newKyc = new KYC({
             userId: userId || null,
             fullName,
@@ -625,7 +623,7 @@ app.post('/api/kyc/submit', async (req, res) => {
             backImage,
             selfieImage,
             email: email || '',
-            status: 'pending' // ሁልጊዜ Pending ይሆናል
+            status: 'pending'
         });
 
         await newKyc.save();
@@ -645,7 +643,6 @@ app.post('/api/kyc/submit', async (req, res) => {
     }
 });
 
-// 3. አድሚኑ ያልጸደቁትን (Pending) እንዲያይ የሚረዳ ራውት
 app.get('/api/admin/kyc/pending', async (req, res) => {
     try {
         const pendingList = await KYC.find({ status: 'pending' }).sort({ createdAt: -1 });
@@ -656,7 +653,6 @@ app.get('/api/admin/kyc/pending', async (req, res) => {
     }
 });
 
-// 4. አድሚኑ KYC ሲያጸድቅ ወይም ውድቅ ሲያደርግ (Admin Action Route)
 app.post('/api/admin/kyc-action', async (req, res) => {
     try {
         const { kycId, action, reason } = req.body; 
@@ -694,7 +690,6 @@ app.post('/api/admin/kyc-action', async (req, res) => {
 // Admin Control & Dashboard Extra Routes
 // ==========================================
 
-// አጠቃላይ ተጠቃሚዎችን ዝርዝር ለማየት (Admin Users List)
 app.get('/api/admin/users', async (req, res) => {
     try {
         const users = await User.find({}, '-password').sort({ _id: -1 });
@@ -705,10 +700,9 @@ app.get('/api/admin/users', async (req, res) => {
     }
 });
 
-// የተቆለፈ አካውንት ለመክፈት (Unlock User Account API)
 app.post('/api/admin/unlock-account', async (req, res) => {
     try {
-        const { identifier } = req.body; // email or phone or userId
+        const { identifier } = req.body;
         if (!identifier) {
             return res.status(400).json({ success: false, message: 'User identifier is required.' });
         }
@@ -732,7 +726,6 @@ app.post('/api/admin/unlock-account', async (req, res) => {
     }
 });
 
-// Admin Market Rate & Account Control API
 app.post('/api/admin/update-rate', async (req, res) => {
     try {
         const { newRate } = req.body;
@@ -740,6 +733,23 @@ app.post('/api/admin/update-rate', async (req, res) => {
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
+});
+
+// Explicit Page Routes to serve Frontend HTML files safely
+app.get('/dashboard.html', (req, res) => {
+    res.sendFile(path.join(publicPath, 'dashboard.html'));
+});
+
+app.get('/admin.html', (req, res) => {
+    res.sendFile(path.join(publicPath, 'admin.html'));
+});
+
+app.get('/signin.html', (req, res) => {
+    res.sendFile(path.join(publicPath, 'signin.html'));
+});
+
+app.get('/signup.html', (req, res) => {
+    res.sendFile(path.join(publicPath, 'signup.html'));
 });
 
 // 10. Fallback Route ለ SPA / HTML ፋይሎች (ሁልጊዜ መጨረሻ ላይ መሆን አለበት)

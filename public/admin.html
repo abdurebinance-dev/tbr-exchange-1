@@ -259,30 +259,32 @@
     </div>
 
     <script>
-        // የ Render ሰርቨር ትክክለኛ ሊንክ
         const API_BASE_URL = 'https://tbr-exchange-backend.onrender.com';
 
-        // ገጹ ሲጫን የ KYC መረጃዎችን ከሰርቨር ማምጣት
         window.addEventListener('DOMContentLoaded', async () => {
             try {
                 const res = await fetch(`${API_BASE_URL}/api/admin/kyc/pending`);
                 if (res.ok) {
-                    const data = await res.json();
+                    const result = await res.json();
+                    // Handle both direct array responses and wrapped { success: true, data: [...] } responses
+                    const data = Array.isArray(result) ? result : (result.data || []);
+                    
                     if (data && data.length > 0) {
                         let rows = '';
                         data.forEach(item => {
+                            const itemId = item._id ? item._id.toString() : '';
                             rows += `
                                 <tr>
                                     <td>
                                         <div style="font-weight: bold;">${item.fullName || 'Unknown'}</div>
-                                        <div style="font-size: 11px; color: #777;">ID: #${item._id.substring(0, 8)}</div>
+                                        <div style="font-size: 11px; color: #777;">ID: #${itemId ? itemId.substring(0, 8) : 'N/A'}</div>
                                     </td>
                                     <td>${item.docType || 'National ID'}</td>
                                     <td><span class="badge-pending">Pending</span></td>
                                     <td>
-                                        <button class="btn btn-view" onclick="openKycModal('${item._id}')"><i class="fa-solid fa-eye"></i></button>
-                                        <button class="btn btn-approve" onclick="approveUser(this, '${item._id}')"><i class="fa-solid fa-check"></i></button>
-                                        <button class="btn btn-reject" onclick="rejectUser(this, '${item._id}')"><i class="fa-solid fa-xmark"></i></button>
+                                        <button class="btn btn-view" onclick="openKycModal('${itemId}')"><i class="fa-solid fa-eye"></i></button>
+                                        <button class="btn btn-approve" onclick="approveUser(this, '${itemId}')"><i class="fa-solid fa-check"></i></button>
+                                        <button class="btn btn-reject" onclick="rejectUser(this, '${itemId}')"><i class="fa-solid fa-xmark"></i></button>
                                     </td>
                                 </tr>
                             `;
@@ -301,13 +303,13 @@
             }
         });
 
-        // የሰነድ ፎቶዎችን ከሰርቨር አምጥቶ በሞዳል ለማሳየት
         async function openKycModal(kycId) {
             try {
                 const res = await fetch(`${API_BASE_URL}/api/admin/kyc/details/${kycId}`);
-                const data = await res.json();
-                if (res.ok) {
-                    document.getElementById('mFullName').innerText = data.fullName;
+                const result = await res.json();
+                const data = result.data || result;
+                if (res.ok && data) {
+                    document.getElementById('mFullName').innerText = data.fullName || 'N/A';
                     document.getElementById('mIdNumber').innerText = data.idNumber || 'N/A';
                     document.getElementById('mFrontImg').src = data.frontImage || '';
                     document.getElementById('mSelfieImg').src = data.selfieImage || '';
@@ -325,14 +327,12 @@
             document.getElementById('adminKycModal').style.display = 'none';
         }
 
-        // KYC አፕሩቭ ሲደረግ
         async function approveUser(btn, kycId) {
             try {
                 const res = await fetch(`${API_BASE_URL}/api/admin/kyc/approve/${kycId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' }
                 });
-                
                 const data = await res.json();
                 if (res.ok) {
                     const row = btn.closest('tr');
@@ -340,7 +340,7 @@
                     btn.closest('td').innerHTML = '<span style="color: #10b981; font-size: 12px; font-weight: bold;"><i class="fa-solid fa-check-circle"></i> Done</span>';
                     alert('KYC Approved successfully!');
                 } else {
-                    alert('Error: ' + (data.error || 'Failed to approve'));
+                    alert('Error: ' + (data.error || data.message || 'Failed to approve'));
                 }
             } catch (err) {
                 console.error(err);
@@ -348,7 +348,6 @@
             }
         }
 
-        // KYC ሪጀክት ሲደረግ
         async function rejectUser(btn, kycId) {
             const reason = prompt("የእምቢታውን ምክንያት (Reason) ይጻፉ:", "ሰነዱ ግልጽ አይደለም ወይም የተሳሳተ መረጃ");
             if (!reason) return;
@@ -359,7 +358,6 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ reason })
                 });
-                
                 const data = await res.json();
                 if (res.ok) {
                     const row = btn.closest('tr');
@@ -367,7 +365,7 @@
                     btn.closest('td').innerHTML = '<span style="color: #ef4444; font-size: 12px; font-weight: bold;">Rejected</span>';
                     alert('KYC Rejected.');
                 } else {
-                    alert('Error: ' + (data.error || 'Failed to reject'));
+                    alert('Error: ' + (data.error || data.message || 'Failed to reject'));
                 }
             } catch (err) {
                 console.error(err);
