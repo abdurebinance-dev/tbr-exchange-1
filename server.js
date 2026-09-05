@@ -640,8 +640,8 @@ app.post('/api/kyc/submit', async (req, res) => {
     }
 });
 
-// 3. አድሚኑ ያልጸደቁትን (Pending) እንዲያይ
-app.get('/api/admin/kyc-list', async (req, res) => {
+// 3. አድሚኑ ያልጸደቁትን (Pending) እንዲያይ (የተስተካከለው ራውት)
+app.get('/api/admin/kyc/pending', async (req, res) => {
     try {
         const pendingList = await KYC.find({ status: 'pending' }).sort({ createdAt: -1 });
         res.status(200).json({ success: true, data: pendingList });
