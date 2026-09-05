@@ -666,7 +666,7 @@ app.get('/api/admin/kyc/:id', async (req, res) => {
     }
 });
 
-// Admin: KYC Actions (Approve / Reject)
+// Admin: KYC Actions (Approve / Reject via POST)
 app.post(['/api/admin/kyc-action', '/api/admin/kyc/approve', '/api/admin/kyc/reject'], async (req, res) => {
     try {
         const kycId = req.body.kycId || req.body.id;
@@ -706,6 +706,55 @@ app.post(['/api/admin/kyc-action', '/api/admin/kyc/approve', '/api/admin/kyc/rej
     }
 });
 
+// Admin: KYC Actions (Approve / Reject via PUT with :id parameter)
+app.put('/api/admin/kyc/approve/:id', async (req, res) => {
+    try {
+        const kycId = req.params.id;
+        const kycRecord = await KYC.findById(kycId);
+        
+        if (!kycRecord) {
+            return res.status(404).json({ success: false, message: 'የ KYC መዝገብ አልተገኘም' });
+        }
+
+        kycRecord.status = 'approved';
+        kycRecord.rejectionReason = '';
+        await kycRecord.save();
+        
+        if (kycRecord.userId) {
+            await User.findByIdAndUpdate(kycRecord.userId, { kycStatus: 'verified' });
+        }
+        
+        return res.json({ success: true, message: 'KYC approved successfully.' });
+    } catch (error) {
+        console.error('Approve KYC Error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.put('/api/admin/kyc/reject/:id', async (req, res) => {
+    try {
+        const kycId = req.params.id;
+        const kycRecord = await KYC.findById(kycId);
+        
+        if (!kycRecord) {
+            return res.status(404).json({ success: false, message: 'የ KYC መዝገብ አልተገኘም' });
+        }
+
+        kycRecord.status = 'rejected';
+        kycRecord.rejectionReason = req.body.reason || 'Rejected by admin';
+        await kycRecord.save();
+        
+        if (kycRecord.userId) {
+            await User.findByIdAndUpdate(kycRecord.userId, { kycStatus: 'rejected' });
+        }
+        
+        return res.json({ success: true, message: 'KYC rejected.' });
+    } catch (error) {
+        console.error('Reject KYC Error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // ==========================================
 // Admin Control & Dashboard Extra Routes
 // ==========================================
@@ -720,15 +769,21 @@ app.get('/api/admin/users', async (req, res) => {
     }
 });
 
-app.post('/api/admin/unlock-account', async (req, res) => {
+app.post(['/api/admin/users/unlock', '/api/admin/unlock-account'], async (req, res) => {
     try {
-        const { identifier } = req.body;
-        if (!identifier) {
+        const { identifier, userId } = req.body;
+        const targetId = identifier || userId;
+        
+        if (!targetId) {
             return res.status(400).json({ success: false, message: 'User identifier is required.' });
         }
 
         const user = await User.findOne({
-            $or: [{ email: identifier.trim().toLowerCase() }, { phone: identifier.trim() }, { _id: identifier.match(/^[0-9a-fA-F]{24}$/) ? identifier : null }]
+            $or: [
+                { email: targetId.trim().toLowerCase() }, 
+                { phone: targetId.trim() }, 
+                { _id: targetId.match(/^[0-9a-fA-F]{24}$/) ? targetId : null }
+            ]
         });
 
         if (!user) {
@@ -746,10 +801,11 @@ app.post('/api/admin/unlock-account', async (req, res) => {
     }
 });
 
-app.post('/api/admin/update-rate', async (req, res) => {
+app.post(['/api/admin/rates', '/api/admin/update-rate'], async (req, res) => {
     try {
-        const { newRate } = req.body;
-        return res.json({ success: true, message: `Market rate updated to ${newRate} ETB` });
+        const { newRate, rate } = req.body;
+        const targetRate = newRate || rate;
+        return res.json({ success: true, message: `Market rate updated to ${targetRate} ETB` });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
