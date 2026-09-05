@@ -807,7 +807,7 @@ app.post(['/api/admin/rates', '/api/admin/update-rate'], async (req, res) => {
         const targetRate = newRate || rate;
         return res.json({ success: true, message: `Market rate updated to ${targetRate} ETB` });
     } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
+        res.status(500).json({ success: error.message });
     }
 });
 
@@ -833,7 +833,7 @@ app.get(/.*/, (req, res) => {
     res.sendFile(path.join(publicPath, 'index.html'));
 });
 
-// Start Server
+// Server Listening
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+    console.log(`Server is running successfully on port ${PORT}`);
 });
