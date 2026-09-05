@@ -581,7 +581,7 @@ app.post('/api/reset-password', async (req, res) => {
 });
 
 // ==========================================
-// TBR Exchange - KYC & User Profile Routes (Smart Auto & Admin Fallback)
+// TBR Exchange - KYC & User Profile Routes (Manual Admin Review Mode)
 // ==========================================
 
 // 1. ዩዘሩ የ KYC ስቴተስ እና ፕሮፋይል እንዲያይ የሚረዳ ራውት
@@ -604,7 +604,7 @@ app.get('/api/user/profile', verifyToken, async (req, res) => {
     }
 });
 
-// 2. ተጠቃሚው KYC ሲልክ (አውቶማቲክ እና አጠራጣሪ ሲሆን ወደ አድሚን የሚልክ)
+// 2. ተጠቃሚው KYC ሲልክ ሁልጊዜም ወደ አድሚን ኪው (Pending) ብቻ እንዲሄድ የተደረገበት ራውት
 app.post('/api/kyc/submit', async (req, res) => {
     try {
         const { userId, fullName, idNumber, dob, address, docType, frontImage, backImage, selfieImage, email } = req.body;
@@ -613,18 +613,7 @@ app.post('/api/kyc/submit', async (req, res) => {
             return res.status(400).json({ success: false, message: 'እባክዎ አስፈላጊዎቹን መረጃዎች እና ፎቶዎች በትክክል ይሙሉ!' });
         }
 
-        // ስማርት ቼኪንግ (Smart Validation): ፎቶዎቹ ባዶ/የተበላሹ ወይም መታወቂያ ቁጥሩ የሌለ/ያነሰ ከሆነ ለአድሚን ፔንዲንግ ይልካል
-        let isSuspicious = false;
-        if (frontImage.length < 200 || selfieImage.length < 200) {
-            isSuspicious = true; // የፎቶ ውሂብ የተሟላ አይደለም
-        }
-        if (!idNumber || idNumber.trim().length < 4) {
-            isSuspicious = true; // ትክክለኛ መታወቂያ ቁጥር የለውም
-        }
-
-        const kycStatusToSet = isSuspicious ? 'pending' : 'approved';
-        const userStatusToSet = isSuspicious ? 'pending' : 'verified';
-
+        // አውቶማቲክ ማረጋገጫውን (Auto-verification) በማጥፋት ሁሉም ጥያቄዎች ወደ ፔንዲንግ እንዲሄዱ ተደርጓል
         const newKyc = new KYC({
             userId: userId || null,
             fullName,
@@ -636,27 +625,19 @@ app.post('/api/kyc/submit', async (req, res) => {
             backImage,
             selfieImage,
             email: email || '',
-            status: kycStatusToSet
+            status: 'pending' // ሁልጊዜ Pending ይሆናል
         });
 
         await newKyc.save();
 
         if (userId) {
-            await User.findByIdAndUpdate(userId, { kycStatus: userStatusToSet });
-        }
-
-        if (isSuspicious) {
-            return res.status(200).json({ 
-                success: true, 
-                status: 'pending', 
-                message: 'መረጃዎ በጥራት/በማስረጃ እጦት ምክንያት ለአድሚን ግምገማ ተልኳል (Pending).' 
-            });
+            await User.findByIdAndUpdate(userId, { kycStatus: 'pending' });
         }
 
         res.status(200).json({ 
             success: true, 
-            status: 'approved', 
-            message: 'KYC verified automatically successfully!' 
+            status: 'pending', 
+            message: 'የ KYC መረጃዎ በትክክል ተልኳል! አድሚኑ እስኪያጸድቀው ድረስ በትዕግስት ይጠብቁ።' 
         });
     } catch (err) {
         console.error('KYC Submit Error:', err);
@@ -664,7 +645,7 @@ app.post('/api/kyc/submit', async (req, res) => {
     }
 });
 
-// 3. አድሚኑ ያልጸደቁትን (Pending) እንዲያይ (የተስተካከለው ራውት)
+// 3. አድሚኑ ያልጸደቁትን (Pending) እንዲያይ የሚረዳ ራውት
 app.get('/api/admin/kyc/pending', async (req, res) => {
     try {
         const pendingList = await KYC.find({ status: 'pending' }).sort({ createdAt: -1 });
