@@ -660,6 +660,23 @@ app.get('/api/admin/kyc/pending', async (req, res) => {
     }
 });
 
+// Admin: Get Single KYC Details by ID (የጠፍቶ የነበረው እና ሞዳሉን የሚያስተካክለው)
+app.get('/api/admin/kyc/:id', async (req, res) => {
+    try {
+        const kycId = req.params.id;
+        const kycRecord = await KYC.findById(kycId) || await KYCModel.findById(kycId);
+        
+        if (!kycRecord) {
+            return res.status(404).json({ success: false, message: 'የ KYC መዝገብ አልተገኘም' });
+        }
+
+        res.status(200).json({ success: true, data: kycRecord });
+    } catch (error) {
+        console.error('Fetch Single KYC Error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 app.put('/api/admin/kyc/approve/:id', async (req, res) => {
     try {
         const kycId = req.params.id;
@@ -672,7 +689,6 @@ app.put('/api/admin/kyc/approve/:id', async (req, res) => {
         kycRecord.status = 'approved';
         await kycRecord.save();
         
-        // ዩዘሩን ለመለየት userId ወይም user የሚለውን ማረጋገጥ
         const targetUserId = kycRecord.userId || kycRecord.user;
         
         if (targetUserId) {
@@ -686,10 +702,9 @@ app.put('/api/admin/kyc/approve/:id', async (req, res) => {
     }
 });
 
-// 2. KYC ን አፕሩቭ ወይም ሪጀክት ሲያደርጉ ለዩዘሩ ማሳለፊያ እና ስቴተስ መቀየሪያ (PUT Endpoint)
 app.put('/api/admin/kyc/:id', async (req, res) => {
     try {
-        const { status, reason } = req.body; // 'approved' ወይም 'rejected'
+        const { status, reason } = req.body; 
         const kyc = await KYC.findById(req.params.id);
         
         if (!kyc) {
@@ -704,7 +719,6 @@ app.put('/api/admin/kyc/:id', async (req, res) => {
         }
         await kyc.save();
 
-        // ዩዘሩን አግኝተን ስቴተሱን እናስተካክላለን (თუ userId ካለው)
         if (kyc.userId) {
             await User.findByIdAndUpdate(kyc.userId, {
                 kycStatus: status === 'approved' ? 'verified' : status,
@@ -719,11 +733,6 @@ app.put('/api/admin/kyc/:id', async (req, res) => {
     }
 });
 
-// ==========================================
-// TBR Exchange - Complete Fixed KYC Routes
-// ==========================================
-
-// 1. POST Method (ለአስተማማኝነት በሁሉም ዓይነት ዩአርኤሎች እንዲሰራ)
 app.post(['/api/admin/kyc-action', '/api/admin/kyc/approve', '/api/admin/kyc/reject'], async (req, res) => {
     try {
         const kycId = req.body.kycId || req.body.id;
@@ -765,7 +774,6 @@ app.post(['/api/admin/kyc-action', '/api/admin/kyc/approve', '/api/admin/kyc/rej
     }
 });
 
-// 2. PATCH Method 
 app.patch('/api/admin/kyc/:id', async (req, res) => {
     try {
         const kycId = req.params.id;
@@ -782,7 +790,6 @@ app.patch('/api/admin/kyc/:id', async (req, res) => {
     }
 });
 
-// 3. PUT Method - Approve
 app.put('/api/admin/kyc/approve/:id', async (req, res) => {
     try {
         const kycId = req.params.id;
@@ -807,7 +814,6 @@ app.put('/api/admin/kyc/approve/:id', async (req, res) => {
     }
 });
 
-// 4. PUT Method - Reject
 app.put('/api/admin/kyc/reject/:id', async (req, res) => {
     try {
         const kycId = req.params.id;
@@ -831,10 +837,6 @@ app.put('/api/admin/kyc/reject/:id', async (req, res) => {
         res.status(500).json({ success: false, error: error.message });
     }
 });
-
-// ==========================================
-// Admin Control & Dashboard Extra Routes
-// ==========================================
 
 app.post(['/api/admin/users/unlock', '/api/admin/unlock-account'], async (req, res) => {
     try {
@@ -869,7 +871,6 @@ app.post(['/api/admin/users/unlock', '/api/admin/unlock-account'], async (req, r
     }
 });
 
-// Start Server
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
