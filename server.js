@@ -820,5 +820,3 @@ async function checkUserKycStatus() {
         console.error('Error fetching user status:', err);
     }
 }
-
-window.addEventListener('DOMContentLoaded', checkUserKycStatus);
