@@ -236,15 +236,20 @@
 
     <!-- KYC Document Review Modal -->
     <div id="adminKycModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center;">
-        <div style="background:#181a20; padding:25px; border-radius:14px; max-width:650px; width:100%; border:1px solid #23272f; color:#fff; box-sizing: border-box;">
+        <div style="background:#181a20; padding:25px; border-radius:14px; max-width:850px; width:100%; border:1px solid #23272f; color:#fff; box-sizing: border-box;">
             <h3 style="margin-top:0; color:#d4af37;"><i class="fa-solid fa-id-card"></i> Review User KYC Documents</h3>
             <p><strong>Name:</strong> <span id="mFullName"></span></p>
             <p><strong>ID Number:</strong> <span id="mIdNumber"></span></p>
             
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0;">
+            <!-- Front ID, Back ID, and Selfie Grid -->
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin: 20px 0;">
                 <div>
                     <p style="font-size:12px; color:#848e9c; margin-bottom: 5px;">Front ID</p>
                     <img id="mFrontImg" src="" style="width:100%; height:180px; object-fit:cover; border-radius:8px; border:1px solid #333; background:#000;" />
+                </div>
+                <div>
+                    <p style="font-size:12px; color:#848e9c; margin-bottom: 5px;">Back ID</p>
+                    <img id="mBackImg" src="" style="width:100%; height:180px; object-fit:cover; border-radius:8px; border:1px solid #333; background:#000;" />
                 </div>
                 <div>
                     <p style="font-size:12px; color:#848e9c; margin-bottom: 5px;">Selfie with ID</p>
@@ -340,34 +345,37 @@
             }
         }
 
-     async function openKycModal(kycId) {
-    try {
-        const res = await fetch(`${API_BASE_URL}/api/admin/kyc/${kycId}`, {
-            headers: getAuthHeaders()
-        });
-        const result = await res.json();
-        const data = result.data || result;
-        if (res.ok && data) {
-            document.getElementById('mFullName').innerText = data.fullName || 'N/A';
-            document.getElementById('mIdNumber').innerText = data.idNumber || 'N/A';
-            document.getElementById('mFrontImg').src = data.frontImage || '';
-            // የ Back ID ምስልን መጫን (ካለ)
-            const backImgEl = document.getElementById('mBackImg');
-            if (backImgEl) {
-                backImgEl.src = data.backImage || '';
-                // ዱካው ባዶ ከሆነ ሠንጠረዡን መደበቅ ይቻላል
-                backImgEl.parentElement.style.display = data.backImage ? 'block' : 'none';
+        async function openKycModal(kycId) {
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/admin/kyc/${kycId}`, {
+                    headers: getAuthHeaders()
+                });
+                const result = await res.json();
+                const data = result.data || result;
+                
+                if (res.ok && data) {
+                    document.getElementById('mFullName').innerText = data.fullName || 'N/A';
+                    document.getElementById('mIdNumber').innerText = data.idNumber || 'N/A';
+                    
+                    // Front ID
+                    document.getElementById('mFrontImg').src = data.frontImage || data.frontId || data.front_image || '';
+                    
+                    // Back ID (ሁሉንም ሊሆኑ የሚችሉ የስም አማራጮችን በማካተት)
+                    document.getElementById('mBackImg').src = data.backImage || data.backId || data.back_image || data.backPhoto || '';
+
+                    // Selfie with ID
+                    document.getElementById('mSelfieImg').src = data.selfieImage || data.selfie || data.selfie_image || '';
+                    
+                    document.getElementById('adminKycModal').style.display = 'flex';
+                } else {
+                    alert('KYC details not found');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Error loading KYC details');
             }
-            document.getElementById('mSelfieImg').src = data.selfieImage || '';
-            document.getElementById('adminKycModal').style.display = 'flex';
-        } else {
-            alert('KYC details not found');
         }
-    } catch (err) {
-        console.error(err);
-        alert('Error loading KYC details');
-    }
-}
+
         function closeAdminModal() {
             document.getElementById('adminKycModal').style.display = 'none';
         }
