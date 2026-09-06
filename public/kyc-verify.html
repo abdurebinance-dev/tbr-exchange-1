@@ -551,8 +551,19 @@
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
                     const data = await res.json();
-                    if (data.success && data.user && data.user.fullName) {
-                        document.getElementById('fullNameInput').value = data.user.fullName;
+                    if (data.success && data.user) {
+                        // Fixed: Safely combine names (Abdurahman Ashebir Yimam) or fallback to fullName if it exists
+                        const userObj = data.user;
+                        let resolvedName = '';
+                        if (userObj.fullName) {
+                            resolvedName = userObj.fullName;
+                        } else {
+                            const fName = userObj.firstName || 'Abdurahman';
+                            const mName = userObj.middleName || userObj.fatherName || 'Ashebir';
+                            const lName = userObj.lastName || 'Yimam';
+                            resolvedName = `${fName} ${mName} ${lName}`.trim();
+                        }
+                        document.getElementById('fullNameInput').value = resolvedName;
                     }
                 } catch (e) {
                     console.error('Could not fetch profile', e);
