@@ -702,9 +702,7 @@ app.post('/api/kyc/submit', verifyToken, upload.single('document'), async (req, 
 });
 
 // የ አድሚን ማጽደቂያ (Approve) እና ማع (Reject) ፖሊሲ
-app.post('/api/admin/kyc/:userId', verifyAdminToken, async (req, res) => {
-    try {
-        const verifyAdminToken = (req, res, next) => {
+const verifyAdminToken = (req, res, next) => {
     verifyToken(req, res, () => {
         if (req.user && req.user.isAdmin) {
             next();
@@ -713,6 +711,9 @@ app.post('/api/admin/kyc/:userId', verifyAdminToken, async (req, res) => {
         }
     });
 };
+app.post('/api/admin/kyc/:userId', verifyAdminToken, async (req, res) => {
+    try {
+       
         const { userId } = req.params;
         const { action } = req.body; // 'approve' ወይም 'reject'
 
