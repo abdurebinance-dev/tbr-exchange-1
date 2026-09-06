@@ -255,7 +255,7 @@
             <a href="settings.html" class="settings-btn"><i class="fa-solid fa-gear"></i> Settings</a>
         </div>
 
-        <!-- Dynamic KYC Banner Container (በጃቫስክሪፕት በስታተሱ መሰረት ይቀየራል) -->
+        <!-- Dynamic KYC Banner Container -->
         <div id="kycBannerContainer"></div>
 
         <div class="stats-grid">
@@ -314,11 +314,9 @@
     </div>
 
     <script>
-        // የተጠቃሚውን መረጃ ከሰርቨር በማምጣት አቀማመጦቹን ማስተካከል
         async function loadUserProfile() {
             try {
                 const token = localStorage.getItem('token');
-                // የlocalStorage ኢሜልን እንደ ቅድመ-ዝግጅት መጠቀም ይቻላል
                 const localEmail = localStorage.getItem('signupEmail') || localStorage.getItem('userEmail') || 'binanceme73@gmail.com';
                 
                 let fullName = "ABDURAHMAN ASHEBIR";
@@ -337,7 +335,6 @@
                     }
                 }
 
-                // ኤለመንቶችን መሙላት
                 document.getElementById('profileEmail').innerText = email;
                 document.getElementById('avatarInitial').innerText = fullName.charAt(0).toUpperCase();
 
@@ -345,7 +342,6 @@
                 const nameContainer = document.getElementById('profileName');
                 const kycStatusRowText = document.getElementById('kycStatusRowText');
 
-                // ሀ. ስሙ አጠገብ ቬሪፋይድ ቲክ ማድረጊያ (እንደ 3ተኛው ምስል)
                 if (kycStatus === 'verified' || kycStatus === 'approved') {
                     nameContainer.innerHTML = `
                         ${fullName} 
@@ -365,7 +361,6 @@
                     kycStatusRowText.innerHTML = `<a href="kyc-verify.html" style="color: #f6465d; text-decoration: none;">Not Submitted <i class="fa-solid fa-chevron-right" style="font-size: 10px;"></i></a>`;
                 }
 
-                // ለ. እንደየ ስታተሱ ከላይ ያለው ባነር መቀየር (1ኛ፣ 2ኛ፣ 3ኛ እና 4ኛ ሁኔታዎች)
                 if (kycStatus === 'not_submitted') {
                     bannerContainer.innerHTML = `
                         <div style="background: #121212; border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 16px; padding: 20px 25px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 15px;">
