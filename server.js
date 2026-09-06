@@ -746,6 +746,25 @@ app.post(['/api/admin/kyc-action', '/api/admin/kyc/approve', '/api/admin/kyc/rej
     }
 });
 
+// በባክኤንድ የአድሚን KYC ማጽደቂያ ራውት ላይ
+app.patch('/api/admin/kyc/:id', async (req, res) => {
+    try {
+        const kycId = req.params.id;
+        
+        // 1. የ KYC ሰነዱን አፕሩቭ ማድረግ
+        const kycDoc = await KYCModel.findByIdAndUpdate(kycId, { status: 'approved' }, { new: true });
+        
+        if (kycDoc) {
+            // 2. እጅግ በጣም ጠቃሚው፡- የዩዘሩንም (User) የ KYC ስታተስ መቀየር!
+            await User.findByIdAndUpdate(kycDoc.userId, { kycStatus: 'approved' });
+        }
+
+        res.json({ success: true, message: 'KYC approved successfully' });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 // Admin: KYC Actions (Approve / Reject via PUT with specific status route)
 app.put('/api/admin/kyc/approve/:id', async (req, res) => {
     try {
