@@ -717,11 +717,13 @@ app.all(['/api/admin/kyc/:id', '/api/admin/kyc/approve/:id', '/api/admin/kyc/rej
             return res.status(400).json({ success: false, message: 'የ KYC መለያ (ID) አልተገኘም' });
         }
 
+        // 1. የ KYC ሪኮርዱን ማግኘት
         const kycRecord = await KYC.findById(kycId) || (typeof KYCModel !== 'undefined' ? await KYCModel.findById(kycId) : null);
         if (!kycRecord) {
             return res.status(404).json({ success: false, message: 'የ KYC መዝገብ አልተገኘም' });
         }
 
+        // 2. የ KYC ሪኮርዱን ስተተስ ማስተካከል
         kycRecord.status = status;
         kycRecord.rejectionReason = status === 'rejected' ? (req.body.reason || 'Rejected by admin') : '';
         await kycRecord.save();
@@ -729,39 +731,46 @@ app.all(['/api/admin/kyc/:id', '/api/admin/kyc/approve/:id', '/api/admin/kyc/rej
         let targetUserId = kycRecord.userId || kycRecord.user;
         let updatedUser = null;
 
-        // 1. በ userId መፈለግ
+        const newKycStatus = status === 'approved' ? 'verified' : status;
+        const newIsVerified = (status === 'approved');
+
+        // 3. ዩዘሩን ለማግኘት እና ለማዘመን (በሶስትዮሽ መንገድ)
+        // ሀ. በ userId
         if (targetUserId && mongoose.isValidObjectId(targetUserId)) {
             updatedUser = await User.findByIdAndUpdate(targetUserId, { 
-                kycStatus: status === 'approved' ? 'verified' : status,
-                isVerified: status === 'approved'
+                kycStatus: newKycStatus,
+                isVerified: newIsVerified
             }, { new: true });
         }
 
-        // 2. በኢሜይል መፈለግ (userId ከሌለ ወይም ካልተገኘ)
+        // ለ. በኢሜይል (userId ካልሰራ)
         if (!updatedUser && kycRecord.email) {
-            updatedUser = await User.findOneAndUpdate({ email: kycRecord.email }, { 
-                kycStatus: status === 'approved' ? 'verified' : status,
-                isVerified: status === 'approved'
+            updatedUser = await User.findOneAndUpdate({ email: kycRecord.email.trim().toLowerCase() }, { 
+                kycStatus: newKycStatus,
+                isVerified: newIsVerified
             }, { new: true });
         }
 
-        // 3. በሙሉ ስም (Full Name) መፈለግ (ሁለቱ ካልተገኙ)
+        // ሐ. በሙሉ ስም (ሁለቱ ካልተገኙ)
         if (!updatedUser && kycRecord.fullName) {
             updatedUser = await User.findOneAndUpdate({ 
                 $or: [
-                    { name: new RegExp(kycRecord.fullName, 'i') },
-                    { fullName: new RegExp(kycRecord.fullName, 'i') }
+                    { name: { $regex: new RegExp(kycRecord.fullName.trim(), 'i') } },
+                    { fullName: { $regex: new RegExp(kycRecord.fullName.trim(), 'i') } }
                 ]
             }, { 
-                kycStatus: status === 'approved' ? 'verified' : status,
-                isVerified: status === 'approved'
+                kycStatus: newKycStatus,
+                isVerified: newIsVerified
             }, { new: true });
         }
+
+        console.log('KYC Approval Debug -> KYC ID:', kycId, 'Status:', status, 'User Updated:', updatedUser ? updatedUser._id : 'NOT FOUND');
 
         return res.json({ 
             success: true, 
             message: `KYC ${status} successfully.`, 
-            userUpdated: !!updatedUser 
+            userUpdated: !!updatedUser,
+            user: updatedUser 
         });
     } catch (error) {
         console.error('KYC Action Error:', error);
