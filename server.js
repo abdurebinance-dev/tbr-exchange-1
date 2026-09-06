@@ -702,16 +702,14 @@ app.put('/api/admin/kyc/approve/:id', async (req, res) => {
     }
 });
 
-// የተስተካከለ አጠቃላይ የ KYC Approve እና Reject ሮውቶች (ሁሉንም የጥያቄ አይነቶች በድብቅ ይይዛል)
+// የተስተካከለ አጠቃላይ የ KYC Approve እና Reject ሮውት (User ቴብልን በ userId ወይም በ email ጭምር የሚያዘምን)
 app.put(['/api/admin/kyc/:id', '/api/admin/kyc/approve/:id', '/api/admin/kyc/reject/:id'], async (req, res) => {
     try {
         const kycId = req.params.id;
-        // ፍሮንትኤንዱ ከላከው አካል ስቴተሱን እንወስዳለን፣ ከሌለም ከዩአርኤሉ እንለያለን
         let status = req.body.status;
         if (req.url.includes('approve')) status = 'approved';
         if (req.url.includes('reject')) status = 'rejected';
-        
-        if (!status) status = 'approved'; // ነባሪ (Default)
+        if (!status) status = 'approved';
 
         const kycRecord = await KYC.findById(kycId);
         
@@ -720,37 +718,43 @@ app.put(['/api/admin/kyc/:id', '/api/admin/kyc/approve/:id', '/api/admin/kyc/rej
         }
 
         kycRecord.status = status;
-        if (status === 'rejected') {
-            kycRecord.rejectionReason = req.body.reason || 'Rejected by admin';
-        } else {
-            kycRecord.rejectionReason = '';
-        }
+        kycRecord.rejectionReason = status === 'rejected' ? (req.body.reason || 'Rejected by admin') : '';
         await kycRecord.save();
         
-        // ዩዘሩን ለማግኘት ሁለቱንም ሊሆኑ የሚችሉ ቁልፎች እንፈትሻለን (userId ወይም user)
-        const targetUserId = kycRecord.userId || kycRecord.user;
-        
-        if (targetUserId) {
-            await User.findByIdAndUpdate(targetUserId, { 
+        // 1. በ userId ለመፈለግ እና ለማዘመን መሞከር
+        let targetUserId = kycRecord.userId || kycRecord.user;
+        let updatedUser = null;
+
+        if (targetUserId && mongoose.isValidObjectId(targetUserId)) {
+            updatedUser = await User.findByIdAndUpdate(targetUserId, { 
                 kycStatus: status === 'approved' ? 'verified' : status,
                 isVerified: status === 'approved'
-            });
+            }, { new: true });
         }
         
-        return res.json({ success: true, message: `KYC ${status} successfully.` });
+        // 2. userId ከሌለ ወይም ዩዘሩ ካልተገኘ በ email አድራሻው ፈልጎ ማዘመን
+        if (!updatedUser && kycRecord.email) {
+            updatedUser = await User.findOneAndUpdate({ email: kycRecord.email }, { 
+                kycStatus: status === 'approved' ? 'verified' : status,
+                isVerified: status === 'approved'
+            }, { new: true });
+        }
+        
+        return res.json({ success: true, message: `KYC ${status} successfully and user updated.` });
     } catch (error) {
         console.error('KYC Action Error:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
 
-// ለ POST ጥያቄዎች የሚሆን (አንዳንዴ ፍሮንትኤንዱ POST ሊጠቀም ስለሚችል)
+// ለ POST ጥያቄዎች የሚሆን (አድሚን ፓነሉ POST የሚጠቀም ከሆነ)
 app.post(['/api/admin/kyc/:id/approve', '/api/admin/kyc/:id/reject', '/api/admin/kyc-action'], async (req, res) => {
     try {
         const kycId = req.body.kycId || req.body.id || req.params.id;
         let action = req.body.action;
         if (req.url.includes('approve')) action = 'approved';
         if (req.url.includes('reject')) action = 'rejected';
+        if (!action) action = 'approved';
 
         const kycRecord = await KYC.findById(kycId);
         if (!kycRecord) {
@@ -758,14 +762,24 @@ app.post(['/api/admin/kyc/:id/approve', '/api/admin/kyc/:id/reject', '/api/admin
         }
 
         kycRecord.status = action;
+        kycRecord.rejectionReason = action === 'rejected' ? (req.body.reason || 'Rejected by admin') : '';
         await kycRecord.save();
 
-        const targetUserId = kycRecord.userId || kycRecord.user;
-        if (targetUserId) {
-            await User.findByIdAndUpdate(targetUserId, { 
+        let targetUserId = kycRecord.userId || kycRecord.user;
+        let updatedUser = null;
+
+        if (targetUserId && mongoose.isValidObjectId(targetUserId)) {
+            updatedUser = await User.findByIdAndUpdate(targetUserId, { 
                 kycStatus: action === 'approved' ? 'verified' : action,
                 isVerified: action === 'approved'
-            });
+            }, { new: true });
+        }
+
+        if (!updatedUser && kycRecord.email) {
+            updatedUser = await User.findOneAndUpdate({ email: kycRecord.email }, { 
+                kycStatus: action === 'approved' ? 'verified' : action,
+                isVerified: action === 'approved'
+            }, { new: true });
         }
 
         res.json({ success: true, message: `KYC successfully ${action}` });
@@ -773,7 +787,6 @@ app.post(['/api/admin/kyc/:id/approve', '/api/admin/kyc/:id/reject', '/api/admin
         res.status(500).json({ success: false, error: err.message });
     }
 });
-
 app.patch('/api/admin/kyc/:id', async (req, res) => {
     try {
         const kycId = req.params.id;
