@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Verification - TBR Exchange</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Tesseract.js for OCR -->
-    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
     <style>
         body {
             background-color: #0b0e11;
@@ -362,55 +360,6 @@
             border: 1px solid #0ecb81;
         }
 
-        /* Custom Center Modal Popup Styles */
-        #customModal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            z-index: 9999;
-            justify-content: center;
-            align-items: center;
-        }
-        .modal-content {
-            background: #181a20;
-            border: 1px solid #23272f;
-            padding: 30px;
-            border-radius: 16px;
-            width: 90%;
-            max-width: 400px;
-            text-align: center;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-        }
-        .modal-icon {
-            font-size: 45px;
-            color: #0ecb81;
-            margin-bottom: 15px;
-        }
-        .modal-title {
-            font-size: 18px;
-            font-weight: bold;
-            color: #fff;
-            margin-bottom: 10px;
-        }
-        .modal-desc {
-            font-size: 13px;
-            color: #848e9c;
-            margin-bottom: 25px;
-            line-height: 1.5;
-        }
-        .modal-btn {
-            background: #f0b90b;
-            color: #0b0e11;
-            border: none;
-            width: 100%;
-            padding: 12px;
-            border-radius: 10px;
-            font-weight: bold;
-            font-size: 14px;
-            cursor: pointer;
-        }
-
         .footer-note {
             display: flex;
             justify-content: space-between;
@@ -445,16 +394,6 @@
                 <a href="market.html"><i class="fa-solid fa-store"></i> Market</a>
                 <a href="wallet.html"><i class="fa-solid fa-wallet"></i> Wallet</a>
             </div>
-        </div>
-    </div>
-
-    <!-- Custom Center Modal Popup -->
-    <div id="customModal">
-        <div class="modal-content">
-            <div class="modal-icon"><i class="fa-solid fa-circle-check"></i></div>
-            <div class="modal-title">KYC Submitted Successfully!</div>
-            <div class="modal-desc" id="modalDescText">Your documents have been successfully uploaded and your account is now under review.</div>
-            <button class="modal-btn" onclick="closeModalAndRedirect()">Got it</button>
         </div>
     </div>
 
@@ -676,68 +615,17 @@
             startCamera();
         }
 
-        async function handleFrontIdUpload(event) {
+        function handleFrontIdUpload(event) {
             const file = event.target.files[0];
             if (file) {
                 const reader = new FileReader();
-                reader.onload = async function(e) {
+                reader.onload = function(e) {
                     frontImageBase64 = e.target.result;
                     document.getElementById('frontText').innerHTML = '<span style="color: #0ecb81;">Front Uploaded ✓</span>';
                     document.getElementById('frontBox').style.borderColor = '#0ecb81';
-
-                    document.getElementById('fullNameInput').placeholder = "Scanning ID accurately...";
-                    
-                    try {
-                        const worker = await Tesseract.createWorker('eng');
-                        const ret = await worker.recognize(frontImageBase64);
-                        await worker.terminate();
-
-                        const text = ret.data.text;
-                        console.log("Extracted ID Text:", text);
-                        parseIdTextAccurately(text);
-
-                    } catch (error) {
-                        console.error("OCR Error:", error);
-                        document.getElementById('fullNameInput').placeholder = "Enter your full name as on ID";
-                    }
                 };
                 reader.readAsDataURL(file);
             }
-        }
-
-        function parseIdTextAccurately(text) {
-            const lines = text.split('\n')
-                .map(line => line.trim())
-                .filter(line => line.length > 1);
-            
-            for (let line of lines) {
-                let cleanLine = line.replace(/[^a-zA-Z\s]/g, '').trim();
-                if (cleanLine.length >= 4 && 
-                    !cleanLine.toLowerCase().includes('republic') && 
-                    !cleanLine.toLowerCase().includes('card') &&
-                    !cleanLine.toLowerCase().includes('national') &&
-                    !cleanLine.toLowerCase().includes('driver') &&
-                    !cleanLine.toLowerCase().includes('license') &&
-                    !cleanLine.toLowerCase().includes('date') &&
-                    !cleanLine.toLowerCase().includes('sex')) {
-                    document.getElementById('fullNameInput').value = cleanLine;
-                    break;
-                }
-            }
-
-            const fullTextWithoutSpaces = text.replace(/\s+/g, '');
-            const idMatch = fullTextWithoutSpaces.match(/\b[A-Z0-9]{6,14}\b/);
-            if (idMatch) {
-                document.getElementById('idNumberInput').value = idMatch[0];
-            }
-
-            const dateMatch = text.match(/\b(19|20)\d{2}[\/\-](0[1-9]|1[0-2])[\/\-](0[1-9]|[12]\d|3[01])\b/) || 
-                            text.match(/\b(0[1-9]|[12]\d|3[01])[\/\-](0[1-9]|1[0-2])[\/\-](19|20)\d{2}\b/);
-            if (dateMatch) {
-                document.getElementById('dobInput').value = dateMatch[0];
-            }
-            
-            document.getElementById('fullNameInput').placeholder = "Enter your full name as on ID";
         }
 
         function handleBackIdUpload(event) {
@@ -799,8 +687,8 @@
                 const result = await response.json();
                 if (response.ok) {
                     localStorage.setItem('kycStatus', 'pending');
-                    // Show custom center modal instead of alert
-                    document.getElementById('customModal').style.display = 'flex';
+                    alert('KYC documents submitted successfully! Your account is now under review.');
+                    window.location.href = 'dashboard.html';
                 } else {
                     alert(result.message || 'ማረጋገጫውን መላክ አልተቻለም። እባክዎ እንደገና ይሞክሩ።');
                     submitBtn.disabled = false;
@@ -813,11 +701,6 @@
                 submitBtn.innerHTML = '<i class="fa-solid fa-arrow-up-from-bracket"></i> Submit for Review';
             }
         });
-
-        function closeModalAndRedirect() {
-            document.getElementById('customModal').style.display = 'none';
-            window.location.href = 'dashboard.html';
-        }
     </script>
 </body>
 </html>
