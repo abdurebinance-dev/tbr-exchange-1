@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Verification - TBR Exchange</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Tesseract.js for OCR -->
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
     <style>
         body {
             background-color: #0b0e11;
@@ -543,7 +545,7 @@
         let backImageBase64 = null;
         let selfieImageBase64 = null;
 
-        // ፔጅ ሲከፈት የተጠቃሚውን መረጃ ከሰርቨር በማምጣት ስሙን በራስ-ሰር እንሞላለን (Dynamic Auto-fill for any logged-in user)
+        // ፔጅ ሲከፈት የተጠቃሚውን መረጃ ከሰርቨር በማምጣት ስሙን በራስ-ሰር እንሞላለን
         window.addEventListener('DOMContentLoaded', async () => {
             const token = localStorage.getItem('token');
             if (token) {
@@ -616,16 +618,51 @@
             startCamera();
         }
 
-        function handleFrontIdUpload(event) {
+        // Tesseract OCR ውህደት ያለው የ Front ID Upload ፋንክሽን
+        async function handleFrontIdUpload(event) {
             const file = event.target.files[0];
             if (file) {
                 const reader = new FileReader();
-                reader.onload = function(e) {
+                reader.onload = async function(e) {
                     frontImageBase64 = e.target.result;
                     document.getElementById('frontText').innerHTML = '<span style="color: #0ecb81;">Front Uploaded ✓</span>';
                     document.getElementById('frontBox').style.borderColor = '#0ecb81';
+
+                    document.getElementById('fullNameInput').placeholder = "Reading ID details automatically...";
+                    
+                    try {
+                        const { data: { text } } = await Tesseract.recognize(
+                            frontImageBase64,
+                            'eng',
+                            { logger: m => console.log(m) }
+                        );
+
+                        console.log("Extracted ID Text:", text);
+                        parseIdText(text);
+
+                    } catch (error) {
+                        console.error("OCR Error:", error);
+                        document.getElementById('fullNameInput').placeholder = "Enter your full name as on ID";
+                    }
                 };
                 reader.readAsDataURL(file);
+            }
+        }
+
+        // ከ ID የተነበበውን ጽሁፍ በመለየት ኢንፑቶቹ ላይ በራሱ መሙላት
+        function parseIdText(text) {
+            const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+            
+            if (lines.length > 0) {
+                let potentialName = lines.find(l => l.length > 5 && !l.toLowerCase().includes('id') && !l.toLowerCase().includes('date') && !l.toLowerCase().includes('republic'));
+                if (potentialName) {
+                    document.getElementById('fullNameInput').value = potentialName;
+                }
+            }
+
+            const idMatch = text.match(/\b\d{6,12}\b/);
+            if (idMatch) {
+                document.getElementById('idNumberInput').value = idMatch[0];
             }
         }
 
