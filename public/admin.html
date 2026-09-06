@@ -340,9 +340,8 @@
             }
         }
 
-        async function openKycModal(kycId) {
+     async function openKycModal(kycId) {
     try {
-        // ከሰርቨርህ ትክክለኛ ራውት ጋር እንዲጣጣም /details የሚለውን አጥፍተነዋል
         const res = await fetch(`${API_BASE_URL}/api/admin/kyc/${kycId}`, {
             headers: getAuthHeaders()
         });
@@ -352,6 +351,13 @@
             document.getElementById('mFullName').innerText = data.fullName || 'N/A';
             document.getElementById('mIdNumber').innerText = data.idNumber || 'N/A';
             document.getElementById('mFrontImg').src = data.frontImage || '';
+            // የ Back ID ምስልን መጫን (ካለ)
+            const backImgEl = document.getElementById('mBackImg');
+            if (backImgEl) {
+                backImgEl.src = data.backImage || '';
+                // ዱካው ባዶ ከሆነ ሠንጠረዡን መደበቅ ይቻላል
+                backImgEl.parentElement.style.display = data.backImage ? 'block' : 'none';
+            }
             document.getElementById('mSelfieImg').src = data.selfieImage || '';
             document.getElementById('adminKycModal').style.display = 'flex';
         } else {
