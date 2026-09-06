@@ -470,7 +470,7 @@
             </div>
         </div>
         <div class="nav-right">
-            <!-- Dynamic KYC Status Button (Clickable, color-changing based on state) -->
+            <!-- Dynamic KYC Status Button -->
             <button id="kycStatusBtn" onclick="goToKycPage()" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: bold; display: flex; align-items: center; gap: 6px;">
                 <i class="fa-solid fa-triangle-exclamation" id="kycIcon"></i> <span id="kycBtnText">Unverified</span>
             </button>
@@ -702,10 +702,11 @@
             localStorage.removeItem('userEmail');
             localStorage.removeItem('token');
             localStorage.removeItem('theme');
+            localStorage.removeItem('kycStatus');
             window.location.href = 'login.html';
         });
 
-        // KYC Status & Dynamic Button Script with Authorization Token
+        // KYC Status & Dynamic Button Script (ይህ ክፍል ከሰርቨር ትክክለኛውን ስቴተስ ያመጣል)
         window.addEventListener('DOMContentLoaded', async () => {
             try {
                 const token = localStorage.getItem('token');
@@ -718,7 +719,9 @@
                 if (res.ok) {
                     const data = await res.json();
                     const userObj = data.user || data;
+                    // ሰርቨር ላይ ያለው kycStatus ወይም isVerified ይረጋገጣል
                     const kycStatus = userObj.kycStatus || (userObj.isVerified ? 'verified' : 'unverified');
+                    localStorage.setItem('kycStatus', kycStatus);
                     updateKycButtonUI(kycStatus);
                 } else {
                     const localStatus = localStorage.getItem('kycStatus') || 'unverified';
@@ -736,13 +739,13 @@
             const icon = document.getElementById('kycIcon');
             const text = document.getElementById('kycBtnText');
 
-            if (status === 'pending' || status === 'Under Review') {
+            if (status === 'pending' || status === 'Under Review' || status === 'under_review') {
                 btn.style.background = 'rgba(234, 179, 8, 0.1)';
                 btn.style.color = '#eab308';
                 btn.style.border = '1px solid rgba(234, 179, 8, 0.2)';
                 icon.className = 'fa-solid fa-clock';
                 text.innerText = 'Under Review';
-            } else if (status === 'verified' || status === 'Approved' || status === true) {
+            } else if (status === 'verified' || status === 'Approved' || status === 'approved' || status === true) {
                 btn.style.background = 'rgba(16, 185, 129, 0.1)';
                 btn.style.color = '#10b981';
                 btn.style.border = '1px solid rgba(16, 185, 129, 0.2)';

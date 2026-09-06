@@ -712,7 +712,6 @@ app.put(['/api/admin/kyc/:id', '/api/admin/kyc/approve/:id', '/api/admin/kyc/rej
         if (!status) status = 'approved';
 
         const kycRecord = await KYC.findById(kycId);
-        
         if (!kycRecord) {
             return res.status(404).json({ success: false, message: 'የ KYC መዝገብ አልተገኘም' });
         }
@@ -721,8 +720,8 @@ app.put(['/api/admin/kyc/:id', '/api/admin/kyc/approve/:id', '/api/admin/kyc/rej
         kycRecord.rejectionReason = status === 'rejected' ? (req.body.reason || 'Rejected by admin') : '';
         await kycRecord.save();
         
-        // 1. በ userId ለመፈለግ እና ለማዘመን መሞከር
-        let targetUserId = kycRecord.userId || kycRecord.user;
+        // ሁሉንም ሊሆኑ የሚችሉ መለያዎችን በመጠቀም ዩዘሩን እንፈልጋለን
+        const targetUserId = kycRecord.userId || kycRecord.user;
         let updatedUser = null;
 
         if (targetUserId && mongoose.isValidObjectId(targetUserId)) {
@@ -731,16 +730,24 @@ app.put(['/api/admin/kyc/:id', '/api/admin/kyc/approve/:id', '/api/admin/kyc/rej
                 isVerified: status === 'approved'
             }, { new: true });
         }
-        
-        // 2. userId ከሌለ ወይም ዩዘሩ ካልተገኘ በ email አድራሻው ፈልጎ ማዘመን
+
+        // በኢሜይል ወይም በስም ጭምር በመፈለግ ዩዘሩን እናዘምነዋለን (Link እንዲያዝ)
         if (!updatedUser && kycRecord.email) {
             updatedUser = await User.findOneAndUpdate({ email: kycRecord.email }, { 
                 kycStatus: status === 'approved' ? 'verified' : status,
                 isVerified: status === 'approved'
             }, { new: true });
         }
+
+        if (!updatedUser && kycRecord.fullName) {
+            // ስሙን በመጠቀም ዩዘሩን አግኝቶ ማስተካከል ከፈለገ
+            updatedUser = await User.findOneAndUpdate({ name: new RegExp(kycRecord.fullName, 'i') }, { 
+                kycStatus: status === 'approved' ? 'verified' : status,
+                isVerified: status === 'approved'
+            }, { new: true });
+        }
         
-        return res.json({ success: true, message: `KYC ${status} successfully and user updated.` });
+        return res.json({ success: true, message: `KYC ${status} successfully.`, userUpdated: !!updatedUser });
     } catch (error) {
         console.error('KYC Action Error:', error);
         res.status(500).json({ success: false, error: error.message });
