@@ -727,6 +727,37 @@
             document.getElementById('customModal').style.display = 'none';
             window.location.href = 'dashboard.html';
         }
+        function closeModalAndRedirect() {
+        document.getElementById('customModal').style.display = 'none';
+        window.location.href = 'dashboard.html';
+    }
+
+    // -- የሰጠሁትን ኮድ እዚህ ጋር ጨምር --
+    async function protectKycPage() {
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch('/api/auth/me', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (data.success && data.user) {
+                const status = data.user.kycStatus;
+                
+                if (status === 'pending' || status === 'under_review') {
+                    alert('Your verification is currently under review. You cannot submit again.');
+                    window.location.href = 'profile.html';
+                } else if (status === 'verified' || status === 'approved') {
+                    alert('Your account is already verified.');
+                    window.location.href = 'dashboard.html';
+                }
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+    
+    // ገጹ ሲከፈት በራሱ እንዲሠራ ጥሪ ማድረግ
+    protectKycPage();
     </script>
 </body>
 </html>

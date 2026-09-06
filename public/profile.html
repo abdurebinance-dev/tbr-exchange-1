@@ -114,6 +114,8 @@
             font-size: 20px;
             color: #fff;
             text-transform: uppercase;
+            display: flex;
+            align-items: center;
         }
         .profile-details p {
             margin: 0;
@@ -137,63 +139,6 @@
         .settings-btn:hover {
             border-color: #d4af37;
             color: #d4af37;
-        }
-
-        .verification-banner {
-            background: #121212;
-            border: 1px solid rgba(212, 175, 55, 0.3);
-            border-radius: 16px;
-            padding: 20px 25px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 15px;
-        }
-        .verification-left {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-        .verification-icon {
-            width: 44px;
-            height: 44px;
-            background: rgba(212, 175, 55, 0.1);
-            border: 1px solid rgba(212, 175, 55, 0.3);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #d4af37;
-            font-size: 18px;
-            flex-shrink: 0;
-        }
-        .verification-text h4 {
-            margin: 0 0 4px 0;
-            font-size: 15px;
-            color: #d4af37;
-        }
-        .verification-text p {
-            margin: 0;
-            font-size: 12px;
-            color: #888;
-        }
-        .verify-action-btn {
-            background: transparent;
-            border: 1px solid #d4af37;
-            color: #d4af37;
-            padding: 9px 18px;
-            border-radius: 10px;
-            font-size: 12px;
-            font-weight: bold;
-            cursor: pointer;
-            text-decoration: none;
-            transition: 0.2s;
-            white-space: nowrap;
-        }
-        .verify-action-btn:hover {
-            background: #d4af37;
-            color: #111;
         }
 
         .stats-grid {
@@ -273,8 +218,6 @@
             .mobile-bottom-nav { display: flex; }
             .stats-grid { grid-template-columns: repeat(2, 1fr); }
             .profile-card { flex-direction: column; align-items: flex-start; gap: 15px; }
-            .verification-banner { flex-direction: column; align-items: flex-start; }
-            .verify-action-btn { width: 100%; text-align: center; box-sizing: border-box; }
         }
     </style>
 </head>
@@ -312,18 +255,8 @@
             <a href="settings.html" class="settings-btn"><i class="fa-solid fa-gear"></i> Settings</a>
         </div>
 
-        <!-- Identity Not Verified Banner -->
-        <div class="verification-banner">
-            <div class="verification-left">
-                <div class="verification-icon"><i class="fa-solid fa-shield-halved"></i></div>
-                <div class="verification-text">
-                    <h4>Identity not verified</h4>
-                    <p>Verify your ID to post ads and unlock 10× higher limits.</p>
-                </div>
-            </div>
-            <!-- እዚህ ጋር ወደ kyc-verify.html እንዲወስድ ተስተካክሏል -->
-            <a href="kyc-verify.html" class="verify-action-btn">VERIFY IDENTITY</a>
-        </div>
+        <!-- Dynamic KYC Banner Container (በጃቫስክሪፕት በስታተሱ መሰረት ይቀየራል) -->
+        <div id="kycBannerContainer"></div>
 
         <div class="stats-grid">
             <div class="stat-card">
@@ -348,8 +281,7 @@
             <h3>Account Details</h3>
             <div class="info-row">
                 <span>KYC Verification</span>
-                <!-- እዚህ ጋም ሲጫኑ ወደ kyc-verify.html እንዲወስድ ሊንክ ማድረግ ይቻላል -->
-                <a href="kyc-verify.html" style="color: #f6465d; text-decoration: none;">Not Submitted <i class="fa-solid fa-chevron-right" style="font-size: 10px;"></i></a>
+                <span id="kycStatusRowText"><a href="kyc-verify.html" style="color: #f6465d; text-decoration: none;">Not Submitted <i class="fa-solid fa-chevron-right" style="font-size: 10px;"></i></a></span>
             </div>
             <div class="info-row">
                 <span>Two-Factor Auth (2FA)</span>
@@ -357,7 +289,7 @@
             </div>
             <div class="info-row">
                 <span>Member Since</span>
-                <span>2026</span>
+                <span id="memberSince">2026</span>
             </div>
         </div>
     </div>
@@ -382,13 +314,117 @@
     </div>
 
     <script>
-        const email = localStorage.getItem('signupEmail') || localStorage.getItem('userEmail');
-        if (email) {
-            const username = email.split('@')[0].toUpperCase();
-            document.getElementById('profileName').innerText = username;
-            document.getElementById('profileEmail').innerText = email;
-            document.getElementById('avatarInitial').innerText = username.charAt(0);
+        // የተጠቃሚውን መረጃ ከሰርቨር በማምጣት አቀማመጦቹን ማስተካከል
+        async function loadUserProfile() {
+            try {
+                const token = localStorage.getItem('token');
+                // የlocalStorage ኢሜልን እንደ ቅድመ-ዝግጅት መጠቀም ይቻላል
+                const localEmail = localStorage.getItem('signupEmail') || localStorage.getItem('userEmail') || 'binanceme73@gmail.com';
+                
+                let fullName = "ABDURAHMAN ASHEBIR";
+                let email = localEmail;
+                let kycStatus = 'not_submitted';
+
+                if (token) {
+                    const res = await fetch('/api/auth/me', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    const data = await res.json();
+                    if (data.success && data.user) {
+                        fullName = data.user.fullName || fullName;
+                        email = data.user.email || email;
+                        kycStatus = data.user.kycStatus || 'not_submitted';
+                    }
+                }
+
+                // ኤለመንቶችን መሙላት
+                document.getElementById('profileEmail').innerText = email;
+                document.getElementById('avatarInitial').innerText = fullName.charAt(0).toUpperCase();
+
+                const bannerContainer = document.getElementById('kycBannerContainer');
+                const nameContainer = document.getElementById('profileName');
+                const kycStatusRowText = document.getElementById('kycStatusRowText');
+
+                // ሀ. ስሙ አጠገብ ቬሪፋይድ ቲክ ማድረጊያ (እንደ 3ተኛው ምስል)
+                if (kycStatus === 'verified' || kycStatus === 'approved') {
+                    nameContainer.innerHTML = `
+                        ${fullName} 
+                        <span style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; background: #10b981; color: #fff; border-radius: 50%; font-size: 10px; margin-left: 8px;" title="Verified">
+                            <i class="fa-solid fa-check"></i>
+                        </span>
+                    `;
+                    kycStatusRowText.innerHTML = `<span style="color: #10b981; font-weight: 600;">Verified <i class="fa-solid fa-circle-check"></i></span>`;
+                } else if (kycStatus === 'pending' || kycStatus === 'under_review') {
+                    nameContainer.innerHTML = fullName;
+                    kycStatusRowText.innerHTML = `<span style="color: #eab308; font-weight: 500;">Under Review</span>`;
+                } else if (kycStatus === 'rejected') {
+                    nameContainer.innerHTML = fullName;
+                    kycStatusRowText.innerHTML = `<a href="kyc-verify.html" style="color: #ef4444; text-decoration: none;">Rejected (Resubmit) <i class="fa-solid fa-chevron-right" style="font-size: 10px;"></i></a>`;
+                } else {
+                    nameContainer.innerHTML = fullName;
+                    kycStatusRowText.innerHTML = `<a href="kyc-verify.html" style="color: #f6465d; text-decoration: none;">Not Submitted <i class="fa-solid fa-chevron-right" style="font-size: 10px;"></i></a>`;
+                }
+
+                // ለ. እንደየ ስታተሱ ከላይ ያለው ባነር መቀየር (1ኛ፣ 2ኛ፣ 3ኛ እና 4ኛ ሁኔታዎች)
+                if (kycStatus === 'not_submitted') {
+                    bannerContainer.innerHTML = `
+                        <div style="background: #121212; border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 16px; padding: 20px 25px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 15px;">
+                            <div style="display: flex; align-items: center; gap: 16px;">
+                                <div style="width: 44px; height: 44px; background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #d4af37; font-size: 18px; flex-shrink: 0;"><i class="fa-solid fa-shield-halved"></i></div>
+                                <div>
+                                    <h4 style="margin: 0 0 4px 0; font-size: 15px; color: #d4af37;">Identity not verified</h4>
+                                    <p style="margin: 0; font-size: 12px; color: #888;">Verify your ID to post ads and unlock 10× higher limits.</p>
+                                </div>
+                            </div>
+                            <a href="kyc-verify.html" style="background: transparent; border: 1px solid #d4af37; color: #d4af37; padding: 9px 18px; border-radius: 10px; font-size: 12px; font-weight: bold; cursor: pointer; text-decoration: none; white-space: nowrap;">VERIFY IDENTITY</a>
+                        </div>
+                    `;
+                } else if (kycStatus === 'pending' || kycStatus === 'under_review') {
+                    bannerContainer.innerHTML = `
+                        <div style="background: #121212; border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 16px; padding: 20px 25px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 15px;">
+                            <div style="display: flex; align-items: center; gap: 16px;">
+                                <div style="width: 44px; height: 44px; background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #eab308; font-size: 18px; flex-shrink: 0;"><i class="fa-solid fa-shield-halved"></i></div>
+                                <div>
+                                    <h4 style="margin: 0 0 4px 0; font-size: 15px; color: #eab308;">Verification under review</h4>
+                                    <p style="margin: 0; font-size: 12px; color: #888;">We'll notify you by email. Typically 1-2 business days.</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else if (kycStatus === 'verified' || kycStatus === 'approved') {
+                    bannerContainer.innerHTML = `
+                        <div style="background: #121212; border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 16px; padding: 20px 25px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 15px;">
+                            <div style="display: flex; align-items: center; gap: 16px;">
+                                <div style="width: 44px; height: 44px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #10b981; font-size: 18px; flex-shrink: 0;"><i class="fa-solid fa-circle-check"></i></div>
+                                <div>
+                                    <h4 style="margin: 0 0 4px 0; font-size: 15px; color: #10b981;">Identity Verified</h4>
+                                    <p style="margin: 0; font-size: 12px; color: #888;">Your identity has been successfully verified.</p>
+                                </div>
+                            </div>
+                            <span style="color: #10b981; font-weight: 600; font-size: 13px;"><i class="fa-solid fa-check"></i> VERIFIED</span>
+                        </div>
+                    `;
+                } else if (kycStatus === 'rejected') {
+                    bannerContainer.innerHTML = `
+                        <div style="background: #121212; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 16px; padding: 20px 25px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 15px;">
+                            <div style="display: flex; align-items: center; gap: 16px;">
+                                <div style="width: 44px; height: 44px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #ef4444; font-size: 18px; flex-shrink: 0;"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                                <div>
+                                    <h4 style="margin: 0 0 4px 0; font-size: 15px; color: #ef4444;">Verification Rejected</h4>
+                                    <p style="margin: 0; font-size: 12px; color: #888;">Please re-submit your documents correctly.</p>
+                                </div>
+                            </div>
+                            <a href="kyc-verify.html" style="background: #ef4444; color: #fff; padding: 9px 18px; border-radius: 10px; font-size: 12px; font-weight: bold; cursor: pointer; text-decoration: none; white-space: nowrap;">RESUBMIT</a>
+                        </div>
+                    `;
+                }
+
+            } catch (err) {
+                console.error("Error loading profile:", err);
+            }
         }
+
+        loadUserProfile();
     </script>
 </body>
 </html>
