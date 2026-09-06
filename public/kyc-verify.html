@@ -231,6 +231,10 @@
         .verify-main-btn:hover {
             opacity: 0.9;
         }
+        .verify-main-btn:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
 
         /* Form Card */
         .form-card {
@@ -337,6 +341,23 @@
             border-radius: 8px;
             font-weight: bold;
             cursor: pointer;
+        }
+
+        /* Selfie Preview Container */
+        #selfiePreviewContainer {
+            display: none;
+            margin-bottom: 20px;
+            text-align: center;
+            background: #0b0e11;
+            border: 1px solid #23272f;
+            padding: 15px;
+            border-radius: 12px;
+        }
+        #selfiePreviewImg {
+            max-width: 200px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #0ecb81;
         }
 
         .footer-note {
@@ -468,6 +489,14 @@
                     <button type="button" class="cam-btn-cancel" onclick="stopCamera()">Cancel</button>
                 </div>
             </div>
+
+            <div id="selfiePreviewContainer">
+                <img id="selfiePreviewImg" src="" alt="Selfie Preview">
+                <div>
+                    <button type="button" class="cam-btn-cancel" onclick="retakeSelfie()"><i class="fa-solid fa-rotate-left"></i> Retake Selfie</button>
+                </div>
+            </div>
+
             <canvas id="canvasElement" style="display: none;"></canvas>
 
             <div class="form-group">
@@ -506,12 +535,15 @@
         const cameraContainer = document.getElementById('cameraContainer');
         const selfieTriggerBox = document.getElementById('selfieTriggerBox');
         const selfieStatusText = document.getElementById('selfieStatusText');
+        const selfiePreviewContainer = document.getElementById('selfiePreviewContainer');
+        const selfiePreviewImg = document.getElementById('selfiePreviewImg');
         const canvasElement = document.getElementById('canvasElement');
 
         let frontImageBase64 = null;
         let backImageBase64 = null;
         let selfieImageBase64 = null;
 
+        // ፔጅ ሲከፈት የተጠቃሚውን መረጃ ከሰርቨር በማምጣት ስሙን በራስ-ሰር እንሞላለን (Dynamic Auto-fill for any logged-in user)
         window.addEventListener('DOMContentLoaded', async () => {
             const token = localStorage.getItem('token');
             if (token) {
@@ -520,7 +552,7 @@
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
                     const data = await res.json();
-                    if (data.success && data.user && data.user.fullName && data.user.fullName !== 'User') {
+                    if (data.success && data.user && data.user.fullName) {
                         document.getElementById('fullNameInput').value = data.user.fullName;
                     }
                 } catch (e) {
@@ -544,6 +576,7 @@
             try {
                 cameraContainer.style.display = 'block';
                 selfieTriggerBox.style.display = 'none';
+                selfiePreviewContainer.style.display = 'none';
                 videoStream = await navigator.mediaDevices.getUserMedia({ 
                     video: { facingMode: 'user' }, 
                     audio: false 
@@ -562,7 +595,6 @@
                 videoStream = null;
             }
             cameraContainer.style.display = 'none';
-            selfieTriggerBox.style.display = 'block';
         }
 
         function captureSelfie() {
@@ -573,9 +605,15 @@
             
             selfieImageBase64 = canvasElement.toDataURL('image/jpeg');
 
-            selfieStatusText.innerHTML = '<i class="fa-solid fa-check-circle" style="color: #0ecb81;"></i> Selfie Captured Successfully!';
-            selfieTriggerBox.style.borderColor = '#0ecb81';
+            selfiePreviewImg.src = selfieImageBase64;
+            selfiePreviewContainer.style.display = 'block';
             stopCamera();
+        }
+
+        function retakeSelfie() {
+            selfieImageBase64 = null;
+            selfiePreviewContainer.style.display = 'none';
+            startCamera();
         }
 
         function handleFrontIdUpload(event) {
@@ -622,6 +660,10 @@
                 return;
             }
 
+            const submitBtn = document.getElementById('submitReviewBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting...';
+
             const token = localStorage.getItem('token');
             
             try {
@@ -650,10 +692,14 @@
                     window.location.href = 'dashboard.html';
                 } else {
                     alert(result.message || 'ማረጋገጫውን መላክ አልተቻለም። እባክዎ እንደገና ይሞክሩ።');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fa-solid fa-arrow-up-from-bracket"></i> Submit for Review';
                 }
             } catch (error) {
                 console.error('Error submitting KYC:', error);
                 alert('የሰርቨር ችግር አጋጥሟል።');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fa-solid fa-arrow-up-from-bracket"></i> Submit for Review';
             }
         });
     </script>
