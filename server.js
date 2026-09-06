@@ -659,17 +659,29 @@ app.get('/api/admin/kyc/pending', async (req, res) => {
     }
 });
 
-// 1. የ KYC ፎቶዎችን እና ሙሉ ዝርዝር ማምጫ (Get single KYC details)
-app.get('/api/admin/kyc/:id', async (req, res) => {
+app.put('/api/admin/kyc/approve/:id', async (req, res) => {
     try {
-        const kyc = await KYC.findById(req.params.id);
-        if (!kyc) {
-            return res.status(404).json({ success: false, message: 'KYC ዶክመንት አልተገኘም' });
+        const kycId = req.params.id;
+        const kycRecord = await KYC.findById(kycId) || await KYCModel.findById(kycId);
+        
+        if (!kycRecord) {
+            return res.status(404).json({ success: false, message: 'የ KYC መዝገብ አልተገኘም' });
         }
-        res.status(200).json({ success: true, data: kyc });
+
+        kycRecord.status = 'approved';
+        await kycRecord.save();
+        
+        // ዩዘሩን ለመለየት userId ወይም user የሚለውን ማረጋገጥ
+        const targetUserId = kycRecord.userId || kycRecord.user;
+        
+        if (targetUserId) {
+            await User.findByIdAndUpdate(targetUserId, { kycStatus: 'verified', isVerified: true });
+        }
+        
+        return res.json({ success: true, message: 'KYC approved successfully.' });
     } catch (error) {
-        console.error('Error loading KYC details:', error);
-        res.status(500).json({ success: false, message: 'ሰርቨር ስህተት ተፈጥሯል' });
+        console.error('Approve KYC Error:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
