@@ -587,14 +587,25 @@ app.post('/api/reset-password', async (req, res) => {
 
 app.get('/api/auth/me', verifyToken, async (req, res) => {
     try {
-        const user = await User.findById(req.user.id);
+        let user = await User.findById(req.user.id);
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
         
+        // ኢሜይሉን በመጠቀም አድሚኑ Approved ያደረገውን ትክክለኛ ሬኮርድ እናስቀድማለን (ID misalignment እንዳይኖር)
+        if (user.email) {
+            const verifiedUser = await User.findOne({ 
+                email: { $regex: new RegExp(`^${user.email.trim()}$`, 'i') }, 
+                kycStatus: { $in: ['verified', 'approved', 'Verified', 'Approved'] } 
+            });
+            if (verifiedUser) {
+                user = verifiedUser;
+            }
+        }
+
         res.json({
             success: true,
             user: {
                 id: user._id,
-                name: user.name,
+                name: user.name || user.fullName,
                 email: user.email,
                 kycStatus: user.kycStatus || 'pending',
                 isVerified: user.isVerified || false
@@ -631,6 +642,8 @@ app.post('/api/kyc/submit', async (req, res) => {
 
         if (userId) {
             await User.findByIdAndUpdate(userId, { kycStatus: 'pending' });
+        } else if (email) {
+            await User.findOneAndUpdate({ email: email.trim().toLowerCase() }, { kycStatus: 'pending' });
         }
 
         res.status(200).json({ 
@@ -648,8 +661,8 @@ app.post('/api/kyc/submit', async (req, res) => {
 app.get('/api/admin/kyc/pending', async (req, res) => {
     try {
         const pendingList = await KYC.find({})
-            .select('-frontImage -backImage -selfieImage') // ግዙፍ ፎቶዎችን አናመጣም
-            .lean(); // ፈጣን እንዲሆን
+            .select('-frontImage -backImage -selfieImage') 
+            .lean(); 
             
         pendingList.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
@@ -660,11 +673,11 @@ app.get('/api/admin/kyc/pending', async (req, res) => {
     }
 });
 
-// Admin: Get Single KYC Details by ID (የጠፍቶ የነበረው እና ሞዳሉን የሚያስተካክለው)
+// Admin: Get Single KYC Details by ID
 app.get('/api/admin/kyc/:id', async (req, res) => {
     try {
         const kycId = req.params.id;
-        const kycRecord = await KYC.findById(kycId) || await KYCModel.findById(kycId);
+        const kycRecord = await KYC.findById(kycId) || (typeof KYCModel !== 'undefined' ? await KYCModel.findById(kycId) : null);
         
         if (!kycRecord) {
             return res.status(404).json({ success: false, message: 'የ KYC መዝገብ አልተገኘም' });
@@ -677,32 +690,6 @@ app.get('/api/admin/kyc/:id', async (req, res) => {
     }
 });
 
-app.put('/api/admin/kyc/approve/:id', async (req, res) => {
-    try {
-        const kycId = req.params.id;
-        const kycRecord = await KYC.findById(kycId) || await KYCModel.findById(kycId);
-        
-        if (!kycRecord) {
-            return res.status(404).json({ success: false, message: 'የ KYC መዝገብ አልተገኘም' });
-        }
-
-        kycRecord.status = 'approved';
-        await kycRecord.save();
-        
-        const targetUserId = kycRecord.userId || kycRecord.user;
-        
-        if (targetUserId) {
-            await User.findByIdAndUpdate(targetUserId, { kycStatus: 'verified', isVerified: true });
-        }
-        
-        return res.json({ success: true, message: 'KYC approved successfully.' });
-    } catch (error) {
-        console.error('Approve KYC Error:', error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// የተስተካከለ አጠቃላይ የ KYC Approve እና Reject ሮውት (User ቴብልን በ userId ወይም በ email ጭምር የሚያዘምን)
 // የተስተካከለ አጠቃላይ የ KYC Approve / Reject ሮውት (ለሁሉም HTTP Methods የሚሰራ)
 app.all(['/api/admin/kyc/:id', '/api/admin/kyc/approve/:id', '/api/admin/kyc/reject/:id', '/api/admin/kyc-action'], async (req, res) => {
     try {
@@ -717,13 +704,11 @@ app.all(['/api/admin/kyc/:id', '/api/admin/kyc/approve/:id', '/api/admin/kyc/rej
             return res.status(400).json({ success: false, message: 'የ KYC መለያ (ID) አልተገኘም' });
         }
 
-        // 1. የ KYC ሪኮርዱን ማግኘት
         const kycRecord = await KYC.findById(kycId) || (typeof KYCModel !== 'undefined' ? await KYCModel.findById(kycId) : null);
         if (!kycRecord) {
             return res.status(404).json({ success: false, message: 'የ KYC መዝገብ አልተገኘም' });
         }
 
-        // 2. የ KYC ሪኮርዱን ስተተስ ማስተካከል
         kycRecord.status = status;
         kycRecord.rejectionReason = status === 'rejected' ? (req.body.reason || 'Rejected by admin') : '';
         await kycRecord.save();
@@ -734,7 +719,6 @@ app.all(['/api/admin/kyc/:id', '/api/admin/kyc/approve/:id', '/api/admin/kyc/rej
         const newKycStatus = status === 'approved' ? 'verified' : status;
         const newIsVerified = (status === 'approved');
 
-        // 3. ዩዘሩን ለማግኘት እና ለማዘመን (በሶስትዮሽ መንገድ)
         // ሀ. በ userId
         if (targetUserId && mongoose.isValidObjectId(targetUserId)) {
             updatedUser = await User.findByIdAndUpdate(targetUserId, { 
@@ -764,8 +748,6 @@ app.all(['/api/admin/kyc/:id', '/api/admin/kyc/approve/:id', '/api/admin/kyc/rej
             }, { new: true });
         }
 
-        console.log('KYC Approval Debug -> KYC ID:', kycId, 'Status:', status, 'User Updated:', updatedUser ? updatedUser._id : 'NOT FOUND');
-
         return res.json({ 
             success: true, 
             message: `KYC ${status} successfully.`, 
@@ -774,109 +756,6 @@ app.all(['/api/admin/kyc/:id', '/api/admin/kyc/approve/:id', '/api/admin/kyc/rej
         });
     } catch (error) {
         console.error('KYC Action Error:', error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-// ለ POST ጥያቄዎች የሚሆን (አድሚን ፓነሉ POST የሚጠቀም ከሆነ)
-app.post(['/api/admin/kyc/:id/approve', '/api/admin/kyc/:id/reject', '/api/admin/kyc-action'], async (req, res) => {
-    try {
-        const kycId = req.body.kycId || req.body.id || req.params.id;
-        let action = req.body.action;
-        if (req.url.includes('approve')) action = 'approved';
-        if (req.url.includes('reject')) action = 'rejected';
-        if (!action) action = 'approved';
-
-        const kycRecord = await KYC.findById(kycId);
-        if (!kycRecord) {
-            return res.status(404).json({ success: false, message: 'የ KYC መዝገብ አልተገኘም' });
-        }
-
-        kycRecord.status = action;
-        kycRecord.rejectionReason = action === 'rejected' ? (req.body.reason || 'Rejected by admin') : '';
-        await kycRecord.save();
-
-        let targetUserId = kycRecord.userId || kycRecord.user;
-        let updatedUser = null;
-
-        if (targetUserId && mongoose.isValidObjectId(targetUserId)) {
-            updatedUser = await User.findByIdAndUpdate(targetUserId, { 
-                kycStatus: action === 'approved' ? 'verified' : action,
-                isVerified: action === 'approved'
-            }, { new: true });
-        }
-
-        if (!updatedUser && kycRecord.email) {
-            updatedUser = await User.findOneAndUpdate({ email: kycRecord.email }, { 
-                kycStatus: action === 'approved' ? 'verified' : action,
-                isVerified: action === 'approved'
-            }, { new: true });
-        }
-
-        res.json({ success: true, message: `KYC successfully ${action}` });
-    } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
-app.patch('/api/admin/kyc/:id', async (req, res) => {
-    try {
-        const kycId = req.params.id;
-        const kycDoc = await KYC.findByIdAndUpdate(kycId, { status: 'approved', rejectionReason: '' }, { new: true }) 
-                    || await KYCModel.findByIdAndUpdate(kycId, { status: 'approved', rejectionReason: '' }, { new: true });
-        
-        if (kycDoc && kycDoc.userId) {
-            await User.findByIdAndUpdate(kycDoc.userId, { kycStatus: 'verified', isVerified: true });
-        }
-
-        res.json({ success: true, message: 'KYC approved successfully' });
-    } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
-
-app.put('/api/admin/kyc/approve/:id', async (req, res) => {
-    try {
-        const kycId = req.params.id;
-        const kycRecord = await KYC.findById(kycId) || await KYCModel.findById(kycId);
-        
-        if (!kycRecord) {
-            return res.status(404).json({ success: false, message: 'የ KYC መዝገብ አልተገኘም' });
-        }
-
-        kycRecord.status = 'approved';
-        kycRecord.rejectionReason = '';
-        await kycRecord.save();
-        
-        if (kycRecord.userId) {
-            await User.findByIdAndUpdate(kycRecord.userId, { kycStatus: 'verified', isVerified: true });
-        }
-        
-        return res.json({ success: true, message: 'KYC approved successfully.' });
-    } catch (error) {
-        console.error('Approve KYC Error:', error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-app.put('/api/admin/kyc/reject/:id', async (req, res) => {
-    try {
-        const kycId = req.params.id;
-        const kycRecord = await KYC.findById(kycId) || await KYCModel.findById(kycId);
-        
-        if (!kycRecord) {
-            return res.status(404).json({ success: false, message: 'የ KYC መዝገብ አልተገኘም' });
-        }
-
-        kycRecord.status = 'rejected';
-        kycRecord.rejectionReason = req.body.reason || 'Rejected by admin';
-        await kycRecord.save();
-        
-        if (kycRecord.userId) {
-            await User.findByIdAndUpdate(kycRecord.userId, { kycStatus: 'rejected', isVerified: false });
-        }
-        
-        return res.json({ success: true, message: 'KYC rejected.' });
-    } catch (error) {
-        console.error('Reject KYC Error:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -917,7 +796,8 @@ app.post(['/api/admin/users/unlock', '/api/admin/unlock-account'], async (req, r
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
-// ይህንን የ script.js ፋይልህ መጨረሻ ላይ ለጥፈው
+
+// የዳሽቦርዱ ሁኔታን በቀጥታ የሚያስተካክለው ስክሪፕት
 async function checkUserKycStatus() {
     try {
         const token = localStorage.getItem('token');
@@ -928,11 +808,11 @@ async function checkUserKycStatus() {
         
         if (data.success && data.user) {
             const kycStatus = data.user.kycStatus; 
-            const badge = document.getElementById('kyc-status-badge'); // 'Under Review' የሚለው ኤለመንት ID
+            const badge = document.getElementById('kyc-status-badge'); 
             
             if ((kycStatus === 'verified' || kycStatus === 'approved') && badge) {
                 badge.innerText = 'Verified';
-                badge.style.backgroundColor = '#10B981'; // የ Verified ከለር (አማራጭ)
+                badge.style.backgroundColor = '#10B981'; 
                 badge.style.color = '#fff';
             }
         }
