@@ -717,7 +717,8 @@
                 const res = await fetch('/api/user/profile', { headers });
                 if (res.ok) {
                     const data = await res.json();
-                    const kycStatus = data.user ? data.user.kycStatus : data.kycStatus;
+                    const userObj = data.user || data;
+                    const kycStatus = userObj.kycStatus || (userObj.isVerified ? 'verified' : 'unverified');
                     updateKycButtonUI(kycStatus);
                 } else {
                     const localStatus = localStorage.getItem('kycStatus') || 'unverified';
@@ -741,7 +742,7 @@
                 btn.style.border = '1px solid rgba(234, 179, 8, 0.2)';
                 icon.className = 'fa-solid fa-clock';
                 text.innerText = 'Under Review';
-            } else if (status === 'verified' || status === 'Approved') {
+            } else if (status === 'verified' || status === 'Approved' || status === true) {
                 btn.style.background = 'rgba(16, 185, 129, 0.1)';
                 btn.style.color = '#10b981';
                 btn.style.border = '1px solid rgba(16, 185, 129, 0.2)';

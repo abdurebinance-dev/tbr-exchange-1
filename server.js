@@ -585,7 +585,7 @@ app.post('/api/reset-password', async (req, res) => {
 // TBR Exchange - KYC & User Profile Routes
 // ==========================================
 
-app.get('/api/user/profile', verifyToken, async (req, res) => {
+app.get('/api/auth/me', verifyToken, async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
@@ -593,14 +593,15 @@ app.get('/api/user/profile', verifyToken, async (req, res) => {
         res.json({
             success: true,
             user: {
-                fullName: user.fullName || 'User',
+                id: user._id,
+                name: user.name,
                 email: user.email,
-                kycStatus: user.kycStatus || 'unverified'
+                kycStatus: user.kycStatus || 'pending',
+                isVerified: user.isVerified || false
             }
         });
     } catch (err) {
-        console.error('Profile Fetch Error:', err);
-        res.status(500).json({ success: false, message: 'Server error' });
+        res.status(500).json({ success: false, error: err.message });
     }
 });
 
