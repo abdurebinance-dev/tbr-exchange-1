@@ -704,6 +704,15 @@ app.post('/api/kyc/submit', verifyToken, upload.single('document'), async (req, 
 // የ አድሚን ማጽደቂያ (Approve) እና ማع (Reject) ፖሊሲ
 app.post('/api/admin/kyc/:userId', verifyAdminToken, async (req, res) => {
     try {
+        const verifyAdminToken = (req, res, next) => {
+    verifyToken(req, res, () => {
+        if (req.user && req.user.isAdmin) {
+            next();
+        } else {
+            return res.status(403).json({ success: false, message: 'Admin access required' });
+        }
+    });
+};
         const { userId } = req.params;
         const { action } = req.body; // 'approve' ወይም 'reject'
 
