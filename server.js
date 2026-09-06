@@ -673,6 +673,54 @@ app.get('/api/admin/kyc/pending', async (req, res) => {
     }
 });
 
+// ဥပለእ፡ የ KYC ሰነድ መቀበያ route
+app.post('/api/kyc/submit', verifyToken, upload.single('document'), async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const user = await User.findById(userId);
+
+        // ተጠቃሚው ቀደም ብሎ pending ወይም verified ከሆነ እንደገና እንዳይልክ መቆለፍ
+        if (user.kycStatus === 'pending' || user.kycStatus === 'verified') {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Your verification is either under review or already verified. You cannot submit new documents.' 
+            });
+        }
+
+        // ሰነዱን መቀበልና ስታატሱን ወደ pending መቀየር
+        user.kycStatus = 'pending';
+        user.kycDocument = req.file.path; // ወይም ፋይሉ የሚቀመጥበት መንገድ
+        await user.save();
+
+        res.status(200).json({ success: true, message: 'Verification under review successfully.' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// የ አድሚን ማጽደቂያ (Approve) እና ማع (Reject) ፖሊሲ
+app.post('/api/admin/kyc/:userId', verifyAdminToken, async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { action } = req.body; // 'approve' ወይም 'reject'
+
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        if (action === 'approve') {
+            user.kycStatus = 'verified';
+        } else if (action === 'reject') {
+            user.kycStatus = 'rejected'; // ተጠቃሚው እንደገና ሬሰብሚት ማድረግ እንዲችል
+        }
+
+        await user.save();
+        res.status(200).json({ success: true, message: `KYC ${action}d successfully` });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
 // Admin: Get Single KYC Details by ID
 app.get('/api/admin/kyc/:id', async (req, res) => {
     try {
