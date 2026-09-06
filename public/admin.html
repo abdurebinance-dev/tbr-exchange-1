@@ -340,58 +340,58 @@
             }
         }
 
-     async function openKycModal(kycId) {
-    try {
-        const res = await fetch(`${API_BASE_URL}/api/admin/kyc/${kycId}`, {
-            headers: getAuthHeaders()
-        });
-        const result = await res.json();
-        const data = result.data || result;
-        if (res.ok && data) {
-            document.getElementById('mFullName').innerText = data.fullName || 'N/A';
-            document.getElementById('mIdNumber').innerText = data.idNumber || 'N/A';
-            document.getElementById('mFrontImg').src = data.frontImage || '';
-            // የ Back ID ምስልን መጫን (ካለ)
-            const backImgEl = document.getElementById('mBackImg');
-            if (backImgEl) {
-                backImgEl.src = data.backImage || '';
-                // ዱካው ባዶ ከሆነ ሠንጠረዡን መደበቅ ይቻላል
-                backImgEl.parentElement.style.display = data.backImage ? 'block' : 'none';
+        async function openKycModal(kycId) {
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/admin/kyc/${kycId}`, {
+                    headers: getAuthHeaders()
+                });
+                const result = await res.json();
+                const data = result.data || result;
+                if (res.ok && data) {
+                    document.getElementById('mFullName').innerText = data.fullName || 'N/A';
+                    document.getElementById('mIdNumber').innerText = data.idNumber || 'N/A';
+                    document.getElementById('mFrontImg').src = data.frontImage || '';
+                    const backImgEl = document.getElementById('mBackImg');
+                    if (backImgEl) {
+                        backImgEl.src = data.backImage || '';
+                        backImgEl.parentElement.style.display = data.backImage ? 'block' : 'none';
+                    }
+                    document.getElementById('mSelfieImg').src = data.selfieImage || '';
+                    document.getElementById('adminKycModal').style.display = 'flex';
+                } else {
+                    alert('KYC details not found');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Error loading KYC details');
             }
-            document.getElementById('mSelfieImg').src = data.selfieImage || '';
-            document.getElementById('adminKycModal').style.display = 'flex';
-        } else {
-            alert('KYC details not found');
         }
-    } catch (err) {
-        console.error(err);
-        alert('Error loading KYC details');
-    }
-}
+
         function closeAdminModal() {
             document.getElementById('adminKycModal').style.display = 'none';
         }
 
-      async function approveKyc(kycId) {
-    try {
-        const response = await fetch(`https://tbr-exchange-backend.onrender.com/api/admin/kyc/approve/${kycId}`, {
-            method: 'PUT', // ወይም POST እንደ ሰርቨር አወቃቀርዎ
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
+        async function approveUser(btn, kycId) {
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/admin/kyc/approve/${kycId}`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders()
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    const row = btn.closest('tr');
+                    row.querySelector('td:nth-child(3)').innerHTML = '<span class="badge-approved">Approved</span>';
+                    btn.closest('td').innerHTML = '<span style="color: #10b981; font-size: 12px; font-weight: bold;"><i class="fa-solid fa-check-circle"></i> Done</span>';
+                    alert('KYC Approved Successfully!');
+                    loadPendingKyc();
+                } else {
+                    alert('Error: ' + (data.error || data.message || 'Failed to approve'));
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Server connection error during approval.');
             }
-        });
-        const data = await response.json();
-        if (data.success) {
-            alert('KYC Approved Successfully!');
-            location.reload(); // ገጹን ሪፍሬሽ በማድረግ አዲሱን ስታተስ ማሳየት
-        } else {
-            alert('Error: ' + data.message);
         }
-    } catch (err) {
-        console.error('Error approving KYC:', err);
-    }
-}
 
         async function rejectUser(btn, kycId) {
             const reason = prompt("የእምቢታውን ምክንያት (Reason) ይጻፉ:", "ሰነዱ ግልጽ አይደለም ወይም የተሳሳተ መረጃ");
