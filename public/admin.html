@@ -341,27 +341,27 @@
         }
 
         async function openKycModal(kycId) {
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/admin/kyc/details/${kycId}`, {
-                    headers: getAuthHeaders()
-                });
-                const result = await res.json();
-                const data = result.data || result;
-                if (res.ok && data) {
-                    document.getElementById('mFullName').innerText = data.fullName || 'N/A';
-                    document.getElementById('mIdNumber').innerText = data.idNumber || 'N/A';
-                    document.getElementById('mFrontImg').src = data.frontImage || '';
-                    document.getElementById('mSelfieImg').src = data.selfieImage || '';
-                    document.getElementById('adminKycModal').style.display = 'flex';
-                } else {
-                    alert('KYC details not found');
-                }
-            } catch (err) {
-                console.error(err);
-                alert('Error loading KYC details');
-            }
+    try {
+        // ከሰርቨርህ ትክክለኛ ራውት ጋር እንዲጣጣም /details የሚለውን አጥፍተነዋል
+        const res = await fetch(`${API_BASE_URL}/api/admin/kyc/${kycId}`, {
+            headers: getAuthHeaders()
+        });
+        const result = await res.json();
+        const data = result.data || result;
+        if (res.ok && data) {
+            document.getElementById('mFullName').innerText = data.fullName || 'N/A';
+            document.getElementById('mIdNumber').innerText = data.idNumber || 'N/A';
+            document.getElementById('mFrontImg').src = data.frontImage || '';
+            document.getElementById('mSelfieImg').src = data.selfieImage || '';
+            document.getElementById('adminKycModal').style.display = 'flex';
+        } else {
+            alert('KYC details not found');
         }
-
+    } catch (err) {
+        console.error(err);
+        alert('Error loading KYC details');
+    }
+}
         function closeAdminModal() {
             document.getElementById('adminKycModal').style.display = 'none';
         }

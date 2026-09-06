@@ -799,16 +799,6 @@ app.put('/api/admin/kyc/reject/:id', async (req, res) => {
 // Admin Control & Dashboard Extra Routes
 // ==========================================
 
-app.get('/api/admin/users', async (req, res) => {
-    try {
-        const users = await User.find({}, '-password').sort({ _id: -1 });
-        res.json({ success: true, users });
-    } catch (error) {
-        console.error('Admin Users Fetch Error:', error);
-        res.status(500).json({ success: false, message: 'Server error' });
-    }
-});
-
 app.post(['/api/admin/users/unlock', '/api/admin/unlock-account'], async (req, res) => {
     try {
         const { identifier, userId } = req.body;
@@ -818,9 +808,14 @@ app.post(['/api/admin/users/unlock', '/api/admin/unlock-account'], async (req, r
             return res.status(400).json({ success: false, message: 'User identifier is required' });
         }
 
-        const user = await User.findOne({
-            $or: [{ _id: mongoose.isValidObjectId(targetId) ? targetId : null }, { email: targetId }, { phone: targetId }]
-        });
+        const query = {
+            $or: [{ email: targetId }, { phone: targetId }]
+        };
+        if (mongoose.isValidObjectId(targetId)) {
+            query.$or.push({ _id: targetId });
+        }
+
+        const user = await User.findOne(query);
 
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found' });
@@ -830,14 +825,14 @@ app.post(['/api/admin/users/unlock', '/api/admin/unlock-account'], async (req, r
         user.lockUntil = undefined;
         await user.save();
 
-        res.json({ success: true, message: 'Account unlocked successfully' });
+        res.json({ success: true, message: 'User account unlocked successfully' });
     } catch (error) {
-        console.error('Unlock Account Error:', error);
+        console.error('Unlock Error:', error);
         res.status(500).json({ success: false, message: 'Server error' });
     }
 });
 
-// Server Listen
+// Start Server
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
