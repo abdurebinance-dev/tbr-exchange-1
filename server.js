@@ -917,3 +917,28 @@ app.post(['/api/admin/users/unlock', '/api/admin/unlock-account'], async (req, r
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
+// ይህንን የ script.js ፋይልህ መጨረሻ ላይ ለጥፈው
+async function checkUserKycStatus() {
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/auth/me', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        
+        if (data.success && data.user) {
+            const kycStatus = data.user.kycStatus; 
+            const badge = document.getElementById('kyc-status-badge'); // 'Under Review' የሚለው ኤለመንት ID
+            
+            if ((kycStatus === 'verified' || kycStatus === 'approved') && badge) {
+                badge.innerText = 'Verified';
+                badge.style.backgroundColor = '#10B981'; // የ Verified ከለር (አማራጭ)
+                badge.style.color = '#fff';
+            }
+        }
+    } catch (err) {
+        console.error('Error fetching user status:', err);
+    }
+}
+
+window.addEventListener('DOMContentLoaded', checkUserKycStatus);
