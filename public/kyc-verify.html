@@ -529,6 +529,18 @@
         </div>
     </div>
 
+    <!-- Custom Success Modal (Replaces default alert) -->
+    <div id="customModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; align-items: center; justify-content: center;">
+        <div style="background: #181a20; border: 1px solid #23272f; border-radius: 16px; padding: 30px; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            <div style="width: 50px; height: 50px; background: rgba(14, 203, 129, 0.1); border: 1px solid rgba(14, 203, 129, 0.3); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px auto; color: #0ecb81; font-size: 20px;">
+                <i class="fa-solid fa-check"></i>
+            </div>
+            <h3 style="color: #fff; margin: 0 0 10px 0; font-size: 18px;">Under Review</h3>
+            <p style="color: #848e9c; font-size: 13px; margin: 0 0 20px 0; line-height: 1.5;">KYC documents submitted successfully! Your account is now under review.</p>
+            <button onclick="closeModalAndRedirect()" style="background: #f0b90b; color: #0b0e11; border: none; padding: 12px; width: 100%; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 14px;">OK</button>
+        </div>
+    </div>
+
     <script>
         let videoStream = null;
         const videoElement = document.getElementById('videoElement');
@@ -552,7 +564,6 @@
                     });
                     const data = await res.json();
                     if (data.success && data.user) {
-                        // Fixed: Safely combine names (Abdurahman Ashebir Yimam) or fallback to fullName if it exists
                         const userObj = data.user;
                         let resolvedName = '';
                         if (userObj.fullName) {
@@ -698,8 +709,8 @@
                 const result = await response.json();
                 if (response.ok) {
                     localStorage.setItem('kycStatus', 'pending');
-                    alert('KYC documents submitted successfully! Your account is now under review.');
-                    window.location.href = 'dashboard.html';
+                    // Show custom modal instead of browser alert
+                    document.getElementById('customModal').style.display = 'flex';
                 } else {
                     alert(result.message || 'ማረጋገጫውን መላክ አልተቻለም። እባክዎ እንደገና ይሞክሩ።');
                     submitBtn.disabled = false;
@@ -712,6 +723,11 @@
                 submitBtn.innerHTML = '<i class="fa-solid fa-arrow-up-from-bracket"></i> Submit for Review';
             }
         });
+
+        function closeModalAndRedirect() {
+            document.getElementById('customModal').style.display = 'none';
+            window.location.href = 'dashboard.html';
+        }
     </script>
 </body>
 </html>
