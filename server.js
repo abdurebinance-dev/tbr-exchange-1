@@ -643,14 +643,13 @@ app.post('/api/kyc/submit', async (req, res) => {
     }
 });
 
-// Admin: Get all KYC requests (በ JavaScript እንድናስተካክለው ከሞንጎዲቢ ሰርት አጥፍተናል)
+// Admin: Get all KYC requests
 app.get('/api/admin/kyc/pending', async (req, res) => {
     try {
         const pendingList = await KYC.find({})
             .select('-frontImage -backImage -selfieImage') // ግዙፍ ፎቶዎችን አናመጣም
             .lean(); // ፈጣን እንዲሆን
             
-        // በ Node.js / JavaScript በኩል በሰዓት እንደረድረዋለን (የማስታወሻ ገደብ ችግር ፈጽሞ አያመጣም)
         pendingList.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
         res.status(200).json({ success: true, data: pendingList });
@@ -660,15 +659,50 @@ app.get('/api/admin/kyc/pending', async (req, res) => {
     }
 });
 
-// Admin: Get specific KYC details by ID
+// 1. የ KYC ፎቶዎችን እና ሙሉ ዝርዝር ማምጫ (Get single KYC details)
 app.get('/api/admin/kyc/:id', async (req, res) => {
     try {
         const kyc = await KYC.findById(req.params.id);
-        if (!kyc) return res.status(404).json({ success: false, message: 'KYC record not found' });
+        if (!kyc) {
+            return res.status(404).json({ success: false, message: 'KYC ዶክመንት አልተገኘም' });
+        }
         res.status(200).json({ success: true, data: kyc });
     } catch (error) {
-        console.error('Fetch Single KYC Error:', error);
-        res.status(500).json({ success: false, message: 'Server error loading KYC details' });
+        console.error('Error loading KYC details:', error);
+        res.status(500).json({ success: false, message: 'ሰርቨር ስህተት ተፈጥሯል' });
+    }
+});
+
+// 2. KYC ን አፕሩቭ ወይም ሪጀክት ሲያደርጉ ለዩዘሩ ማሳለፊያ እና ስቴተስ መቀየሪያ (PUT Endpoint)
+app.put('/api/admin/kyc/:id', async (req, res) => {
+    try {
+        const { status, reason } = req.body; // 'approved' ወይም 'rejected'
+        const kyc = await KYC.findById(req.params.id);
+        
+        if (!kyc) {
+            return res.status(404).json({ success: false, message: 'KYC ዶክመንት አልተገኘም' });
+        }
+
+        kyc.status = status;
+        if (status === 'rejected') {
+            kyc.rejectionReason = reason || 'Rejected by admin';
+        } else if (status === 'approved') {
+            kyc.rejectionReason = '';
+        }
+        await kyc.save();
+
+        // ዩዘሩን አግኝተን ስቴተሱን እናስተካክላለን (თუ userId ካለው)
+        if (kyc.userId) {
+            await User.findByIdAndUpdate(kyc.userId, {
+                kycStatus: status === 'approved' ? 'verified' : status,
+                isVerified: status === 'approved'
+            });
+        }
+
+        res.status(200).json({ success: true, message: `KYC successfully ${status}` });
+    } catch (error) {
+        console.error('KYC Update Error:', error);
+        res.status(500).json({ success: false, message: 'ማሻሻል አልተቻለም' });
     }
 });
 
@@ -692,7 +726,7 @@ app.post(['/api/admin/kyc-action', '/api/admin/kyc/approve', '/api/admin/kyc/rej
             kycRecord.rejectionReason = '';
             await kycRecord.save();
             if (kycRecord.userId) {
-                await User.findByIdAndUpdate(kycRecord.userId, { kycStatus: 'verified' });
+                await User.findByIdAndUpdate(kycRecord.userId, { kycStatus: 'verified', isVerified: true });
             }
             return res.json({ success: true, message: 'KYC approved successfully.' });
         } else if (action === 'reject') {
@@ -712,7 +746,7 @@ app.post(['/api/admin/kyc-action', '/api/admin/kyc/approve', '/api/admin/kyc/rej
     }
 });
 
-// Admin: KYC Actions (Approve / Reject via PUT with :id parameter)
+// Admin: KYC Actions (Approve / Reject via PUT with specific status route)
 app.put('/api/admin/kyc/approve/:id', async (req, res) => {
     try {
         const kycId = req.params.id;
@@ -727,7 +761,7 @@ app.put('/api/admin/kyc/approve/:id', async (req, res) => {
         await kycRecord.save();
         
         if (kycRecord.userId) {
-            await User.findByIdAndUpdate(kycRecord.userId, { kycStatus: 'verified' });
+            await User.findByIdAndUpdate(kycRecord.userId, { kycStatus: 'verified', isVerified: true });
         }
         
         return res.json({ success: true, message: 'KYC approved successfully.' });
@@ -781,65 +815,29 @@ app.post(['/api/admin/users/unlock', '/api/admin/unlock-account'], async (req, r
         const targetId = identifier || userId;
         
         if (!targetId) {
-            return res.status(400).json({ success: false, message: 'User identifier is required.' });
+            return res.status(400).json({ success: false, message: 'User identifier is required' });
         }
 
         const user = await User.findOne({
-            $or: [
-                { email: targetId.trim().toLowerCase() }, 
-                { phone: targetId.trim() }, 
-                { _id: targetId.match(/^[0-9a-fA-F]{24}$/) ? targetId : null }
-            ]
+            $or: [{ _id: mongoose.isValidObjectId(targetId) ? targetId : null }, { email: targetId }, { phone: targetId }]
         });
 
         if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found.' });
+            return res.status(404).json({ success: false, message: 'User not found' });
         }
 
         user.loginAttempts = 0;
         user.lockUntil = undefined;
         await user.save();
 
-        res.json({ success: true, message: `User account (${user.email}) unlocked successfully.` });
+        res.json({ success: true, message: 'Account unlocked successfully' });
     } catch (error) {
         console.error('Unlock Account Error:', error);
-        res.status(500).json({ success: false, message: error.message || 'Server error' });
+        res.status(500).json({ success: false, message: 'Server error' });
     }
 });
 
-app.post(['/api/admin/rates', '/api/admin/update-rate'], async (req, res) => {
-    try {
-        const { newRate, rate } = req.body;
-        const targetRate = newRate || rate;
-        return res.json({ success: true, message: `Market rate updated to ${targetRate} ETB` });
-    } catch (error) {
-        res.status(500).json({ success: error.message });
-    }
-});
-
-// Explicit Page Routes to serve Frontend HTML files safely
-app.get('/dashboard.html', (req, res) => {
-    res.sendFile(path.join(publicPath, 'dashboard.html'));
-});
-
-app.get('/admin.html', (req, res) => {
-    res.sendFile(path.join(publicPath, 'admin.html'));
-});
-
-app.get('/signin.html', (req, res) => {
-    res.sendFile(path.join(publicPath, 'signin.html'));
-});
-
-app.get('/signup.html', (req, res) => {
-    res.sendFile(path.join(publicPath, 'signup.html'));
-});
-
-// 10. Fallback Route ለ SPA / HTML ፋይሎች
-app.get(/.*/, (req, res) => {
-    res.sendFile(path.join(publicPath, 'index.html'));
-});
-
-// Server Listening
+// Server Listen
 app.listen(PORT, () => {
-    console.log(`Server is running successfully on port ${PORT}`);
+    console.log(`Server is running on port ${PORT}`);
 });
