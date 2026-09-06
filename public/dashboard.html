@@ -706,8 +706,8 @@
             window.location.href = 'login.html';
         });
 
-        // KYC Status & Dynamic Button Script (ሰርቨርህ ላይ ካለው /api/auth/me ጋር የተስተካከለ)
-        window.addEventListener('DOMContentLoaded', async () => {
+        // Combined and consolidated user loading script
+        async function loadUserData() {
             try {
                 const token = localStorage.getItem('token');
                 const headers = { 'Content-Type': 'application/json' };
@@ -716,22 +716,33 @@
                 }
 
                 const res = await fetch('/api/auth/me', { headers });
+                
                 if (res.ok) {
                     const data = await res.json();
-                    const userObj = data.user || data;
-                    const kycStatus = userObj.kycStatus || (userObj.isVerified ? 'verified' : 'unverified');
-                    localStorage.setItem('kycStatus', kycStatus);
-                    updateKycButtonUI(kycStatus);
+                    if (data.success && data.user) {
+                        const userObj = data.user;
+                        const status = userObj.kycStatus || (userObj.isVerified ? 'verified' : 'unverified');
+                        
+                        localStorage.setItem('kycStatus', status);
+                        updateKycButtonUI(status);
+
+                        if (userObj.balance !== undefined) {
+                            actualBalance = Number(userObj.balance).toFixed(2);
+                            if (!isBalanceHidden) {
+                                balanceValueEl.innerText = actualBalance;
+                            }
+                        }
+                    }
                 } else {
                     const localStatus = localStorage.getItem('kycStatus') || 'unverified';
                     updateKycButtonUI(localStatus);
                 }
-            } catch (err) {
-                console.log("Using local storage state check.");
+            } catch (e) {
+                console.error('Error loading user profile:', e);
                 const localStatus = localStorage.getItem('kycStatus') || 'unverified';
                 updateKycButtonUI(localStatus);
             }
-        });
+        }
 
         function updateKycButtonUI(status) {
             const btn = document.getElementById('kycStatusBtn');
@@ -762,6 +773,8 @@
         function goToKycPage() {
             window.location.href = 'kyc-verify.html';
         }
+
+        document.addEventListener('DOMContentLoaded', loadUserData);
     </script>
 </body>
 </html>
