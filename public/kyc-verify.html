@@ -618,7 +618,7 @@
             startCamera();
         }
 
-        // Tesseract OCR ውህደት ያለው የ Front ID Upload ፋንክሽን
+        // Tesseract OCR ውህደት እና የተስተካከለ Smart Parsing Logic
         async function handleFrontIdUpload(event) {
             const file = event.target.files[0];
             if (file) {
@@ -628,7 +628,7 @@
                     document.getElementById('frontText').innerHTML = '<span style="color: #0ecb81;">Front Uploaded ✓</span>';
                     document.getElementById('frontBox').style.borderColor = '#0ecb81';
 
-                    document.getElementById('fullNameInput').placeholder = "Reading ID details automatically...";
+                    document.getElementById('fullNameInput').placeholder = "Scanning ID accurately...";
                     
                     try {
                         const { data: { text } } = await Tesseract.recognize(
@@ -638,7 +638,7 @@
                         );
 
                         console.log("Extracted ID Text:", text);
-                        parseIdText(text);
+                        parseIdTextAccurately(text);
 
                     } catch (error) {
                         console.error("OCR Error:", error);
@@ -649,21 +649,37 @@
             }
         }
 
-        // ከ ID የተነበበውን ጽሁፍ በመለየት ኢንፑቶቹ ላይ በራሱ መሙላት
-        function parseIdText(text) {
-            const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+        // የተስተካከለ መረጃ የማውጣት (Parsing) ስልተ-ቀመር
+        function parseIdTextAccurately(text) {
+            const lines = text.split('\n')
+                .map(line => line.trim())
+                .filter(line => line.length > 2 && 
+                    !line.toLowerCase().includes('republic') && 
+                    !line.toLowerCase().includes('card') &&
+                    !line.toLowerCase().includes('id')
+                );
             
-            if (lines.length > 0) {
-                let potentialName = lines.find(l => l.length > 5 && !l.toLowerCase().includes('id') && !l.toLowerCase().includes('date') && !l.toLowerCase().includes('republic'));
-                if (potentialName) {
-                    document.getElementById('fullNameInput').value = potentialName;
-                }
+            // 1. ስም ለማግኘት (ቁጥሮች እና ምልክቶች የሌሉባቸው ረጅም ቃላት ያላቸውን መስመሮች መፈለግ)
+            let foundName = lines.find(l => /^[A-Za-z\s]{4,}$/.test(l) && !l.toLowerCase().includes('date') && !l.toLowerCase().includes('sex'));
+            if (foundName) {
+                document.getElementById('fullNameInput').value = foundName;
             }
 
-            const idMatch = text.match(/\b\d{6,12}\b/);
+            // 2. ትክክለኛ የመታወቂያ ቁጥር (ID Number) ከጽሁፉ ውስጥ መፈለግ
+            const fullTextWithoutSpaces = text.replace(/\s+/g, '');
+            const idMatch = fullTextWithoutSpaces.match(/\b\d{6,12}\b/);
             if (idMatch) {
                 document.getElementById('idNumberInput').value = idMatch[0];
             }
+
+            // 3. የትውልድ ቀን (Date format YYYY-MM-DD ወይም DD/MM/YYYY) መፈለግ
+            const dateMatch = text.match(/\b(19|20)\d{2}[\/\-](0[1-9]|1[0-2])[\/\-](0[1-9]|[12]\d|3[01])\b/) || 
+                              text.match(/\b(0[1-9]|[12]\d|3[01])[\/\-](0[1-9]|1[0-2])[\/\-](19|20)\d{2}\b/);
+            if (dateMatch) {
+                document.getElementById('dobInput').value = dateMatch[0];
+            }
+            
+            document.getElementById('fullNameInput').placeholder = "Enter your full name as on ID";
         }
 
         function handleBackIdUpload(event) {
