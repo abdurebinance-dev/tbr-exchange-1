@@ -545,7 +545,6 @@
         let backImageBase64 = null;
         let selfieImageBase64 = null;
 
-        // ፔጅ ሲከፈት የተጠቃሚውን መረጃ ከሰርቨር በማምጣት ስሙን በራስ-ሰር እንሞላለን
         window.addEventListener('DOMContentLoaded', async () => {
             const token = localStorage.getItem('token');
             if (token) {
@@ -618,7 +617,7 @@
             startCamera();
         }
 
-        // Tesseract OCR ውህደት እና የተስተካከለ Smart Parsing Logic
+        // Tesseract Worker የተስተካከለ አጠቃቀም
         async function handleFrontIdUpload(event) {
             const file = event.target.files[0];
             if (file) {
@@ -631,12 +630,11 @@
                     document.getElementById('fullNameInput').placeholder = "Scanning ID accurately...";
                     
                     try {
-                        const { data: { text } } = await Tesseract.recognize(
-                            frontImageBase64,
-                            'eng',
-                            { logger: m => console.log(m) }
-                        );
+                        const worker = await Tesseract.createWorker('eng');
+                        const ret = await worker.recognize(frontImageBase64);
+                        await worker.terminate();
 
+                        const text = ret.data.text;
                         console.log("Extracted ID Text:", text);
                         parseIdTextAccurately(text);
 
@@ -649,30 +647,32 @@
             }
         }
 
-        // የተስተካከለ መረጃ የማውጣት (Parsing) ስልተ-ቀመር
         function parseIdTextAccurately(text) {
             const lines = text.split('\n')
                 .map(line => line.trim())
-                .filter(line => line.length > 2 && 
-                    !line.toLowerCase().includes('republic') && 
-                    !line.toLowerCase().includes('card') &&
-                    !line.toLowerCase().includes('id')
-                );
+                .filter(line => line.length > 1);
             
-            // 1. ስም ለማግኘት (ቁጥሮች እና ምልክቶች የሌሉባቸው ረጅም ቃላት ያላቸውን መስመሮች መፈለግ)
-            let foundName = lines.find(l => /^[A-Za-z\s]{4,}$/.test(l) && !l.toLowerCase().includes('date') && !l.toLowerCase().includes('sex'));
-            if (foundName) {
-                document.getElementById('fullNameInput').value = foundName;
+            for (let line of lines) {
+                let cleanLine = line.replace(/[^a-zA-Z\s]/g, '').trim();
+                if (cleanLine.length >= 4 && 
+                    !cleanLine.toLowerCase().includes('republic') && 
+                    !cleanLine.toLowerCase().includes('card') &&
+                    !cleanLine.toLowerCase().includes('national') &&
+                    !cleanLine.toLowerCase().includes('driver') &&
+                    !cleanLine.toLowerCase().includes('license') &&
+                    !cleanLine.toLowerCase().includes('date') &&
+                    !cleanLine.toLowerCase().includes('sex')) {
+                    document.getElementById('fullNameInput').value = cleanLine;
+                    break;
+                }
             }
 
-            // 2. ትክክለኛ የመታወቂያ ቁጥር (ID Number) ከጽሁፉ ውስጥ መፈለግ
             const fullTextWithoutSpaces = text.replace(/\s+/g, '');
-            const idMatch = fullTextWithoutSpaces.match(/\b\d{6,12}\b/);
+            const idMatch = fullTextWithoutSpaces.match(/\b[A-Z0-9]{6,14}\b/);
             if (idMatch) {
                 document.getElementById('idNumberInput').value = idMatch[0];
             }
 
-            // 3. የትውልድ ቀን (Date format YYYY-MM-DD ወይም DD/MM/YYYY) መፈለግ
             const dateMatch = text.match(/\b(19|20)\d{2}[\/\-](0[1-9]|1[0-2])[\/\-](0[1-9]|[12]\d|3[01])\b/) || 
                               text.match(/\b(0[1-9]|[12]\d|3[01])[\/\-](0[1-9]|1[0-2])[\/\-](19|20)\d{2}\b/);
             if (dateMatch) {
