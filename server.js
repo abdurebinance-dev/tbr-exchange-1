@@ -706,7 +706,11 @@ app.put('/api/admin/kyc/:id', async (req, res) => {
     }
 });
 
-// Admin: KYC Actions (Approve / Reject via POST)
+// ==========================================
+// TBR Exchange - Complete Fixed KYC Routes
+// ==========================================
+
+// 1. POST Method (ለአስተማማኝነት በሁሉም ዓይነት ዩአርኤሎች እንዲሰራ)
 app.post(['/api/admin/kyc-action', '/api/admin/kyc/approve', '/api/admin/kyc/reject'], async (req, res) => {
     try {
         const kycId = req.body.kycId || req.body.id;
@@ -715,7 +719,7 @@ app.post(['/api/admin/kyc-action', '/api/admin/kyc/approve', '/api/admin/kyc/rej
         if (req.url.includes('approve')) action = 'approve';
         if (req.url.includes('reject')) action = 'reject';
 
-        const kycRecord = await KYC.findById(kycId);
+        const kycRecord = await KYC.findById(kycId) || await KYCModel.findById(kycId);
         
         if (!kycRecord) {
             return res.status(404).json({ success: false, message: 'የ KYC መዝገብ አልተገኘም' });
@@ -725,6 +729,7 @@ app.post(['/api/admin/kyc-action', '/api/admin/kyc/approve', '/api/admin/kyc/rej
             kycRecord.status = 'approved';
             kycRecord.rejectionReason = '';
             await kycRecord.save();
+            
             if (kycRecord.userId) {
                 await User.findByIdAndUpdate(kycRecord.userId, { kycStatus: 'verified', isVerified: true });
             }
@@ -733,8 +738,9 @@ app.post(['/api/admin/kyc-action', '/api/admin/kyc/approve', '/api/admin/kyc/rej
             kycRecord.status = 'rejected';
             kycRecord.rejectionReason = req.body.reason || 'Rejected by admin';
             await kycRecord.save();
+            
             if (kycRecord.userId) {
-                await User.findByIdAndUpdate(kycRecord.userId, { kycStatus: 'rejected' });
+                await User.findByIdAndUpdate(kycRecord.userId, { kycStatus: 'rejected', isVerified: false });
             }
             return res.json({ success: true, message: 'KYC rejected.' });
         }
@@ -746,17 +752,15 @@ app.post(['/api/admin/kyc-action', '/api/admin/kyc/approve', '/api/admin/kyc/rej
     }
 });
 
-// በባክኤንድ የአድሚን KYC ማጽደቂያ ራውት ላይ
+// 2. PATCH Method 
 app.patch('/api/admin/kyc/:id', async (req, res) => {
     try {
         const kycId = req.params.id;
+        const kycDoc = await KYC.findByIdAndUpdate(kycId, { status: 'approved', rejectionReason: '' }, { new: true }) 
+                    || await KYCModel.findByIdAndUpdate(kycId, { status: 'approved', rejectionReason: '' }, { new: true });
         
-        // 1. የ KYC ሰነዱን አፕሩቭ ማድረግ
-        const kycDoc = await KYCModel.findByIdAndUpdate(kycId, { status: 'approved' }, { new: true });
-        
-        if (kycDoc) {
-            // 2. እጅግ በጣም ጠቃሚው፡- የዩዘሩንም (User) የ KYC ስታተስ መቀየር!
-            await User.findByIdAndUpdate(kycDoc.userId, { kycStatus: 'approved' });
+        if (kycDoc && kycDoc.userId) {
+            await User.findByIdAndUpdate(kycDoc.userId, { kycStatus: 'verified', isVerified: true });
         }
 
         res.json({ success: true, message: 'KYC approved successfully' });
@@ -765,11 +769,11 @@ app.patch('/api/admin/kyc/:id', async (req, res) => {
     }
 });
 
-// Admin: KYC Actions (Approve / Reject via PUT with specific status route)
+// 3. PUT Method - Approve
 app.put('/api/admin/kyc/approve/:id', async (req, res) => {
     try {
         const kycId = req.params.id;
-        const kycRecord = await KYC.findById(kycId);
+        const kycRecord = await KYC.findById(kycId) || await KYCModel.findById(kycId);
         
         if (!kycRecord) {
             return res.status(404).json({ success: false, message: 'የ KYC መዝገብ አልተገኘም' });
@@ -790,10 +794,11 @@ app.put('/api/admin/kyc/approve/:id', async (req, res) => {
     }
 });
 
+// 4. PUT Method - Reject
 app.put('/api/admin/kyc/reject/:id', async (req, res) => {
     try {
         const kycId = req.params.id;
-        const kycRecord = await KYC.findById(kycId);
+        const kycRecord = await KYC.findById(kycId) || await KYCModel.findById(kycId);
         
         if (!kycRecord) {
             return res.status(404).json({ success: false, message: 'የ KYC መዝገብ አልተገኘም' });
@@ -804,7 +809,7 @@ app.put('/api/admin/kyc/reject/:id', async (req, res) => {
         await kycRecord.save();
         
         if (kycRecord.userId) {
-            await User.findByIdAndUpdate(kycRecord.userId, { kycStatus: 'rejected' });
+            await User.findByIdAndUpdate(kycRecord.userId, { kycStatus: 'rejected', isVerified: false });
         }
         
         return res.json({ success: true, message: 'KYC rejected.' });
