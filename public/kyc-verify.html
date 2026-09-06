@@ -617,7 +617,6 @@
             startCamera();
         }
 
-        // Tesseract Worker የተስተካከለ አጠቃቀም
         async function handleFrontIdUpload(event) {
             const file = event.target.files[0];
             if (file) {
@@ -674,7 +673,7 @@
             }
 
             const dateMatch = text.match(/\b(19|20)\d{2}[\/\-](0[1-9]|1[0-2])[\/\-](0[1-9]|[12]\d|3[01])\b/) || 
-                              text.match(/\b(0[1-9]|[12]\d|3[01])[\/\-](0[1-9]|1[0-2])[\/\-](19|20)\d{2}\b/);
+                            text.match(/\b(0[1-9]|[12]\d|3[01])[\/\-](0[1-9]|1[0-2])[\/\-](19|20)\d{2}\b/);
             if (dateMatch) {
                 document.getElementById('dobInput').value = dateMatch[0];
             }
