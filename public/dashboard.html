@@ -706,7 +706,7 @@
             window.location.href = 'login.html';
         });
 
-        // KYC Status & Dynamic Button Script (ይህ ክፍል ከሰርቨር ትክክለኛውን ስቴተስ ያመጣል)
+        // KYC Status & Dynamic Button Script (ሰርቨርህ ላይ ካለው /api/auth/me ጋር የተስተካከለ)
         window.addEventListener('DOMContentLoaded', async () => {
             try {
                 const token = localStorage.getItem('token');
@@ -715,11 +715,10 @@
                     headers['Authorization'] = `Bearer ${token}`;
                 }
 
-                const res = await fetch('/api/user/profile', { headers });
+                const res = await fetch('/api/auth/me', { headers });
                 if (res.ok) {
                     const data = await res.json();
                     const userObj = data.user || data;
-                    // ሰርቨር ላይ ያለው kycStatus ወይም isVerified ይረጋገጣል
                     const kycStatus = userObj.kycStatus || (userObj.isVerified ? 'verified' : 'unverified');
                     localStorage.setItem('kycStatus', kycStatus);
                     updateKycButtonUI(kycStatus);
