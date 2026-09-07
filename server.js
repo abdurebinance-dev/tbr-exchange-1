@@ -587,6 +587,38 @@ app.post('/api/reset-password', async (req, res) => {
 // TBR Exchange - Complete Fixed Backend Code
 // ==========================================
 
+// ፡ ሁሉንም የ KYC ጥያቄዎች/ዝርዝሮች በሊስት ለማምጣት (Admin Only)
+app.get('/api/admin/kyc', verifyAdminToken, async (req, res) => {
+    try {
+        // መጀመሪያ ከ KYC ኮሌክሽን መረጃዎችን እንፈልጋለን
+        let kycList = await KYC.find({}).sort({ createdAt: -1 });
+
+        // በ KYC ኮሌክሽን ውስጥ ዳታ ከሌለ ከ User ኮሌክሽን ኪአይሲ የጠየቁትን እንወስዳለን
+        if (!kycList || kycList.length === 0) {
+            const usersWithKyc = await User.find({ 
+                kycStatus: { $in: ['pending', 'verified', 'rejected', 'approved'] } 
+            }).select('-password');
+
+            kycList = usersWithKyc.map(user => ({
+                _id: user._id,
+                userId: user._id,
+                fullName: user.fullName || user.name || 'N/A',
+                email: user.email,
+                idNumber: user.idNumber || 'N/A',
+                frontImage: user.frontImage || user.kycDocument || '',
+                backImage: user.backImage || '',
+                selfieImage: user.selfieImage || '',
+                status: user.kycStatus === 'verified' ? 'approved' : user.kycStatus
+            }));
+        }
+
+        res.status(200).json({ success: true, data: kycList });
+    } catch (error) {
+        console.error('Get All KYC List Error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // 1. የ KYC ዝርዝር መረጃን በ ID ማምጫ (Admin Only)
 app.get('/api/admin/kyc/:id', verifyAdminToken, async (req, res) => {
     try {
