@@ -424,7 +424,7 @@ async function loadPendingKyc() {
             }
         }
 
-       async function approveUser(btn, kycId) {
+      async function approveUser(btn, kycId) {
             if (!confirm('ይህንን የ KYC ጥያቄ ማጽደቅ (Approve) ይፈልጋሉ?')) return;
             try {
                 const cleanId = kycId ? kycId.toString().replace('#', '').trim() : '';
@@ -434,7 +434,7 @@ async function loadPendingKyc() {
                         ...getAuthHeaders(),
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ action: 'approve', status: 'approved' })
+                    body: JSON.stringify({ status: 'approved' })
                 });
                 const result = await res.json();
                 if (res.ok && result.success) {
@@ -442,6 +442,31 @@ async function loadPendingKyc() {
                     loadPendingKyc();
                 } else {
                     alert(result.message || 'ማጽደት አልተቻለም');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('ስህተት ተፈጥሯል');
+            }
+        }
+
+        async function rejectUser(btn, kycId) {
+            if (!confirm('ይህንን የ KYC ጥያቄ ውድቅ ማድረግ (Reject) ይፈልጋሉ?')) return;
+            try {
+                const cleanId = kycId ? kycId.toString().replace('#', '').trim() : '';
+                const res = await fetch(`${API_BASE_URL}/api/admin/kyc/${cleanId}`, {
+                    method: 'POST',
+                    headers: {
+                        ...getAuthHeaders(),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status: 'rejected' })
+                });
+                const result = await res.json();
+                if (res.ok && result.success) {
+                    alert('ውድቅ ተደርጓል!');
+                    loadPendingKyc();
+                } else {
+                    alert(result.message || 'መፈጸም አልተቻለም');
                 }
             } catch (err) {
                 console.error(err);
@@ -473,7 +498,7 @@ async function loadPendingKyc() {
                 alert('ስህተት ተፈጥሯል');
             }
         }
-        
+
         async function updateRate() {
             const rate = document.getElementById('marketRateInput').value;
             if(!rate || isNaN(rate)) {
