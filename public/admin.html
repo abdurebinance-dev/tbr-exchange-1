@@ -290,9 +290,9 @@ async function loadPendingKyc() {
                         let pendingCount = 0;
 
                         data.forEach(item => {
-                            // እዚህ ጋር ትክክለኛው የሞንጎዲቢ መታወቂያ ከ _id ወይም ከ id መሆኑን በቅደም ተከተል እንፈትሻለን
-                            const rawId = item._id || item.id || item.userId || '';
-                            const itemId = typeof rawId === 'object' ? rawId.toString() : String(rawId);
+                            // ሁለቱንም የ KYC _id እና userId እንይዛለን
+                            const kycId = item._id || item.id || '';
+                            const userId = item.userId || item.user || '';
                             const status = item.status ? item.status.toLowerCase() : 'pending';
 
                             if (status === 'pending') {
@@ -311,9 +311,9 @@ async function loadPendingKyc() {
                             } else {
                                 statusBadge = '<span class="badge-pending">Pending</span>';
                                 actionButtons = `
-                                    <button class="btn btn-view" onclick="openKycModal('${itemId}')"><i class="fa-solid fa-eye"></i></button>
-                                    <button class="btn btn-approve" onclick="approveUser(this, '${itemId}')"><i class="fa-solid fa-check"></i></button>
-                                    <button class="btn btn-reject" onclick="rejectUser(this, '${itemId}')"><i class="fa-solid fa-xmark"></i></button>
+                                    <button class="btn btn-view" onclick="openKycModal('${kycId}', '${userId}')"><i class="fa-solid fa-eye"></i></button>
+                                    <button class="btn btn-approve" onclick="approveUser(this, '${kycId}')"><i class="fa-solid fa-check"></i></button>
+                                    <button class="btn btn-reject" onclick="rejectUser(this, '${kycId}')"><i class="fa-solid fa-xmark"></i></button>
                                 `;
                             }
 
@@ -321,7 +321,7 @@ async function loadPendingKyc() {
                                 <tr>
                                     <td>
                                         <div style="font-weight: bold;">${item.fullName || 'Unknown'}</div>
-                                        <div style="font-size: 11px; color: #777;">ID: #${itemId ? itemId.substring(0, 8) : 'N/A'}</div>
+                                        <div style="font-size: 11px; color: #777;">ID: #${kycId ? kycId.toString().substring(0, 8) : 'N/A'}</div>
                                     </td>
                                     <td>${item.docType || 'National ID'}</td>
                                     <td>${statusBadge}</td>
@@ -345,11 +345,19 @@ async function loadPendingKyc() {
             }
         }
 
-        async function openKycModal(kycId) {
+        async function openKycModal(kycId, userId) {
             try {
-                const res = await fetch(`${API_BASE_URL}/api/admin/kyc/${kycId}`, {
+                // መጀመሪያ በ kycId ለመፈለግ እንሞክራለን፣ ካልሰራ በ userId እንሞክራለን
+                let res = await fetch(`${API_BASE_URL}/api/admin/kyc/${kycId}`, {
                     headers: getAuthHeaders()
                 });
+                
+                if (!res.ok && userId) {
+                    res = await fetch(`${API_BASE_URL}/api/admin/kyc/${userId}`, {
+                        headers: getAuthHeaders()
+                    });
+                }
+
                 const result = await res.json();
                 const data = result.data || result;
                 if (res.ok && data) {
