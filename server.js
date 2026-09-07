@@ -675,7 +675,7 @@ app.get('/api/admin/kyc/pending', async (req, res) => {
     }
 });
 
-// Admin: Get single KYC details by ID
+// Admin: Get single KYC details by ID (Updated Fix)
 app.get('/api/admin/kyc/:id', verifyToken, async (req, res) => {
     try {
         let kycId = req.params.id;
@@ -683,17 +683,33 @@ app.get('/api/admin/kyc/:id', verifyToken, async (req, res) => {
             kycId = kycId.replace('#', '');
         }
 
-        // መጀመሪያ በ KYC ሞዴል እንፈልጋለን
-        let kycDetails = await KYC.findOne({ 
-            $or: [
-                { _id: kycId.length === 24 ? kycId : null }, 
-                { userId: kycId }
-            ] 
-        });
+        let kycDetails = null;
 
-        // KYC ሞዴል ውስጥ ካልተገኘ በ User ሞዴል እንፈልጋለን (ምክንያቱም አንዳንዴ የተጠቃሚው _id ሊሆን ስለሚችል)
+        // 1. መጀመሪያ ቫሊድ የሞንጎዲቢ አይዲ ከሆነ በ KYC _id ለመፈለግ እንሞክራለን
+        if (kycId.match(/^[0-9a-fA-F]{24}$/)) {
+            kycDetails = await KYC.findById(kycId);
+        }
+
+        // 2. ካልተገኘ በ userId ወይም user ፊልድ እንፈልጋለን
         if (!kycDetails) {
-            kycDetails = await User.findById(kycId.length === 24 ? kycId : null);
+            kycDetails = await KYC.findOne({ 
+                $or: [{ userId: kycId }, { user: kycId }] 
+            });
+        }
+
+        // 3. አሁንም ካልተገኘ በ User መታወቂያ (User _id) በመጠቀም ከ KYC ቴብል እንፈልጋለን
+        if (!kycDetails && kycId.match(/^[0-9a-fA-F]{24}$/)) {
+            kycDetails = await KYC.findOne({ 
+                $or: [{ userId: kycId }, { user: kycId }, { _id: kycId }] 
+            });
+        }
+
+        // 4. በመጨረሻም በሰነዱ ውስጥ የተመዘገበውን ዩዘር ኢሜይል አግኝተን በዚያ እንፈልጋለን
+        if (!kycDetails) {
+            const targetUser = await User.findById(kycId.length === 24 ? kycId : null).catch(() => null);
+            if (targetUser && targetUser.email) {
+                kycDetails = await KYC.findOne({ email: targetUser.email.trim().toLowerCase() });
+            }
         }
         
         if (!kycDetails) {
