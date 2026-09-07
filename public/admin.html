@@ -276,8 +276,7 @@
         window.addEventListener('DOMContentLoaded', async () => {
             loadPendingKyc();
         });
-
-        async function loadPendingKyc() {
+async function loadPendingKyc() {
             try {
                 const res = await fetch(`${API_BASE_URL}/api/admin/kyc/pending`, {
                     headers: getAuthHeaders()
@@ -291,7 +290,9 @@
                         let pendingCount = 0;
 
                         data.forEach(item => {
-                            const itemId = item._id ? item._id.toString() : '';
+                            // እዚህ ጋር ትክክለኛው የሞንጎዲቢ መታወቂያ ከ _id ወይም ከ id መሆኑን በቅደም ተከተል እንፈትሻለን
+                            const rawId = item._id || item.id || item.userId || '';
+                            const itemId = typeof rawId === 'object' ? rawId.toString() : String(rawId);
                             const status = item.status ? item.status.toLowerCase() : 'pending';
 
                             if (status === 'pending') {
