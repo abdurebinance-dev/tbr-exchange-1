@@ -675,6 +675,23 @@ app.get('/api/admin/kyc/pending', async (req, res) => {
     }
 });
 
+// Admin: Get single KYC details by ID
+app.get('/api/admin/kyc/:id', verifyToken, async (req, res) => {
+    try {
+        const kycId = req.params.id;
+        const kycDetails = await KYC.findById(kycId); // በኮድዎ ውስጥ ያለው የሞዴል ስም KYC ከሆነ
+        
+        if (!kycDetails) {
+            return res.status(404).json({ success: false, message: 'KYC details not found' });
+        }
+        
+        res.status(200).json({ success: true, data: kycDetails });
+    } catch (error) {
+        console.error('Fetch Single KYC Error:', error);
+        res.status(500).json({ success: false, message: 'መረጃውን ማምጣት አልተቻለም' });
+    }
+});
+
 // ဥပለእ፡ የ KYC ሰነድ መቀበያ route
 app.post('/api/kyc/submit', verifyToken, upload.single('document'), async (req, res) => {
     try {
