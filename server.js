@@ -734,19 +734,22 @@ app.post('/api/admin/kyc/:userId', verifyAdminToken, async (req, res) => {
 });
 
 // Admin: Get Single KYC Details by ID
-app.get('/api/admin/kyc/:id', async (req, res) => {
+app.get('/api/user/profile', verifyToken, async (req, res) => {
     try {
-        const kycId = req.params.id;
-        const kycRecord = await KYC.findById(kycId) || (typeof KYCModel !== 'undefined' ? await KYCModel.findById(kycId) : null);
+        const user = await User.findById(req.user.id).select('-password');
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
         
-        if (!kycRecord) {
-            return res.status(404).json({ success: false, message: 'የ KYC መዝገብ አልተገኘም' });
-        }
-
-        res.status(200).json({ success: true, data: kycRecord });
-    } catch (error) {
-        console.error('Fetch Single KYC Error:', error);
-        res.status(500).json({ success: false, error: error.message });
+        res.json({
+            success: true,
+            user: {
+                fullName: user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+                email: user.email,
+                kycStatus: user.kycStatus || 'not_submitted', // ይህ ማረጋገጫ ወሳኝ ነው
+                isAdmin: user.isAdmin
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error' });
     }
 });
 
