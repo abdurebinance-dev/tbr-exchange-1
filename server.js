@@ -744,6 +744,34 @@ const verifyAdminToken = (req, res, next) => {
     });
 };
 // መስመር 731 ላይ ያለውን በ :id እንዲመሳሰል ያድርጉ፦
+// የ KYC መረጃን በ ID ወይም በ User ID ፈልጎ ማምጫ
+app.get('/api/admin/kyc/:id', verifyAdminToken, async (req, res) => {
+    try {
+        const targetId = req.params.id;
+        let kycData = null;
+
+        // 1. መጀመሪያ በራሱ በ KYC ሰነዱ _id ለመፈለግ እንሞክራለን (ቫሊድ የሞንጎዲቢ አይዲ ከሆነ)
+        if (targetId.match(/^[0-9a-fA-F]{24}$/)) {
+            kycData = await KYC.findById(targetId);
+        }
+
+        // 2. ካልተገኘ በ userId ወይም user ፊልድ እንፈልጋለን
+        if (!kycData) {
+            kycData = await KYC.findOne({ 
+                $or: [{ userId: targetId }, { user: targetId }] 
+            });
+        }
+
+        if (!kycData) {
+            return res.status(404).json({ success: false, message: "KYC details not found" });
+        }
+
+        res.json({ success: true, data: kycData });
+    } catch (err) {
+        console.error("Error fetching KYC details:", err);
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+});
 app.post('/api/admin/kyc/:id', verifyAdminToken, async (req, res) => {
     try {
         const kycId = req.params.id; // ከ userId ወደ id ይቀየር
