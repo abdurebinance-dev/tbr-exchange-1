@@ -276,11 +276,20 @@
         window.addEventListener('DOMContentLoaded', async () => {
             loadPendingKyc();
         });
-async function loadPendingKyc() {
+
+        async function loadPendingKyc() {
             try {
-                const res = await fetch(`${API_BASE_URL}/api/admin/kyc/pending`, {
+                // Try fetching from primary endpoint, fallback automatically if route structure differs
+                let res = await fetch(`${API_BASE_URL}/api/admin/kyc/pending`, {
                     headers: getAuthHeaders()
                 });
+                
+                if (!res.ok) {
+                    res = await fetch(`${API_BASE_URL}/api/admin/kyc`, {
+                        headers: getAuthHeaders()
+                    });
+                }
+
                 if (res.ok) {
                     const result = await res.json();
                     const data = Array.isArray(result) ? result : (result.data || []);
@@ -290,9 +299,7 @@ async function loadPendingKyc() {
                         let pendingCount = 0;
 
                         data.forEach(item => {
-                            // ሁለቱንም የ KYC _id እና userId እንይዛለን
-                            const kycId = item._id || item.id || '';
-                            const userId = item.userId || item.user || '';
+                            const itemId = item._id || item.userId || '';
                             const status = item.status ? item.status.toLowerCase() : 'pending';
 
                             if (status === 'pending') {
@@ -311,17 +318,17 @@ async function loadPendingKyc() {
                             } else {
                                 statusBadge = '<span class="badge-pending">Pending</span>';
                                 actionButtons = `
-                                    <button class="btn btn-view" onclick="openKycModal('${kycId}', '${userId}')"><i class="fa-solid fa-eye"></i></button>
-                                    <button class="btn btn-approve" onclick="approveUser(this, '${kycId}')"><i class="fa-solid fa-check"></i></button>
-                                    <button class="btn btn-reject" onclick="rejectUser(this, '${kycId}')"><i class="fa-solid fa-xmark"></i></button>
+                                    <button class="btn btn-view" onclick="openKycModal('${itemId}')"><i class="fa-solid fa-eye"></i></button>
+                                    <button class="btn btn-approve" onclick="approveUser(this, '${itemId}')"><i class="fa-solid fa-check"></i></button>
+                                    <button class="btn btn-reject" onclick="rejectUser(this, '${itemId}')"><i class="fa-solid fa-xmark"></i></button>
                                 `;
                             }
 
                             rows += `
                                 <tr>
                                     <td>
-                                        <div style="font-weight: bold;">${item.fullName || 'Unknown'}</div>
-                                        <div style="font-size: 11px; color: #777;">ID: #${kycId ? kycId.toString().substring(0, 8) : 'N/A'}</div>
+                                        <div style="font-weight: bold;">${item.fullName || item.name || 'Unknown'}</div>
+                                        <div style="font-size: 11px; color: #777;">ID: #${itemId ? itemId.toString().substring(0, 8) : 'N/A'}</div>
                                     </td>
                                     <td>${item.docType || 'National ID'}</td>
                                     <td>${statusBadge}</td>
@@ -345,55 +352,32 @@ async function loadPendingKyc() {
             }
         }
 
-       async function openKycModal(kycId, userId) {
+        async function openKycModal(kycId) {
             try {
-                // መጀመሪያ የጠራነውን ID እናጸዳለን (# ምልክት ካለው እናወጣለን)
-                let cleanId = kycId ? kycId.toString().replace('#', '').trim() : '';
-                
-                let res = null;
-                
-                // 1. በ KYC ID ለመፈለግ እንሞክራለን
-                if (cleanId) {
-                    res = await fetch(`${API_BASE_URL}/api/admin/kyc/${cleanId}`, {
-                        headers: getAuthHeaders()
-                    });
-                }
-                
-                // 2. ካልተገኘ እና ዩዘር ID ካለ በዚያ እንሞክራለን
-                if ((!res || !res.ok) && userId) {
-                    let cleanUserId = userId.toString().replace('#', '').trim();
-                    res = await fetch(`${API_BASE_URL}/api/admin/kyc/${cleanUserId}`, {
-                        headers: getAuthHeaders()
-                    });
-                }
-
-                if (res && res.ok) {
-                    const result = await res.json();
-                    const data = result.data || result;
+                const res = await fetch(`${API_BASE_URL}/api/admin/kyc/${kycId}`, {
+                    headers: getAuthHeaders()
+                });
+                const result = await res.json();
+                const data = result.data || result;
+                if (res.ok && data) {
+                    document.getElementById('mFullName').innerText = data.fullName || data.name || 'N/A';
+                    document.getElementById('mIdNumber').innerText = data.idNumber || 'N/A';
+                    document.getElementById('mFrontImg').src = data.frontImage || '';
                     
-                    if (data) {
-                        document.getElementById('mFullName').innerText = data.fullName || data.name || 'N/A';
-                        document.getElementById('mIdNumber').innerText = data.idNumber || data.docNumber || 'N/A';
-                        document.getElementById('mFrontImg').src = data.frontImage || data.docImage || '';
-                        
-                        const backImgEl = document.getElementById('mBackImg');
-                        const backContainer = document.getElementById('mBackContainer');
-                        if (backImgEl) {
-                            backImgEl.src = data.backImage || '';
-                            if (backContainer) {
-                                backContainer.style.display = data.backImage ? 'block' : 'none';
-                            }
-                        }
-                        
-                        document.getElementById('mSelfieImg').src = data.selfieImage || '';
-                        document.getElementById('adminKycModal').style.display = 'flex';
-                        return;
+                    const backImgEl = document.getElementById('mBackImg');
+                    const backContainer = document.getElementById('mBackContainer');
+                    if (backImgEl) {
+                        backImgEl.src = data.backImage || '';
+                        backContainer.style.display = data.backImage ? 'block' : 'none';
                     }
+                    
+                    document.getElementById('mSelfieImg').src = data.selfieImage || '';
+                    document.getElementById('adminKycModal').style.display = 'flex';
+                } else {
+                    alert('KYC details not found');
                 }
-                
-                alert('KYC details not found');
             } catch (err) {
-                console.error("Modal error:", err);
+                console.error(err);
                 alert('Error loading KYC details');
             }
         }
@@ -424,78 +408,29 @@ async function loadPendingKyc() {
             }
         }
 
-      async function approveUser(btn, kycId) {
-            if (!confirm('ይህንን የ KYC ጥያቄ ማጽደቅ (Approve) ይፈልጋሉ?')) return;
-            try {
-                const cleanId = kycId ? kycId.toString().replace('#', '').trim() : '';
-                const res = await fetch(`${API_BASE_URL}/api/admin/kyc/${cleanId}`, {
-                    method: 'POST',
-                    headers: {
-                        ...getAuthHeaders(),
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ status: 'approved' })
-                });
-                const result = await res.json();
-                if (res.ok && result.success) {
-                    alert('በተሳካ ሁኔታ ጸድቋል!');
-                    loadPendingKyc();
-                } else {
-                    alert(result.message || 'ማጽደት አልተቻለም');
-                }
-            } catch (err) {
-                console.error(err);
-                alert('ስህተት ተፈጥሯል');
-            }
-        }
-
         async function rejectUser(btn, kycId) {
-            if (!confirm('ይህንን የ KYC ጥያቄ ውድቅ ማድረግ (Reject) ይፈልጋሉ?')) return;
-            try {
-                const cleanId = kycId ? kycId.toString().replace('#', '').trim() : '';
-                const res = await fetch(`${API_BASE_URL}/api/admin/kyc/${cleanId}`, {
-                    method: 'POST',
-                    headers: {
-                        ...getAuthHeaders(),
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ status: 'rejected' })
-                });
-                const result = await res.json();
-                if (res.ok && result.success) {
-                    alert('ውድቅ ተደርጓል!');
-                    loadPendingKyc();
-                } else {
-                    alert(result.message || 'መፈጸም አልተቻለም');
-                }
-            } catch (err) {
-                console.error(err);
-                alert('ስህተት ተፈጥሯል');
-            }
-        }
+            const reason = prompt("የእምቢታውን ምክንያት (Reason) ይጻፉ:", "ሰነዱ ግልጽ አይደለም ወይም የተሳሳተ መረጃ");
+            if (!reason) return;
 
-        async function rejectUser(btn, kycId) {
-            if (!confirm('ይህንን የ KYC ጥያቄ አለመቀበል (Reject) ይፈልጋሉ?')) return;
             try {
-                const cleanId = kycId ? kycId.toString().replace('#', '').trim() : '';
-                const res = await fetch(`${API_BASE_URL}/api/admin/kyc/${cleanId}`, {
-                    method: 'POST',
-                    headers: {
-                        ...getAuthHeaders(),
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ action: 'reject', status: 'rejected' })
+                const res = await fetch(`${API_BASE_URL}/api/admin/kyc/reject/${kycId}`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ reason })
                 });
-                const result = await res.json();
-                if (res.ok && result.success) {
-                    alert('ውድቅ ተደርጓል!');
-                    loadPendingKyc();
+                const data = await res.json();
+                if (res.ok) {
+                    const row = btn.closest('tr');
+                    row.querySelector('td:nth-child(3)').innerHTML = '<span class="badge-rejected">Rejected</span>';
+                    btn.closest('td').innerHTML = '<span style="color: #ef4444; font-size: 12px; font-weight: bold;">Rejected</span>';
+                    alert('KYC Rejected.');
+                    loadPendingKyc(); 
                 } else {
-                    alert(result.message || 'መፈጸም አልተቻለም');
+                    alert('Error: ' + (data.error || data.message || 'Failed to reject'));
                 }
             } catch (err) {
                 console.error(err);
-                alert('ስህተት ተፈጥሯል');
+                alert('Server connection error during rejection.');
             }
         }
 
