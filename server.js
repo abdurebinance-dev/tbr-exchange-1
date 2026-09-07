@@ -728,25 +728,26 @@ const verifyAdminToken = (req, res, next) => {
         }
     });
 };
-app.post('/api/admin/kyc/:userId', verifyAdminToken, async (req, res) => {
+// መስመር 731 ላይ ያለውን በ :id እንዲመሳሰል ያድርጉ፦
+app.post('/api/admin/kyc/:id', verifyAdminToken, async (req, res) => {
     try {
-       
-        const { userId } = req.params;
-        const { action } = req.body; // 'approve' ወይም 'reject'
-
-        const user = await User.findById(userId);
+        const kycId = req.params.id; // ከ userId ወደ id ይቀየር
+        const { action } = req.body; 
+        
+        const user = await User.findById(kycId);
         if (!user) return res.status(404).json({ message: 'User not found' });
 
         if (action === 'approve') {
             user.kycStatus = 'verified';
         } else if (action === 'reject') {
-            user.kycStatus = 'rejected'; // ተጠቃሚው እንደገና ሬሰብሚት ማድረግ እንዲችል
+            user.kycStatus = 'rejected';
         }
-
+        
         await user.save();
-        res.status(200).json({ success: true, message: `KYC ${action}d successfully` });
-    } catch (err) {
-        res.status(500).json({ success: false, message: 'Server error' });
+        res.status(200).json({ success: true, message: `Successfully ${action}ed` });
+    } catch (error) {
+        console.error('KYC Action Error:', error);
+        res.status(500).json({ success: false, message: error.message });
     }
 });
 
