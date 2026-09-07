@@ -370,9 +370,12 @@
                     `;
                 } else if (kycStatus === 'pending' || kycStatus === 'under_review') {
                     bannerContainer.innerHTML = `
-                        <div style="padding: 20px; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; margin-bottom: 20px;">
-                            <h4 style="color: #f0b90b; margin: 0 0 5px 0;">Verification under review</h4>
-                            <p style="color: #848e9c; margin: 0; font-size: 13px;">We'll notify you by email. Typically 1-2 business days.</p>
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; margin-bottom: 20px;">
+                            <div>
+                                <h4 style="color: #f0b90b; margin: 0 0 5px 0;">Verification under review</h4>
+                                <p style="color: #848e9c; margin: 0; font-size: 13px;">We'll notify you by email. Typically 1-2 business days.</p>
+                            </div>
+                            <div style="color: #f0b90b; font-size: 20px;"><i class="fa-solid fa-shield-halved"></i></div>
                         </div>
                     `;
                 } else if (kycStatus === 'verified' || kycStatus === 'approved') {
