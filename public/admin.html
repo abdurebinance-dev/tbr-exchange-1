@@ -345,44 +345,59 @@ async function loadPendingKyc() {
             }
         }
 
-        async function openKycModal(kycId, userId) {
+       async function openKycModal(kycId, userId) {
             try {
-                // መጀመሪያ በ kycId ለመፈለግ እንሞክራለን፣ ካልሰራ በ userId እንሞክራለን
-                let res = await fetch(`${API_BASE_URL}/api/admin/kyc/${kycId}`, {
-                    headers: getAuthHeaders()
-                });
+                // መጀመሪያ የጠራነውን ID እናጸዳለን (# ምልክት ካለው እናወጣለን)
+                let cleanId = kycId ? kycId.toString().replace('#', '').trim() : '';
                 
-                if (!res.ok && userId) {
-                    res = await fetch(`${API_BASE_URL}/api/admin/kyc/${userId}`, {
+                let res = null;
+                
+                // 1. በ KYC ID ለመፈለግ እንሞክራለን
+                if (cleanId) {
+                    res = await fetch(`${API_BASE_URL}/api/admin/kyc/${cleanId}`, {
+                        headers: getAuthHeaders()
+                    });
+                }
+                
+                // 2. ካልተገኘ እና ዩዘር ID ካለ በዚያ እንሞክራለን
+                if ((!res || !res.ok) && userId) {
+                    let cleanUserId = userId.toString().replace('#', '').trim();
+                    res = await fetch(`${API_BASE_URL}/api/admin/kyc/${cleanUserId}`, {
                         headers: getAuthHeaders()
                     });
                 }
 
-                const result = await res.json();
-                const data = result.data || result;
-                if (res.ok && data) {
-                    document.getElementById('mFullName').innerText = data.fullName || 'N/A';
-                    document.getElementById('mIdNumber').innerText = data.idNumber || 'N/A';
-                    document.getElementById('mFrontImg').src = data.frontImage || '';
+                if (res && res.ok) {
+                    const result = await res.json();
+                    const data = result.data || result;
                     
-                    const backImgEl = document.getElementById('mBackImg');
-                    const backContainer = document.getElementById('mBackContainer');
-                    if (backImgEl) {
-                        backImgEl.src = data.backImage || '';
-                        backContainer.style.display = data.backImage ? 'block' : 'none';
+                    if (data) {
+                        document.getElementById('mFullName').innerText = data.fullName || data.name || 'N/A';
+                        document.getElementById('mIdNumber').innerText = data.idNumber || data.docNumber || 'N/A';
+                        document.getElementById('mFrontImg').src = data.frontImage || data.docImage || '';
+                        
+                        const backImgEl = document.getElementById('mBackImg');
+                        const backContainer = document.getElementById('mBackContainer');
+                        if (backImgEl) {
+                            backImgEl.src = data.backImage || '';
+                            if (backContainer) {
+                                backContainer.style.display = data.backImage ? 'block' : 'none';
+                            }
+                        }
+                        
+                        document.getElementById('mSelfieImg').src = data.selfieImage || '';
+                        document.getElementById('adminKycModal').style.display = 'flex';
+                        return;
                     }
-                    
-                    document.getElementById('mSelfieImg').src = data.selfieImage || '';
-                    document.getElementById('adminKycModal').style.display = 'flex';
-                } else {
-                    alert('KYC details not found');
                 }
+                
+                alert('KYC details not found');
             } catch (err) {
-                console.error(err);
+                console.error("Modal error:", err);
                 alert('Error loading KYC details');
             }
         }
-
+        
         function closeAdminModal() {
             document.getElementById('adminKycModal').style.display = 'none';
         }
