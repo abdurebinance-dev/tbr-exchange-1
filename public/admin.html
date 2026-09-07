@@ -397,7 +397,7 @@ async function loadPendingKyc() {
                 alert('Error loading KYC details');
             }
         }
-        
+
         function closeAdminModal() {
             document.getElementById('adminKycModal').style.display = 'none';
         }
@@ -424,32 +424,56 @@ async function loadPendingKyc() {
             }
         }
 
-        async function rejectUser(btn, kycId) {
-            const reason = prompt("የእምቢታውን ምክንያት (Reason) ይጻፉ:", "ሰነዱ ግልጽ አይደለም ወይም የተሳሳተ መረጃ");
-            if (!reason) return;
-
+       async function approveUser(btn, kycId) {
+            if (!confirm('ይህንን የ KYC ጥያቄ ማጽደቅ (Approve) ይፈልጋሉ?')) return;
             try {
-                const res = await fetch(`${API_BASE_URL}/api/admin/kyc/reject/${kycId}`, {
-                    method: 'PUT',
-                    headers: getAuthHeaders(),
-                    body: JSON.stringify({ reason })
+                const cleanId = kycId ? kycId.toString().replace('#', '').trim() : '';
+                const res = await fetch(`${API_BASE_URL}/api/admin/kyc/${cleanId}`, {
+                    method: 'POST',
+                    headers: {
+                        ...getAuthHeaders(),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ action: 'approve', status: 'approved' })
                 });
-                const data = await res.json();
-                if (res.ok) {
-                    const row = btn.closest('tr');
-                    row.querySelector('td:nth-child(3)').innerHTML = '<span class="badge-rejected">Rejected</span>';
-                    btn.closest('td').innerHTML = '<span style="color: #ef4444; font-size: 12px; font-weight: bold;">Rejected</span>';
-                    alert('KYC Rejected.');
-                    loadPendingKyc(); 
+                const result = await res.json();
+                if (res.ok && result.success) {
+                    alert('በተሳካ ሁኔታ ጸድቋል!');
+                    loadPendingKyc();
                 } else {
-                    alert('Error: ' + (data.error || data.message || 'Failed to reject'));
+                    alert(result.message || 'ማጽደት አልተቻለም');
                 }
             } catch (err) {
                 console.error(err);
-                alert('Server connection error during rejection.');
+                alert('ስህተት ተፈጥሯል');
             }
         }
 
+        async function rejectUser(btn, kycId) {
+            if (!confirm('ይህንን የ KYC ጥያቄ አለመቀበል (Reject) ይፈልጋሉ?')) return;
+            try {
+                const cleanId = kycId ? kycId.toString().replace('#', '').trim() : '';
+                const res = await fetch(`${API_BASE_URL}/api/admin/kyc/${cleanId}`, {
+                    method: 'POST',
+                    headers: {
+                        ...getAuthHeaders(),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ action: 'reject', status: 'rejected' })
+                });
+                const result = await res.json();
+                if (res.ok && result.success) {
+                    alert('ውድቅ ተደርጓል!');
+                    loadPendingKyc();
+                } else {
+                    alert(result.message || 'መፈጸም አልተቻለም');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('ስህተት ተፈጥሯል');
+            }
+        }
+        
         async function updateRate() {
             const rate = document.getElementById('marketRateInput').value;
             if(!rate || isNaN(rate)) {

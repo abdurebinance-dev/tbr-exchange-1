@@ -587,139 +587,138 @@ app.post('/api/reset-password', async (req, res) => {
 // TBR Exchange - KYC & User Profile Routes
 // ==========================================
 
-app.get('/api/auth/me', verifyToken, async (req, res) => {
-    try {
-        let user = await User.findById(req.user.id);
-        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-        
-        // ኢሜይሉን በመጠቀም አድሚኑ Approved ያደረገውን ትክክለኛ ሬኮርድ እናስቀድማለን (ID misalignment እንዳይኖር)
-        if (user.email) {
-            const verifiedUser = await User.findOne({ 
-                email: { $regex: new RegExp(`^${user.email.trim()}$`, 'i') }, 
-                kycStatus: { $in: ['verified', 'approved', 'Verified', 'Approved'] } 
-            });
-            if (verifiedUser) {
-                user = verifiedUser;
-            }
-        }
-
-        res.json({
-            success: true,
-            user: {
-                id: user._id,
-                name: user.name || user.fullName,
-                email: user.email,
-                kycStatus: user.kycStatus || 'pending',
-                isVerified: user.isVerified || false
-            }
-        });
-    } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
-
-app.post('/api/kyc/submit', async (req, res) => {
-    try {
-        const { userId, fullName, idNumber, dob, address, docType, frontImage, backImage, selfieImage, email } = req.body;
-
-        if (!fullName || !frontImage || !selfieImage) {
-            return res.status(400).json({ success: false, message: 'እባክዎ አስፈላጊዎቹን መረጃዎች እና ፎቶዎች በትክክል ይሙሉ!' });
-        }
-
-        const newKyc = new KYC({
-            userId: userId || null,
-            fullName,
-            idNumber,
-            dob,
-            address,
-            docType: docType || 'national_id',
-            frontImage,
-            backImage,
-            selfieImage,
-            email: email || '',
-            status: 'pending'
-        });
-
-        await newKyc.save();
-
-        if (userId) {
-            await User.findByIdAndUpdate(userId, { kycStatus: 'pending' });
-        } else if (email) {
-            await User.findOneAndUpdate({ email: email.trim().toLowerCase() }, { kycStatus: 'pending' });
-        }
-
-        res.status(200).json({ 
-            success: true, 
-            status: 'pending', 
-            message: 'የ KYC መረጃዎ በትክክል ተልኳል! አድሚኑ እስኪያጸድቀው ድረስ በትዕግስት ይጠብቁ።' 
-        });
-    } catch (err) {
-        console.error('KYC Submit Error:', err);
-        res.status(500).json({ success: false, message: 'ሰርቨር ላይ ስህተት ተፈጥሯል' });
-    }
-});
-
-// Admin: Get all KYC requests
-app.get('/api/admin/kyc/pending', async (req, res) => {
-    try {
-        const pendingList = await KYC.find({})
-            .select('-frontImage -backImage -selfieImage') 
-            .lean(); 
-            
-        pendingList.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-        res.status(200).json({ success: true, data: pendingList });
-    } catch (error) {
-        console.error('Fetch KYC Error:', error);
-        res.status(500).json({ success: false, message: 'መረጃዎችን ማምጣት አልተቻለም' });
-    }
-});
-
-// Admin: Get single KYC details by ID (Updated Fix)
+// 1. የ KYC ሰነድ ዝርዝር በ ID፣ userId ወይም በኢሜይል ፈልጎ ማምጫ
 app.get('/api/admin/kyc/:id', verifyToken, async (req, res) => {
     try {
-        let kycId = req.params.id;
-        if (kycId.startsWith('#')) {
-            kycId = kycId.replace('#', '');
-        }
-
+        let kycId = req.params.id ? req.params.id.replace('#', '').trim() : '';
         let kycDetails = null;
 
-        // 1. መጀመሪያ ቫሊድ የሞንጎዲቢ አይዲ ከሆነ በ KYC _id ለመፈለግ እንሞክራለን
         if (kycId.match(/^[0-9a-fA-F]{24}$/)) {
             kycDetails = await KYC.findById(kycId);
-        }
-
-        // 2. ካልተገኘ በ userId ወይም user ፊልድ እንፈልጋለን
-        if (!kycDetails) {
-            kycDetails = await KYC.findOne({ 
-                $or: [{ userId: kycId }, { user: kycId }] 
-            });
-        }
-
-        // 3. አሁንም ካልተገኘ በ User መታወቂያ (User _id) በመጠቀም ከ KYC ቴብል እንፈልጋለን
-        if (!kycDetails && kycId.match(/^[0-9a-fA-F]{24}$/)) {
-            kycDetails = await KYC.findOne({ 
-                $or: [{ userId: kycId }, { user: kycId }, { _id: kycId }] 
-            });
-        }
-
-        // 4. በመጨረሻም በሰነዱ ውስጥ የተመዘገበውን ዩዘር ኢሜይል አግኝተን በዚያ እንፈልጋለን
-        if (!kycDetails) {
-            const targetUser = await User.findById(kycId.length === 24 ? kycId : null).catch(() => null);
-            if (targetUser && targetUser.email) {
-                kycDetails = await KYC.findOne({ email: targetUser.email.trim().toLowerCase() });
+            if (!kycDetails) {
+                kycDetails = await KYC.findOne({ userId: kycId });
+            }
+            if (!kycDetails) {
+                kycDetails = await KYC.findOne({ user: kycId });
             }
         }
-        
+
+        if (!kycDetails) {
+            kycDetails = await KYC.findOne({ 
+                $or: [{ userId: kycId }, { user: kycId }, { id: kycId }] 
+            });
+        }
+
+        if (!kycDetails && kycId.match(/^[0-9a-fA-F]{24}$/)) {
+            const targetUser = await User.findById(kycId).catch(() => null);
+            if (targetUser) {
+                kycDetails = await KYC.findOne({ 
+                    $or: [{ userId: targetUser._id.toString }, { email: targetUser.email }, { fullName: targetUser.fullName }] 
+                });
+                
+                // ሰነዱ በ KYC ኮልክሽን ከሌለ ነገር ግን በ User ውስጥ ካለ ከ User እንወስዳለን
+                if (!kycDetails && (targetUser.kycDocument || targetUser.frontImage)) {
+                    kycDetails = {
+                        fullName: targetUser.fullName || targetUser.name,
+                        idNumber: targetUser.idNumber || 'N/A',
+                        frontImage: targetUser.frontImage || targetUser.kycDocument,
+                        backImage: targetUser.backImage || '',
+                        selfieImage: targetUser.selfieImage || '',
+                        userId: targetUser._id,
+                        email: targetUser.email,
+                        status: targetUser.kycStatus || 'pending'
+                    };
+                }
+            }
+        }
+
         if (!kycDetails) {
             return res.status(404).json({ success: false, message: 'KYC details not found' });
         }
-        
+
         res.status(200).json({ success: true, data: kycDetails });
     } catch (error) {
         console.error('Get KYC Details Error:', error);
         res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// 2. የተስተካከለ የ KYC Approve / Reject ማስተካከያ (አካውንቱን አብሮ የሚቀይር)
+app.post(['/api/admin/kyc/:id', '/api/admin/kyc/approve/:id', '/api/admin/kyc/reject/:id', '/api/admin/kyc-action'], async (req, res) => {
+    try {
+        const rawId = req.params.id || req.body.kycId || req.body.id || '';
+        const kycId = rawId.replace('#', '').trim();
+        let status = req.body.status || req.body.action;
+
+        if (req.url.includes('approve') || req.method === 'PATCH') status = 'approved';
+        if (req.url.includes('reject')) status = 'rejected';
+        if (!status) status = 'approved';
+
+        if (!kycId) {
+            return res.status(400).json({ success: false, message: 'የ KYC መለያ (ID) አልተገኘም' });
+        }
+
+        let kycRecord = null;
+        if (kycId.match(/^[0-9a-fA-F]{24}$/)) {
+            kycRecord = await KYC.findById(kycId);
+            if (!kycRecord) kycRecord = await KYC.findOne({ userId: kycId });
+        }
+        if (!kycRecord) {
+            kycRecord = await KYC.findOne({ $or: [{ userId: kycId }, { user: kycId }] });
+        }
+
+        if (kycRecord) {
+            kycRecord.status = status;
+            await kycRecord.save();
+        }
+
+        // የተጠቃሚውን (User) አካውንት ስታተስ እና ሰርተፍኬት ማስተካከል
+        let updatedUser = null;
+        const newKycStatus = status === 'approved' ? 'verified' : 'rejected';
+        const newIsVerified = (status === 'approved');
+
+        if (kycId.match(/^[0-9a-fA-F]{24}$/)) {
+            updatedUser = await User.findByIdAndUpdate(kycId, { 
+                kycStatus: newKycStatus, 
+                isVerified: newIsVerified 
+            }, { new: true });
+        }
+
+        if (!updatedUser && kycRecord && kycRecord.userId) {
+            updatedUser = await User.findByIdAndUpdate(kycRecord.userId, { 
+                kycStatus: newKycStatus, 
+                isVerified: newIsVerified 
+            }, { new: true });
+        }
+
+        if (!updatedUser && kycRecord && kycRecord.email) {
+            updatedUser = await User.findOneAndUpdate({ email: kycRecord.email.trim().toLowerCase() }, { 
+                kycStatus: newKycStatus, 
+                isVerified: newIsVerified 
+            }, { new: true });
+        }
+
+        // በ ID በቀጥታ ማግኘት ካልተቻለ በመጨረሻ በስም ወይም በፓርሻል ID እንፈልጋለን
+        if (!updatedUser && kycRecord && kycRecord.fullName) {
+            updatedUser = await User.findOneAndUpdate({ 
+                $or: [
+                    { name: { $regex: new RegExp(kycRecord.fullName.trim(), 'i') } },
+                    { fullName: { $regex: new RegExp(kycRecord.fullName.trim(), 'i') } }
+                ]
+            }, { 
+                kycStatus: newKycStatus, 
+                isVerified: newIsVerified 
+            }, { new: true });
+        }
+
+        res.status(200).json({ 
+            success: true, 
+            message: `KYC ${status} successfully.`, 
+            userUpdated: !!updatedUser 
+        });
+    } catch (error) {
+        console.error('KYC Action Error:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
