@@ -643,8 +643,8 @@ app.get('/api/admin/kyc/:id', verifyToken, async (req, res) => {
     }
 });
 
-// 2. የተስተካከለ የ KYC Approve / Reject ማስተካከያ (አካውንቱን አብሮ የሚቀይር)
-app.post(['/api/admin/kyc/:id', '/api/admin/kyc/approve/:id', '/api/admin/kyc/reject/:id', '/api/admin/kyc-action'], async (req, res) => {
+// 2. የተስተካከለ የ KYC Approve / Reject ማስተካከያ (verifyToken የተጨመረበት)
+app.post(['/api/admin/kyc/:id', '/api/admin/kyc/approve/:id', '/api/admin/kyc/reject/:id', '/api/admin/kyc-action'], verifyToken, async (req, res) => {
     try {
         const rawId = req.params.id || req.body.kycId || req.body.id || '';
         const kycId = rawId.replace('#', '').trim();
@@ -698,7 +698,6 @@ app.post(['/api/admin/kyc/:id', '/api/admin/kyc/approve/:id', '/api/admin/kyc/re
             }, { new: true });
         }
 
-        // በ ID በቀጥታ ማግኘት ካልተቻለ በመጨረሻ በስም ወይም በፓርሻል ID እንፈልጋለን
         if (!updatedUser && kycRecord && kycRecord.fullName) {
             updatedUser = await User.findOneAndUpdate({ 
                 $or: [
