@@ -196,7 +196,7 @@
             background: var(--card-bg); 
             padding: 25px; 
             border-radius: 14px; 
-            max-width: 700px; 
+            max-width: 900px; /* ስፋቱ ለሦስቱም ፎቶዎች እንዲመች ትንሽ ሰፋ ተደርጓል */
             width: 100%; 
             border: 1px solid var(--border-color); 
             color: var(--text-main); 
@@ -360,16 +360,23 @@
             <h3 style="margin-top:0; color:var(--accent-gold);"><i class="fa-solid fa-id-card"></i> Inspect User KYC Identification</h3>
             <p><strong>Full Name:</strong> <span id="mKycName"></span></p>
             <p><strong>ID Number:</strong> <span id="mKycIdNum"></span></p>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 15px 0;">
+            
+            <!-- ሦስቱም ፎቶዎች (Front, Back, Selfie) ጎን ለጎን እንዲታዩ ተደርጓል -->
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin: 15px 0;">
                 <div>
                     <p style="font-size:11px; color:var(--text-muted);">Front Document</p>
-                    <img id="mKycFront" src="" style="width:100%; height:180px; object-fit:cover; border-radius:8px; border:1px solid var(--border-color); background:#000;">
+                    <img id="mKycFront" src="" style="width:100%; height:160px; object-fit:cover; border-radius:8px; border:1px solid var(--border-color); background:#000;">
+                </div>
+                <div>
+                    <p style="font-size:11px; color:var(--text-muted);">Back Document</p>
+                    <img id="mKycBack" src="" style="width:100%; height:160px; object-fit:cover; border-radius:8px; border:1px solid var(--border-color); background:#000;">
                 </div>
                 <div>
                     <p style="font-size:11px; color:var(--text-muted);">Selfie Verification</p>
-                    <img id="mKycSelfie" src="" style="width:100%; height:180px; object-fit:cover; border-radius:8px; border:1px solid var(--border-color); background:#000;">
+                    <img id="mKycSelfie" src="" style="width:100%; height:160px; object-fit:cover; border-radius:8px; border:1px solid var(--border-color); background:#000;">
                 </div>
             </div>
+
             <div style="display:flex; justify-content:flex-end; gap: 10px;">
                 <button class="btn" style="background:var(--border-color); color:#fff;" onclick="closeModal()">Close</button>
             </div>
@@ -482,6 +489,7 @@
                     document.getElementById('mKycName').innerText = data.fullName || data.name || 'N/A';
                     document.getElementById('mKycIdNum').innerText = data.idNumber || 'N/A';
                     document.getElementById('mKycFront').src = data.frontImage || data.kycDocument || '';
+                    document.getElementById('mKycBack').src = data.backImage || data.backDocument || data.idBack || ''; // <--- የጀርባው ፎቶ እዚህ ተያይዟል
                     document.getElementById('mKycSelfie').src = data.selfieImage || '';
                     document.getElementById('kycModal').style.display = 'flex';
                 }
@@ -507,7 +515,6 @@
         }
 
         async function loadUsersDirectory() {
-            // Can be connected to user list endpoint if available
             document.getElementById('userTableBody').innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Use search or system records.</td></tr>';
         }
 
