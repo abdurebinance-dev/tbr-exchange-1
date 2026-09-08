@@ -719,3 +719,9 @@ app.post('/api/admin/users/unlock', verifyAdminToken, async (req, res) => {
         res.status(500).json({ success: false, message: 'Server error' });
     }
 });
+
+PORT = process.env.PORT || 5000;
+
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server is running on port ${PORT}`);
+});
