@@ -632,7 +632,7 @@ app.post('/api/admin/rates', verifyAdminToken, async (req, res) => {
     }
 });
 
-// 3. Get All KYC List
+// 3. Get All KYC List (Updated to include back document fields)
 app.get('/api/admin/kyc', verifyAdminToken, async (req, res) => {
     try {
         let kycList = await KYC.find({}).sort({ createdAt: -1 });
@@ -649,8 +649,15 @@ app.get('/api/admin/kyc', verifyAdminToken, async (req, res) => {
                 email: user.email,
                 idNumber: user.idNumber || 'N/A',
                 frontImage: user.frontImage || user.kycDocument || '',
+                backImage: user.backImage || user.backDocument || user.idBack || '', // <--- የጀርባው ፎቶ ፊልድ ተጨምሯል
                 selfieImage: user.selfieImage || '',
                 status: user.kycStatus === 'verified' ? 'approved' : user.kycStatus
+            }));
+        } else {
+            // KYC collection ሲጠቀሙ የባክ ፎቶው እንዳይቀር
+            kycList = kycList.map(item => ({
+                ...item.toObject ? item.toObject() : item,
+                backImage: item.backImage || item.backDocument || item.idBack || ''
             }));
         }
 
@@ -660,11 +667,18 @@ app.get('/api/admin/kyc', verifyAdminToken, async (req, res) => {
     }
 });
 
-// 4. Get KYC Details by ID
+// 4. Get KYC Details by ID (Updated to include back document fields)
 app.get('/api/admin/kyc/:id', verifyAdminToken, async (req, res) => {
     try {
         let kycId = req.params.id ? req.params.id.replace('#', '').trim() : '';
         let kycDetails = await KYC.findById(kycId).catch(() => null);
+
+        if (kycDetails) {
+            kycDetails = {
+                ...kycDetails.toObject(),
+                backImage: kycDetails.backImage || kycDetails.backDocument || kycDetails.idBack || ''
+            };
+        }
 
         if (!kycDetails && kycId.match(/^[0-9a-fA-F]{24}$/)) {
             const targetUser = await User.findById(kycId).catch(() => null);
@@ -673,6 +687,7 @@ app.get('/api/admin/kyc/:id', verifyAdminToken, async (req, res) => {
                     fullName: targetUser.fullName,
                     idNumber: targetUser.idNumber || 'N/A',
                     frontImage: targetUser.frontImage || targetUser.kycDocument || '',
+                    backImage: targetUser.backImage || targetUser.backDocument || targetUser.idBack || '', // <--- የጀርባው ፎቶ እዚህም ተጨምሯል
                     selfieImage: targetUser.selfieImage || '',
                     userId: targetUser._id,
                     email: targetUser.email,
