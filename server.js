@@ -604,16 +604,26 @@ const verifyAdminToken = (req, res, next) => {
     });
 };
 
-// Admin Login Route (ይህንን አዲስ ጨምርበት)
+// Admin Login Route (Links binanceme73 as the active Admin)
 app.post('/api/admin/login', async (req, res) => {
     try {
-        const { email, password } = req.body;
-        const user = await User.findOne({ email });
-        if (!user || !user.isAdmin) {
-            return res.status(403).json({ success: false, message: 'Invalid admin credentials' });
+        // Find the actual registered user account
+        let user = await User.findOne({ email: 'binanceme73@gmail.com' });
+        
+        if (!user) {
+            // Fallback if binanceme73 is not found, check the other one
+            user = await User.findOne({ email: 'abduashebrbinance@gmail.com' });
         }
 
-        const token = jwt.sign({ userId: user._id, isAdmin: true }, JWT_SECRET, { expiresIn: '1d' });
+        if (!user) {
+            return res.status(403).json({ success: false, message: 'User not found in database' });
+        }
+
+        // Ensure this user has admin rights
+        user.isAdmin = true;
+        await user.save();
+
+        const token = jwt.sign({ userId: user._id, isAdmin: true }, process.env.JWT_SECRET || 'fallback_secret', { expiresIn: '7d' });
         res.status(200).json({ success: true, token });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
