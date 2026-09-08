@@ -583,44 +583,27 @@ app.post('/api/reset-password', async (req, res) => {
     }
 });
 
-// ==========================================
-// አዲሶቹ የአድሚን ዳሽቦርድ ሮውቶች (እዚህ መጨረሻ ላይ ይጨመሩ)
-// ==========================================
-
-// Simple Admin Middleware / Route Protection fix
-const verifyAdmin = async (req, res, next) => {
+// Define the admin verification middleware properly
+const verifyAdminToken = async (req, res, next) => {
     try {
-        const token = req.headers.authorization?.split(' ')[1];
-        if (!token) return res.status(403).json({ message: 'No token provided' });
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(403).json({ success: false, message: 'Access denied. No token provided.' });
+        }
         
+        const token = authHeader.split(' ')[1];
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
-        // Allow if token has isAdmin true or matches our admin email
+        
+        if (!decoded.isAdmin) {
+            return res.status(403).json({ success: false, message: 'Access denied. Not an admin.' });
+        }
+        
         req.user = decoded;
         next();
     } catch (err) {
-        return res.status(403).json({ message: 'Invalid token' });
+        return res.status(403).json({ success: false, message: 'Invalid or expired token.' });
     }
 };
-
-// Apply this to your admin stats and kyc routes:
-app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
-    try {
-        // Return your stats data here
-        res.json({ success: true, pendingKyc: 0, totalVolume: 0, escrowHoldings: 0, totalUsers: 4 });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-});
-
-app.get('/api/admin/kyc', verifyAdmin, async (req, res) => {
-    try {
-        // Return your kyc list here
-        res.json({ success: true, kycs: [] });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-});
-
 // 1. Dashboard Stats
 app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
     try {
