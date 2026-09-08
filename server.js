@@ -737,4 +737,37 @@ app.post('/api/admin/users/unlock', verifyAdminToken, async (req, res) => {
 
 app.listen(process.env.PORT || 5000, '0.0.0.0', () => {
     console.log(`Server is running on port ${process.env.PORT || 5000}`);
+});// KYC ሪኬስትን ለመቀበል የሚረዳ ራውት
+app.post('/api/kyc/submit', upload.fields([
+    { name: 'idImage', maxCount: 1 },
+    { name: 'selfieImage', maxCount: 1 }
+]), async (req, res) => {
+    try {
+        // ከዩዘር ፎርሙ የሚመጡ መረጃዎች
+        const { fullName, idNumber, dateOfBirth, residentialAddress } = req.body;
+        
+        // ዩዘሩ በምን አክሰስ ቶከን እንደገባ (User ID ከየት እንደሚገኝ እንደ አሰራርህ አስተካክለው)
+        // ለምሳሌ ከ session, req.user ወይም ከ token የሚገኝ ከሆነ፦
+        const userId = req.user ? req.user._id : req.body.userId; // ወይም ከ Auth Middleware የሚመጣ
+
+        if (!userId) {
+            return res.status(401).json({ success: false, message: 'Unauthorized user' });
+        }
+
+        // ዳታቤዝ ውስጥ የዩዘርን KYC መረጃ ማዘመን እና ስታተሱን ወደ 'pending' መቀየር
+        // (ለምሳሌ User model ወይም KycRequest model እየተጠቀምክ ከሆነ)
+        await User.findByIdAndUpdate(userId, {
+            fullName,
+            idNumber,
+            dateOfBirth,
+            residentialAddress,
+            kycStatus: 'pending', // ዩዘሩ ሰሚት ሲያደርግ ፔንዲንግ (Under Review) እንዲሆን
+            kycSubmittedAt: new Date()
+        });
+
+        res.status(200).json({ success: true, message: 'KYC submitted successfully and is under review.' });
+    } catch (error) {
+        console.error('KYC submission error:', error);
+        res.status(500).json({ success: false, message: 'Server error during KYC submission.' });
+    }
 });
