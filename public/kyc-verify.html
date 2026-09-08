@@ -556,7 +556,7 @@
         let selfieImageBase64 = null;
 
         window.addEventListener('DOMContentLoaded', async () => {
-            const token = localStorage.getItem('token');
+            const token = localStorage.getItem('adminToken');
             if (token) {
                 try {
                     const res = await fetch('https://tbr-exchange-backend.onrender.com/api/user/profile', {
