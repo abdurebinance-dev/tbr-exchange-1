@@ -706,7 +706,6 @@
             window.location.href = 'login.html';
         });
 
-        // Combined and consolidated user loading script
         async function loadUserData() {
             try {
                 const token = localStorage.getItem('token');
@@ -744,24 +743,28 @@
             }
         }
 
+        // እዚህ ጋር የጠየቅካቸው 3ቱ ቀለማት እና ጽሁፎች ተስተካክለዋል
         function updateKycButtonUI(status) {
             const btn = document.getElementById('kycStatusBtn');
             const icon = document.getElementById('kycIcon');
             const text = document.getElementById('kycBtnText');
 
             if (status === 'pending' || status === 'Under Review' || status === 'under_review') {
+                // 2. መረጃ ሲልኩ: በቢጫ ከለር Under Review ይላል
                 btn.style.background = 'rgba(234, 179, 8, 0.1)';
                 btn.style.color = '#eab308';
                 btn.style.border = '1px solid rgba(234, 179, 8, 0.2)';
                 icon.className = 'fa-solid fa-clock';
                 text.innerText = 'Under Review';
             } else if (status === 'verified' || status === 'Approved' || status === 'approved' || status === true) {
+                // 3. አድሚን ሲያረጋግጥ: በአረንጓዴ ከለር Verified ይላል
                 btn.style.background = 'rgba(16, 185, 129, 0.1)';
                 btn.style.color = '#10b981';
                 btn.style.border = '1px solid rgba(16, 185, 129, 0.2)';
                 icon.className = 'fa-solid fa-circle-check';
                 text.innerText = 'Verified';
             } else {
+                // 1. ምንም መረጃ ካላስገባ: በቀይ ከለር Unverified ይላል
                 btn.style.background = 'rgba(239, 68, 68, 0.1)';
                 btn.style.color = '#ef4444';
                 btn.style.border = '1px solid rgba(239, 68, 68, 0.2)';
