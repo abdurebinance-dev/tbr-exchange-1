@@ -772,17 +772,20 @@ app.post('/api/kyc/submit', upload.fields([
     }
 });
 
-// 1. አሁን የገባውን ዩዘር መረጃ ለማግኘት
+// የተጠቃሚውን ቶከን ቼክ በማድረግ መረጃውን የሚመልስ ራውት
 app.get('/api/auth/me', async (req, res) => {
     try {
-        // እንደ አሰራርህ ዩአይዲን ከ Session ወይም Token ማግኘት ትችላለህ
-        const userId = req.session && req.session.userId; 
-        
-        if (!userId) {
-            return res.status(401).json({ success: false, message: 'Not authenticated' });
+        const authHeader = req.headers['authorization'];
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ success: false, message: 'No token provided' });
         }
 
-        const user = await User.findById(userId).select('-password');
+        const token = authHeader.split(' ')[1];
+        
+        // ቶከኑን መፈተሽ (JWT እየተጠቀምክ ከሆነ)
+        const decoded = jwt.verify(token, process.env.JWT_SECRET); // ወይም የከፈትክበት ሚስጥር ቃል
+        const user = await User.findById(decoded.id || decoded.userId).select('-password');
+
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found' });
         }
@@ -790,31 +793,6 @@ app.get('/api/auth/me', async (req, res) => {
         res.status(200).json({ success: true, user });
     } catch (error) {
         console.error('Auth check error:', error);
-        res.status(500).json({ success: false, message: 'Server error' });
-    }
-});
-
-// 2. የ KYC ፎርም መረጃዎችን ለመቀበል
-app.post('/api/kyc/submit', async (req, res) => {
-    try {
-        const { fullName, idNumber, dateOfBirth, residentialAddress, userId } = req.body;
-
-        if (!userId) {
-            return res.status(400).json({ success: false, message: 'User ID is required' });
-        }
-
-        await User.findByIdAndUpdate(userId, {
-            fullName,
-            idNumber,
-            dateOfBirth,
-            residentialAddress,
-            kycStatus: 'pending', // ፎርሙ ሲላክ ስታተሱ ራሱ ወደ Under Review እንዲቀየር
-            kycSubmittedAt: new Date()
-        });
-
-        res.status(200).json({ success: true, message: 'KYC submitted successfully' });
-    } catch (error) {
-        console.error('KYC submission error:', error);
-        res.status(500).json({ success: false, message: 'Server error during KYC submission' });
+        res.status(401).json({ success: false, message: 'Invalid or expired token' });
     }
 });
