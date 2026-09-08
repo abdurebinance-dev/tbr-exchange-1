@@ -587,7 +587,7 @@ app.post('/api/reset-password', async (req, res) => {
 // አዲሶቹ የአድሚን ዳሽቦርድ ሮውቶች (እዚህ መጨረሻ ላይ ይጨመሩ)
 // ==========================================
 
-// Middleware for Admin Verification (ከሌለህ እዚህ ጋር ጨምረው)
+// Middleware for Admin Verification
 const verifyAdminToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -603,6 +603,22 @@ const verifyAdminToken = (req, res, next) => {
         }
     });
 };
+
+// Admin Login Route (ይህንን አዲስ ጨምርበት)
+app.post('/api/admin/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        const user = await User.findOne({ email });
+        if (!user || !user.isAdmin) {
+            return res.status(403).json({ success: false, message: 'Invalid admin credentials' });
+        }
+
+        const token = jwt.sign({ userId: user._id, isAdmin: true }, JWT_SECRET, { expiresIn: '1d' });
+        res.status(200).json({ success: true, token });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
 
 // 1. Dashboard Stats
 app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
