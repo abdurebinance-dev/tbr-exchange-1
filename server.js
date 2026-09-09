@@ -873,3 +873,58 @@ app.post('/api/auth/login', async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
+// Get Admin Overview Stats
+app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
+    try {
+        const totalUsers = await User.countDocuments();
+        const pendingKyc = await User.countDocuments({ kycStatus: 'pending' });
+        
+        res.status(200).json({
+            success: true,
+            stats: {
+                totalUsers,
+                pendingKyc,
+                totalVolume: 0,
+                activeEscrow: 0
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Get Single KYC Details by ID
+app.get('/api/admin/kyc/:id', verifyAdminToken, async (req, res) => {
+    try {
+        const kycId = req.params.id;
+        let user = await User.findById(kycId).select('-password').lean();
+        
+        if (!user) {
+            let kycItem = await KYC.findById(kycId).lean();
+            if (!kycItem) {
+                return res.status(404).json({ success: false, message: 'KYC details not found' });
+            }
+            return res.status(200).json({ success: true, data: kycItem });
+        }
+
+        // Format data to match frontend requirements
+        const formattedData = {
+            _id: user._id,
+            userId: user._id,
+            fullName: user.fullName || 'N/A',
+            email: user.email || 'N/A',
+            idNumber: user.idNumber || 'N/A',
+            docType: user.docType || 'ID Card',
+            frontImage: user.frontImage || user.kycDocument || '',
+            backImage: user.backImage || user.backDocument || user.idBack || '',
+            selfieImage: user.selfieImage || '',
+            status: user.kycStatus === 'verified' ? 'approved' : user.kycStatus,
+            createdAt: user.kycSubmittedAt || user.updatedAt || new Date()
+        };
+
+        res.status(200).json({ success: true, data: formattedData });
+    } catch (error) {
+        console.error('Fetch single KYC error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
