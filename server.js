@@ -583,92 +583,7 @@ app.post('/api/reset-password', async (req, res) => {
     }
 });
 
-// Helper Function: Verify Admin Middleware (በ isAdmin: true አማካኝነት ማረጋገጥ)
-async function verifyAdmin(req, res, next) {
-    try {
-        const authHeader = req.headers['authorization'];
-        const token = authHeader && authHeader.split(' ')[1];
-        
-        if (!token) {
-            return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
-        }
-
-        const verified = jwt.verify(token, JWT_SECRET);
-        const user = await User.findById(verified.id);
-
-        // ዳታቤዝ ላይ isAdmin: true መሆኑን በቀጥታ ይፈትሻል
-        if (!user || !user.isAdmin) { 
-            return res.status(403).json({ success: false, message: 'Access denied. Admin privileges required.' });
-        }
-
-        req.user = user;
-        next();
-    } catch (err) {
-        res.status(403).json({ success: false, message: 'Invalid or expired token.' });
-    }
-}
-
-// 1. Get All KYC Submissions (ለአድሚን - የ KYC ጥያቄዎችን በሙሉ ለማየት)
-app.get('/api/admin/kyc-requests', verifyAdmin, async (req, res) => {
-    try {
-        const kycList = await KYC.find({}).sort({ createdAt: -1 });
-        res.json({ success: true, count: kycList.length, data: kycList });
-    } catch (error) {
-        console.error('Fetch KYC Error:', error);
-        res.status(500).json({ success: false, message: 'Server error while fetching KYC requests.' });
-    }
-});
-
-// 2. Approve or Reject KYC (ለአድሚን - KYC ማጽደቅ ወይም ውድቅ ማድረግ)
-app.post('/api/admin/kyc-action', verifyAdmin, async (req, res) => {
-    try {
-        const { kycId, status, rejectionReason } = req.body; // status: 'approved' ወይም 'rejected'
-        
-        if (!kycId || !status) {
-            return res.status(400).json({ success: false, message: 'KYC ID and status are required.' });
-        }
-
-        const kycDoc = await KYC.findById(kycId);
-        if (!kycDoc) {
-            return res.status(404).json({ success: false, message: 'KYC submission not found.' });
-        }
-
-        kycDoc.status = status;
-        if (status === 'rejected') {
-            kycDoc.rejectionReason = rejectionReason || 'Document does not meet requirements.';
-        } else {
-            kycDoc.rejectionReason = '';
-        }
-        await kycDoc.save();
-
-        // ተጠቃሚው ራሱ ከተመዘገበበት User መረጃ ጋር አገናኝቶ የ kycStatus ማሻሻል ከፈለግን:
-        if (kycDoc.userId) {
-            await User.findByIdAndUpdate(kycDoc.userId, { 
-                kycStatus: status === 'approved' ? 'verified' : 'rejected' 
-            });
-        }
-
-        res.json({ success: true, message: `KYC has been successfully ${status}.` });
-    } catch (error) {
-        console.error('KYC Action Error:', error);
-        res.status(500).json({ success: false, message: 'Server error during KYC update.' });
-    }
-});
-
-// 3. Get All Users (ለአድሚን - የተመዘገቡ ተጠቃሚዎችን ዝርዝር ለማየት)
-app.get('/api/admin/users', verifyAdmin, async (req, res) => {
-    try {
-        const users = await User.find({}).select('-password').sort({ _id: -1 });
-        res.json({ success: true, count: users.length, data: users });
-    } catch (error) {
-        console.error('Fetch Users Error:', error);
-        res.status(500).json({ success: false, message: 'Server error while fetching users.' });
-    }
-});
-app.listen(process.env.PORT || 5000, () => {
-    console.log(`Server is running on port ${process.env.PORT || 5000}`);
-});
-// Admin Login Route (የአድሚን መግቢያ ራውት)
+// Admin Login Route (መጀመሪያ ላይ መቀመጥ አለበት)
 app.post('/api/admin/login', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -686,7 +601,6 @@ app.post('/api/admin/login', async (req, res) => {
             return res.status(403).json({ success: false, message: 'Access denied. Not an admin.' });
         }
 
-        // ፓስወርዱን በቀጥታ ማወዳደር (PlainText check)
         const isMatch = (password === user.password);
 
         if (!isMatch) {
@@ -709,4 +623,89 @@ app.post('/api/admin/login', async (req, res) => {
         console.error('Admin Login Error:', error);
         res.status(500).json({ success: false, message: 'Server error during login.' });
     }
+});
+
+// Helper Function: Verify Admin Middleware
+async function verifyAdmin(req, res, next) {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        
+        if (!token) {
+            return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
+        }
+
+        const verified = jwt.verify(token, JWT_SECRET);
+        const user = await User.findById(verified.id);
+
+        if (!user || !user.isAdmin) { 
+            return res.status(403).json({ success: false, message: 'Access denied. Admin privileges required.' });
+        }
+
+        req.user = user;
+        next();
+    } catch (err) {
+        res.status(403).json({ success: false, message: 'Invalid or expired token.' });
+    }
+}
+
+// 1. Get All KYC Submissions
+app.get('/api/admin/kyc-requests', verifyAdmin, async (req, res) => {
+    try {
+        const kycList = await KYC.find({}).sort({ createdAt: -1 });
+        res.json({ success: true, count: kycList.length, data: kycList });
+    } catch (error) {
+        console.error('Fetch KYC Error:', error);
+        res.status(500).json({ success: false, message: 'Server error while fetching KYC requests.' });
+    }
+});
+
+// 2. Approve or Reject KYC
+app.post('/api/admin/kyc-action', verifyAdmin, async (req, res) => {
+    try {
+        const { kycId, status, rejectionReason } = req.body;
+        
+        if (!kycId || !status) {
+            return res.status(400).json({ success: false, message: 'KYC ID and status are required.' });
+        }
+
+        const kycDoc = await KYC.findById(kycId);
+        if (!kycDoc) {
+            return res.status(404).json({ success: false, message: 'KYC submission not found.' });
+        }
+
+        kycDoc.status = status;
+        if (status === 'rejected') {
+            kycDoc.rejectionReason = rejectionReason || 'Document does not meet requirements.';
+        } else {
+            kycDoc.rejectionReason = '';
+        }
+        await kycDoc.save();
+
+        if (kycDoc.userId) {
+            await User.findByIdAndUpdate(kycDoc.userId, { 
+                kycStatus: status === 'approved' ? 'verified' : 'rejected' 
+            });
+        }
+
+        res.json({ success: true, message: `KYC has been successfully ${status}.` });
+    } catch (error) {
+        console.error('KYC Action Error:', error);
+        res.status(500).json({ success: false, message: 'Server error during KYC update.' });
+    }
+});
+
+// 3. Get All Users
+app.get('/api/admin/users', verifyAdmin, async (req, res) => {
+    try {
+        const users = await User.find({}).select('-password').sort({ _id: -1 });
+        res.json({ success: true, count: users.length, data: users });
+    } catch (error) {
+        console.error('Fetch Users Error:', error);
+        res.status(500).json({ success: false, message: 'Server error while fetching users.' });
+    }
+});
+
+app.listen(process.env.PORT || 5000, () => {
+    console.log(`Server is running on port ${process.env.PORT || 5000}`);
 });
