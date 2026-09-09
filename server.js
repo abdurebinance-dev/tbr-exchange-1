@@ -633,15 +633,9 @@ function verifyAdminToken(req, res, next) {
 }
 
 // ==========================================
-// 2. KYC SUBMIT ROUTE
+// 2. KYC SUBMIT ROUTE (Bulletproof Any Files)
 // ==========================================
-appServer.post('/api/kyc/submit', uploadKycs.fields([
-    { name: 'idImage', maxCount: 1 },
-    { name: 'frontImage', maxCount: 1 },
-    { name: 'selfieImage', maxCount: 1 },
-    { name: 'idBack', maxCount: 1 },
-    { name: 'backImage', maxCount: 1 }
-]), async (req, res) => {
+appServer.post('/api/kyc/submit', uploadKycs.any(), async (req, res) => {
     try {
         const authHeader = req.headers['authorization'];
         let userId = null;
@@ -668,28 +662,37 @@ appServer.post('/api/kyc/submit', uploadKycs.fields([
             return res.status(401).json({ success: false, message: 'Please log in again to submit KYC.' });
         }
 
-        const getFilePath = (fileObj) => {
-            if (!fileObj) return '';
-            return `uploads/${fileObj.filename}`;
-        };
+        const files = req.files || [];
+        
+        let frontImage = targetUser.frontImage || '';
+        let backImage = targetUser.backImage || '';
+        let selfieImage = targetUser.selfieImage || '';
 
-        const frontImgPath = req.files?.['idImage']?.[0] || req.files?.['frontImage']?.[0];
-        const backImgPath = req.files?.['idBack']?.[0] || req.files?.['backImage']?.[0];
-        const selfieImgPath = req.files?.['selfieImage']?.[0];
+        files.forEach((file, index) => {
+            const filePath = `uploads/${file.filename}`;
+            const field = (file.fieldname || '').toLowerCase();
+            
+            if (field.includes('front') || field.includes('idimage') || field.includes('idfront') || index === 0) {
+                frontImage = filePath;
+            } else if (field.includes('back') || field.includes('idback') || index === 1) {
+                backImage = filePath;
+            } else if (field.includes('selfie') || index === 2) {
+                selfieImage = filePath;
+            }
+        });
 
-        const frontImage = frontImgPath ? getFilePath(frontImgPath) : (req.body.frontImage || '');
-        const backImage = backImgPath ? getFilePath(backImgPath) : (req.body.backImage || '');
-        const selfieImage = selfieImgPath ? getFilePath(selfieImgPath) : (req.body.selfieImage || '');
+        if (req.body.frontImage) frontImage = req.body.frontImage;
+        if (req.body.backImage) backImage = req.body.backImage;
+        if (req.body.selfieImage) selfieImage = req.body.selfieImage;
 
         targetUser.fullName = fullName || targetUser.fullName;
         targetUser.idNumber = idNumber || targetUser.idNumber;
         targetUser.dateOfBirth = dateOfBirth || targetUser.dateOfBirth;
         targetUser.residentialAddress = residentialAddress || targetUser.residentialAddress;
         
-        if (frontImage) targetUser.frontImage = frontImage;
-        if (backImage) targetUser.backImage = backImage;
-        if (selfieImage) targetUser.selfieImage = selfieImage;
-
+        targetUser.frontImage = frontImage;
+        targetUser.backImage = backImage;
+        targetUser.selfieImage = selfieImage;
         targetUser.kycStatus = 'pending';
         targetUser.kycSubmittedAt = new Date();
 
@@ -725,7 +728,7 @@ appServer.get('/api/admin/kyc', verifyAdminToken, async (req, res) => {
         };
 
         const usersWithKyc = await User.find({ 
-            kycStatus: { $in: ['pending', 'verified', 'rejected', 'approved'] } 
+            kycStatus: { $in: ['pending', 'verified', 'rejected', 'approved', 'unverified'] } 
         }).select('-password').lean();
 
         const combinedListMap = new Map();
@@ -738,9 +741,9 @@ appServer.get('/api/admin/kyc', verifyAdminToken, async (req, res) => {
                 email: user.email || 'N/A',
                 idNumber: user.idNumber || 'N/A',
                 docType: user.docType || 'ID Card',
-                frontImage: formatUrl(user.frontImage || user.kycDocument),
+                frontImage: formatUrl(user.frontImage || user.kycDocument || user.idFront),
                 backImage: formatUrl(user.backImage || user.backDocument || user.idBack),
-                selfieImage: formatUrl(user.selfieImage),
+                selfieImage: formatUrl(user.selfieImage || user.selfie),
                 status: user.kycStatus === 'verified' ? 'approved' : user.kycStatus,
                 createdAt: user.kycSubmittedAt || user.updatedAt || new Date()
             });
