@@ -5,8 +5,8 @@ const bcrypt = require('bcryptjs');
 console.log('Script started...');
 
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/tbr_exchange';
-const ADMIN_EMAIL = 'admin@tbrexchange.com';
-const ADMIN_PASSWORD = 'adminpassword123';
+const ADMIN_EMAIL = 'binanceme73@gmail.com';
+const ADMIN_PASSWORD = 'admin123';
 
 async function setupAdmin() {
     try {
