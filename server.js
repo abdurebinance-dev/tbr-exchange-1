@@ -582,3 +582,8 @@ app.post('/api/reset-password', async (req, res) => {
         res.status(500).json({ success: false, message: error.message || 'Server error during password reset.' });
     }
 });
+
+PORT = process.env.PORT || 5000;
+appServer.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server is running on port ${PORT}`);
+});
