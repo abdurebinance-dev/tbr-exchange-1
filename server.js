@@ -583,52 +583,86 @@ app.post('/api/reset-password', async (req, res) => {
     }
 });
 
-// ==========================================
-// የ KYC እና ADMIN ራውቶች ብቻ (በነባሩ server.js መጨረሻ ላይ የሚጨመሩ)
-// ==========================================
-
-// 1. ተጠቃሚው KYC ሲልክ
-app.post('/api/user/submit-kyc', upload.single('idDocument'), async (req, res) => {
+// Helper Function: Verify Admin Middleware (አድሚን መሆኑን ለማረጋገጥ)
+async function verifyAdmin(req, res, next) {
     try {
-        const { userId, fullName, documentType } = req.body;
-        const filePath = req.file ? req.file.path : null;
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        
+        if (!token) {
+            return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
+        }
 
-        res.json({ 
-            success: true, 
-            message: "የ KYC ሰነድዎ በትክክል ገብቷል! አስተዳዳሪው እስኪመረምረው በትዕግስት ይጠብቁ።" 
-        });
+        const verified = jwt.verify(token, JWT_SECRET);
+        const user = await User.findById(verified.id);
+
+        // እዚህ ጋር የአድሚን ኢሜይል ወይም ሮል (Role) ማረጋገጥ ይቻላል
+        // ለምሳሌ ኢሜይሉ አድሚን ከሆነ ወይም isAdmin: true ካለው:
+        if (!user || user.email !== 'tbrexchange@gmail.com') { // እንደአስፈላጊነቱ የአድሚን ኢሜይል መቀየር ይቻላል
+            return res.status(403).json({ success: false, message: 'Access denied. Admin privileges required.' });
+        }
+
+        req.user = user;
+        next();
+    } catch (err) {
+        res.status(403).json({ success: false, message: 'Invalid or expired token.' });
+    }
+}
+
+// 1. Get All KYC Submissions (ለአድሚን - የ KYC ጥያቄዎችን በሙሉ ለማየት)
+app.get('/api/admin/kyc-requests', verifyAdmin, async (req, res) => {
+    try {
+        const kycList = await KYC.find({}).sort({ createdAt: -1 });
+        res.json({ success: true, count: kycList.length, data: kycList });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        console.error('Fetch KYC Error:', error);
+        res.status(500).json({ success: false, message: 'Server error while fetching KYC requests.' });
     }
 });
 
-// 2. አድሚኑ የ KYC ጥያቄዎችን እንዲያይ
-app.get('/api/admin/kyc-requests', async (req, res) => {
+// 2. Approve or Reject KYC (ለአድሚን - KYC ማጽደቅ ወይም ውድቅ ማድረግ)
+app.post('/api/admin/kyc-action', verifyAdmin, async (req, res) => {
     try {
-        const pendingKycs = [
-            { id: "605c72ef", name: "Abdurahman Ashebir", docType: "National ID", date: "2026-09-09", status: "Pending" }
-        ];
+        const { kycId, status, rejectionReason } = req.body; // status: 'approved' ወይም 'rejected'
+        
+        if (!kycId || !status) {
+            return res.status(400).json({ success: false, message: 'KYC ID and status are required.' });
+        }
 
-        res.json({ success: true, pendingKycs });
+        const kycDoc = await KYC.findById(kycId);
+        if (!kycDoc) {
+            return res.status(404).json({ success: false, message: 'KYC submission not found.' });
+        }
+
+        kycDoc.status = status;
+        if (status === 'rejected') {
+            kycDoc.rejectionReason = rejectionReason || 'Document does not meet requirements.';
+        } else {
+            kycDoc.rejectionReason = '';
+        }
+        await kycDoc.save();
+
+        // ተጠቃሚው ራሱ ከተመዘገበበት User መረጃ ጋር አገናኝቶ የ kycStatus ማሻሻል ከፈለግን:
+        if (kycDoc.userId) {
+            await User.findByIdAndUpdate(kycDoc.userId, { 
+                kycStatus: status === 'approved' ? 'verified' : 'rejected' 
+            });
+        }
+
+        res.json({ success: true, message: `KYC has been successfully ${status}.` });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        console.error('KYC Action Error:', error);
+        res.status(500).json({ success: false, message: 'Server error during KYC update.' });
     }
 });
 
-// 3. አድሚኑ KYC ሲቀበል ወይም ሲቀንስ
-app.post('/api/admin/kyc-action', async (req, res) => {
+// 3. Get All Users (ለአድሚን - የተመዘገቡ ተጠቃሚዎችን ዝርዝር ለማየት)
+app.get('/api/admin/users', verifyAdmin, async (req, res) => {
     try {
-        const { userId, action } = req.body;
-
-        res.json({ 
-            success: true, 
-            message: "የተጠቃሚው KYC ሰነድ በትክክል ተስተካክሏል!" 
-        });
+        const users = await User.find({}).select('-password').sort({ _id: -1 });
+        res.json({ success: true, count: users.length, data: users });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        console.error('Fetch Users Error:', error);
+        res.status(500).json({ success: false, message: 'Server error while fetching users.' });
     }
-});
-// ሰርቨሩን ማስጀመር (ትክክለኛው መንገድ)
-app.listen(PORT, () => {
-    console.log(`Server is running smoothly on port ${PORT}`);
 });
