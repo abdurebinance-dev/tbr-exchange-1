@@ -633,7 +633,7 @@ function verifyAdminToken(req, res, next) {
 }
 
 // ==========================================
-// 2. KYC SUBMIT ROUTE (Bulletproof Any Files)
+// 2. KYC SUBMIT ROUTE
 // ==========================================
 appServer.post('/api/kyc/submit', uploadKycs.any(), async (req, res) => {
     try {
