@@ -800,3 +800,6 @@ app.get('/api/user/profile', async (req, res) => {
         res.status(401).json({ success: false, message: 'Unauthorized user' });
     }
 });
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server is running on port ${PORT}`);
+});
