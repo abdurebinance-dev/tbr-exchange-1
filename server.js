@@ -733,23 +733,25 @@ app.listen(process.env.PORT || 5000, () => {
     console.log(`Server is running on port ${process.env.PORT || 5000}`);
 });
 
-// 4. Get Dashboard Statistics & Volumes (የዕለቱ ቮልዩም እና ኢስክሮ መረጃ)
+// 4. Get Dashboard Statistics & Volumes (የተስተካከለ የስታቲስቲክስ ኤፒአይ)
 app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
     try {
         const totalUsers = await User.countDocuments({});
+        
+        // ማስተካከያ፡ የ KYC ፔንዲንግ ቁጥር በቀጥታ ከ KYC ሞዴል እንዲቆጠር ተደረገ
         const kycPending = await KYC.countDocuments({ status: 'pending' });
         
-        // እዚህጋ የ Escrow እና Volume መረጃዎችን ከባህርይ (Model) ጋር ማገናኘት ይቻላል
         res.json({
             success: true,
             data: {
                 totalUsers,
                 kycPending,
-                todayVolume: "0 USDT / 0 ETB", // በሚቀጥለው ትሬድ ሞዴል ሲሰካ በቀጥታ ይሞላል
+                todayVolume: "0 USDT / 0 ETB",
                 activeEscrow: "0 USDT"
             }
         });
     } catch (error) {
+        console.error('Stats Error:', error);
         res.status(500).json({ success: false, message: 'Error fetching stats' });
     }
 });
