@@ -767,36 +767,50 @@ app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
 });
 
 
-// --- 9. User KYC Submission API ---
-const kycUpload = multer({ 
-    storage: multer.diskStorage({
-        destination: (req, file, cb) => cb(null, 'uploads/'),
-        filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
-    }),
-    limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
-});
-
-app.post('/api/kyc/submit', kycUpload.fields([
-    { name: 'frontImage', maxCount: 1 },
-    { name: 'backImage', maxCount: 1 },
-    { name: 'selfieImage', maxCount: 1 }
-]), async (req, res) => {
+// --- 9. User KYC Submission API (Updated for Base64 & Optional Back Image) ---
+app.post('/api/kyc/submit', async (req, res) => {
     try {
-        const { userId, fullName, address, email } = req.body;
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        
+        let userId = req.body.userId;
+        let email = req.body.email;
 
-        if (!req.files || !req.files.frontImage || !req.files.backImage || !req.files.selfieImage) {
-            return res.status(400).json({ success: false, message: "ሁሉም የ KYC ፎቶዎች (Front, Back, Selfie) ያስፈልጋሉ!" });
+        if (token) {
+            try {
+                const verified = jwt.verify(token, JWT_SECRET);
+                userId = verified.id;
+                email = verified.email;
+            } catch (e) {
+                // Token verification failed or optional
+            }
         }
 
-        const frontImage = req.files.frontImage[0].path;
-        const backImage = req.files.backImage[0].path;
-        const selfieImage = req.files.selfieImage[0].path;
+        const { fullName, idNumber, dateOfBirth, residentialAddress, address, docType, frontImage, backImage, selfieImage } = req.body;
 
-        const query = userId ? { _id: userId } : { email };
+        // Front Image እና Selfie ግዴታ ሲሆኑ፣ Back Image ግን እንደ መታወቂያው ዓይነት አማራጭ (Optional) ተደርጓል
+        if (!frontImage || !selfieImage) {
+            return res.status(400).json({ success: false, message: "የመታወቂያ ፊት (Front) እና የሰልፊ ፎቶ (Selfie) ግዴታ ናቸው!" });
+        }
+
+        const query = userId ? { _id: userId } : (email ? { email } : null);
+        if (!query) {
+            return res.status(400).json({ success: false, message: "ተጠቃሚው አልታወቀም (User identification failed)" });
+        }
 
         await User.findOneAndUpdate(
             query,
-            { fullName, address, frontImage, backImage, selfieImage, kycStatus: 'pending' },
+            { 
+                fullName: fullName || '', 
+                address: residentialAddress || address || '', 
+                idNumber: idNumber || '',
+                dateOfBirth: dateOfBirth || '',
+                docType: docType || 'national_id',
+                frontImage, 
+                backImage: backImage || '', 
+                selfieImage, 
+                kycStatus: 'pending' 
+            },
             { new: true, upsert: true }
         );
 
@@ -806,9 +820,3 @@ app.post('/api/kyc/submit', kycUpload.fields([
         res.status(500).json({ success: false, message: 'የሰርቨር ችግር አጋጥሟል::' });
     }
 });
-
-
-// --- 10. Server Port Listener (ሁልጊዜ ፋይሉ መጨረሻ ላይ መሆን አለበት) ---
-app.listen(process.env.PORT || 5000, () => {
-    console.log(`Server is running on port ${process.env.PORT || 5000}`);
-})
