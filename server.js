@@ -694,6 +694,7 @@ app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
 });
 
 // 2. Get KYC Requests from Users Collection
+// Get KYC Requests with Selfie support
 app.get('/api/admin/kyc-requests', verifyAdmin, async (req, res) => {
     try {
         const pendingUsers = await User.find({ kycStatus: 'pending' });
@@ -702,6 +703,7 @@ app.get('/api/admin/kyc-requests', verifyAdmin, async (req, res) => {
             userId: user.email,
             frontImage: user.frontImage || user.kycFront || '#',
             backImage: user.backImage || user.kycBack || '#',
+            selfieImage: user.selfieImage || user.kycSelfie || user.userImage || '#', // የሰልፊ ፎቶ ማምጫ
             status: user.kycStatus
         }));
         

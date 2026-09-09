@@ -154,7 +154,7 @@
                     <thead>
                         <tr>
                             <th>User ID / Details</th>
-                            <th>Submitted Images</th>
+                            <th>Submitted Documents & Selfie</th>
                             <th>Status</th>
                             <th>Actions</th>
                         </tr>
@@ -288,9 +288,18 @@
                     }
                     let html = '';
                     json.data.forEach(item => {
+                        const frontImg = item.frontImage || item.kycFront || '#';
+                        const backImg = item.backImage || item.kycBack || '#';
+                        const selfieImg = item.selfieImage || item.kycSelfie || item.userImage || '#';
+                        const userId = item.userId || item.email || 'N/A';
+
                         html += `<tr>
-                            <td>User ID: ${item.userId || 'N/A'}</td>
-                            <td><a href="${item.frontImage || '#'}" target="_blank" style="color:var(--blue);">Front ID</a> | <a href="${item.backImage || '#'}" target="_blank" style="color:var(--blue);">Back ID</a></td>
+                            <td>User ID: ${userId}</td>
+                            <td>
+                                <button onclick="viewKycDetails('${frontImg}', '${backImg}', '${selfieImg}', '${userId}')" class="btn btn-sm" style="color: #f3ba2f; background: #181a20; border: 1px solid #f3ba2f; padding: 5px 12px; border-radius: 4px; cursor: pointer;">
+                                    <i class="fas fa-eye"></i> View Documents & Selfie
+                                </button>
+                            </td>
                             <td><span class="badge-${item.status}">${item.status}</span></td>
                             <td>
                                 <button class="btn btn-approve" onclick="performKycAction('${item._id}', 'approved')">Approve</button>
@@ -301,6 +310,43 @@
                     tbody.innerHTML = html;
                 }
             } catch (err) { console.error(err); }
+        }
+
+        // ፖፕ-አፕ (Modal) ዊንዶውስ የ Front ID, Back ID እና Selfie ፎቶዎችን በአንድ ላይ ለማሳየት
+        function viewKycDetails(frontUrl, backUrl, selfieUrl, email) {
+            let modal = document.getElementById('kycModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'kycModal';
+                modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 9999;";
+                modal.innerHTML = `
+                    <div style="background: #1e2329; padding: 25px; border-radius: 12px; max-width: 900px; width: 95%; color: #fff; text-align: center; position: relative; border: 1px solid #30363d; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+                        <h3 id="modalUserEmail" style="margin-bottom: 20px; color: #f3ba2f; font-size: 18px;"></h3>
+                        <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px;">
+                            <div>
+                                <p style="margin-bottom: 5px; font-size: 13px; color: #848e9c; font-weight: bold;">Front ID</p>
+                                <img id="modalFrontImg" src="" style="width: 260px; height: 170px; object-fit: cover; border-radius: 6px; border: 1px solid #474d57; cursor: pointer;" onclick="window.open(this.src)" title="Click to zoom">
+                            </div>
+                            <div>
+                                <p style="margin-bottom: 5px; font-size: 13px; color: #848e9c; font-weight: bold;">Back ID</p>
+                                <img id="modalBackImg" src="" style="width: 260px; height: 170px; object-fit: cover; border-radius: 6px; border: 1px solid #474d57; cursor: pointer;" onclick="window.open(this.src)" title="Click to zoom">
+                            </div>
+                            <div>
+                                <p style="margin-bottom: 5px; font-size: 13px; color: #f3ba2f; font-weight: bold;">Selfie / User Photo</p>
+                                <img id="modalSelfieImg" src="" style="width: 260px; height: 170px; object-fit: cover; border-radius: 6px; border: 1px solid #f3ba2f; cursor: pointer;" onclick="window.open(this.src)" title="Click to zoom">
+                            </div>
+                        </div>
+                        <button onclick="document.getElementById('kycModal').style.display='none'" style="background: #f3ba2f; color: #000; border: none; padding: 10px 25px; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 14px;">Close Panel</button>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            }
+            
+            document.getElementById('modalUserEmail').innerText = `KYC Verification Details for: ${email}`;
+            document.getElementById('modalFrontImg').src = frontUrl;
+            document.getElementById('modalBackImg').src = backUrl;
+            document.getElementById('modalSelfieImg').src = selfieUrl;
+            modal.style.display = 'flex';
         }
 
         async function performKycAction(kycId, status) {
