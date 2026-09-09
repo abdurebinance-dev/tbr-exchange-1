@@ -873,15 +873,25 @@ app.post('/api/auth/login', async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
-// Simple Working Admin Stats
+// 1. Live Admin Stats with actual pending KYC count from Database
 app.get('/api/admin/stats', async (req, res) => {
     try {
-        const usersCount = await User.countDocuments();
+        const totalUsers = await User.countDocuments();
+        
+        // እውነተኛውን ፔንዲንግ KYC ብዛት ከዳታቤዝ ይቆጥራል
+        const pendingKycCount = await User.countDocuments({ 
+            $or: [
+                { kycStatus: 'pending' }, 
+                { status: 'pending' },
+                { 'kyc.status': 'pending' }
+            ] 
+        });
+
         res.status(200).json({
             success: true,
             stats: {
-                totalUsers: usersCount > 0 ? usersCount : 5,
-                pendingKyc: 1,
+                totalUsers: totalUsers > 0 ? totalUsers : 0,
+                pendingKyc: pendingKycCount,
                 totalVolume: 42500,
                 activeEscrow: 1250
             }
@@ -891,17 +901,15 @@ app.get('/api/admin/stats', async (req, res) => {
     }
 });
 
-// Simple Working KYC Detail by ID
+// 2. KYC Detail by ID (Fetching ACTUAL User Images from Database)
 app.get('/api/admin/kyc/:id', async (req, res) => {
     try {
         const targetId = req.params.id;
         let user = await User.findById(targetId).select('-password');
         
         if (!user) {
-            user = await User.findOne(); // ከጠፋ የመጀመሪያውን ዩዘር ያመጣል
+            user = await User.findOne(); 
         }
-
-        const dummyImg = 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=400';
 
         res.status(200).json({
             success: true,
@@ -909,12 +917,15 @@ app.get('/api/admin/kyc/:id', async (req, res) => {
                 _id: user ? user._id : targetId,
                 fullName: user ? (user.fullName || user.name) : 'Abdurahman Ashebir Yimam',
                 email: user ? user.email : 'binanceme73@gmail.com',
-                idNumber: 'ET-98765432',
-                docType: 'National ID / Passport',
-                frontImage: dummyImg,
-                backImage: dummyImg,
-                selfieImage: dummyImg,
-                status: 'pending'
+                idNumber: user ? (user.idNumber || user.nationalId || 'ET-98765432') : 'ET-98765432',
+                docType: user ? (user.docType || 'National ID / Passport') : 'National ID / Passport',
+                
+                // የናሙናው ሊንክ ጠፍቶ አሁን በቀጥታ ከዳታቤዝ የሚመጡት ትክክለኛ የፎቶ ፊልዶች ተተክተዋል
+                frontImage: user ? (user.frontImage || user.kycFront || user.idFront || user.kycDocument || '') : '',
+                backImage: user ? (user.backImage || user.kycBack || user.idBack || '') : '',
+                selfieImage: user ? (user.selfieImage || user.selfie || user.kycSelfie || '') : '',
+                
+                status: user ? (user.kycStatus || user.status || 'pending') : 'pending'
             }
         });
     } catch (error) {
