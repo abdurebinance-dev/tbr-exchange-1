@@ -606,21 +606,28 @@ function verifyAdminToken(req, res, next) {
 // ==========================================
 // 2. KYC SUBMIT ROUTE (Combined with Multer & Auth)
 // ==========================================
-app.post('/api/kyc/submit', verifyAdminToken, upload.fields([
+// KYC SUBMIT ROUTE (ተጠቃሚው ራሱ ኬይሲ ሲልክ የሚሰራ ራውት)
+app.post('/api/kyc/submit', upload.fields([
     { name: 'idImage', maxCount: 1 },
     { name: 'selfieImage', maxCount: 1 },
     { name: 'idBack', maxCount: 1 }
 ]), async (req, res) => {
     try {
-        const userId = req.user.id || req.user.userId;
+        const authHeader = req.headers['authorization'];
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ success: false, message: 'Unauthorized user' });
+        }
+
+        const token = authHeader.split(' ')[1];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const userId = decoded.id || decoded.userId;
+
         const { fullName, idNumber, dateOfBirth, residentialAddress } = req.body;
 
-        // የፋይሎቹን ሊንኮች ማግኘት (ካሉ)
         const frontImage = req.files && req.files['idImage'] ? req.files['idImage'][0].path : '';
         const selfieImage = req.files && req.files['selfieImage'] ? req.files['selfieImage'][0].path : '';
         const backImage = req.files && req.files['idBack'] ? req.files['idBack'][0].path : '';
 
-        // ዳታቤዝ ውስጥ ማዘመን
         await User.findByIdAndUpdate(userId, {
             fullName,
             idNumber,
@@ -639,7 +646,6 @@ app.post('/api/kyc/submit', verifyAdminToken, upload.fields([
         return res.status(500).json({ success: false, message: 'Server error during KYC submission.' });
     }
 });
-
 
 // ==========================================
 // 3. ADMIN & USER ROUTES
