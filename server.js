@@ -628,3 +628,7 @@ app.post('/api/admin/kyc-action', async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
+PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+    console.log(`Server is running smoothly on port ${PORT}`);
+});
