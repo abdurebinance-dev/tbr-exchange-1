@@ -767,7 +767,7 @@ app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
 });
 
 
-// --- 9. User KYC Submission API (Fixed User Identification) ---
+// --- 9. User KYC Submission API (Fixed Multi-User Submission) ---
 app.post('/api/kyc/submit', async (req, res) => {
     try {
         const authHeader = req.headers['authorization'];
@@ -776,57 +776,67 @@ app.post('/api/kyc/submit', async (req, res) => {
         let userId = req.body.userId;
         let email = req.body.email;
 
-        // ከ Token ማንነቱን ለማግኘት መሞከር
+        // ከ Token ዩዘሩን ለመለየት
         if (token) {
             try {
                 const verified = jwt.verify(token, JWT_SECRET);
                 userId = verified.id;
                 email = verified.email;
             } catch (e) {
-                console.error('Token verification error in KYC:', e.message);
+                console.error('Token verification error:', e.message);
             }
         }
 
         const { fullName, idNumber, dateOfBirth, residentialAddress, address, docType, frontImage, backImage, selfieImage } = req.body;
 
-        // Front Image እና Selfie ግዴታ መሆናቸውን ማረጋገጥ
         if (!frontImage || !selfieImage) {
             return res.status(400).json({ success: false, message: "የመታወቂያ ፊት (Front) እና የሰልፊ ፎቶ (Selfie) ግዴታ ናቸው!" });
         }
 
-        // ዩዘርን ለመፈለግ የሚረጭ query (በ userId, በ email ወይም በመጨረሻ የተመዘገበ)
         let query = null;
         if (userId) {
             query = { _id: userId };
         } else if (email) {
             query = { email: email };
+        }
+
+        let user = null;
+        if (query) {
+            user = await User.findOne(query);
+        }
+
+        // ዩዘሩ ከሌለ በኢሜል ወይም በአዲስ መልክ እንፈጥራለን/እናገኛለን
+        if (!user && email) {
+            user = await User.findOne({ email });
+        }
+
+        if (user) {
+            // ነባር ዩዘር ከሆነ መረጃውን እናዘምነዋለን
+            user.fullName = fullName || user.fullName;
+            user.address = residentialAddress || address || user.address;
+            user.idNumber = idNumber || user.idNumber;
+            user.dateOfBirth = dateOfBirth || user.dateOfBirth;
+            user.docType = docType || user.docType;
+            user.frontImage = frontImage;
+            user.backImage = backImage || '';
+            user.selfieImage = selfieImage;
+            user.kycStatus = 'pending'; // ፕንዲንግ እናደርገዋለን
+            await user.save();
         } else {
-            // ከሌለ በስተመጨረሻ የገባውን ተጠቃሚ መውሰድ (ወይም አዲስ መፍጠር እንዳይሳሳት)
-            const lastUser = await User.findOne({}).sort({ _id: -1 });
-            if (lastUser) {
-                query = { _id: lastUser._id };
-            }
-        }
-
-        if (!query) {
-            return res.status(400).json({ success: false, message: "ተጠቃሚው አልታወቀም (User identification failed)" });
-        }
-
-        await User.findOneAndUpdate(
-            query,
-            { 
-                fullName: fullName || '', 
-                address: residentialAddress || address || '', 
+            // ዩዘሩ ሙሉ በሙሉ ካልተገኘ አዲስ ፕንዲንግ ዩዘር እንፈጥራለን
+            await User.create({
+                email: email || `user_${Date.now()}@tbr.com`,
+                fullName: fullName || '',
+                address: residentialAddress || address || '',
                 idNumber: idNumber || '',
                 dateOfBirth: dateOfBirth || '',
                 docType: docType || 'national_id',
-                frontImage, 
-                backImage: backImage || '', 
-                selfieImage, 
-                kycStatus: 'pending' 
-            },
-            { new: true }
-        );
+                frontImage,
+                backImage: backImage || '',
+                selfieImage,
+                kycStatus: 'pending'
+            });
+        }
 
         res.json({ success: true, message: "የ KYC መረጃዎ በትክክል ተልኳል!" });
     } catch (error) {
