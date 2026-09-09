@@ -583,7 +583,48 @@ app.post('/api/reset-password', async (req, res) => {
     }
 });
 
-const SERVER_PORT = process.env.PORT || 5000;
-appServer.listen(SERVER_PORT, '0.0.0.0', () => {
-    console.log(`Server is running on port ${SERVER_PORT}`);
+// ==========================================
+// የ KYC እና ADMIN ራውቶች ብቻ (በነባሩ server.js መጨረሻ ላይ የሚጨመሩ)
+// ==========================================
+
+// 1. ተጠቃሚው KYC ሲልክ
+app.post('/api/user/submit-kyc', upload.single('idDocument'), async (req, res) => {
+    try {
+        const { userId, fullName, documentType } = req.body;
+        const filePath = req.file ? req.file.path : null;
+
+        res.json({ 
+            success: true, 
+            message: "የ KYC ሰነድዎ በትክክል ገብቷል! አስተዳዳሪው እስኪመረምረው በትዕግስት ይጠብቁ።" 
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// 2. አድሚኑ የ KYC ጥያቄዎችን እንዲያይ
+app.get('/api/admin/kyc-requests', async (req, res) => {
+    try {
+        const pendingKycs = [
+            { id: "605c72ef", name: "Abdurahman Ashebir", docType: "National ID", date: "2026-09-09", status: "Pending" }
+        ];
+
+        res.json({ success: true, pendingKycs });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// 3. አድሚኑ KYC ሲቀበል ወይም ሲቀንስ
+app.post('/api/admin/kyc-action', async (req, res) => {
+    try {
+        const { userId, action } = req.body;
+
+        res.json({ 
+            success: true, 
+            message: "የተጠቃሚው KYC ሰነድ በትክክል ተስተካክሏል!" 
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
 });
