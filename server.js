@@ -583,6 +583,8 @@ app.post('/api/reset-password', async (req, res) => {
     }
 });
 
+const multer = require('multer');
+
 // --- 1. Admin Login Route (Fixed Direct Admin Access) ---
 app.post('/api/admin/login', async (req, res) => {
     try {
@@ -747,7 +749,6 @@ app.get('/api/admin/users', verifyAdmin, async (req, res) => {
 app.post('/api/admin/settings', verifyAdmin, async (req, res) => {
     try {
         const { buyRate, sellRate, platformFee } = req.body;
-        // መረጃውን ዳታቤዝ ላይ ማስቀመጥ (ወይም በ Settings Model)
         res.json({ success: true, message: 'Settings updated successfully' });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error updating settings' });
@@ -758,7 +759,7 @@ app.post('/api/admin/settings', verifyAdmin, async (req, res) => {
 // --- 8. User Ban / Suspend Endpoint ---
 app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
     try {
-        const { userId, action } = req.body; // action: 'ban' ወይም 'unban'
+        const { userId, action } = req.body; 
         const isBanned = action === 'ban';
         await User.findByIdAndUpdate(userId, { isBanned });
         res.json({ success: true, message: `User successfully ${action}ned` });
@@ -768,12 +769,7 @@ app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
 });
 
 
-// --- 9. Server Port Listener (ሁልጊዜ ፋይሉ መጨረሻ ላይ መሆን አለበት) ---
-app.listen(process.env.PORT || 5000, () => {
-    console.log(`Server is running on port ${process.env.PORT || 5000}`);
-});
-
-// --- User KYC Submission API (ይህንን ብቻ የሰርቨርህ መጨረሻ ላይ ጨምረው) ---
+// --- 9. User KYC Submission API ---
 const kycUpload = multer({ 
     storage: multer.diskStorage({
         destination: (req, file, cb) => cb(null, 'uploads/'),
@@ -811,4 +807,10 @@ app.post('/api/kyc/submit', kycUpload.fields([
         console.error('KYC Submit Error:', error);
         res.status(500).json({ success: false, message: 'የሰርቨር ችግር አጋጥሟል::' });
     }
+});
+
+
+// --- 10. Server Port Listener (ሁልጊዜ ፋይሉ መጨረሻ ላይ መሆን አለበት) ---
+app.listen(process.env.PORT || 5000, () => {
+    console.log(`Server is running on port ${process.env.PORT || 5000}`);
 });
