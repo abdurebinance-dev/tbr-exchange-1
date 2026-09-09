@@ -583,7 +583,7 @@ app.post('/api/reset-password', async (req, res) => {
     }
 });
 
-PORT = process.env.PORT || 5000;
-appServer.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server is running on port ${PORT}`);
+const SERVER_PORT = process.env.PORT || 5000;
+appServer.listen(SERVER_PORT, '0.0.0.0', () => {
+    console.log(`Server is running on port ${SERVER_PORT}`);
 });
