@@ -599,45 +599,6 @@ appServer.use(express.json({ limit: '50mb' }));
 appServer.use(express.urlencoded({ extended: true, limit: '50mb' }));
 appServer.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-const multerStorage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, 'uploads/');
-    },
-    filename: function (req, file, cb) {
-        cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname));
-    }
-});
-const uploadKycs = multer({ storage: multerStorage });
-
-function verifyAdminToken(req, res, next) {
-    try {
-        const authHeader = req.headers['authorization'];
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({ success: false, message: 'Unauthorized user' });
-        }
-        const token = authHeader.split(' ')[1];
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = decoded;
-        next();
-    } catch (error) {
-        return res.status(401).json({ success: false, message: 'Unauthorized user' });
-    }
-}
-
-appServer.post('/api/kyc/submit', uploadKycs.fields([
-    { name: 'idImage', maxCount: 1 },
-    { name: 'frontImage', maxCount: 1 },
-    { name: 'selfieImage', maxCount: 1 },
-    { name: 'idBack', maxCount: 1 },
-    { name: 'backImage', maxCount: 1 }
-]), async (req, res) => {
-    try {
-        return res.status(200).json({ success: true, message: 'KYC submitted successfully.' });
-    } catch (error) {
-        return res.status(500).json({ success: false, message: 'Server error during KYC submission.' });
-    }
-});
-
 appServer.get('/api/auth/me', async (req, res) => {
     try {
         res.status(200).json({ success: true, message: 'Auth check OK' });
