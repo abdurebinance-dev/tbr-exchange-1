@@ -583,7 +583,7 @@ app.post('/api/reset-password', async (req, res) => {
     }
 });
 
-// Helper Function: Verify Admin Middleware (አድሚን መሆኑን ለማረጋገጥ)
+// Helper Function: Verify Admin Middleware (በ isAdmin: true አማካኝነት ማረጋገጥ)
 async function verifyAdmin(req, res, next) {
     try {
         const authHeader = req.headers['authorization'];
@@ -596,9 +596,8 @@ async function verifyAdmin(req, res, next) {
         const verified = jwt.verify(token, JWT_SECRET);
         const user = await User.findById(verified.id);
 
-        // እዚህ ጋር የአድሚን ኢሜይል ወይም ሮል (Role) ማረጋገጥ ይቻላል
-        // ለምሳሌ ኢሜይሉ አድሚን ከሆነ ወይም isAdmin: true ካለው:
-       if (!user || user.email !== 'binanceme73@gmail.com') { // እንደአስፈላጊነቱ የአድሚን ኢሜይል መቀየር ይቻላል
+        // ዳታቤዝ ላይ isAdmin: true መሆኑን በቀጥታ ይፈትሻል
+        if (!user || !user.isAdmin) { 
             return res.status(403).json({ success: false, message: 'Access denied. Admin privileges required.' });
         }
 
