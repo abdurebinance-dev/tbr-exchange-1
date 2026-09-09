@@ -677,27 +677,22 @@ app.post('/api/admin/login', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Please provide email and password.' });
         }
 
-        // ተጠቃሚውን በኢሜል መፈለግ
         const user = await User.findOne({ email });
         if (!user) {
             return res.status(401).json({ success: false, message: 'Invalid credentials or user not found.' });
         }
 
-        // አድሚን መሆኑን ማረጋገጥ
         if (!user.isAdmin) {
             return res.status(403).json({ success: false, message: 'Access denied. Not an admin.' });
         }
 
-        // ፓስወርድ ማወዳደር (የእርስዎ ኮድ bcrypt የሚጠቀም ከሆነ)
-        const isMatch = await bcrypt.compare(password, user.password);
-        // *ማስታወሻ:* ፓስወርዱን ሃሽ (Hash) ሳያደርጉ ቀጥታ ካስቀመጡት (ለምሳሌ: user.password === password) ከታች ያለውን መጠቀም ይችላሉ፡
-        // const isMatch = (password === user.password);
+        // ፓስወርዱን በቀጥታ ማወዳደር (PlainText check)
+        const isMatch = (password === user.password);
 
         if (!isMatch) {
             return res.status(401).json({ success: false, message: 'Invalid email or password.' });
         }
 
-        // ቶከን ማመንጨት (JWT Token)
         const token = jwt.sign(
             { id: user._id, email: user.email, isAdmin: user.isAdmin },
             JWT_SECRET,
