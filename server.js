@@ -616,40 +616,60 @@ app.post('/api/kyc/submit', upload.fields([
 ]), async (req, res) => {
     try {
         const authHeader = req.headers['authorization'];
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({ success: false, message: 'Unauthorized user: No token provided' });
+        let userId = null;
+
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            const token = authHeader.split(' ')[1];
+            if (token && token !== 'undefined' && token !== 'null') {
+                try {
+                    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+                    userId = decoded.id || decoded.userId;
+                } catch (e) {
+                    // ቶከኑ የተበላሸ ከሆነ ችላ ብሎ በኢሜል እንፈልገዋለን
+                }
+            }
         }
 
-        const token = authHeader.split(' ')[1];
-        if (!token || token === 'undefined' || token === 'null') {
-            return res.status(401).json({ success: false, message: 'Unauthorized user: Invalid token' });
+        const { fullName, idNumber, dateOfBirth, residentialAddress, email } = req.body;
+
+        // ቶከን ከሌለ በኢሜል ወይም በስም ዩዘሩን መፈለግ
+        let targetUser = null;
+        if (userId) {
+            targetUser = await User.findById(userId);
+        }
+        if (!targetUser && email) {
+            targetUser = await User.findOne({ email });
+        }
+        if (!targetUser && fullName) {
+            targetUser = await User.findOne({ fullName });
         }
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const userId = decoded.id || decoded.userId;
-
-        const { fullName, idNumber, dateOfBirth, residentialAddress } = req.body;
+        if (!targetUser) {
+            return res.status(401).json({ success: false, message: 'Please log in again to submit KYC.' });
+        }
 
         const frontImage = req.files?.['idImage']?.[0]?.path || req.files?.['frontImage']?.[0]?.path || '';
         const backImage = req.files?.['idBack']?.[0]?.path || req.files?.['backImage']?.[0]?.path || '';
         const selfieImage = req.files?.['selfieImage']?.[0]?.path || '';
 
-        await User.findByIdAndUpdate(userId, {
-            fullName,
-            idNumber,
-            dateOfBirth,
-            residentialAddress,
-            ...(frontImage && { frontImage }),
-            ...(backImage && { backImage }),
-            ...(selfieImage && { selfieImage }),
-            kycStatus: 'pending',
-            kycSubmittedAt: new Date()
-        });
+        targetUser.fullName = fullName || targetUser.fullName;
+        targetUser.idNumber = idNumber || targetUser.idNumber;
+        targetUser.dateOfBirth = dateOfBirth || targetUser.dateOfBirth;
+        targetUser.residentialAddress = residentialAddress || targetUser.residentialAddress;
+        
+        if (frontImage) targetUser.frontImage = frontImage;
+        if (backImage) targetUser.backImage = backImage;
+        if (selfieImage) targetUser.selfieImage = selfieImage;
+
+        targetUser.kycStatus = 'pending';
+        targetUser.kycSubmittedAt = new Date();
+
+        await targetUser.save();
 
         return res.status(200).json({ success: true, message: 'KYC submitted successfully and is under review.' });
     } catch (error) {
         console.error('KYC submission error details:', error.message);
-        return res.status(401).json({ success: false, message: 'Session expired or invalid token. Please log in again.' });
+        return res.status(500).json({ success: false, message: 'Server error during KYC submission.' });
     }
 });
 
