@@ -693,69 +693,54 @@ app.post('/api/admin/rates', verifyAdminToken, async (req, res) => {
 // Get All KYC List
 app.get('/api/admin/kyc', verifyAdminToken, async (req, res) => {
     try {
-        let kycList = await KYC.find({}).sort({ createdAt: -1 });
+        let kycList = await KYC.find({}).sort({ createdAt: -1 }).lean();
 
-        if (!kycList || kycList.length === 0) {
-            const usersWithKyc = await User.find({ 
-                kycStatus: { $in: ['pending', 'verified', 'rejected', 'approved'] } 
-            }).select('-password');
+        const usersWithKyc = await User.find({ 
+            kycStatus: { $in: ['pending', 'verified', 'rejected', 'approved'] } 
+        }).select('-password').lean();
 
-            kycList = usersWithKyc.map(user => ({
+        const combinedListMap = new Map();
+
+        usersWithKyc.forEach(user => {
+            combinedListMap.set(user._id.toString(), {
                 _id: user._id,
                 userId: user._id,
                 fullName: user.fullName || 'N/A',
-                email: user.email,
+                email: user.email || 'N/A',
                 idNumber: user.idNumber || 'N/A',
+                docType: user.docType || 'ID Card',
                 frontImage: user.frontImage || user.kycDocument || '',
                 backImage: user.backImage || user.backDocument || user.idBack || '',
                 selfieImage: user.selfieImage || '',
-                status: user.kycStatus === 'verified' ? 'approved' : user.kycStatus
-            }));
-        } else {
-            kycList = kycList.map(item => ({
-                ...item.toObject ? item.toObject() : item,
-                backImage: item.backImage || item.backDocument || item.idBack || ''
-            }));
+                status: user.kycStatus === 'verified' ? 'approved' : user.kycStatus,
+                createdAt: user.kycSubmittedAt || user.updatedAt || new Date()
+            });
+        });
+
+        if (kycList && kycList.length > 0) {
+            kycList.forEach(item => {
+                const uId = item.userId ? item.userId.toString() : item._id.toString();
+                combinedListMap.set(uId, {
+                    _id: item._id,
+                    userId: item.userId || item._id,
+                    fullName: item.fullName || 'N/A',
+                    email: item.email || 'N/A',
+                    idNumber: item.idNumber || 'N/A',
+                    docType: item.docType || 'ID Card',
+                    frontImage: item.frontImage || item.kycDocument || '',
+                    backImage: item.backImage || item.backDocument || item.idBack || '',
+                    selfieImage: item.selfieImage || '',
+                    status: item.status || 'pending',
+                    createdAt: item.createdAt || new Date()
+                });
+            });
         }
 
-        res.status(200).json({ success: true, data: kycList });
+        const finalKycList = Array.from(combinedListMap.values());
+
+        res.status(200).json({ success: true, data: finalKycList });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-// Get KYC Details by ID
-app.get('/api/admin/kyc/:id', verifyAdminToken, async (req, res) => {
-    try {
-        let kycId = req.params.id ? req.params.id.replace('#', '').trim() : '';
-        let kycDetails = await KYC.findById(kycId).catch(() => null);
-
-        if (kycDetails) {
-            kycDetails = {
-                ...kycDetails.toObject(),
-                backImage: kycDetails.backImage || kycDetails.backDocument || kycDetails.idBack || ''
-            };
-        }
-
-        if (!kycDetails && kycId.match(/^[0-9a-fA-F]{24}$/)) {
-            const targetUser = await User.findById(kycId).catch(() => null);
-            if (targetUser) {
-                kycDetails = {
-                    fullName: targetUser.fullName,
-                    idNumber: targetUser.idNumber || 'N/A',
-                    frontImage: targetUser.frontImage || targetUser.kycDocument || '',
-                    backImage: targetUser.backImage || targetUser.backDocument || targetUser.idBack || '',
-                    selfieImage: targetUser.selfieImage || '',
-                    userId: targetUser._id,
-                    email: targetUser.email,
-                    status: targetUser.kycStatus || 'pending'
-                };
-            }
-        }
-
-        if (!kycDetails) return res.status(404).json({ success: false, message: 'KYC details not found' });
-        res.status(200).json({ success: true, data: kycDetails });
-    } catch (error) {
+        console.error('Admin KYC fetch error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });
