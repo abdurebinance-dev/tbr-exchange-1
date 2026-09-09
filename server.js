@@ -601,8 +601,6 @@ app.post('/api/kyc/submit', verifyAdminToken, async (req, res) => {
         return res.status(500).json({ success: false, message: 'Server error' });
     }
 });
-// 1. Dashboard Stats
-const jwt = require('jsonwebtoken');
 
 // 1. መጀመሪያ ሚድልዌሩ መፃፍ አለበት
 const verifyAdminToken = (req, res, next) => {
