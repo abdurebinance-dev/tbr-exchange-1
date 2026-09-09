@@ -668,3 +668,50 @@ app.get('/api/admin/users', verifyAdmin, async (req, res) => {
 app.listen(process.env.PORT || 5000, () => {
     console.log(`Server is running on port ${process.env.PORT || 5000}`);
 });
+// Admin Login Route (የአድሚን መግቢያ ራውት)
+app.post('/api/admin/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            return res.status(400).json({ success: false, message: 'Please provide email and password.' });
+        }
+
+        // ተጠቃሚውን በኢሜል መፈለግ
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(401).json({ success: false, message: 'Invalid credentials or user not found.' });
+        }
+
+        // አድሚን መሆኑን ማረጋገጥ
+        if (!user.isAdmin) {
+            return res.status(403).json({ success: false, message: 'Access denied. Not an admin.' });
+        }
+
+        // ፓስወርድ ማወዳደር (የእርስዎ ኮድ bcrypt የሚጠቀም ከሆነ)
+        const isMatch = await bcrypt.compare(password, user.password);
+        // *ማስታወሻ:* ፓስወርዱን ሃሽ (Hash) ሳያደርጉ ቀጥታ ካስቀመጡት (ለምሳሌ: user.password === password) ከታች ያለውን መጠቀም ይችላሉ፡
+        // const isMatch = (password === user.password);
+
+        if (!isMatch) {
+            return res.status(401).json({ success: false, message: 'Invalid email or password.' });
+        }
+
+        // ቶከን ማመንጨት (JWT Token)
+        const token = jwt.sign(
+            { id: user._id, email: user.email, isAdmin: user.isAdmin },
+            JWT_SECRET,
+            { expiresIn: '1d' }
+        );
+
+        res.json({
+            success: true,
+            message: 'Admin logged in successfully',
+            token: token
+        });
+
+    } catch (error) {
+        console.error('Admin Login Error:', error);
+        res.status(500).json({ success: false, message: 'Server error during login.' });
+    }
+});
