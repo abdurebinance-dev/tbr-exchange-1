@@ -666,3 +666,6 @@ app.get('/api/admin/users', verifyAdmin, async (req, res) => {
         res.status(500).json({ success: false, message: 'Server error while fetching users.' });
     }
 });
+app.listen(process.env.PORT || 5000, () => {
+    console.log(`Server is running on port ${process.env.PORT || 5000}`);
+});
