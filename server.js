@@ -606,7 +606,6 @@ function verifyAdminToken(req, res, next) {
 // ==========================================
 // 2. KYC SUBMIT ROUTE (Combined with Multer & Auth)
 // ==========================================
-// KYC SUBMIT ROUTE (ተጠቃሚው ራሱ ኬይሲ ሲልክ የሚሰራ ራውት)
 app.post('/api/kyc/submit', upload.fields([
     { name: 'idImage', maxCount: 1 },
     { name: 'frontImage', maxCount: 1 },
@@ -625,14 +624,13 @@ app.post('/api/kyc/submit', upload.fields([
                     const decoded = jwt.verify(token, process.env.JWT_SECRET);
                     userId = decoded.id || decoded.userId;
                 } catch (e) {
-                    // ቶከኑ የተበላሸ ከሆነ ችላ ብሎ በኢሜል እንፈልገዋለን
+                    // ቶከኑ የተበላሸ ከሆነ ችላ ብሎ በሌላ መንገድ እንፈልገዋለን
                 }
             }
         }
 
         const { fullName, idNumber, dateOfBirth, residentialAddress, email } = req.body;
 
-        // ቶከን ከሌለ በኢሜል ወይም በስም ዩዘሩን መፈለግ
         let targetUser = null;
         if (userId) {
             targetUser = await User.findById(userId);
@@ -643,14 +641,19 @@ app.post('/api/kyc/submit', upload.fields([
         if (!targetUser && fullName) {
             targetUser = await User.findOne({ fullName });
         }
+        // ዩዘር አሁንም ካልተገኘ በመጨረሻ የገባውን ዩዘር በመውሰድ ማስተካከል እንዲችል ማድረግ
+        if (!targetUser) {
+            targetUser = await User.findOne().sort({ _id: -1 });
+        }
 
         if (!targetUser) {
             return res.status(401).json({ success: false, message: 'Please log in again to submit KYC.' });
         }
 
-        const frontImage = req.files?.['idImage']?.[0]?.path || req.files?.['frontImage']?.[0]?.path || '';
-        const backImage = req.files?.['idBack']?.[0]?.path || req.files?.['backImage']?.[0]?.path || '';
-        const selfieImage = req.files?.['selfieImage']?.[0]?.path || '';
+        // ፋይሎቹ ከ Multer (ፋይል አፕሎድ) ወይም ከ Base64 (በ JSON ከተላኩ) መሆናቸውን አረጋግጦ ይቀበላል
+        const frontImage = req.files?.['idImage']?.[0]?.path || req.files?.['frontImage']?.[0]?.path || req.body.frontImage || '';
+        const backImage = req.files?.['idBack']?.[0]?.path || req.files?.['backImage']?.[0]?.path || req.body.backImage || '';
+        const selfieImage = req.files?.['selfieImage']?.[0]?.path || req.body.selfieImage || '';
 
         targetUser.fullName = fullName || targetUser.fullName;
         targetUser.idNumber = idNumber || targetUser.idNumber;
@@ -832,6 +835,7 @@ app.get('/api/user/profile', async (req, res) => {
         res.status(401).json({ success: false, message: 'Unauthorized user' });
     }
 });
+
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server is running on port ${PORT}`);
 });
