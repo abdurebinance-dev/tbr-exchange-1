@@ -617,16 +617,19 @@ app.post('/api/kyc/submit', upload.fields([
     try {
         const authHeader = req.headers['authorization'];
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({ success: false, message: 'Unauthorized user' });
+            return res.status(401).json({ success: false, message: 'Unauthorized user: No token provided' });
         }
 
         const token = authHeader.split(' ')[1];
+        if (!token || token === 'undefined' || token === 'null') {
+            return res.status(401).json({ success: false, message: 'Unauthorized user: Invalid token' });
+        }
+
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const userId = decoded.id || decoded.userId;
 
         const { fullName, idNumber, dateOfBirth, residentialAddress } = req.body;
 
-        // የፋይሎቹን ዱካዎች በተለያዩ ስሞች መፈለግ (Front, Back, Selfie)
         const frontImage = req.files?.['idImage']?.[0]?.path || req.files?.['frontImage']?.[0]?.path || '';
         const backImage = req.files?.['idBack']?.[0]?.path || req.files?.['backImage']?.[0]?.path || '';
         const selfieImage = req.files?.['selfieImage']?.[0]?.path || '';
@@ -645,9 +648,8 @@ app.post('/api/kyc/submit', upload.fields([
 
         return res.status(200).json({ success: true, message: 'KYC submitted successfully and is under review.' });
     } catch (error) {
-        console.error('KYC submission error details:', error);
-        // ትክክለኛውን የኤረር መልዕክት ወደ ብሮውዘር እንዲልክ ማድረግ
-        return res.status(500).json({ success: false, message: error.message || 'Server error during KYC submission.' });
+        console.error('KYC submission error details:', error.message);
+        return res.status(401).json({ success: false, message: 'Session expired or invalid token. Please log in again.' });
     }
 });
 
