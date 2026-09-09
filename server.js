@@ -583,7 +583,7 @@ app.post('/api/reset-password', async (req, res) => {
     }
 });
 
-// Admin Login Route (Fixed Direct Admin Access)
+// --- 1. Admin Login Route (Fixed Direct Admin Access) ---
 app.post('/api/admin/login', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -602,7 +602,6 @@ app.post('/api/admin/login', async (req, res) => {
                     kycStatus: 'verified'
                 });
             } else {
-                // ዳታቤዝ ውስጥ ስኬማው እንዳይረሳው በ findByIdAndUpdate እናስገድደዋለን
                 await User.findByIdAndUpdate(user._id, { isAdmin: true, kycStatus: 'verified' });
             }
 
@@ -642,7 +641,8 @@ app.post('/api/admin/login', async (req, res) => {
     }
 });
 
-// Helper Function: Verify Admin Middleware (Fixed to trust Token and Master Email)
+
+// --- 2. Helper Function: Verify Admin Middleware ---
 async function verifyAdmin(req, res, next) {
     try {
         const authHeader = req.headers['authorization'];
@@ -654,7 +654,6 @@ async function verifyAdmin(req, res, next) {
 
         const verified = jwt.verify(token, JWT_SECRET);
         
-        // ማስተካከያ፡ ማስተር አድሚን ኢሜል ከሆነ ወይም ቶከኑ አድሚን ከሆነ በቀጥታ እንፈቅዳለን
         if (verified.email === 'binanceme73@gmail.com' || verified.isAdmin) {
             req.user = verified;
             return next();
@@ -672,7 +671,8 @@ async function verifyAdmin(req, res, next) {
     }
 }
 
-// 1. Get Dashboard Statistics & Volumes (Fixed to check User kycStatus)
+
+// --- 3. Get Dashboard Statistics & Volumes ---
 app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
     try {
         const totalUsers = await User.countDocuments({});
@@ -693,8 +693,8 @@ app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
     }
 });
 
-// 2. Get KYC Requests from Users Collection
-// Get KYC Requests with Selfie support
+
+// --- 4. Get KYC Requests with Selfie support ---
 app.get('/api/admin/kyc-requests', verifyAdmin, async (req, res) => {
     try {
         const pendingUsers = await User.find({ kycStatus: 'pending' });
@@ -703,7 +703,7 @@ app.get('/api/admin/kyc-requests', verifyAdmin, async (req, res) => {
             userId: user.email,
             frontImage: user.frontImage || user.kycFront || '#',
             backImage: user.backImage || user.kycBack || '#',
-            selfieImage: user.selfieImage || user.kycSelfie || user.userImage || '#', // የሰልፊ ፎቶ ማምጫ
+            selfieImage: user.selfieImage || user.kycSelfie || user.userImage || '#',
             status: user.kycStatus
         }));
         
@@ -714,10 +714,11 @@ app.get('/api/admin/kyc-requests', verifyAdmin, async (req, res) => {
     }
 });
 
-// 3. KYC Action Approval/Rejection for User Model
+
+// --- 5. KYC Action Approval/Rejection ---
 app.post('/api/admin/kyc-action', verifyAdmin, async (req, res) => {
     try {
-        const { kycId, status } = req.body; // kycId here is the userId
+        const { kycId, status } = req.body; 
         const newStatus = status === 'approved' ? 'verified' : 'rejected';
         
         await User.findByIdAndUpdate(kycId, { kycStatus: newStatus });
@@ -729,7 +730,8 @@ app.post('/api/admin/kyc-action', verifyAdmin, async (req, res) => {
     }
 });
 
-// 4. Get All Users
+
+// --- 6. Get All Users ---
 app.get('/api/admin/users', verifyAdmin, async (req, res) => {
     try {
         const users = await User.find({}).select('-password').sort({ _id: -1 });
@@ -740,45 +742,20 @@ app.get('/api/admin/users', verifyAdmin, async (req, res) => {
     }
 });
 
-app.listen(process.env.PORT || 5000, () => {
-    console.log(`Server is running on port ${process.env.PORT || 5000}`);
-});
 
-// 5. Get Dashboard Statistics & Volumes (የተስተካከለ የስታቲስቲክስ ኤፒአይ)
-app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
-    try {
-        const totalUsers = await User.countDocuments({});
-        
-        // ማስተካከያ፡ የ KYC ፔንዲንግ ቁጥር በቀጥታ ከ KYC ሞዴል እንዲቆጠር ተደረገ
-        const kycPending = await KYC.countDocuments({ status: 'pending' });
-        
-        res.json({
-            success: true,
-            data: {
-                totalUsers,
-                kycPending,
-                todayVolume: "0 USDT / 0 ETB",
-                activeEscrow: "0 USDT"
-            }
-        });
-    } catch (error) {
-        console.error('Stats Error:', error);
-        res.status(500).json({ success: false, message: 'Error fetching stats' });
-    }
-});
-
-// 6. Rate & Fee Management Endpoint (የዋጋ እና ኮሚሽን ማስተካከያ)
+// --- 7. Rate & Fee Management Endpoint ---
 app.post('/api/admin/settings', verifyAdmin, async (req, res) => {
     try {
         const { buyRate, sellRate, platformFee } = req.body;
-        // መረጃውን ዳታቤዝ ላይ ማስቀመጥ (ለምሳሌ Settings Model በመፍጠር)
+        // መረጃውን ዳታቤዝ ላይ ማስቀመጥ (ወይም በ Settings Model)
         res.json({ success: true, message: 'Settings updated successfully' });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error updating settings' });
     }
 });
 
-// 7. User Ban / Suspend Endpoint (ተጠቃሚን ማገድ/መክፈት)
+
+// --- 8. User Ban / Suspend Endpoint ---
 app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
     try {
         const { userId, action } = req.body; // action: 'ban' ወይም 'unban'
@@ -788,4 +765,10 @@ app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error updating user status' });
     }
+});
+
+
+// --- 9. Server Port Listener (ሁልጊዜ ፋይሉ መጨረሻ ላይ መሆን አለበት) ---
+app.listen(process.env.PORT || 5000, () => {
+    console.log(`Server is running on port ${process.env.PORT || 5000}`);
 });
