@@ -602,20 +602,37 @@ app.post('/api/kyc/submit', verifyAdminToken, async (req, res) => {
     }
 });
 // 1. Dashboard Stats
-app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
+const jwt = require('jsonwebtoken');
+
+// 1. መጀመሪያ ሚድልዌሩ መፃፍ አለበት
+const verifyAdminToken = (req, res, next) => {
     try {
-        const totalUsers = await User.countDocuments();
-        const pendingKyc = await User.countDocuments({ kycStatus: 'pending' });
-        
-        res.status(200).json({
-            success: true,
-            totalUsers: totalUsers,
-            pendingKyc: pendingKyc,
-            todayVolume: 42500,
-            activeEscrow: 1250
-        });
+        const authHeader = req.headers['authorization'];
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ success: false, message: 'Unauthorized user' });
+        }
+
+        const token = authHeader.split(' ')[1];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = decoded;
+        next();
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        return res.status(401).json({ success: false, message: 'Unauthorized user' });
+    }
+};
+
+// 2. ከዛም ራውቱ ላይ ሚድልዌሩን መጥራት
+app.post('/api/kyc/submit', verifyAdminToken, async (req, res) => {
+    try {
+        const userId = req.user.id || req.user.userId;
+        const { fullName, idNumber, dob, address, docType } = req.body;
+
+        // የ KYC ማከማቻ ኮድህ እዚህ ይኖራል...
+
+        return res.status(200).json({ success: true, message: 'KYC submitted successfully' });
+    } catch (error) {
+        console.error('KYC Submit Error:', error);
+        return res.status(500).json({ success: false, message: 'Server error' });
     }
 });
 
