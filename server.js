@@ -767,7 +767,7 @@ app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
 });
 
 
-// --- 9. User KYC Submission API (Fixed Multi-User Submission) ---
+// --- 9. User KYC Submission API (Fixed for Separate Multi-User Submissions) ---
 app.post('/api/kyc/submit', async (req, res) => {
     try {
         const authHeader = req.headers['authorization'];
@@ -776,7 +776,7 @@ app.post('/api/kyc/submit', async (req, res) => {
         let userId = req.body.userId;
         let email = req.body.email;
 
-        // ከ Token ዩዘሩን ለመለየት
+        // ከ Token ማንነቱን ለማግኘት
         if (token) {
             try {
                 const verified = jwt.verify(token, JWT_SECRET);
@@ -793,25 +793,20 @@ app.post('/api/kyc/submit', async (req, res) => {
             return res.status(400).json({ success: false, message: "የመታወቂያ ፊት (Front) እና የሰልፊ ፎቶ (Selfie) ግዴታ ናቸው!" });
         }
 
-        let query = null;
-        if (userId) {
-            query = { _id: userId };
-        } else if (email) {
-            query = { email: email };
-        }
-
         let user = null;
-        if (query) {
-            user = await User.findOne(query);
+
+        // 1. በ userId ለመፈለግ
+        if (userId) {
+            user = await User.findById(userId);
         }
 
-        // ዩዘሩ ከሌለ በኢሜል ወይም በአዲስ መልክ እንፈጥራለን/እናገኛለን
+        // 2. ከሌለ በ email ለመፈለግ
         if (!user && email) {
             user = await User.findOne({ email });
         }
 
         if (user) {
-            // ነባር ዩዘር ከሆነ መረጃውን እናዘምነዋለን
+            // ነባር ዩዘር ከሆነ መረጃውን እናዘምነዋለን (ነገር ግን አዲስ አካውንት ከሆነ አዲስ ዶክመንት እንይዛለን)
             user.fullName = fullName || user.fullName;
             user.address = residentialAddress || address || user.address;
             user.idNumber = idNumber || user.idNumber;
@@ -820,12 +815,12 @@ app.post('/api/kyc/submit', async (req, res) => {
             user.frontImage = frontImage;
             user.backImage = backImage || '';
             user.selfieImage = selfieImage;
-            user.kycStatus = 'pending'; // ፕንዲንግ እናደርገዋለን
+            user.kycStatus = 'pending';
             await user.save();
         } else {
-            // ዩዘሩ ሙሉ በሙሉ ካልተገኘ አዲስ ፕንዲንግ ዩዘር እንፈጥራለን
+            // ዩዘሩ ፈጽሞ ካልተገኘ (በሌላ ብሮውዘር ወይም አካውንት ከሆነ) አዲስ ዩዘር በ KYC መረጃ እንፈጥራለን
             await User.create({
-                email: email || `user_${Date.now()}@tbr.com`,
+                email: email || `user_${Date.now()}_${Math.floor(Math.random()*1000)}@tbr.com`,
                 fullName: fullName || '',
                 address: residentialAddress || address || '',
                 idNumber: idNumber || '',
