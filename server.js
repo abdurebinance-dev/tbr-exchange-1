@@ -594,15 +594,11 @@ const path = require('path');
 const appServer = express();
 const SERVER_PORT = process.env.PORT || 5000;
 
-// Middleware
 appServer.use(cors());
 appServer.use(express.json({ limit: '50mb' }));
 appServer.use(express.urlencoded({ extended: true, limit: '50mb' }));
-
-// ፎቶዎች የሚቀመጡበትን አቃፊ ለህዝብ ክፍት ማድረግ
 appServer.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Multer Storage Configuration
 const multerStorage = multer.diskStorage({
     destination: function (req, file, cb) {
         cb(null, 'uploads/');
