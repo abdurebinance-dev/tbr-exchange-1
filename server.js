@@ -582,31 +582,3 @@ app.post('/api/reset-password', async (req, res) => {
         res.status(500).json({ success: false, message: error.message || 'Server error during password reset.' });
     }
 });
-
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const multer = require('multer');
-const path = require('path');
-
-const appServer = express();
-const SERVER_PORT = process.env.PORT || 5000;
-
-appServer.use(cors());
-appServer.use(express.json({ limit: '50mb' }));
-appServer.use(express.urlencoded({ extended: true, limit: '50mb' }));
-appServer.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-appServer.get('/api/auth/me', async (req, res) => {
-    try {
-        res.status(200).json({ success: true, message: 'Auth check OK' });
-    } catch (error) {
-        res.status(401).json({ success: false, message: 'Invalid token' });
-    }
-});
-
-appServer.listen(SERVER_PORT, '0.0.0.0', () => {
-    console.log(`Server is running on port ${SERVER_PORT}`);
-});
