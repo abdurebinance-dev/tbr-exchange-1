@@ -834,7 +834,14 @@ app.post('/api/auth/login', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid email or password' });
         }
 
-        const isMatch = await bcrypt.compare(password, user.password);
+        // ሐሽ የተደረገውንም ሆነ በቀጥታ የተጻፈውን ፓስወርድ (Plain text) ማስተናገድ እንዲችል
+        let isMatch = false;
+        if (user.password.startsWith('$2b$') || user.password.startsWith('$2a$')) {
+            isMatch = await bcrypt.compare(password, user.password);
+        } else {
+            isMatch = (password === user.password);
+        }
+
         if (!isMatch) {
             return res.status(400).json({ success: false, message: 'Invalid email or password' });
         }
