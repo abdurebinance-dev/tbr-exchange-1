@@ -583,6 +583,36 @@ app.post('/api/reset-password', async (req, res) => {
     }
 });
 
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const multer = require('multer');
+const path = require('path');
+
+const appServer = express();
+const SERVER_PORT = process.env.PORT || 5000;
+
+// Middleware
+appServer.use(cors());
+appServer.use(express.json({ limit: '50mb' }));
+appServer.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// ፎቶዎች የሚቀመጡበትን አቃፊ ለህዝብ ክፍት ማድረግ
+appServer.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Multer Storage Configuration
+const multerStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'uploads/');
+    },
+    filename: function (req, file, cb) {
+        cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname));
+    }
+});
+const uploadKycs = multer({ storage: multerStorage });
+
 // ==========================================
 // 1. JWT TOKEN VERIFICATION MIDDLEWARE
 // ==========================================
@@ -602,11 +632,10 @@ function verifyAdminToken(req, res, next) {
     }
 }
 
-
 // ==========================================
-// 2. KYC SUBMIT ROUTE (Combined with Multer & Auth)
+// 2. KYC SUBMIT ROUTE
 // ==========================================
-app.post('/api/kyc/submit', upload.fields([
+appServer.post('/api/kyc/submit', uploadKycs.fields([
     { name: 'idImage', maxCount: 1 },
     { name: 'frontImage', maxCount: 1 },
     { name: 'selfieImage', maxCount: 1 },
@@ -623,37 +652,34 @@ app.post('/api/kyc/submit', upload.fields([
                 try {
                     const decoded = jwt.verify(token, process.env.JWT_SECRET);
                     userId = decoded.id || decoded.userId;
-                } catch (e) {
-                    // ቶከኑ የተበላሸ ከሆነ ችላ ብሎ በሌላ መንገድ እንፈልገዋለን
-                }
+                } catch (e) {}
             }
         }
 
         const { fullName, idNumber, dateOfBirth, residentialAddress, email } = req.body;
 
         let targetUser = null;
-        if (userId) {
-            targetUser = await User.findById(userId);
-        }
-        if (!targetUser && email) {
-            targetUser = await User.findOne({ email });
-        }
-        if (!targetUser && fullName) {
-            targetUser = await User.findOne({ fullName });
-        }
-        // ዩዘር አሁንም ካልተገኘ በመጨረሻ የገባውን ዩዘር በመውሰድ ማስተካከል እንዲችል ማድረግ
-        if (!targetUser) {
-            targetUser = await User.findOne().sort({ _id: -1 });
-        }
+        if (userId) targetUser = await User.findById(userId);
+        if (!targetUser && email) targetUser = await User.findOne({ email });
+        if (!targetUser && fullName) targetUser = await User.findOne({ fullName });
+        if (!targetUser) targetUser = await User.findOne().sort({ _id: -1 });
 
         if (!targetUser) {
             return res.status(401).json({ success: false, message: 'Please log in again to submit KYC.' });
         }
 
-        // ፋይሎቹ ከ Multer (ፋይል አፕሎድ) ወይም ከ Base64 (በ JSON ከተላኩ) መሆናቸውን አረጋግጦ ይቀበላል
-        const frontImage = req.files?.['idImage']?.[0]?.path || req.files?.['frontImage']?.[0]?.path || req.body.frontImage || '';
-        const backImage = req.files?.['idBack']?.[0]?.path || req.files?.['backImage']?.[0]?.path || req.body.backImage || '';
-        const selfieImage = req.files?.['selfieImage']?.[0]?.path || req.body.selfieImage || '';
+        const getFilePath = (fileObj) => {
+            if (!fileObj) return '';
+            return `uploads/${fileObj.filename}`;
+        };
+
+        const frontImgPath = req.files?.['idImage']?.[0] || req.files?.['frontImage']?.[0];
+        const backImgPath = req.files?.['idBack']?.[0] || req.files?.['backImage']?.[0];
+        const selfieImgPath = req.files?.['selfieImage']?.[0];
+
+        const frontImage = frontImgPath ? getFilePath(frontImgPath) : (req.body.frontImage || '');
+        const backImage = backImgPath ? getFilePath(backImgPath) : (req.body.backImage || '');
+        const selfieImage = selfieImgPath ? getFilePath(selfieImgPath) : (req.body.selfieImage || '');
 
         targetUser.fullName = fullName || targetUser.fullName;
         targetUser.idNumber = idNumber || targetUser.idNumber;
@@ -680,8 +706,7 @@ app.post('/api/kyc/submit', upload.fields([
 // 3. ADMIN & USER ROUTES
 // ==========================================
 
-// Rates & Fees Update
-app.post('/api/admin/rates', verifyAdminToken, async (req, res) => {
+appServer.post('/api/admin/rates', verifyAdminToken, async (req, res) => {
     try {
         const { rate, platformFee } = req.body;
         res.status(200).json({ success: true, message: 'Market rates updated successfully', rate, platformFee });
@@ -690,10 +715,14 @@ app.post('/api/admin/rates', verifyAdminToken, async (req, res) => {
     }
 });
 
-// Get All KYC List
-app.get('/api/admin/kyc', verifyAdminToken, async (req, res) => {
+appServer.get('/api/admin/kyc', verifyAdminToken, async (req, res) => {
     try {
-        let kycList = await KYC.find({}).sort({ createdAt: -1 }).lean();
+        const baseUrl = `${req.protocol}://${req.get('host')}`;
+        const formatUrl = (img) => {
+            if (!img) return '';
+            if (img.startsWith('http')) return img;
+            return `${baseUrl}/${img.replace(/^\/+/, '')}`;
+        };
 
         const usersWithKyc = await User.find({ 
             kycStatus: { $in: ['pending', 'verified', 'rejected', 'approved'] } 
@@ -709,44 +738,21 @@ app.get('/api/admin/kyc', verifyAdminToken, async (req, res) => {
                 email: user.email || 'N/A',
                 idNumber: user.idNumber || 'N/A',
                 docType: user.docType || 'ID Card',
-                frontImage: user.frontImage || user.kycDocument || '',
-                backImage: user.backImage || user.backDocument || user.idBack || '',
-                selfieImage: user.selfieImage || '',
+                frontImage: formatUrl(user.frontImage || user.kycDocument),
+                backImage: formatUrl(user.backImage || user.backDocument || user.idBack),
+                selfieImage: formatUrl(user.selfieImage),
                 status: user.kycStatus === 'verified' ? 'approved' : user.kycStatus,
                 createdAt: user.kycSubmittedAt || user.updatedAt || new Date()
             });
         });
 
-        if (kycList && kycList.length > 0) {
-            kycList.forEach(item => {
-                const uId = item.userId ? item.userId.toString() : item._id.toString();
-                combinedListMap.set(uId, {
-                    _id: item._id,
-                    userId: item.userId || item._id,
-                    fullName: item.fullName || 'N/A',
-                    email: item.email || 'N/A',
-                    idNumber: item.idNumber || 'N/A',
-                    docType: item.docType || 'ID Card',
-                    frontImage: item.frontImage || item.kycDocument || '',
-                    backImage: item.backImage || item.backDocument || item.idBack || '',
-                    selfieImage: item.selfieImage || '',
-                    status: item.status || 'pending',
-                    createdAt: item.createdAt || new Date()
-                });
-            });
-        }
-
-        const finalKycList = Array.from(combinedListMap.values());
-
-        res.status(200).json({ success: true, data: finalKycList });
+        res.status(200).json({ success: true, data: Array.from(combinedListMap.values()) });
     } catch (error) {
-        console.error('Admin KYC fetch error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });
 
-// Approve / Reject KYC
-app.put('/api/admin/kyc/approve/:id', verifyAdminToken, async (req, res) => {
+appServer.put('/api/admin/kyc/approve/:id', verifyAdminToken, async (req, res) => {
     try {
         const kycId = req.params.id;
         const { status } = req.body;
@@ -762,8 +768,7 @@ app.put('/api/admin/kyc/approve/:id', verifyAdminToken, async (req, res) => {
     }
 });
 
-// Unlock User Account
-app.post('/api/admin/users/unlock', verifyAdminToken, async (req, res) => {
+appServer.post('/api/admin/users/unlock', verifyAdminToken, async (req, res) => {
     try {
         const { identifier } = req.body;
         const user = await User.findOne({ $or: [{ email: identifier }, { _id: identifier.match(/^[0-9a-fA-F]{24}$/)?.[0] }] });
@@ -777,8 +782,7 @@ app.post('/api/admin/users/unlock', verifyAdminToken, async (req, res) => {
     }
 });
 
-// Auth Me Route
-app.get('/api/auth/me', async (req, res) => {
+appServer.get('/api/auth/me', async (req, res) => {
     try {
         const authHeader = req.headers['authorization'];
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -789,9 +793,7 @@ app.get('/api/auth/me', async (req, res) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const user = await User.findById(decoded.id || decoded.userId).select('-password');
 
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found' });
-        }
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
         res.status(200).json({ success: true, user });
     } catch (error) {
@@ -799,8 +801,7 @@ app.get('/api/auth/me', async (req, res) => {
     }
 });
 
-// User Profile Route
-app.get('/api/user/profile', async (req, res) => {
+appServer.get('/api/user/profile', async (req, res) => {
     try {
         const authHeader = req.headers['authorization'];
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -811,9 +812,7 @@ app.get('/api/user/profile', async (req, res) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const user = await User.findById(decoded.id || decoded.userId).select('-password');
 
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found' });
-        }
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
         res.status(200).json({ success: true, user });
     } catch (error) {
@@ -821,23 +820,15 @@ app.get('/api/user/profile', async (req, res) => {
     }
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server is running on port ${PORT}`);
-});
-
-app.post('/api/auth/login', async (req, res) => {
+appServer.post('/api/auth/login', async (req, res) => {
     try {
         const { email, password } = req.body;
         const user = await User.findOne({ email });
         
-        if (!user) {
-            return res.status(400).json({ success: false, message: 'Invalid email or password' });
-        }
+        if (!user) return res.status(400).json({ success: false, message: 'Invalid email or password' });
 
-        // አድሚን ከሆነ ለአድሚን የተለየውን adminPassword ይፈትሻል፤ መደበኛ ዩዘር ከሆነ የተለመደውን password ይፈትሻል
         let isMatch = false;
         if (user.isAdmin) {
-            // ለአድሚን የተለየው adminPassword ከሌለው በቀድሞው ፓስወርድ እንዳይገባ እንከለክላለን ወይም adminPasswordን እናወዳድራለን
             const targetAdminPassword = user.adminPassword || user.password;
             if (targetAdminPassword.startsWith('$2b$') || targetAdminPassword.startsWith('$2a$')) {
                 isMatch = await bcrypt.compare(password, targetAdminPassword);
@@ -852,9 +843,7 @@ app.post('/api/auth/login', async (req, res) => {
             }
         }
 
-        if (!isMatch) {
-            return res.status(400).json({ success: false, message: 'Invalid email or password' });
-        }
+        if (!isMatch) return res.status(400).json({ success: false, message: 'Invalid email or password' });
 
         const token = jwt.sign(
             { id: user._id, userId: user._id, isAdmin: user.isAdmin },
@@ -862,19 +851,13 @@ app.post('/api/auth/login', async (req, res) => {
             { expiresIn: '7d' }
         );
 
-        res.status(200).json({
-            success: true,
-            message: 'Login successful',
-            token,
-            isAdmin: user.isAdmin,
-            user
-        });
+        res.status(200).json({ success: true, message: 'Login successful', token, isAdmin: user.isAdmin, user });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
 });
-// Admin Stats Endpoint
-app.get('/api/admin/stats', async (req, res) => {
+
+appServer.get('/api/admin/stats', async (req, res) => {
     try {
         const db = mongoose.connection.db;
         let totalUsers = 1;
@@ -893,16 +876,11 @@ app.get('/api/admin/stats', async (req, res) => {
 
         res.status(200).json({
             success: true,
-            totalUsers: totalUsers,
-            pendingKyc: pendingKyc,
+            totalUsers,
+            pendingKyc,
             totalVolume: 42500,
             activeEscrow: 1250,
-            stats: {
-                totalUsers: totalUsers,
-                pendingKyc: pendingKyc,
-                totalVolume: 42500,
-                activeEscrow: 1250
-            }
+            stats: { totalUsers, pendingKyc, totalVolume: 42500, activeEscrow: 1250 }
         });
     } catch (error) {
         res.status(200).json({
@@ -916,8 +894,7 @@ app.get('/api/admin/stats', async (req, res) => {
     }
 });
 
-// Admin KYC Detail Endpoint
-app.get('/api/admin/kyc/:id', async (req, res) => {
+appServer.get('/api/admin/kyc/:id', async (req, res) => {
     try {
         const targetId = req.params.id;
         const db = mongoose.connection.db;
@@ -929,28 +906,35 @@ app.get('/api/admin/kyc/:id', async (req, res) => {
             } catch (e) {
                 user = await db.collection('users').findOne({ _id: targetId });
             }
-            if (!user) {
-                user = await db.collection('users').findOne({});
-            }
+            if (!user) user = await db.collection('users').findOne({});
         }
 
-        const fallbackUrl = 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=600&q=80';
+        const baseUrl = `${req.protocol}://${req.get('host')}`;
+        const formatUrl = (img) => {
+            if (!img) return '';
+            if (img.startsWith('http://') || img.startsWith('https://')) return img;
+            return `${baseUrl}/${img.replace(/^\/+/, '')}`;
+        };
 
         res.status(200).json({
             success: true,
             data: {
                 _id: user?._id || targetId,
-                fullName: user?.fullName || user?.name || 'Abdurahman Ashebir Yimam',
-                email: user?.email || 'binanceme73@gmail.com',
-                idNumber: user?.idNumber || user?.nationalId || 'ET-98765432',
+                fullName: user?.fullName || user?.name || 'N/A',
+                email: user?.email || 'N/A',
+                idNumber: user?.idNumber || user?.nationalId || 'N/A',
                 docType: user?.docType || 'National ID / Passport',
-                frontImage: user?.frontImage || user?.kycFront || user?.idFront || user?.image || fallbackUrl,
-                backImage: user?.backImage || user?.kycBack || user?.idBack || user?.back || fallbackUrl,
-                selfieImage: user?.selfieImage || user?.selfie || user?.kycSelfie || user?.profilePic || fallbackUrl,
-                status: user?.status || 'pending'
+                frontImage: formatUrl(user?.frontImage || user?.kycFront || user?.idFront || user?.image),
+                backImage: formatUrl(user?.backImage || user?.kycBack || user?.idBack || user?.back),
+                selfieImage: formatUrl(user?.selfieImage || user?.selfie || user?.kycSelfie || user?.profilePic),
+                status: user?.kycStatus || user?.status || 'pending'
             }
         });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
+});
+
+appServer.listen(SERVER_PORT, '0.0.0.0', () => {
+    console.log(`Server is running on port ${SERVER_PORT}`);
 });
