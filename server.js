@@ -772,3 +772,43 @@ app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
 app.listen(process.env.PORT || 5000, () => {
     console.log(`Server is running on port ${process.env.PORT || 5000}`);
 });
+
+// --- User KYC Submission API (ይህንን ብቻ የሰርቨርህ መጨረሻ ላይ ጨምረው) ---
+const kycUpload = multer({ 
+    storage: multer.diskStorage({
+        destination: (req, file, cb) => cb(null, 'uploads/'),
+        filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
+    }),
+    limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+});
+
+app.post('/api/kyc/submit', kycUpload.fields([
+    { name: 'frontImage', maxCount: 1 },
+    { name: 'backImage', maxCount: 1 },
+    { name: 'selfieImage', maxCount: 1 }
+]), async (req, res) => {
+    try {
+        const { userId, fullName, address, email } = req.body;
+
+        if (!req.files || !req.files.frontImage || !req.files.backImage || !req.files.selfieImage) {
+            return res.status(400).json({ success: false, message: "ሁሉም የ KYC ፎቶዎች (Front, Back, Selfie) ያስፈልጋሉ!" });
+        }
+
+        const frontImage = req.files.frontImage[0].path;
+        const backImage = req.files.backImage[0].path;
+        const selfieImage = req.files.selfieImage[0].path;
+
+        const query = userId ? { _id: userId } : { email };
+
+        await User.findOneAndUpdate(
+            query,
+            { fullName, address, frontImage, backImage, selfieImage, kycStatus: 'pending' },
+            { new: true, upsert: true }
+        );
+
+        res.json({ success: true, message: "የ KYC መረጃዎ በትክክል ተልኳል!" });
+    } catch (error) {
+        console.error('KYC Submit Error:', error);
+        res.status(500).json({ success: false, message: 'የሰርቨር ችግር አጋጥሟል::' });
+    }
+});
