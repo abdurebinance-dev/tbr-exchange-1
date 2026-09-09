@@ -672,53 +672,62 @@ async function verifyAdmin(req, res, next) {
     }
 }
 
-// 1. Get All KYC Submissions
+// 1. Get Dashboard Statistics & Volumes (Fixed to check User kycStatus)
+app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
+    try {
+        const totalUsers = await User.countDocuments({});
+        const kycPending = await User.countDocuments({ kycStatus: 'pending' });
+        
+        res.json({
+            success: true,
+            data: {
+                totalUsers,
+                kycPending,
+                todayVolume: "0 USDT / 0 ETB",
+                activeEscrow: "0 USDT"
+            }
+        });
+    } catch (error) {
+        console.error('Stats Error:', error);
+        res.status(500).json({ success: false, message: 'Error fetching stats' });
+    }
+});
+
+// 2. Get KYC Requests from Users Collection
 app.get('/api/admin/kyc-requests', verifyAdmin, async (req, res) => {
     try {
-        const kycList = await KYC.find({}).sort({ createdAt: -1 });
-        res.json({ success: true, count: kycList.length, data: kycList });
+        const pendingUsers = await User.find({ kycStatus: 'pending' });
+        const data = pendingUsers.map(user => ({
+            _id: user._id,
+            userId: user.email,
+            frontImage: user.frontImage || user.kycFront || '#',
+            backImage: user.backImage || user.kycBack || '#',
+            status: user.kycStatus
+        }));
+        
+        res.json({ success: true, data });
     } catch (error) {
-        console.error('Fetch KYC Error:', error);
-        res.status(500).json({ success: false, message: 'Server error while fetching KYC requests.' });
+        console.error('KYC Requests Error:', error);
+        res.status(500).json({ success: false, message: 'Error fetching KYC requests' });
     }
 });
 
-// 2. Approve or Reject KYC
+// 3. KYC Action Approval/Rejection for User Model
 app.post('/api/admin/kyc-action', verifyAdmin, async (req, res) => {
     try {
-        const { kycId, status, rejectionReason } = req.body;
+        const { kycId, status } = req.body; // kycId here is the userId
+        const newStatus = status === 'approved' ? 'verified' : 'rejected';
         
-        if (!kycId || !status) {
-            return res.status(400).json({ success: false, message: 'KYC ID and status are required.' });
-        }
-
-        const kycDoc = await KYC.findById(kycId);
-        if (!kycDoc) {
-            return res.status(404).json({ success: false, message: 'KYC submission not found.' });
-        }
-
-        kycDoc.status = status;
-        if (status === 'rejected') {
-            kycDoc.rejectionReason = rejectionReason || 'Document does not meet requirements.';
-        } else {
-            kycDoc.rejectionReason = '';
-        }
-        await kycDoc.save();
-
-        if (kycDoc.userId) {
-            await User.findByIdAndUpdate(kycDoc.userId, { 
-                kycStatus: status === 'approved' ? 'verified' : 'rejected' 
-            });
-        }
-
-        res.json({ success: true, message: `KYC has been successfully ${status}.` });
+        await User.findByIdAndUpdate(kycId, { kycStatus: newStatus });
+        
+        res.json({ success: true, message: `KYC status updated to ${newStatus} successfully.` });
     } catch (error) {
         console.error('KYC Action Error:', error);
-        res.status(500).json({ success: false, message: 'Server error during KYC update.' });
+        res.status(500).json({ success: false, message: 'Error updating KYC status' });
     }
 });
 
-// 3. Get All Users
+// 4. Get All Users
 app.get('/api/admin/users', verifyAdmin, async (req, res) => {
     try {
         const users = await User.find({}).select('-password').sort({ _id: -1 });
@@ -733,7 +742,7 @@ app.listen(process.env.PORT || 5000, () => {
     console.log(`Server is running on port ${process.env.PORT || 5000}`);
 });
 
-// 4. Get Dashboard Statistics & Volumes (የተስተካከለ የስታቲስቲክስ ኤፒአይ)
+// 5. Get Dashboard Statistics & Volumes (የተስተካከለ የስታቲስቲክስ ኤፒአይ)
 app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
     try {
         const totalUsers = await User.countDocuments({});
@@ -756,7 +765,7 @@ app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
     }
 });
 
-// 5. Rate & Fee Management Endpoint (የዋጋ እና ኮሚሽን ማስተካከያ)
+// 6. Rate & Fee Management Endpoint (የዋጋ እና ኮሚሽን ማስተካከያ)
 app.post('/api/admin/settings', verifyAdmin, async (req, res) => {
     try {
         const { buyRate, sellRate, platformFee } = req.body;
@@ -767,7 +776,7 @@ app.post('/api/admin/settings', verifyAdmin, async (req, res) => {
     }
 });
 
-// 6. User Ban / Suspend Endpoint (ተጠቃሚን ማገድ/መክፈት)
+// 7. User Ban / Suspend Endpoint (ተጠቃሚን ማገድ/መክፈት)
 app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
     try {
         const { userId, action } = req.body; // action: 'ban' ወይም 'unban'
