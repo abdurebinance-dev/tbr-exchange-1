@@ -583,27 +583,10 @@ app.post('/api/reset-password', async (req, res) => {
     }
 });
 
-// Define the admin verification middleware properly
-// የአድሚን ቶከን ማረጋገጫ ሚድልዌር
-app.post('/api/kyc/submit', verifyAdminToken, async (req, res) => {
-    try {
-        // req.user በ verifyAdminToken በኩል በትክክል ገብቷል
-        const userId = req.user.id || req.user.userId;
-
-        const { fullName, idNumber, dob, address, docType } = req.body;
-
-        // የ KYC መረጃውን ዳታቤዝ ውስጥ ማስቀመጥ
-        // (እዚህ ጋር አንተ የተጠቀምክበት የ KYC ማስቀመጫ ኮድ ይኖራል)
-
-        return res.status(200).json({ success: true, message: 'KYC submitted successfully' });
-    } catch (error) {
-        console.error('KYC Submit Error:', error);
-        return res.status(500).json({ success: false, message: 'Server error' });
-    }
-});
-
-// 1. መጀመሪያ ሚድልዌሩ መፃፍ አለበት
-const verifyAdminToken = (req, res, next) => {
+// ==========================================
+// 1. JWT TOKEN VERIFICATION MIDDLEWARE
+// ==========================================
+function verifyAdminToken(req, res, next) {
     try {
         const authHeader = req.headers['authorization'];
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -617,24 +600,52 @@ const verifyAdminToken = (req, res, next) => {
     } catch (error) {
         return res.status(401).json({ success: false, message: 'Unauthorized user' });
     }
-};
+}
 
-// 2. ከዛም ራውቱ ላይ ሚድልዌሩን መጥራት
-app.post('/api/kyc/submit', verifyAdminToken, async (req, res) => {
+
+// ==========================================
+// 2. KYC SUBMIT ROUTE (Combined with Multer & Auth)
+// ==========================================
+app.post('/api/kyc/submit', verifyAdminToken, upload.fields([
+    { name: 'idImage', maxCount: 1 },
+    { name: 'selfieImage', maxCount: 1 },
+    { name: 'idBack', maxCount: 1 }
+]), async (req, res) => {
     try {
         const userId = req.user.id || req.user.userId;
-        const { fullName, idNumber, dob, address, docType } = req.body;
+        const { fullName, idNumber, dateOfBirth, residentialAddress } = req.body;
 
-        // የ KYC ማከማቻ ኮድህ እዚህ ይኖራል...
+        // የፋይሎቹን ሊንኮች ማግኘት (ካሉ)
+        const frontImage = req.files && req.files['idImage'] ? req.files['idImage'][0].path : '';
+        const selfieImage = req.files && req.files['selfieImage'] ? req.files['selfieImage'][0].path : '';
+        const backImage = req.files && req.files['idBack'] ? req.files['idBack'][0].path : '';
 
-        return res.status(200).json({ success: true, message: 'KYC submitted successfully' });
+        // ዳታቤዝ ውስጥ ማዘመን
+        await User.findByIdAndUpdate(userId, {
+            fullName,
+            idNumber,
+            dateOfBirth,
+            residentialAddress,
+            ...(frontImage && { frontImage }),
+            ...(backImage && { backImage }),
+            ...(selfieImage && { selfieImage }),
+            kycStatus: 'pending',
+            kycSubmittedAt: new Date()
+        });
+
+        return res.status(200).json({ success: true, message: 'KYC submitted successfully and is under review.' });
     } catch (error) {
-        console.error('KYC Submit Error:', error);
-        return res.status(500).json({ success: false, message: 'Server error' });
+        console.error('KYC submission error:', error);
+        return res.status(500).json({ success: false, message: 'Server error during KYC submission.' });
     }
 });
 
-// 2. Rates & Fees Update
+
+// ==========================================
+// 3. ADMIN & USER ROUTES
+// ==========================================
+
+// Rates & Fees Update
 app.post('/api/admin/rates', verifyAdminToken, async (req, res) => {
     try {
         const { rate, platformFee } = req.body;
@@ -644,7 +655,7 @@ app.post('/api/admin/rates', verifyAdminToken, async (req, res) => {
     }
 });
 
-// 3. Get All KYC List (Updated to include back document fields)
+// Get All KYC List
 app.get('/api/admin/kyc', verifyAdminToken, async (req, res) => {
     try {
         let kycList = await KYC.find({}).sort({ createdAt: -1 });
@@ -661,12 +672,11 @@ app.get('/api/admin/kyc', verifyAdminToken, async (req, res) => {
                 email: user.email,
                 idNumber: user.idNumber || 'N/A',
                 frontImage: user.frontImage || user.kycDocument || '',
-                backImage: user.backImage || user.backDocument || user.idBack || '', // <--- የጀርባው ፎቶ ፊልድ ተጨምሯል
+                backImage: user.backImage || user.backDocument || user.idBack || '',
                 selfieImage: user.selfieImage || '',
                 status: user.kycStatus === 'verified' ? 'approved' : user.kycStatus
             }));
         } else {
-            // KYC collection ሲጠቀሙ የባክ ፎቶው እንዳይቀር
             kycList = kycList.map(item => ({
                 ...item.toObject ? item.toObject() : item,
                 backImage: item.backImage || item.backDocument || item.idBack || ''
@@ -679,7 +689,7 @@ app.get('/api/admin/kyc', verifyAdminToken, async (req, res) => {
     }
 });
 
-// 4. Get KYC Details by ID (Updated to include back document fields)
+// Get KYC Details by ID
 app.get('/api/admin/kyc/:id', verifyAdminToken, async (req, res) => {
     try {
         let kycId = req.params.id ? req.params.id.replace('#', '').trim() : '';
@@ -699,7 +709,7 @@ app.get('/api/admin/kyc/:id', verifyAdminToken, async (req, res) => {
                     fullName: targetUser.fullName,
                     idNumber: targetUser.idNumber || 'N/A',
                     frontImage: targetUser.frontImage || targetUser.kycDocument || '',
-                    backImage: targetUser.backImage || targetUser.backDocument || targetUser.idBack || '', // <--- የጀርባው ፎቶ እዚህም ተጨምሯል
+                    backImage: targetUser.backImage || targetUser.backDocument || targetUser.idBack || '',
                     selfieImage: targetUser.selfieImage || '',
                     userId: targetUser._id,
                     email: targetUser.email,
@@ -715,11 +725,11 @@ app.get('/api/admin/kyc/:id', verifyAdminToken, async (req, res) => {
     }
 });
 
-// 5. Approve / Reject KYC
+// Approve / Reject KYC
 app.put('/api/admin/kyc/approve/:id', verifyAdminToken, async (req, res) => {
     try {
         const kycId = req.params.id;
-        const { status } = req.body; // approved or rejected
+        const { status } = req.body;
 
         const updatedUser = await User.findByIdAndUpdate(kycId, { 
             kycStatus: status === 'approved' ? 'verified' : 'rejected',
@@ -732,7 +742,7 @@ app.put('/api/admin/kyc/approve/:id', verifyAdminToken, async (req, res) => {
     }
 });
 
-// 6. Unlock User Account
+// Unlock User Account
 app.post('/api/admin/users/unlock', verifyAdminToken, async (req, res) => {
     try {
         const { identifier } = req.body;
@@ -747,44 +757,7 @@ app.post('/api/admin/users/unlock', verifyAdminToken, async (req, res) => {
     }
 });
 
-app.listen(process.env.PORT || 5000, '0.0.0.0', () => {
-    console.log(`Server is running on port ${process.env.PORT || 5000}`);
-});// KYC ሪኬስትን ለመቀበል የሚረዳ ራውት
-app.post('/api/kyc/submit', upload.fields([
-    { name: 'idImage', maxCount: 1 },
-    { name: 'selfieImage', maxCount: 1 }
-]), async (req, res) => {
-    try {
-        // ከዩዘር ፎርሙ የሚመጡ መረጃዎች
-        const { fullName, idNumber, dateOfBirth, residentialAddress } = req.body;
-        
-        // ዩዘሩ በምን አክሰስ ቶከን እንደገባ (User ID ከየት እንደሚገኝ እንደ አሰራርህ አስተካክለው)
-        // ለምሳሌ ከ session, req.user ወይም ከ token የሚገኝ ከሆነ፦
-        const userId = req.user ? req.user._id : req.body.userId; // ወይም ከ Auth Middleware የሚመጣ
-
-        if (!userId) {
-            return res.status(401).json({ success: false, message: 'Unauthorized user' });
-        }
-
-        // ዳታቤዝ ውስጥ የዩዘርን KYC መረጃ ማዘመን እና ስታተሱን ወደ 'pending' መቀየር
-        // (ለምሳሌ User model ወይም KycRequest model እየተጠቀምክ ከሆነ)
-        await User.findByIdAndUpdate(userId, {
-            fullName,
-            idNumber,
-            dateOfBirth,
-            residentialAddress,
-            kycStatus: 'pending', // ዩዘሩ ሰሚት ሲያደርግ ፔንዲንግ (Under Review) እንዲሆን
-            kycSubmittedAt: new Date()
-        });
-
-        res.status(200).json({ success: true, message: 'KYC submitted successfully and is under review.' });
-    } catch (error) {
-        console.error('KYC submission error:', error);
-        res.status(500).json({ success: false, message: 'Server error during KYC submission.' });
-    }
-});
-
-// የተጠቃሚውን ቶከን ቼክ በማድረግ መረጃውን የሚመልስ ራውት
+// Auth Me Route
 app.get('/api/auth/me', async (req, res) => {
     try {
         const authHeader = req.headers['authorization'];
@@ -793,9 +766,7 @@ app.get('/api/auth/me', async (req, res) => {
         }
 
         const token = authHeader.split(' ')[1];
-        
-        // ቶከኑን መፈተሽ (JWT እየተጠቀምክ ከሆነ)
-        const decoded = jwt.verify(token, process.env.JWT_SECRET); // ወይም የከፈትክበት ሚስጥር ቃል
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const user = await User.findById(decoded.id || decoded.userId).select('-password');
 
         if (!user) {
@@ -804,11 +775,11 @@ app.get('/api/auth/me', async (req, res) => {
 
         res.status(200).json({ success: true, user });
     } catch (error) {
-        console.error('Auth check error:', error);
         res.status(401).json({ success: false, message: 'Invalid or expired token' });
     }
 });
-// ተጠቃሚው ፕሮፋይሉን ሲጠይቅ ዳታውን የሚመልስ ራውት
+
+// User Profile Route
 app.get('/api/user/profile', async (req, res) => {
     try {
         const authHeader = req.headers['authorization'];
