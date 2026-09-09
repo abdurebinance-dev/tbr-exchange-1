@@ -177,7 +177,7 @@
                             <th>Buyer / Seller</th>
                             <th>Amount (USDT)</th>
                             <th>Dispute Status</th>
-                            <th>Actions (Release / Cancel)</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="escrowTableBody">
@@ -258,8 +258,22 @@
         }
 
         async function loadAdminData() {
+            fetchStats();
             fetchKycRequests();
             fetchUsersList();
+        }
+
+        async function fetchStats() {
+            try {
+                const res = await fetch('/api/admin/stats', { headers: { 'Authorization': 'Bearer ' + getToken() } });
+                const json = await res.json();
+                if (res.ok && json.success) {
+                    document.getElementById('statUserCount').innerText = json.data.totalUsers;
+                    document.getElementById('statKycCount').innerText = json.data.kycPending;
+                    document.getElementById('statVolume').innerText = json.data.todayVolume;
+                    document.getElementById('statEscrow').innerText = json.data.activeEscrow;
+                }
+            } catch (err) { console.error('Error loading stats:', err); }
         }
 
         async function fetchKycRequests() {
@@ -267,7 +281,6 @@
                 const res = await fetch('/api/admin/kyc-requests', { headers: { 'Authorization': 'Bearer ' + getToken() } });
                 const json = await res.json();
                 if (res.ok && json.success) {
-                    document.getElementById('statKycCount').innerText = json.count;
                     const tbody = document.getElementById('kycTableBody');
                     if (json.data.length === 0) {
                         tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">No KYC requests found.</td></tr>`;
@@ -299,7 +312,7 @@
                 body: JSON.stringify({ kycId, status, rejectionReason })
             });
             const json = await res.json();
-            if (res.ok && json.success) { alert(json.message); fetchKycRequests(); }
+            if (res.ok && json.success) { alert(json.message); loadAdminData(); }
         }
 
         async function fetchUsersList() {
@@ -307,7 +320,6 @@
                 const res = await fetch('/api/admin/users', { headers: { 'Authorization': 'Bearer ' + getToken() } });
                 const json = await res.json();
                 if (res.ok && json.success) {
-                    document.getElementById('statUserCount').innerText = json.count;
                     const tbody = document.getElementById('userTableBody');
                     if (json.data.length === 0) {
                         tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No users found.</td></tr>`;
@@ -342,11 +354,29 @@
                 body: JSON.stringify({ userId, action })
             });
             const json = await res.json();
-            if (res.ok && json.success) { alert(json.message); fetchUsersList(); }
+            if (res.ok && json.success) { alert(json.message); loadAdminData(); }
         }
 
-        function saveRates() {
-            alert('Rate & Fee settings saved successfully!');
+        async function saveRates() {
+            const buyRate = document.getElementById('buyRateInput').value;
+            const sellRate = document.getElementById('sellRateInput').value;
+            const platformFee = document.getElementById('feeInput').value;
+
+            try {
+                const res = await fetch('/api/admin/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+                    body: JSON.stringify({ buyRate, sellRate, platformFee })
+                });
+                const json = await res.json();
+                if (res.ok && json.success) {
+                    alert('Rate & Fee settings saved successfully!');
+                } else {
+                    alert('Failed to save settings.');
+                }
+            } catch (err) {
+                alert('Network error while saving settings.');
+            }
         }
     </script>
 </body>
