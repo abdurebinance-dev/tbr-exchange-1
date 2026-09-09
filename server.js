@@ -834,3 +834,8 @@ app.post('/api/kyc/submit', async (req, res) => {
         res.status(500).json({ success: false, message: 'የሰርቨር ችግር አጋጥሟል::' });
     }
 });
+// --- 10. Server Port Listener (Fixed Port & Binding) ---
+const serverPort = process.env.PORT || 5000;
+app.listen(serverPort, '0.0.0.0', () => {
+    console.log(`Server is running on port ${serverPort}`);
+});
