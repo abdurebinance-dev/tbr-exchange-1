@@ -583,8 +583,6 @@ app.post('/api/reset-password', async (req, res) => {
     }
 });
 
-const multer = require('multer');
-
 // --- 1. Admin Login Route (Fixed Direct Admin Access) ---
 app.post('/api/admin/login', async (req, res) => {
     try {
