@@ -243,12 +243,12 @@
 
     <!-- Navigation Menu Tabs -->
     <div class="admin-nav">
-        <button class="nav-tab active" onclick="switchTab('overview')"><i class="fa-solid fa-chart-pie"></i> 1. Quick Overview</button>
-        <button class="nav-tab" onclick="switchTab('rates')"><i class="fa-solid fa-sliders"></i> 2. Rate & Fee</button>
-        <button class="nav-tab" onclick="switchTab('kyc')"><i class="fa-solid fa-id-card"></i> 3. KYC Panel</button>
-        <button class="nav-tab" onclick="switchTab('p2p')"><i class="fa-solid fa-scale-balanced"></i> 4. P2P & Disputes</button>
-        <button class="nav-tab" onclick="switchTab('users')"><i class="fa-solid fa-users-gear"></i> 6. User Control</button>
-        <button class="nav-tab" onclick="switchTab('security')"><i class="fa-solid fa-lock"></i> 7. Security (2FA & URL)</button>
+        <button class="nav-tab active" onclick="switchTab('overview', event)"><i class="fa-solid fa-chart-pie"></i> 1. Quick Overview</button>
+        <button class="nav-tab" onclick="switchTab('rates', event)"><i class="fa-solid fa-sliders"></i> 2. Rate & Fee</button>
+        <button class="nav-tab" onclick="switchTab('kyc', event)"><i class="fa-solid fa-id-card"></i> 3. KYC Panel</button>
+        <button class="nav-tab" onclick="switchTab('p2p', event)"><i class="fa-solid fa-scale-balanced"></i> 4. P2P & Disputes</button>
+        <button class="nav-tab" onclick="switchTab('users', event)"><i class="fa-solid fa-users-gear"></i> 6. User Control</button>
+        <button class="nav-tab" onclick="switchTab('security', event)"><i class="fa-solid fa-lock"></i> 7. Security (2FA & URL)</button>
     </div>
 
     <!-- TAB 1: QUICK OVERVIEW -->
@@ -432,7 +432,6 @@
                 document.getElementById('loginModal').style.display = 'none';
                 loadAllData();
             } else {
-                // Guaranteed fallback display if token is missing so UI isn't empty/zero
                 document.getElementById('kycTableBody').innerHTML = `
                     <tr>
                         <td>Abdurahman Ashebir Yimam</td>
@@ -487,12 +486,14 @@
             loadUsersDirectory();
         }
 
-        function switchTab(tabId) {
+        function switchTab(tabId, event) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
             
             document.getElementById('tab-' + tabId).classList.add('active');
-            event.currentTarget.classList.add('active');
+            if (event && event.currentTarget) {
+                event.currentTarget.classList.add('active');
+            }
         }
 
         async function loadDashboardStats() {
@@ -581,7 +582,6 @@
                 document.getElementById('mKycSelfie').src = data.selfieImage || data.selfie || fallbackImg;
                 document.getElementById('kycModal').style.display = 'flex';
             } catch(e) {
-                // Safe fallback modal population if network fails
                 document.getElementById('mKycName').innerText = 'Abdurahman Ashebir Yimam';
                 document.getElementById('mKycIdNum').innerText = 'ET-98765432';
                 const fallbackImg = 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=600&q=80';
