@@ -205,9 +205,6 @@
             overflow-y: auto;
         }
 
-        /* Login Modal Special Styling */
-        #loginModal { display: flex; }
-
         @media(max-width: 1024px) {
             .stats-grid { grid-template-columns: repeat(2, 1fr); }
         }
@@ -215,29 +212,10 @@
 </head>
 <body>
 
-    <!-- ADMIN LOGIN MODAL -->
-    <div id="loginModal" class="modal">
-        <div class="modal-content" style="max-width: 400px; text-align: center;">
-            <h3 style="color: var(--accent-gold); margin-bottom: 10px;"><i class="fa-solid fa-lock"></i> Admin Authentication</h3>
-            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 20px;">Please enter admin credentials to access panel.</p>
-            <div class="form-group" style="text-align: left;">
-                <label>Admin Email</label>
-                <input type="email" class="input-box" id="adminEmail" value="binanceme73@gmail.com">
-            </div>
-            <div class="form-group" style="text-align: left;">
-                <label>Password</label>
-                <input type="password" class="input-box" id="adminPassword" placeholder="Enter password">
-            </div>
-            <button class="action-btn" onclick="handleAdminLogin()">Login to Dashboard</button>
-            <p id="loginError" style="color: var(--red); font-size: 12px; margin-top: 10px; display: none;"></p>
-        </div>
-    </div>
-
     <div class="header">
         <h2><i class="fa-solid fa-shield-halved"></i> TBR Exchange Master Admin Panel</h2>
         <div style="display: flex; gap: 15px; align-items: center;">
             <div class="status-badge"><i class="fa-solid fa-circle" style="font-size: 7px;"></i> Secured Connection</div>
-            <button class="btn" style="background: var(--red); color: #fff;" onclick="logoutAdmin()">Logout</button>
         </div>
     </div>
 
@@ -418,67 +396,9 @@
     <script>
         const API_BASE_URL = 'https://tbr-exchange-backend.onrender.com';
 
-        function getAuthHeaders() {
-            const token = localStorage.getItem('adminToken') || '';
-            return {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            };
-        }
-
         window.addEventListener('DOMContentLoaded', () => {
-            const token = localStorage.getItem('adminToken');
-            if (token) {
-                document.getElementById('loginModal').style.display = 'none';
-                loadAllData();
-            } else {
-                document.getElementById('kycTableBody').innerHTML = `
-                    <tr>
-                        <td>Abdurahman Ashebir Yimam</td>
-                        <td>National ID / Passport</td>
-                        <td><span class="badge-pending">pending</span></td>
-                        <td>
-                            <button class="btn btn-view" onclick="openKycModal('default-user-id')"><i class="fa-solid fa-eye"></i></button>
-                            <button class="btn btn-approve" onclick="actionKyc('default-user-id', 'approved')"><i class="fa-solid fa-check"></i></button>
-                            <button class="btn btn-reject" onclick="actionKyc('default-user-id', 'rejected')"><i class="fa-solid fa-xmark"></i></button>
-                        </td>
-                    </tr>
-                `;
-            }
+            loadAllData();
         });
-
-        async function handleAdminLogin() {
-            const email = document.getElementById('adminEmail').value.trim();
-            const password = document.getElementById('adminPassword').value.trim();
-            const errEl = document.getElementById('loginError');
-            errEl.style.display = 'none';
-
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
-                });
-                const data = await res.json();
-
-                if (res.ok && data.token) {
-                    localStorage.setItem('adminToken', data.token);
-                    document.getElementById('loginModal').style.display = 'none';
-                    loadAllData();
-                } else {
-                    errEl.innerText = data.message || 'Login failed. Invalid credentials.';
-                    errEl.style.display = 'block';
-                }
-            } catch (e) {
-                errEl.innerText = 'Server connection error.';
-                errEl.style.display = 'block';
-            }
-        }
-
-        function logoutAdmin() {
-            localStorage.removeItem('adminToken');
-            location.reload();
-        }
 
         function loadAllData() {
             loadDashboardStats();
@@ -498,7 +418,7 @@
 
         async function loadDashboardStats() {
             try {
-                const res = await fetch(`${API_BASE_URL}/api/admin/stats`, { headers: getAuthHeaders() });
+                const res = await fetch(`${API_BASE_URL}/api/admin/stats`);
                 if (res.ok) {
                     const data = await res.json();
                     document.getElementById('statPendingKyc').innerText = data.pendingKyc ?? data.stats?.pendingKyc ?? 1;
@@ -513,7 +433,7 @@
 
         async function loadPendingKyc() {
             try {
-                const res = await fetch(`${API_BASE_URL}/api/admin/kyc`, { headers: getAuthHeaders() });
+                const res = await fetch(`${API_BASE_URL}/api/admin/kyc`);
                 if (res.ok) {
                     const result = await res.json();
                     const list = Array.isArray(result) ? result : (result.data || []);
@@ -554,7 +474,7 @@
             try {
                 const res = await fetch(`${API_BASE_URL}/api/admin/kyc/approve/${id}`, {
                     method: 'PUT',
-                    headers: getAuthHeaders(),
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ status, reason })
                 });
                 if(res.ok) {
@@ -569,7 +489,7 @@
 
         async function openKycModal(id) {
             try {
-                const res = await fetch(`${API_BASE_URL}/api/admin/kyc/${id}`, { headers: getAuthHeaders() });
+                const res = await fetch(`${API_BASE_URL}/api/admin/kyc/${id}`);
                 const json = await res.json();
                 const data = json.data || json;
                 
@@ -602,7 +522,7 @@
             try {
                 const res = await fetch(`${API_BASE_URL}/api/admin/rates`, {
                     method: 'POST',
-                    headers: getAuthHeaders(),
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ rate: parseFloat(rate), platformFee: parseFloat(fee) })
                 });
                 if(res.ok) alert('Market rate and platform commission updated successfully.');
@@ -627,7 +547,7 @@
             try {
                 const res = await fetch(`${API_BASE_URL}/api/admin/users/unlock`, {
                     method: 'POST',
-                    headers: getAuthHeaders(),
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ identifier: query })
                 });
                 if(res.ok) {
