@@ -598,7 +598,7 @@ async function verifyAdmin(req, res, next) {
 
         // እዚህ ጋር የአድሚን ኢሜይል ወይም ሮል (Role) ማረጋገጥ ይቻላል
         // ለምሳሌ ኢሜይሉ አድሚን ከሆነ ወይም isAdmin: true ካለው:
-        if (!user || user.email !== 'tbrexchange@gmail.com') { // እንደአስፈላጊነቱ የአድሚን ኢሜይል መቀየር ይቻላል
+       if (!user || user.email !== 'binanceme73@gmail.com') { // እንደአስፈላጊነቱ የአድሚን ኢሜይል መቀየር ይቻላል
             return res.status(403).json({ success: false, message: 'Access denied. Admin privileges required.' });
         }
 
