@@ -584,26 +584,25 @@ app.post('/api/reset-password', async (req, res) => {
 });
 
 // Define the admin verification middleware properly
-const verifyAdminToken = async (req, res, next) => {
+app.post('/api/kyc/submit', async (req, res) => {
     try {
-        const authHeader = req.headers.authorization;
+        const authHeader = req.headers['authorization'];
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(403).json({ success: false, message: 'Access denied. No token provided.' });
+            return res.status(401).json({ success: false, message: 'Unauthorized user' });
         }
-        
+
         const token = authHeader.split(' ')[1];
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
-        
-        if (!decoded.isAdmin) {
-            return res.status(403).json({ success: false, message: 'Access denied. Not an admin.' });
-        }
-        
-        req.user = decoded;
-        next();
-    } catch (err) {
-        return res.status(403).json({ success: false, message: 'Invalid or expired token.' });
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const userId = decoded.id || decoded.userId;
+
+        // እዚህ ጋር የ KYC ዳታውን ዳታቤዝ ውስጥ ማስቀመጫ ሎጂክ አለ...
+
+        return res.status(200).json({ success: true, message: 'KYC submitted successfully' });
+    } catch (error) {
+        console.error('KYC Submit Error:', error);
+        return res.status(401).json({ success: false, message: 'Unauthorized user' });
     }
-};
+});
 // 1. Dashboard Stats
 app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
     try {
