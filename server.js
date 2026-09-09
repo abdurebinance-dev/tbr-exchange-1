@@ -811,4 +811,4 @@ app.post('/api/kyc/submit', kycUpload.fields([
 // --- 10. Server Port Listener (ሁልጊዜ ፋይሉ መጨረሻ ላይ መሆን አለበት) ---
 app.listen(process.env.PORT || 5000, () => {
     console.log(`Server is running on port ${process.env.PORT || 5000}`);
-});
+})
