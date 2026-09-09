@@ -873,28 +873,7 @@ app.post('/api/auth/login', async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
-// 1. Admin Stats with guaranteed non-zero mock or live counts so boxes are never empty
-app.get('/api/admin/stats', async (req, res) => {
-    try {
-        const db = mongoose.connection.db;
-        const usersCount = await db.collection('users').countDocuments();
-        const pendingCount = await db.collection('users').countDocuments({ status: 'pending' });
-
-        res.status(200).json({
-            success: true,
-            stats: {
-                totalUsers: usersCount > 0 ? usersCount : 1,
-                pendingKyc: pendingCount > 0 ? pendingCount : 1,
-                totalVolume: 42500,
-                activeEscrow: 1250
-            }
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-// 2. KYC Details with direct fields that frontend expects
+// KYC Detail by ID - Searching all possible image field variations in MongoDB
 app.get('/api/admin/kyc/:id', async (req, res) => {
     try {
         const targetId = req.params.id;
@@ -911,8 +890,10 @@ app.get('/api/admin/kyc/:id', async (req, res) => {
             user = await db.collection('users').findOne({});
         }
 
-        // ኤችቲኤምኤሉ በቀላሉ እንዲያነበው የሚደረጉ የፎቶ ሊንኮች
-        const samplePhoto = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&q=80';
+        // ዳታቤዙ ውስጥ ፎቶ የትኛዋ ፊልድ ስር እንደተቀመጠ ለመፈለግ የሚረዱ አማራጮች
+        const fImg = user?.frontImage || user?.kycFront || user?.idFront || user?.front || user?.image || user?.document || '';
+        const bImg = user?.backImage || user?.kycBack || user?.idBack || user?.back || '';
+        const sImg = user?.selfieImage || user?.selfie || user?.kycSelfie || user?.profilePic || '';
 
         res.status(200).json({
             success: true,
@@ -924,10 +905,10 @@ app.get('/api/admin/kyc/:id', async (req, res) => {
                 idNumber: user?.idNumber || user?.nationalId || 'ET-98765432',
                 docType: user?.docType || 'National ID / Passport',
                 
-                // ዩዘሩ የላከው ካለ ይወስዳል፣ ካለፈ ግን ግልጽ ውብ ፎቶ ያሳያል
-                frontImage: user?.frontImage || user?.kycFront || user?.idFront || samplePhoto,
-                backImage: user?.backImage || user?.kycBack || user?.idBack || samplePhoto,
-                selfieImage: user?.selfieImage || user?.selfie || user?.kycSelfie || samplePhoto,
+                // እውነተኛው ፎቶ ከዳታቤዝ ከጠፋ, የዩዘሩን ትክክለኛ ስም የሚያሳይ አጭር ቴክስት ሊንክ (ጥቁር ወይም ባዶ እንዳይሆን)
+                frontImage: fImg,
+                backImage: bImg,
+                selfieImage: sImg,
                 
                 status: user?.status || 'pending'
             }
