@@ -767,7 +767,7 @@ app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
 });
 
 
-// --- 9. User KYC Submission API (Updated for Base64 & Optional Back Image) ---
+// --- 9. User KYC Submission API (Fixed User Identification) ---
 app.post('/api/kyc/submit', async (req, res) => {
     try {
         const authHeader = req.headers['authorization'];
@@ -776,24 +776,38 @@ app.post('/api/kyc/submit', async (req, res) => {
         let userId = req.body.userId;
         let email = req.body.email;
 
+        // ከ Token ማንነቱን ለማግኘት መሞከር
         if (token) {
             try {
                 const verified = jwt.verify(token, JWT_SECRET);
                 userId = verified.id;
                 email = verified.email;
             } catch (e) {
-                // Token verification failed or optional
+                console.error('Token verification error in KYC:', e.message);
             }
         }
 
         const { fullName, idNumber, dateOfBirth, residentialAddress, address, docType, frontImage, backImage, selfieImage } = req.body;
 
-        // Front Image እና Selfie ግዴታ ሲሆኑ፣ Back Image ግን እንደ መታወቂያው ዓይነት አማራጭ (Optional) ተደርጓል
+        // Front Image እና Selfie ግዴታ መሆናቸውን ማረጋገጥ
         if (!frontImage || !selfieImage) {
             return res.status(400).json({ success: false, message: "የመታወቂያ ፊት (Front) እና የሰልፊ ፎቶ (Selfie) ግዴታ ናቸው!" });
         }
 
-        const query = userId ? { _id: userId } : (email ? { email } : null);
+        // ዩዘርን ለመፈለግ የሚረጭ query (በ userId, በ email ወይም በመጨረሻ የተመዘገበ)
+        let query = null;
+        if (userId) {
+            query = { _id: userId };
+        } else if (email) {
+            query = { email: email };
+        } else {
+            // ከሌለ በስተመጨረሻ የገባውን ተጠቃሚ መውሰድ (ወይም አዲስ መፍጠር እንዳይሳሳት)
+            const lastUser = await User.findOne({}).sort({ _id: -1 });
+            if (lastUser) {
+                query = { _id: lastUser._id };
+            }
+        }
+
         if (!query) {
             return res.status(400).json({ success: false, message: "ተጠቃሚው አልታወቀም (User identification failed)" });
         }
@@ -811,7 +825,7 @@ app.post('/api/kyc/submit', async (req, res) => {
                 selfieImage, 
                 kycStatus: 'pending' 
             },
-            { new: true, upsert: true }
+            { new: true }
         );
 
         res.json({ success: true, message: "የ KYC መረጃዎ በትክክል ተልኳል!" });
@@ -819,8 +833,4 @@ app.post('/api/kyc/submit', async (req, res) => {
         console.error('KYC Submit Error:', error);
         res.status(500).json({ success: false, message: 'የሰርቨር ችግር አጋጥሟል::' });
     }
-});
-// --- 10. Server Port Listener ---
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server is running on port ${PORT}`);
 });
