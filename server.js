@@ -834,12 +834,22 @@ app.post('/api/auth/login', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid email or password' });
         }
 
-        // ሐሽ የተደረገውንም ሆነ በቀጥታ የተጻፈውን ፓስወርድ (Plain text) ማስተናገድ እንዲችል
+        // አድሚን ከሆነ ለአድሚን የተለየውን adminPassword ይፈትሻል፤ መደበኛ ዩዘር ከሆነ የተለመደውን password ይፈትሻል
         let isMatch = false;
-        if (user.password.startsWith('$2b$') || user.password.startsWith('$2a$')) {
-            isMatch = await bcrypt.compare(password, user.password);
+        if (user.isAdmin) {
+            // ለአድሚን የተለየው adminPassword ከሌለው በቀድሞው ፓስወርድ እንዳይገባ እንከለክላለን ወይም adminPasswordን እናወዳድራለን
+            const targetAdminPassword = user.adminPassword || user.password;
+            if (targetAdminPassword.startsWith('$2b$') || targetAdminPassword.startsWith('$2a$')) {
+                isMatch = await bcrypt.compare(password, targetAdminPassword);
+            } else {
+                isMatch = (password === targetAdminPassword);
+            }
         } else {
-            isMatch = (password === user.password);
+            if (user.password.startsWith('$2b$') || user.password.startsWith('$2a$')) {
+                isMatch = await bcrypt.compare(password, user.password);
+            } else {
+                isMatch = (password === user.password);
+            }
         }
 
         if (!isMatch) {
