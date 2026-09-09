@@ -609,8 +609,10 @@ function verifyAdminToken(req, res, next) {
 // KYC SUBMIT ROUTE (ተጠቃሚው ራሱ ኬይሲ ሲልክ የሚሰራ ራውት)
 app.post('/api/kyc/submit', upload.fields([
     { name: 'idImage', maxCount: 1 },
+    { name: 'frontImage', maxCount: 1 },
     { name: 'selfieImage', maxCount: 1 },
-    { name: 'idBack', maxCount: 1 }
+    { name: 'idBack', maxCount: 1 },
+    { name: 'backImage', maxCount: 1 }
 ]), async (req, res) => {
     try {
         const authHeader = req.headers['authorization'];
@@ -624,9 +626,10 @@ app.post('/api/kyc/submit', upload.fields([
 
         const { fullName, idNumber, dateOfBirth, residentialAddress } = req.body;
 
-        const frontImage = req.files && req.files['idImage'] ? req.files['idImage'][0].path : '';
-        const selfieImage = req.files && req.files['selfieImage'] ? req.files['selfieImage'][0].path : '';
-        const backImage = req.files && req.files['idBack'] ? req.files['idBack'][0].path : '';
+        // የፋይሎቹን ዱካዎች በተለያዩ ስሞች መፈለግ (Front, Back, Selfie)
+        const frontImage = req.files?.['idImage']?.[0]?.path || req.files?.['frontImage']?.[0]?.path || '';
+        const backImage = req.files?.['idBack']?.[0]?.path || req.files?.['backImage']?.[0]?.path || '';
+        const selfieImage = req.files?.['selfieImage']?.[0]?.path || '';
 
         await User.findByIdAndUpdate(userId, {
             fullName,
@@ -642,8 +645,9 @@ app.post('/api/kyc/submit', upload.fields([
 
         return res.status(200).json({ success: true, message: 'KYC submitted successfully and is under review.' });
     } catch (error) {
-        console.error('KYC submission error:', error);
-        return res.status(500).json({ success: false, message: 'Server error during KYC submission.' });
+        console.error('KYC submission error details:', error);
+        // ትክክለኛውን የኤረር መልዕክት ወደ ብሮውዘር እንዲልክ ማድረግ
+        return res.status(500).json({ success: false, message: error.message || 'Server error during KYC submission.' });
     }
 });
 
