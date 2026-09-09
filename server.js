@@ -585,21 +585,22 @@ app.post('/api/reset-password', async (req, res) => {
 
 // Define the admin verification middleware properly
 // የአድሚን ቶከን ማረጋገጫ ሚድልዌር
-const verifyAdminToken = (req, res, next) => {
+app.post('/api/kyc/submit', verifyAdminToken, async (req, res) => {
     try {
-        const authHeader = req.headers['authorization'];
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({ success: false, message: 'Unauthorized user' });
-        }
+        // req.user በ verifyAdminToken በኩል በትክክል ገብቷል
+        const userId = req.user.id || req.user.userId;
 
-        const token = authHeader.split(' ')[1];
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = decoded;
-        next();
+        const { fullName, idNumber, dob, address, docType } = req.body;
+
+        // የ KYC መረጃውን ዳታቤዝ ውስጥ ማስቀመጥ
+        // (እዚህ ጋር አንተ የተጠቀምክበት የ KYC ማስቀመጫ ኮድ ይኖራል)
+
+        return res.status(200).json({ success: true, message: 'KYC submitted successfully' });
     } catch (error) {
-        return res.status(401).json({ success: false, message: 'Unauthorized user' });
+        console.error('KYC Submit Error:', error);
+        return res.status(500).json({ success: false, message: 'Server error' });
     }
-};
+});
 // 1. Dashboard Stats
 app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
     try {
