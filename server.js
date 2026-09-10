@@ -669,9 +669,6 @@ app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
     }
 });
 
-// --- User KYC Submit Route ---
-const Kyc = require('./models/Kyc'); // ሞዴሉን ከላይ ማስገባት (Import ማድረግ)
-
 // የ KYC ማስገቢያ ራውት
 // --- User KYC Submit Route ---
 app.post('/api/kyc/submit', verifyToken, async (req, res) => {
