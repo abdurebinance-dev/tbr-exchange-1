@@ -767,37 +767,49 @@ app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
 });
 
 
-// --- 9. User KYC Submission API (Fixed to update the authenticated user's KYC details) ---
-app.post('/api/kyc/submit', async (req, res) => {
+// --- User KYC Submission API ---
+app.post('/api/kyc/submit', verifyToken, async (req, res) => {
     try {
-        const authHeader = req.headers['authorization'];
-        const token = authHeader && authHeader.split(' ')[1];
-
-        if (!token) {
-            return res.status(401).json({ success: false, message: 'እባክዎ መጀመሪያ ሎጊን ያድርጉ (No token provided).' });
-        }
-
-        const decoded = jwt.verify(token, JWT_SECRET);
-        const userId = decoded.id;
-
+        const userId = req.user.id;
         const { fullName, idNumber, dateOfBirth, residentialAddress, address, docType, frontImage, backImage, selfieImage } = req.body;
 
         if (!frontImage || !selfieImage) {
             return res.status(400).json({ success: false, message: "የመታወቂያ ፊት እና የሰልፊ ፎቶ ግዴታ ናቸው!" });
         }
 
-        // ነባሩን ዩዘር ፈልጎ የ KYC መረጃውን እና ፋይሎቹን እናዘምነዋለን (እንዳይደራረብ ወይም አዲስ ዩዘር እንዳይፈጠር)
-        await User.findByIdAndUpdate(userId, {
-            fullName: fullName || 'New User',
-            address: residentialAddress || address || '',
-            idNumber: idNumber || '',
-            dateOfBirth: dateOfBirth || '',
-            docType: docType || 'national_id',
-            frontImage,
-            backImage: backImage || '',
-            selfieImage,
-            kycStatus: 'pending'
-        });
+        // ከዚህ በፊት የላከው KYC ካለ እንፈልጋለን
+        let kycRecord = await KYC.findOne({ userId });
+
+        if (kycRecord) {
+            // ካለ እናስተካክለዋለን
+            kycRecord.fullName = fullName || '';
+            kycRecord.address = residentialAddress || address || '';
+            kycRecord.idNumber = idNumber || '';
+            kycRecord.dob = dateOfBirth || '';
+            kycRecord.docType = docType || 'national_id';
+            kycRecord.frontImage = frontImage;
+            kycRecord.backImage = backImage || '';
+            kycRecord.selfieImage = selfieImage;
+            kycRecord.status = 'pending';
+            await kycRecord.save();
+        } else {
+            // ከሌለ አዲስ እንፈጥራለን
+            await KYC.create({
+                userId,
+                fullName: fullName || '',
+                address: residentialAddress || address || '',
+                idNumber: idNumber || '',
+                dob: dateOfBirth || '',
+                docType: docType || 'national_id',
+                frontImage,
+                backImage: backImage || '',
+                selfieImage,
+                status: 'pending'
+            });
+        }
+
+        // የዩዘሩንም kycStatus እናዘምነዋለን
+        await User.findByIdAndUpdate(userId, { kycStatus: 'pending' });
 
         res.json({ success: true, message: "የ KYC መረጃዎ በትክክል ተልኳል!" });
     } catch (error) {
@@ -806,24 +818,55 @@ app.post('/api/kyc/submit', async (req, res) => {
     }
 });
 
-// --- 10. Admin Get KYC Requests API ---
-app.get('/api/admin/kyc-requests', async (req, res) => {
+// --- Get KYC Requests API for Admin ---
+app.get('/api/admin/kyc-requests', verifyAdmin, async (req, res) => {
     try {
-        const kycUsers = await User.find({ kycStatus: 'pending' }).sort({ _id: -1 });
+        // ከ KYC ኮሌክሽን 'pending' የሆኑትን እንፈልጋለን እና ከ User ሞዴል ጋር እናያይዘዋለን (populate)
+        const pendingKycs = await KYC.find({ status: 'pending' }).populate('userId', 'email').sort({ _id: -1 });
 
-        const formattedData = kycUsers.map(user => ({
-            _id: user._id,
-            userId: user.email || user._id,
-            frontImage: user.frontImage,
-            backImage: user.backImage,
-            selfieImage: user.selfieImage,
-            status: user.kycStatus
+        const formattedData = pendingKycs.map(kyc => ({
+            _id: kyc._id,
+            userId: kyc.userId ? kyc.userId.email : 'Unknown User',
+            frontImage: kyc.frontImage || '',
+            backImage: kyc.backImage || '',
+            selfieImage: kyc.selfieImage || '',
+            status: kyc.status,
+            fullName: kyc.fullName,
+            idNumber: kyc.idNumber,
+            dateOfBirth: kyc.dob,
+            address: kyc.address,
+            docType: kyc.docType
         }));
 
         res.json({ success: true, data: formattedData });
     } catch (error) {
         console.error('Error fetching KYC requests:', error);
         res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// --- KYC Action Approval/Rejection ---
+app.post('/api/admin/kyc-action', verifyAdmin, async (req, res) => {
+    try {
+        const { kycId, status } = req.body; 
+        const newStatus = status === 'approved' ? 'approved' : 'rejected';
+        
+        const kycRecord = await KYC.findById(kycId);
+        if (!kycRecord) {
+            return res.status(404).json({ success: false, message: 'KYC record not found.' });
+        }
+
+        kycRecord.status = newStatus;
+        await kycRecord.save();
+
+        // በዩዘር ቴብል ላይም ስታተሱን እናዘምነዋለን (verified ወይም rejected)
+        const userStatus = newStatus === 'approved' ? 'verified' : 'rejected';
+        await User.findByIdAndUpdate(kycRecord.userId, { kycStatus: userStatus });
+
+        res.json({ success: true, message: `KYC status updated to ${newStatus} successfully.` });
+    } catch (error) {
+        console.error('KYC Action Error:', error);
+        res.status(500).json({ success: false, message: 'Error updating KYC status' });
     }
 });
 
