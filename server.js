@@ -89,7 +89,7 @@ const kycSchema = new mongoose.Schema({
     address: { type: String },
     docType: { type: String, default: 'national_id' },
     frontImage: { type: String, required: true }, 
-    backImage: { type: String },                     
+    backImage: { type: String },                    
     selfieImage: { type: String, required: true }, 
     status: { type: String, default: 'pending' }, 
     rejectionReason: { type: String, default: '' },
@@ -121,7 +121,6 @@ const verifyToken = (req, res, next) => {
         }
 
         const verified = jwt.verify(token, JWT_SECRET);
-        // Ensure standard properties exist for downstream usage
         req.user = {
             id: verified.id || verified._id,
             _id: verified.id || verified._id,
@@ -564,86 +563,6 @@ app.post('/api/reset-password', async (req, res) => {
     }
 });
 
-// 1. Admin Login API
-app.post('/api/admin/login', async (req, res) => {
-    try {
-        const { email, password } = req.body;
-        // እዚህጋ የአድሚን ኢሜልና ፓስወርድ ማረጋገጫ ኮድህ ይኑር (ለምሳሌ ከዳታቤዝ ወይም በ Environment Variable)
-        if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
-            const token = jwt.sign({ email, isAdmin: true }, process.env.JWT_SECRET, { expiresIn: '1d' });
-            return res.json({ success: true, token });
-        }
-        res.status(401).json({ success: false, message: 'Invalid admin credentials' });
-    } catch (err) {
-        res.status(500).json({ success: false, message: 'Server error' });
-    }
-});
-
-// Admin Authentication Middleware
-const verifyAdminToken = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    if (!authHeader) return res.status(401).json({ success: false, message: 'No token provided' });
-    
-    const token = authHeader.split(' ')[1];
-    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-        if (err) return res.status(403).json({ success: false, message: 'Failed to authenticate token' });
-        req.admin = decoded;
-        next();
-    });
-};
-
-// 2. Admin Stats API (ቁጥሮቹ 0 እንዳይሆኑ ዳታዎችን ከየኮሌክሽኖቹ ቆጥሮ የሚልክ)
-app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
-    try {
-        const totalUsers = await User.countDocuments();
-        const kycPending = await Kyc.countDocuments({ status: 'pending' }); // ወይም የ KYC ሞዴል ስምህ
-        const activeEscrow = await Escrow.countDocuments({ status: 'active' }); // እንደ ሞዴልህ አስተካክለው
-        
-        res.json({
-            success: true,
-            data: {
-                totalUsers: totalUsers || 0,
-                kycPending: kycPending || 0,
-                todayVolume: "0 USDT", // የምትፈልገውን የቮልዩም ሎጂክ ማስገባት ትችላለህ
-                activeEscrow: activeEscrow + " USDT"
-            }
-        });
-    } catch (err) {
-        res.status(500).json({ success: false, message: 'Error fetching stats' });
-    }
-});
-
-// 3. Fetch KYC Requests API
-app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
-    try {
-        const kycList = await Kyc.find(); // የ KYC ዳታዎች የሚገኙበት ሞዴል
-        res.json({ success: true, data: kycList });
-    } catch (err) {
-        res.status(500).json({ success: false, message: 'Error fetching KYC requests' });
-    }
-});
-
-// 4. Fetch Users List API
-app.get('/api/admin/users', verifyAdminToken, async (req, res) => {
-    try {
-        const users = await User.find();
-        res.json({ success: true, data: users });
-    } catch (err) {
-        res.status(500).json({ success: false, message: 'Error fetching users' });
-    }
-});
-
-// 5. Settings Save API
-app.post('/api/admin/settings', verifyAdminToken, async (req, res) => {
-    try {
-        const { buyRate, sellRate, platformFee } = req.body;
-        //ሬቶቹን ዳታቤዝ ውስጥ ማስቀመጫ ሎጂክ እዚህ ይጻፍ
-        res.json({ success: true, message: 'Settings saved successfully' });
-    } catch (err) {
-        res.status(500).json({ success: false, message: 'Error saving settings' });
-    }
-});
-
 // --- Admin Stats Route ---
 app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
     try {
@@ -778,76 +697,52 @@ app.post('/api/kyc/submit', verifyToken, async (req, res) => {
         } = req.body;
 
         if (!fullName || !frontImage || !selfieImage) {
-            return res.status(400).json({ 
-                success: false, 
-                message: "Full name, front ID image, and selfie image are required." 
-            });
+            return res.status(400).json({ success: false, message: 'Please provide all required KYC details and images.' });
         }
 
-        const userId = req.user._id || req.user.id;
+        const userId = req.user.id;
 
-        if (!userId) {
-            return res.status(400).json({ success: false, message: "User ID not found in token." });
-        }
-
-        const userDoc = await User.findById(userId);
-        const userEmail = userDoc ? userDoc.email : '';
-
-        // 1. Save or Update in KYC Collection
-        let kycRecord = await KYC.findOne({ userId: userId });
-        
-        if (kycRecord) {
-            kycRecord.fullName = fullName;
-            kycRecord.email = userEmail;
-            kycRecord.idNumber = idNumber || '';
-            kycRecord.dob = dateOfBirth || '';
-            kycRecord.address = residentialAddress || '';
-            kycRecord.docType = docType || 'national_id';
-            kycRecord.frontImage = frontImage;
-            kycRecord.backImage = backImage || '';
-            kycRecord.selfieImage = selfieImage;
-            kycRecord.status = 'pending';
-            await kycRecord.save();
-        } else {
-            await KYC.create({
-                userId: userId,
-                fullName,
-                email: userEmail,
-                idNumber: idNumber || '',
-                dob: dateOfBirth || '',
-                address: residentialAddress || '',
-                docType: docType || 'national_id',
-                frontImage,
-                backImage: backImage || '',
-                selfieImage,
-                status: 'pending'
-            });
-        }
-
-        // 2. Also save inside User kycData and set kycStatus to 'pending'
-        await User.findByIdAndUpdate(userId, { 
+        await User.findByIdAndUpdate(userId, {
             kycStatus: 'pending',
             kycData: {
-                idNumber: idNumber || '',
-                dateOfBirth: dateOfBirth || '',
-                residentialAddress: residentialAddress || '',
-                docType: docType || 'national_id',
+                idNumber,
+                dateOfBirth,
+                residentialAddress,
+                docType,
                 frontImage,
-                backImage: backImage || '',
+                backImage,
                 selfieImage,
                 submittedAt: new Date()
             }
         });
 
-        res.status(200).json({ success: true, message: "KYC submitted successfully" });
+        await KYC.findOneAndUpdate(
+            { userId },
+            {
+                userId,
+                fullName,
+                email: req.user.email,
+                idNumber,
+                dob: dateOfBirth,
+                address: residentialAddress,
+                docType: docType || 'national_id',
+                frontImage,
+                backImage,
+                selfieImage,
+                status: 'pending',
+                createdAt: new Date()
+            },
+            { upsert: true, new: true }
+        );
+
+        res.json({ success: true, message: 'KYC documents submitted successfully. Awaiting admin review.' });
     } catch (error) {
-        console.error("KYC Submission Error:", error);
-        res.status(500).json({ success: false, message: "Server error during KYC submission" });
+        console.error("KYC Submit Error:", error);
+        res.status(500).json({ success: false, message: 'Server error during KYC submission.' });
     }
 });
 
-// --- Server Port Listener ---
-const serverPort = process.env.PORT || 10000;
-app.listen(serverPort, '0.0.0.0', () => {
-    console.log(`Server is running on port ${serverPort}`);
+// Server Listen
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
 });
