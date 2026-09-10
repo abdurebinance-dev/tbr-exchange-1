@@ -673,6 +673,7 @@ app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
 const Kyc = require('./models/Kyc'); // ሞዴሉን ከላይ ማስገባት (Import ማድረግ)
 
 // የ KYC ማስገቢያ ራውት
+// --- User KYC Submit Route ---
 app.post('/api/kyc/submit', verifyToken, async (req, res) => {
     try {
         const { 
@@ -693,33 +694,39 @@ app.post('/api/kyc/submit', verifyToken, async (req, res) => {
             });
         }
 
-        let kycRecord = await Kyc.findOne({ userId: req.user._id || req.user.id });
+        const userId = req.user._id || req.user.id;
+
+        // ከላይ በተገለጸው አንዱ የ KYC ሞዴል (KYC) እንጠቀማለን
+        let kycRecord = await KYC.findOne({ userId: userId });
         
         if (kycRecord) {
             kycRecord.fullName = fullName;
             kycRecord.idNumber = idNumber;
-            kycRecord.dateOfBirth = dateOfBirth;
-            kycRecord.residentialAddress = residentialAddress;
-            kycRecord.docType = docType;
+            kycRecord.dob = dateOfBirth;
+            kycRecord.address = residentialAddress;
+            kycRecord.docType = docType || 'national_id';
             kycRecord.frontImage = frontImage;
             kycRecord.backImage = backImage;
             kycRecord.selfieImage = selfieImage;
             kycRecord.status = 'pending';
             await kycRecord.save();
         } else {
-            await Kyc.create({
-                userId: req.user._id || req.user.id,
+            await KYC.create({
+                userId: userId,
                 fullName,
                 idNumber,
-                dateOfBirth,
-                residentialAddress,
-                docType,
+                dob: dateOfBirth,
+                address: residentialAddress,
+                docType: docType || 'national_id',
                 frontImage,
                 backImage,
                 selfieImage,
                 status: 'pending'
             });
         }
+
+        // የተጠቃሚውን የ kycStatus በ User ሞዴል ውስጥም ማሻሻል
+        await User.findByIdAndUpdate(userId, { kycStatus: 'pending' });
 
         res.status(200).json({ success: true, message: "KYC submitted successfully" });
     } catch (error) {
