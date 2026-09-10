@@ -555,42 +555,10 @@ app.post('/api/reset-password', async (req, res) => {
     }
 });
 
-// --- Admin Login Route ---
-app.post('/api/admin/login', async (req, res) => {
-    try {
-        const { email, password } = req.body;
-        if (!email || !password) {
-            return res.status(400).json({ success: false, message: 'Please provide email and password.' });
-        }
-
-        if (email === 'binanceme73@gmail.com' && password === 'admin123') {
-            let user = await User.findOne({ email });
-            if (!user) {
-                user = await User.create({ email, password: 'admin123', isAdmin: true, kycStatus: 'verified' });
-            } else {
-                await User.findByIdAndUpdate(user._id, { isAdmin: true, kycStatus: 'verified' });
-            }
-            const token = jwt.sign({ id: user._id, email: user.email, isAdmin: true }, JWT_SECRET, { expiresIn: '1d' });
-            return res.json({ success: true, message: 'Admin logged in successfully', token });
-        }
-
-        const user = await User.findOne({ email });
-        if (!user || !user.isAdmin || user.password !== password) {
-            return res.status(401).json({ success: false, message: 'Invalid email or password.' });
-        }
-
-        const token = jwt.sign({ id: user._id, email: user.email, isAdmin: true }, JWT_SECRET, { expiresIn: '1d' });
-        res.json({ success: true, message: 'Admin logged in successfully', token });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Server error during login.' });
-    }
-});
-
 // --- Admin Stats Route ---
 app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
     try {
         const totalUsers = await User.countDocuments({});
-        // ሁለቱንም ከKYC ኮሌክሽን እና ከUser ኮሌክሽን pending የሆኑትን ይቆጥራል
         const kycPendingKYC = await KYC.countDocuments({ $or: [{ status: 'pending' }, { status: 'under_review' }, { status: 'undefined' }, { status: { $exists: false } }] });
         const kycPendingUser = await User.countDocuments({ kycStatus: 'pending' });
         const kycPending = Math.max(kycPendingKYC, kycPendingUser);
@@ -651,6 +619,58 @@ app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
     } catch (err) {
         console.error("KYC Fetch Error:", err);
         res.status(500).json({ success: false, message: 'Error fetching KYC requests' });
+    }
+});
+
+// --- Admin Get All Users Route ---
+app.get('/api/admin/users', verifyAdminToken, async (req, res) => {
+    try {
+        const users = await User.find({}).select('-password').sort({ _id: -1 });
+        res.json({ success: true, count: users.length, data: users });
+    } catch (error) {
+        console.error("Fetch Users Error:", error);
+        res.status(500).json({ success: false, message: 'Server error while fetching users.' });
+    }
+});
+
+// --- Admin KYC Action Route ---
+app.post('/api/admin/kyc-action', verifyAdmin, async (req, res) => {
+    try {
+        const { kycId, status } = req.body; 
+        const newStatus = status === 'approved' ? 'approved' : 'rejected';
+        let kycRecord = await KYC.findById(kycId);
+        
+        if (!kycRecord) {
+            const userRecord = await User.findById(kycId);
+            if (userRecord) {
+                userRecord.kycStatus = newStatus === 'approved' ? 'verified' : 'rejected';
+                await userRecord.save();
+                return res.json({ success: true, message: `User KYC status updated to ${newStatus} successfully.` });
+            }
+            return res.status(404).json({ success: false, message: 'KYC record not found.' });
+        }
+
+        kycRecord.status = newStatus;
+        await kycRecord.save();
+
+        if (kycRecord.userId) {
+            await User.findByIdAndUpdate(kycRecord.userId, { kycStatus: newStatus === 'approved' ? 'verified' : 'rejected' });
+        }
+        res.json({ success: true, message: `KYC status updated to ${newStatus} successfully.` });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error updating KYC status' });
+    }
+});
+
+// --- Admin User Action Route ---
+app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
+    try {
+        const { userId, action } = req.body; 
+        const isBanned = action === 'ban';
+        await User.findByIdAndUpdate(userId, { isBanned });
+        res.json({ success: true, message: `User successfully ${action === 'ban' ? 'banned' : 'unbanned'}` });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error updating user status' });
     }
 });
 
@@ -715,17 +735,6 @@ app.post('/api/kyc/submit', verifyToken, async (req, res) => {
     } catch (error) {
         console.error("KYC Submission Error:", error);
         res.status(500).json({ success: false, message: "Server error during KYC submission" });
-    }
-});
-
-// --- Admin Get All Users Route ---
-app.get('/api/admin/users', verifyAdminToken, async (req, res) => {
-    try {
-        const users = await User.find({}).select('-password').sort({ _id: -1 });
-        res.json({ success: true, count: users.length, data: users });
-    } catch (error) {
-        console.error("Fetch Users Error:", error);
-        res.status(500).json({ success: false, message: 'Server error while fetching users.' });
     }
 });
 
