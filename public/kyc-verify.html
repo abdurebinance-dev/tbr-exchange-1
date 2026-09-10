@@ -555,6 +555,16 @@
     let backImageBase64 = null;
     let selfieImageBase64 = null;
 
+    // ፋይሎችን ወደ Base64 የሚቀይር ትክክለኛ ፊቸር
+    function convertFileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+    }
+
     window.addEventListener('DOMContentLoaded', async () => {
         const token = localStorage.getItem('token');
         if (token) {
@@ -642,33 +652,33 @@
         startCamera();
     }
 
-    function handleFrontIdUpload(event) {
+    async function handleFrontIdUpload(event) {
         const file = event.target.files[0];
         if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                frontImageBase64 = e.target.result;
+            try {
+                frontImageBase64 = await convertFileToBase64(file);
                 const frontText = document.getElementById('frontText');
                 const frontBox = document.getElementById('frontBox');
                 if (frontText) frontText.innerHTML = '<span style="color: #0ecb81;">Front Uploaded ✓</span>';
                 if (frontBox) frontBox.style.borderColor = '#0ecb81';
-            };
-            reader.readAsDataURL(file);
+            } catch (err) {
+                console.error('Error reading front image:', err);
+            }
         }
     }
 
-    function handleBackIdUpload(event) {
+    async function handleBackIdUpload(event) {
         const file = event.target.files[0];
         if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                backImageBase64 = e.target.result;
+            try {
+                backImageBase64 = await convertFileToBase64(file);
                 const backText = document.getElementById('backText');
                 const backBox = document.getElementById('backBox');
                 if (backText) backText.innerHTML = '<span style="color: #0ecb81;">Back Uploaded ✓</span>';
                 if (backBox) backBox.style.borderColor = '#0ecb81';
-            };
-            reader.readAsDataURL(file);
+            } catch (err) {
+                console.error('Error reading back image:', err);
+            }
         }
     }
 
