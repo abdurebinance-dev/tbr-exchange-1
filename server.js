@@ -81,7 +81,7 @@ const kycSchema = new mongoose.Schema({
     address: { type: String },
     docType: { type: String, default: 'national_id' },
     frontImage: { type: String, required: true }, 
-    backImage: { type: String },                     
+    backImage: { type: String },                    
     selfieImage: { type: String, required: true }, 
     status: { type: String, default: 'pending' }, 
     rejectionReason: { type: String, default: '' },
@@ -112,7 +112,7 @@ const verifyToken = (req, res, next) => {
             return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
         }
 
-        const verified = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret_key');
+        const verified = jwt.verify(token, JWT_SECRET);
         req.user = verified;
         next();
     } catch (err) {
@@ -120,15 +120,11 @@ const verifyToken = (req, res, next) => {
     }
 };
 
-// --- Admin Token Verification (ለሁለቱም ራውቶች እንዲመች የተስተካከለ) ---
-const verifyAdminToken = verifyToken;
-const verifyAdmin = verifyToken;
-
 // --- Admin Verification Middleware ---
 const verifyAdmin = async (req, res, next) => {
     try {
-        const authHeader = req.headers['authorization'];
-        const token = authHeader && authHeader.split(' ')[1];
+        const authHeader = req.headers['authorization'] || req.headers['Authorization'];
+        const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : authHeader;
         
         if (!token) {
             return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
@@ -141,7 +137,7 @@ const verifyAdmin = async (req, res, next) => {
             return next();
         }
 
-        const user = await User.findById(verified.id);
+        const user = await User.findById(verified.id || verified._id);
         if (!user || !user.isAdmin) { 
             return res.status(403).json({ success: false, message: 'Access denied. Admin privileges required.' });
         }
