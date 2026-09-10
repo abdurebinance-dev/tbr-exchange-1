@@ -95,19 +95,22 @@ const pendingUsers = {};
 // --- JWT Token Verification Middleware ---
 const verifyToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer <token>
+    
+    // ከ Header ወይም ከ Cookie/Body ቶከኑን ለመፈለግ
+    const finalToken = token || req.headers['token'] || req.body.token;
 
-    if (!token) {
-        return res.status(401).json({ success: false, message: 'No token provided.' });
+    if (!finalToken) {
+        return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
     }
 
-    jwt.verify(token, JWT_SECRET, (err, user) => {
-        if (err) {
-            return res.status(403).json({ success: false, message: 'Invalid or expired token.' });
-        }
-        req.user = user; 
+    try {
+        const verified = jwt.verify(finalToken, process.env.JWT_SECRET || 'your_jwt_secret_key');
+        req.user = verified;
         next();
-    });
+    } catch (err) {
+        return res.status(403).json({ success: false, message: 'Invalid or expired token.' });
+    }
 };
 
 // --- Admin Verification Middleware ---
@@ -656,7 +659,7 @@ app.post('/api/kyc/submit', verifyToken, async (req, res) => {
             });
         }
 
-        const userId = req.user._id || req.user.id;
+        const userId = req.user._id || req.user.id || req.user.userId;
 
         let kycRecord = await KYC.findOne({ userId: userId });
         
