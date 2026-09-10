@@ -828,12 +828,3 @@ const serverPort = process.env.PORT || 5000;
 app.listen(serverPort, '0.0.0.0', () => {
     console.log(`Server is running on port ${serverPort}`);
 });
-አሁን ማድረግ የሚጠበቅብህ፦
-ይህንን ሙሉ ኮድ በ server.js ፋይልህ ውስጥ አስገባና Save አድርገው።
-
-በመቀጠል ተርሚናል ላይ ሆኖ እነዚህን ትዕዛዞች ጻፍ፦
-
-Bash
-git add .
-git commit -m "Fix duplicate routes and resolve KYC image rendering issue"
-git push origin main
