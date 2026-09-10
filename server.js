@@ -94,21 +94,30 @@ const pendingUsers = {};
 
 // --- JWT Token Verification Middleware ---
 const verifyToken = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Bearer <token>
-    
-    // ከ Header ወይም ከ Cookie/Body ቶከኑን ለመፈለግ
-    const finalToken = token || req.headers['token'] || req.body.token;
-
-    if (!finalToken) {
-        return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
-    }
-
     try {
-        const verified = jwt.verify(finalToken, process.env.JWT_SECRET || 'your_jwt_secret_key');
+        let token = null;
+        const authHeader = req.headers['authorization'] || req.headers['Authorization'];
+        
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            token = authHeader.split(' ')[1];
+        } else if (authHeader) {
+            token = authHeader;
+        }
+
+        // ከሌሎች የሀደር ወይም የቦዲ አማራጮችም መፈለግ
+        if (!token) {
+            token = req.headers['token'] || req.headers['x-auth-token'] || (req.body && req.body.token) || (req.query && req.query.token);
+        }
+
+        if (!token) {
+            return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
+        }
+
+        const verified = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret_key');
         req.user = verified;
         next();
     } catch (err) {
+        console.error("Token Verification Error:", err.message);
         return res.status(403).json({ success: false, message: 'Invalid or expired token.' });
     }
 };
@@ -591,54 +600,6 @@ app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
 });
 
 // --- Admin KYC Requests Route ---
-app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
-    try {
-        let pendingKycs = await KYC.find({ 
-            $or: [
-                { status: { $in: ['pending', 'under_review', 'undefined'] } },
-                { status: { $exists: false } }
-            ] 
-        }).populate('userId', 'email fullName').sort({ _id: -1 });
-
-        if (pendingKycs.length === 0) {
-            const pendingUsers = await User.find({ kycStatus: 'pending' }).sort({ _id: -1 });
-            pendingKycs = pendingUsers.map(u => ({
-                _id: u._id,
-                userId: u,
-                email: u.email,
-                fullName: u.fullName || 'User',
-                frontImage: u.kycData?.frontImage || '',
-                backImage: u.kycData?.backImage || '',
-                selfieImage: u.kycData?.selfieImage || '',
-                status: 'pending',
-                idNumber: u.kycData?.idNumber || '',
-                dob: u.kycData?.dateOfBirth || '',
-                address: u.kycData?.residentialAddress || '',
-                docType: u.kycData?.docType || 'national_id'
-            }));
-        }
-
-        const data = pendingKycs.map(kyc => ({
-            _id: kyc._id,
-            userId: kyc.userId && kyc.userId.email ? kyc.userId.email : (kyc.email || 'Unknown User'),
-            frontImage: kyc.frontImage || '',
-            backImage: kyc.backImage || '',
-            selfieImage: kyc.selfieImage || '',
-            status: kyc.status || 'pending',
-            fullName: kyc.fullName || 'User',
-            idNumber: kyc.idNumber || '',
-            dateOfBirth: kyc.dob || kyc.dateOfBirth || '',
-            address: kyc.address || kyc.residentialAddress || '',
-            docType: kyc.docType || 'national_id'
-        }));
-        return res.json({ success: true, data, requests: pendingKycs });
-    } catch (err) {
-        console.error("KYC Fetch Error:", err);
-        res.status(500).json({ success: false, message: 'Error fetching KYC requests' });
-    }
-});
-
-// --- User KYC Submit Route ---
 app.post('/api/kyc/submit', verifyToken, async (req, res) => {
     try {
         const { 
@@ -661,13 +622,17 @@ app.post('/api/kyc/submit', verifyToken, async (req, res) => {
 
         const userId = req.user._id || req.user.id || req.user.userId;
 
+        if (!userId) {
+            return res.status(400).json({ success: false, message: "User ID not found in token." });
+        }
+
         let kycRecord = await KYC.findOne({ userId: userId });
         
         if (kycRecord) {
             kycRecord.fullName = fullName;
-            kycRecord.idNumber = idNumber;
-            kycRecord.dob = dateOfBirth;
-            kycRecord.address = residentialAddress;
+            kycRecord.idNumber = idNumber || '';
+            kycRecord.dob = dateOfBirth || '';
+            kycRecord.address = residentialAddress || '';
             kycRecord.docType = docType || 'national_id';
             kycRecord.frontImage = frontImage;
             kycRecord.backImage = backImage || '';
@@ -678,9 +643,9 @@ app.post('/api/kyc/submit', verifyToken, async (req, res) => {
             await KYC.create({
                 userId: userId,
                 fullName,
-                idNumber,
-                dob: dateOfBirth,
-                address: residentialAddress,
+                idNumber: idNumber || '',
+                dob: dateOfBirth || '',
+                address: residentialAddress || '',
                 docType: docType || 'national_id',
                 frontImage,
                 backImage: backImage || '',
