@@ -22,7 +22,7 @@ const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 const BREVO_API_KEY = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : '';
 const EMAIL_FROM = process.env.EMAIL_FROM || 'tbrexchange@gmail.com';
 
-// Middleware - Updated Content Security Policy (CSP) headers to allow eval/inline scripts if needed by frontend/admin assets
+// Middleware - Updated Content Security Policy (CSP) headers
 app.use((req, res, next) => {
     res.setHeader(
         'Content-Security-Policy',
@@ -100,7 +100,7 @@ const KYC = mongoose.models.KYC || mongoose.model('KYC', kycSchema);
 
 const pendingUsers = {};
 
-// --- JWT Token Verification Middleware (Flexible for all headers/body/query) ---
+// --- JWT Token Verification Middleware ---
 const verifyToken = (req, res, next) => {
     try {
         let token = null;
@@ -121,7 +121,13 @@ const verifyToken = (req, res, next) => {
         }
 
         const verified = jwt.verify(token, JWT_SECRET);
-        req.user = verified;
+        // Ensure standard properties exist for downstream usage
+        req.user = {
+            id: verified.id || verified._id,
+            _id: verified.id || verified._id,
+            email: verified.email,
+            isAdmin: verified.isAdmin
+        };
         next();
     } catch (err) {
         return res.status(403).json({ success: false, message: 'Invalid or expired token.' });
@@ -144,13 +150,8 @@ const verifyAdmin = async (req, res, next) => {
 
         const verified = jwt.verify(token, JWT_SECRET);
         
-        if (verified.email === 'binanceme73@gmail.com' || verified.isAdmin) {
-            req.user = verified;
-            return next();
-        }
-
         const user = await User.findById(verified.id || verified._id);
-        if (!user || !user.isAdmin) { 
+        if (!user || (!user.isAdmin && user.email !== 'binanceme73@gmail.com')) { 
             return res.status(403).json({ success: false, message: 'Access denied. Admin privileges required.' });
         }
 
@@ -682,7 +683,7 @@ app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
     }
 });
 
-// --- User KYC Submit Route (Updated to support dual storage in KYC & User collections) ---
+// --- User KYC Submit Route ---
 app.post('/api/kyc/submit', verifyToken, async (req, res) => {
     try {
         const { 
@@ -703,7 +704,7 @@ app.post('/api/kyc/submit', verifyToken, async (req, res) => {
             });
         }
 
-        const userId = req.user._id || req.user.id || req.user.userId;
+        const userId = req.user._id || req.user.id;
 
         if (!userId) {
             return res.status(400).json({ success: false, message: "User ID not found in token." });
@@ -743,7 +744,7 @@ app.post('/api/kyc/submit', verifyToken, async (req, res) => {
             });
         }
 
-        // 2. Also save inside User kycData and set kycStatus to 'pending' so it appears reliably everywhere
+        // 2. Also save inside User kycData and set kycStatus to 'pending'
         await User.findByIdAndUpdate(userId, { 
             kycStatus: 'pending',
             kycData: {
