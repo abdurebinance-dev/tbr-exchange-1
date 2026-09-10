@@ -634,3 +634,8 @@ app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
         res.status(500).json({ success: false, message: 'Error fetching KYC requests' });
     }
 });
+// --- Server Port Listener ---
+const serverPort = process.env.PORT || 10000;
+app.listen(serverPort, '0.0.0.0', () => {
+    console.log(`Server is running on port ${serverPort}`);
+});
