@@ -707,7 +707,7 @@ app.post('/api/kyc/submit', verifyToken, async (req, res) => {
     }
 });
 
-router.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
+app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
     try {
         const pendingUsers = await User.find({ kycStatus: { $in: ['pending', 'under_review'] } });
         res.status(200).json({ success: true, requests: pendingUsers });
