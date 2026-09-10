@@ -835,7 +835,44 @@ app.post('/api/kyc/submit', async (req, res) => {
         res.status(500).json({ success: false, message: 'የሰርቨር ችግር አጋጥሟል::' });
     }
 });
-// --- 10. Server Port Listener (Fixed Port & Binding) ---
+
+// --- 10. Admin Get KYC Requests API (Fixed to return all pending/submitted users) ---
+app.get('/api/admin/kyc-requests', async (req, res) => {
+    try {
+        // የሰርቨር ቶከን ማረጋገጫ (ከተፈለገ)
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        
+        if (!token) {
+            return res.status(401).json({ success: false, message: 'Unauthorized access' });
+        }
+
+        // ኪኢሲያቸው pending የሆነ ወይም ዶክመንት የላኩ ሰዎችን በሙሉ ከዳታቤዝ እናመጣለን
+        const kycUsers = await User.find({ 
+            $or: [
+                { kycStatus: 'pending' },
+                { frontImage: { $exists: true, $ne: '' } }
+            ]
+        }).select('_id email fullName idNumber dateOfBirth address docType frontImage backImage selfieImage kycStatus status');
+
+        // ለfront-end በሚመች መልኩ ዳታውን እናዘጋጃለን
+        const formattedData = kycUsers.map(user => ({
+            _id: user._id,
+            userId: user.email || user._id,
+            frontImage: user.frontImage,
+            backImage: user.backImage,
+            selfieImage: user.selfieImage,
+            status: user.kycStatus || user.status || 'pending'
+        }));
+
+        res.json({ success: true, data: formattedData });
+    } catch (error) {
+        console.error('Error fetching KYC requests:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// --- 11. Server Port Listener (Fixed Port & Binding) ---
 const serverPort = process.env.PORT || 5000;
 app.listen(serverPort, '0.0.0.0', () => {
     console.log(`Server is running on port ${serverPort}`);
