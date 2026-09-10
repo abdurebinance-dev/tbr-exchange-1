@@ -538,7 +538,7 @@ const verifyToken = (req, res, next) => {
         return res.status(401).json({ success: false, message: 'No token provided.' });
     }
 
-    jwt.verify(token, process.env.JWT_SECRET || 'tbr_exchange_secret_key_', (err, user) => {
+    jwt.verify(token, JWT_SECRET, (err, user) => {
         if (err) {
             return res.status(403).json({ success: false, message: 'Invalid or expired token.' });
         }
@@ -547,25 +547,7 @@ const verifyToken = (req, res, next) => {
     });
 };
 
-// --- 1. JWT Token Verification Middleware ---
-const verifyToken = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // "Bearer TOKEN"
-
-    if (!token) {
-        return res.status(401).json({ success: false, message: 'No token provided.' });
-    }
-
-    jwt.verify(token, process.env.JWT_SECRET || 'tbr_exchange_secret_key_', (err, user) => {
-        if (err) {
-            return res.status(403).json({ success: false, message: 'Invalid or expired token.' });
-        }
-        req.user = user; 
-        next();
-    });
-};
-
-// --- 2. Admin Verification Middleware ---
+// --- Admin Verification Middleware ---
 const verifyAdmin = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -574,7 +556,7 @@ const verifyAdmin = (req, res, next) => {
         return res.status(401).json({ success: false, message: 'No token provided.' });
     }
 
-    jwt.verify(token, process.env.JWT_SECRET || 'tbr_exchange_secret_key_', (err, user) => {
+    jwt.verify(token, JWT_SECRET, (err, user) => {
         if (err) {
             return res.status(403).json({ success: false, message: 'Invalid or expired token.' });
         }
@@ -586,7 +568,7 @@ const verifyAdmin = (req, res, next) => {
     });
 };
 
-// --- 3. Admin Login Route ---
+// --- 1. Admin Login Route ---
 app.post('/api/admin/login', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -610,7 +592,7 @@ app.post('/api/admin/login', async (req, res) => {
 
             const token = jwt.sign(
                 { id: user._id, email: user.email, isAdmin: true },
-                process.env.JWT_SECRET || 'tbr_exchange_secret_key_',
+                JWT_SECRET,
                 { expiresIn: '1d' }
             );
 
@@ -628,7 +610,7 @@ app.post('/api/admin/login', async (req, res) => {
 
         const token = jwt.sign(
             { id: user._id, email: user.email, isAdmin: user.isAdmin },
-            process.env.JWT_SECRET || 'tbr_exchange_secret_key_',
+            JWT_SECRET,
             { expiresIn: '1d' }
         );
 
@@ -644,7 +626,7 @@ app.post('/api/admin/login', async (req, res) => {
     }
 });
 
-// --- 4. Get Dashboard Statistics & Volumes ---
+// --- 2. Get Dashboard Statistics & Volumes ---
 app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
     try {
         const totalUsers = await User.countDocuments({});
@@ -665,7 +647,7 @@ app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
     }
 });
 
-// --- 5. Get KYC Requests for Admin ---
+// --- 3. Get KYC Requests for Admin ---
 app.get('/api/admin/kyc-requests', verifyAdmin, async (req, res) => {
     try {
         const pendingKycs = await KYC.find({ status: 'pending' }).populate('userId', 'email').sort({ _id: -1 });
@@ -691,7 +673,7 @@ app.get('/api/admin/kyc-requests', verifyAdmin, async (req, res) => {
     }
 });
 
-// --- 6. KYC Action Approval/Rejection ---
+// --- 4. KYC Action Approval/Rejection ---
 app.post('/api/admin/kyc-action', verifyAdmin, async (req, res) => {
     try {
         const { kycId, status } = req.body; 
@@ -717,7 +699,7 @@ app.post('/api/admin/kyc-action', verifyAdmin, async (req, res) => {
     }
 });
 
-// --- 7. Get All Users ---
+// --- 5. Get All Users ---
 app.get('/api/admin/users', verifyAdmin, async (req, res) => {
     try {
         const users = await User.find({}).select('-password').sort({ _id: -1 });
@@ -728,7 +710,7 @@ app.get('/api/admin/users', verifyAdmin, async (req, res) => {
     }
 });
 
-// --- 8. Rate & Fee Management Endpoint ---
+// --- 6. Rate & Fee Management Endpoint ---
 app.post('/api/admin/settings', verifyAdmin, async (req, res) => {
     try {
         res.json({ success: true, message: 'Settings updated successfully' });
@@ -737,7 +719,7 @@ app.post('/api/admin/settings', verifyAdmin, async (req, res) => {
     }
 });
 
-// --- 9. User Ban / Suspend Endpoint ---
+// --- 7. User Ban / Suspend Endpoint ---
 app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
     try {
         const { userId, action } = req.body; 
@@ -750,7 +732,7 @@ app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
     }
 });
 
-// --- 10. User KYC Submission API ---
+// --- 8. User KYC Submission API ---
 app.post('/api/kyc/submit', verifyToken, async (req, res) => {
     try {
         const userId = req.user.id;
@@ -800,7 +782,7 @@ app.post('/api/kyc/submit', verifyToken, async (req, res) => {
     }
 });
 
-// --- 11. Server Port Listener ---
+// --- 9. Server Port Listener ---
 const serverPort = process.env.PORT || 5000;
 app.listen(serverPort, '0.0.0.0', () => {
     console.log(`Server is running on port ${serverPort}`);
