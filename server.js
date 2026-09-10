@@ -677,7 +677,7 @@ app.listen(serverPort, '0.0.0.0', () => {
 });
 
 // በሰርቨር በኩል (Backend Route)
-router.post('/api/kyc/submit', verifyToken, async (req, res) => {
+app.post('/api/kyc/submit', verifyToken, async (req, res) => {
     try {
         const { fullName, idNumber, dateOfBirth, residentialAddress, docType, frontImage, backImage, selfieImage } = req.body;
         
