@@ -644,39 +644,29 @@ app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
 // --- User KYC Submit Route ---
 app.post('/api/kyc/submit', verifyToken, async (req, res) => {
     try {
-        const userId = req.user.id;
-        const userEmail = req.user.email;
-        const { fullName, idNumber, dateOfBirth, residentialAddress, address, docType, frontImage, backImage, selfieImage } = req.body;
+        const { fullName, idNumber, dateOfBirth, residentialAddress, docType, frontImage, backImage, selfieImage } = req.body;
+        
+        const userId = req.user.id; 
+        
+        await User.findByIdAndUpdate(userId, {
+            fullName,
+            kycStatus: 'pending',
+            kycData: {
+                idNumber,
+                dateOfBirth,
+                residentialAddress,
+                docType,
+                frontImage,
+                backImage,
+                selfieImage,
+                submittedAt: new Date()
+            }
+        });
 
-        if (!frontImage || !selfieImage) {
-            return res.status(400).json({ success: false, message: "የመታወቂያ ፊት እና የሰልፊ ፎቶ ግዴታ ናቸው!" });
-        }
-
-        let kycRecord = await KYC.findOne({ userId });
-        if (kycRecord) {
-            kycRecord.fullName = fullName || '';
-            kycRecord.email = userEmail || '';
-            kycRecord.address = residentialAddress || address || '';
-            kycRecord.idNumber = idNumber || '';
-            kycRecord.dob = dateOfBirth || '';
-            kycRecord.docType = docType || 'national_id';
-            kycRecord.frontImage = frontImage;
-            kycRecord.backImage = backImage || '';
-            kycRecord.selfieImage = selfieImage;
-            kycRecord.status = 'pending';
-            await kycRecord.save();
-        } else {
-            await KYC.create({
-                userId, fullName: fullName || '', email: userEmail || '', address: residentialAddress || address || '',
-                idNumber: idNumber || '', dob: dateOfBirth || '', docType: docType || 'national_id',
-                frontImage, backImage: backImage || '', selfieImage, status: 'pending'
-            });
-        }
-
-        await User.findByIdAndUpdate(userId, { kycStatus: 'pending' });
-        res.json({ success: true, message: "የ KYC መረጃዎ በትክክል ተልኳል!" });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'የሰርቨር ችግር አጋጥሟል::' });
+        res.status(200).json({ success: true, message: 'KYC submitted successfully under review' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: 'Server error during KYC submission' });
     }
 });
 
