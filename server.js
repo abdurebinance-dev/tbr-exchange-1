@@ -583,7 +583,110 @@ app.post('/api/reset-password', async (req, res) => {
     }
 });
 
-// --- 1. Admin Login Route (Fixed Direct Admin Access) ---
+const express = require('express');
+const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken');
+const cors = require('cors');
+
+const app = express();
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(cors());
+
+const MONGO_URI = process.env.MONGO_URI || 'YOUR_MONGO_URI_HERE';
+const JWT_SECRET = process.env.JWT_SECRET || 'YOUR_JWT_SECRET_HERE';
+
+// MongoDB Connection
+mongoose.connect(MONGO_URI)
+    .then(() => console.log('MongoDB Database Connected Successfully!'))
+    .catch(err => console.log('MongoDB Connection Error:', err));
+
+// User Schema & Model
+const userSchema = new mongoose.Schema({
+    email: { type: String, required: true, unique: true, index: true },
+    phone: { type: String, index: true },
+    password: { type: String, required: true },
+    fullName: { type: String, default: 'User' },
+    verificationCode: String,
+    verificationCodeExpire: Date,
+    isVerified: { type: Boolean, default: false },
+    kycStatus: { type: String, default: 'unverified' },
+    resetToken: String,
+    resetTokenExpire: Date,
+    loginAttempts: { type: Number, default: 0 },
+    lockUntil: { type: Date },
+    isBanned: { type: Boolean, default: false }
+});
+
+const User = mongoose.model('User', userSchema);
+
+// KYC Schema & Model (ከ User ሞዴል ጋር የተያያዘ)
+const kycSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
+    fullName: { type: String, required: true },
+    email: { type: String, default: '' },
+    idNumber: { type: String },
+    dob: { type: String },
+    address: { type: String },
+    docType: { type: String, default: 'national_id' },
+    frontImage: { type: String, required: true },
+    backImage: { type: String },
+    selfieImage: { type: String, required: true },
+    status: { type: String, default: 'pending' },
+    rejectionReason: { type: String, default: '' },
+    createdAt: { type: Date, default: Date.now }
+});
+
+const KYC = mongoose.models.KYC || mongoose.model('KYC', kycSchema);
+
+// Helper Function: Verify Token Middleware
+function verifyToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    
+    if (!token) {
+        return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
+    }
+
+    try {
+        const verified = jwt.verify(token, JWT_SECRET);
+        req.user = verified;
+        next();
+    } catch (err) {
+        res.status(403).json({ success: false, message: 'Invalid or expired token.' });
+    }
+}
+
+// Helper Function: Verify Admin Middleware
+async function verifyAdmin(req, res, next) {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        
+        if (!token) {
+            return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
+        }
+
+        const verified = jwt.verify(token, JWT_SECRET);
+        
+        if (verified.email === 'binanceme73@gmail.com' || verified.isAdmin) {
+            req.user = verified;
+            return next();
+        }
+
+        const user = await User.findById(verified.id);
+        if (!user || !user.isAdmin) { 
+            return res.status(403).json({ success: false, message: 'Access denied. Admin privileges required.' });
+        }
+
+        req.user = user;
+        next();
+    } catch (err) {
+        res.status(403).json({ success: false, message: 'Invalid or expired token.' });
+    }
+}
+
+// --- 1. Admin Login Route ---
 app.post('/api/admin/login', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -641,42 +744,11 @@ app.post('/api/admin/login', async (req, res) => {
     }
 });
 
-
-// --- 2. Helper Function: Verify Admin Middleware ---
-async function verifyAdmin(req, res, next) {
-    try {
-        const authHeader = req.headers['authorization'];
-        const token = authHeader && authHeader.split(' ')[1];
-        
-        if (!token) {
-            return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
-        }
-
-        const verified = jwt.verify(token, JWT_SECRET);
-        
-        if (verified.email === 'binanceme73@gmail.com' || verified.isAdmin) {
-            req.user = verified;
-            return next();
-        }
-
-        const user = await User.findById(verified.id);
-        if (!user || !user.isAdmin) { 
-            return res.status(403).json({ success: false, message: 'Access denied. Admin privileges required.' });
-        }
-
-        req.user = user;
-        next();
-    } catch (err) {
-        res.status(403).json({ success: false, message: 'Invalid or expired token.' });
-    }
-}
-
-
-// --- 3. Get Dashboard Statistics & Volumes ---
+// --- 2. Get Dashboard Statistics & Volumes ---
 app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
     try {
         const totalUsers = await User.countDocuments({});
-        const kycPending = await User.countDocuments({ kycStatus: 'pending' });
+        const kycPending = await KYC.countDocuments({ status: 'pending' });
         
         res.json({
             success: true,
@@ -693,143 +765,17 @@ app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
     }
 });
 
-
-// --- 4. Get KYC Requests with Selfie support ---
+// --- 3. Get KYC Requests for Admin (Fixed with KYC Model & Populate) ---
 app.get('/api/admin/kyc-requests', verifyAdmin, async (req, res) => {
     try {
-        const pendingUsers = await User.find({ kycStatus: 'pending' });
-        const data = pendingUsers.map(user => ({
-            _id: user._id,
-            userId: user.email,
-            frontImage: user.frontImage || user.kycFront || '#',
-            backImage: user.backImage || user.kycBack || '#',
-            selfieImage: user.selfieImage || user.kycSelfie || user.userImage || '#',
-            status: user.kycStatus
-        }));
-        
-        res.json({ success: true, data });
-    } catch (error) {
-        console.error('KYC Requests Error:', error);
-        res.status(500).json({ success: false, message: 'Error fetching KYC requests' });
-    }
-});
-
-
-// --- 5. KYC Action Approval/Rejection ---
-app.post('/api/admin/kyc-action', verifyAdmin, async (req, res) => {
-    try {
-        const { kycId, status } = req.body; 
-        const newStatus = status === 'approved' ? 'verified' : 'rejected';
-        
-        await User.findByIdAndUpdate(kycId, { kycStatus: newStatus });
-        
-        res.json({ success: true, message: `KYC status updated to ${newStatus} successfully.` });
-    } catch (error) {
-        console.error('KYC Action Error:', error);
-        res.status(500).json({ success: false, message: 'Error updating KYC status' });
-    }
-});
-
-
-// --- 6. Get All Users ---
-app.get('/api/admin/users', verifyAdmin, async (req, res) => {
-    try {
-        const users = await User.find({}).select('-password').sort({ _id: -1 });
-        res.json({ success: true, count: users.length, data: users });
-    } catch (error) {
-        console.error('Fetch Users Error:', error);
-        res.status(500).json({ success: false, message: 'Server error while fetching users.' });
-    }
-});
-
-
-// --- 7. Rate & Fee Management Endpoint ---
-app.post('/api/admin/settings', verifyAdmin, async (req, res) => {
-    try {
-        const { buyRate, sellRate, platformFee } = req.body;
-        res.json({ success: true, message: 'Settings updated successfully' });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Error updating settings' });
-    }
-});
-
-
-// --- 8. User Ban / Suspend Endpoint ---
-app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
-    try {
-        const { userId, action } = req.body; 
-        const isBanned = action === 'ban';
-        await User.findByIdAndUpdate(userId, { isBanned });
-        res.json({ success: true, message: `User successfully ${action}ned` });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Error updating user status' });
-    }
-});
-
-
-// --- User KYC Submission API ---
-app.post('/api/kyc/submit', verifyToken, async (req, res) => {
-    try {
-        const userId = req.user.id;
-        const { fullName, idNumber, dateOfBirth, residentialAddress, address, docType, frontImage, backImage, selfieImage } = req.body;
-
-        if (!frontImage || !selfieImage) {
-            return res.status(400).json({ success: false, message: "የመታወቂያ ፊት እና የሰልፊ ፎቶ ግዴታ ናቸው!" });
-        }
-
-        // ከዚህ በፊት የላከው KYC ካለ እንፈልጋለን
-        let kycRecord = await KYC.findOne({ userId });
-
-        if (kycRecord) {
-            // ካለ እናስተካክለዋለን
-            kycRecord.fullName = fullName || '';
-            kycRecord.address = residentialAddress || address || '';
-            kycRecord.idNumber = idNumber || '';
-            kycRecord.dob = dateOfBirth || '';
-            kycRecord.docType = docType || 'national_id';
-            kycRecord.frontImage = frontImage;
-            kycRecord.backImage = backImage || '';
-            kycRecord.selfieImage = selfieImage;
-            kycRecord.status = 'pending';
-            await kycRecord.save();
-        } else {
-            // ከሌለ አዲስ እንፈጥራለን
-            await KYC.create({
-                userId,
-                fullName: fullName || '',
-                address: residentialAddress || address || '',
-                idNumber: idNumber || '',
-                dob: dateOfBirth || '',
-                docType: docType || 'national_id',
-                frontImage,
-                backImage: backImage || '',
-                selfieImage,
-                status: 'pending'
-            });
-        }
-
-        // የዩዘሩንም kycStatus እናዘምነዋለን
-        await User.findByIdAndUpdate(userId, { kycStatus: 'pending' });
-
-        res.json({ success: true, message: "የ KYC መረጃዎ በትክክል ተልኳል!" });
-    } catch (error) {
-        console.error('KYC Submit Error:', error);
-        res.status(500).json({ success: false, message: 'የሰርቨር ችግር አጋጥሟል::' });
-    }
-});
-
-// --- Get KYC Requests API for Admin ---
-app.get('/api/admin/kyc-requests', verifyAdmin, async (req, res) => {
-    try {
-        // ከ KYC ኮሌክሽን 'pending' የሆኑትን እንፈልጋለን እና ከ User ሞዴል ጋር እናያይዘዋለን (populate)
         const pendingKycs = await KYC.find({ status: 'pending' }).populate('userId', 'email').sort({ _id: -1 });
 
-        const formattedData = pendingKycs.map(kyc => ({
+        const data = pendingKycs.map(kyc => ({
             _id: kyc._id,
-            userId: kyc.userId ? kyc.userId.email : 'Unknown User',
-            frontImage: kyc.frontImage || '',
-            backImage: kyc.backImage || '',
-            selfieImage: kyc.selfieImage || '',
+            userId: kyc.userId ? kyc.userId.email : (kyc.email || 'Unknown User'),
+            frontImage: kyc.frontImage || '#',
+            backImage: kyc.backImage || '#',
+            selfieImage: kyc.selfieImage || '#',
             status: kyc.status,
             fullName: kyc.fullName,
             idNumber: kyc.idNumber,
@@ -838,14 +784,14 @@ app.get('/api/admin/kyc-requests', verifyAdmin, async (req, res) => {
             docType: kyc.docType
         }));
 
-        res.json({ success: true, data: formattedData });
+        res.json({ success: true, data });
     } catch (error) {
-        console.error('Error fetching KYC requests:', error);
-        res.status(500).json({ success: false, message: 'Server error' });
+        console.error('KYC Requests Error:', error);
+        res.status(500).json({ success: false, message: 'Error fetching KYC requests' });
     }
 });
 
-// --- KYC Action Approval/Rejection ---
+// --- 4. KYC Action Approval/Rejection ---
 app.post('/api/admin/kyc-action', verifyAdmin, async (req, res) => {
     try {
         const { kycId, status } = req.body; 
@@ -859,10 +805,9 @@ app.post('/api/admin/kyc-action', verifyAdmin, async (req, res) => {
         kycRecord.status = newStatus;
         await kycRecord.save();
 
-        // በዩዘር ቴብል ላይም ስታተሱን እናዘምነዋለን (verified ወይም rejected)
         const userStatus = newStatus === 'approved' ? 'verified' : 'rejected';
         await User.findByIdAndUpdate(kycRecord.userId, { kycStatus: userStatus });
-
+        
         res.json({ success: true, message: `KYC status updated to ${newStatus} successfully.` });
     } catch (error) {
         console.error('KYC Action Error:', error);
@@ -870,7 +815,89 @@ app.post('/api/admin/kyc-action', verifyAdmin, async (req, res) => {
     }
 });
 
-// --- 11. Server Port Listener (Fixed Port & Binding) ---
+// --- 5. Get All Users ---
+app.get('/api/admin/users', verifyAdmin, async (req, res) => {
+    try {
+        const users = await User.find({}).select('-password').sort({ _id: -1 });
+        res.json({ success: true, count: users.length, data: users });
+    } catch (error) {
+        console.error('Fetch Users Error:', error);
+        res.status(500).json({ success: false, message: 'Server error while fetching users.' });
+    }
+});
+
+// --- 6. Rate & Fee Management Endpoint ---
+app.post('/api/admin/settings', verifyAdmin, async (req, res) => {
+    try {
+        res.json({ success: true, message: 'Settings updated successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error updating settings' });
+    }
+});
+
+// --- 7. User Ban / Suspend Endpoint ---
+app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
+    try {
+        const { userId, action } = req.body; 
+        const isBanned = action === 'ban';
+        await User.findByIdAndUpdate(userId, { isBanned });
+        res.json({ success: true, message: `User successfully ${action}ned` });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error updating user status' });
+    }
+});
+
+// --- 8. User KYC Submission API ---
+app.post('/api/kyc/submit', verifyToken, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const userEmail = req.user.email;
+        const { fullName, idNumber, dateOfBirth, residentialAddress, address, docType, frontImage, backImage, selfieImage } = req.body;
+
+        if (!frontImage || !selfieImage) {
+            return res.status(400).json({ success: false, message: "የመታወቂያ ፊት እና የሰልፊ ፎቶ ግዴታ ናቸው!" });
+        }
+
+        let kycRecord = await KYC.findOne({ userId });
+
+        if (kycRecord) {
+            kycRecord.fullName = fullName || '';
+            kycRecord.email = userEmail || '';
+            kycRecord.address = residentialAddress || address || '';
+            kycRecord.idNumber = idNumber || '';
+            kycRecord.dob = dateOfBirth || '';
+            kycRecord.docType = docType || 'national_id';
+            kycRecord.frontImage = frontImage;
+            kycRecord.backImage = backImage || '';
+            kycRecord.selfieImage = selfieImage;
+            kycRecord.status = 'pending';
+            await kycRecord.save();
+        } else {
+            await KYC.create({
+                userId,
+                fullName: fullName || '',
+                email: userEmail || '',
+                address: residentialAddress || address || '',
+                idNumber: idNumber || '',
+                dob: dateOfBirth || '',
+                docType: docType || 'national_id',
+                frontImage,
+                backImage: backImage || '',
+                selfieImage,
+                status: 'pending'
+            });
+        }
+
+        await User.findByIdAndUpdate(userId, { kycStatus: 'pending' });
+
+        res.json({ success: true, message: "የ KYC መረጃዎ በትክክል ተልኳል!" });
+    } catch (error) {
+        console.error('KYC Submit Error:', error);
+        res.status(500).json({ success: false, message: 'የሰርቨር ችግር አጋጥሟል::' });
+    }
+});
+
+// --- 9. Server Port Listener ---
 const serverPort = process.env.PORT || 5000;
 app.listen(serverPort, '0.0.0.0', () => {
     console.log(`Server is running on port ${serverPort}`);
