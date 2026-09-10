@@ -583,80 +583,6 @@ app.post('/api/reset-password', async (req, res) => {
     }
 });
 
-const express = require('express');
-const mongoose = require('mongoose');
-const jwt = require('jsonwebtoken');
-const cors = require('cors');
-
-const app = express();
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
-app.use(cors());
-
-const MONGO_URI = process.env.MONGO_URI || 'YOUR_MONGO_URI_HERE';
-const JWT_SECRET = process.env.JWT_SECRET || 'YOUR_JWT_SECRET_HERE';
-
-// MongoDB Connection
-mongoose.connect(MONGO_URI)
-    .then(() => console.log('MongoDB Database Connected Successfully!'))
-    .catch(err => console.log('MongoDB Connection Error:', err));
-
-// User Schema & Model
-const userSchema = new mongoose.Schema({
-    email: { type: String, required: true, unique: true, index: true },
-    phone: { type: String, index: true },
-    password: { type: String, required: true },
-    fullName: { type: String, default: 'User' },
-    verificationCode: String,
-    verificationCodeExpire: Date,
-    isVerified: { type: Boolean, default: false },
-    kycStatus: { type: String, default: 'unverified' },
-    resetToken: String,
-    resetTokenExpire: Date,
-    loginAttempts: { type: Number, default: 0 },
-    lockUntil: { type: Date },
-    isBanned: { type: Boolean, default: false }
-});
-
-const User = mongoose.model('User', userSchema);
-
-// KYC Schema & Model (ከ User ሞዴል ጋር የተያያዘ)
-const kycSchema = new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
-    fullName: { type: String, required: true },
-    email: { type: String, default: '' },
-    idNumber: { type: String },
-    dob: { type: String },
-    address: { type: String },
-    docType: { type: String, default: 'national_id' },
-    frontImage: { type: String, required: true },
-    backImage: { type: String },
-    selfieImage: { type: String, required: true },
-    status: { type: String, default: 'pending' },
-    rejectionReason: { type: String, default: '' },
-    createdAt: { type: Date, default: Date.now }
-});
-
-const KYC = mongoose.models.KYC || mongoose.model('KYC', kycSchema);
-
-// Helper Function: Verify Token Middleware
-function verifyToken(req, res, next) {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-    
-    if (!token) {
-        return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
-    }
-
-    try {
-        const verified = jwt.verify(token, JWT_SECRET);
-        req.user = verified;
-        next();
-    } catch (err) {
-        res.status(403).json({ success: false, message: 'Invalid or expired token.' });
-    }
-}
-
 // Helper Function: Verify Admin Middleware
 async function verifyAdmin(req, res, next) {
     try {
@@ -902,3 +828,12 @@ const serverPort = process.env.PORT || 5000;
 app.listen(serverPort, '0.0.0.0', () => {
     console.log(`Server is running on port ${serverPort}`);
 });
+አሁን ማድረግ የሚጠበቅብህ፦
+ይህንን ሙሉ ኮድ በ server.js ፋይልህ ውስጥ አስገባና Save አድርገው።
+
+በመቀጠል ተርሚናል ላይ ሆኖ እነዚህን ትዕዛዞች ጻፍ፦
+
+Bash
+git add .
+git commit -m "Fix duplicate routes and resolve KYC image rendering issue"
+git push origin main
