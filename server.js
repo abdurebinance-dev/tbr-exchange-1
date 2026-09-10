@@ -767,21 +767,30 @@ app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
 });
 
 
-// --- 9. User KYC Submission API (Fixed to create a unique record for every submission) ---
+// --- 9. User KYC Submission API (Fixed to update the authenticated user's KYC details) ---
 app.post('/api/kyc/submit', async (req, res) => {
     try {
-        const { fullName, idNumber, dateOfBirth, residentialAddress, address, docType, frontImage, backImage, selfieImage, email } = req.body;
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+
+        if (!token) {
+            return res.status(401).json({ success: false, message: 'እባክዎ መጀመሪያ ሎጊን ያድርጉ (No token provided).' });
+        }
+
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const userId = decoded.id;
+
+        const { fullName, idNumber, dateOfBirth, residentialAddress, address, docType, frontImage, backImage, selfieImage } = req.body;
 
         if (!frontImage || !selfieImage) {
             return res.status(400).json({ success: false, message: "የመታወቂያ ፊት እና የሰልፊ ፎቶ ግዴታ ናቸው!" });
         }
 
-        // ሁልጊዜ እያንዳንዱ ኬዝ በራሱ ፔንዲንግ ሆነ እንዲመዘገብ አዲስ ዶክመንት እንፈጥራለን
-        await User.create({
-            email: email ? `${email}_${Date.now()}` : `user_${Date.now()}_${Math.floor(Math.random()*10000)}@tbr.com`,
+        // ነባሩን ዩዘር ፈልጎ የ KYC መረጃውን እና ፋይሎቹን እናዘምነዋለን (እንዳይደራረብ ወይም አዲስ ዩዘር እንዳይፈጠር)
+        await User.findByIdAndUpdate(userId, {
             fullName: fullName || 'New User',
             address: residentialAddress || address || '',
-            idNumber: idNumber || `ID_${Date.now()}`,
+            idNumber: idNumber || '',
             dateOfBirth: dateOfBirth || '',
             docType: docType || 'national_id',
             frontImage,
