@@ -573,11 +573,14 @@ app.post('/api/admin/login', async (req, res) => {
 });
 
 // --- Admin Stats Route ---
-// --- Admin Stats Route ---
 app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
     try {
         const totalUsers = await User.countDocuments({});
-        const kycPending = await KYC.countDocuments({ $or: [{ status: 'pending' }, { status: 'under_review' }, { status: 'undefined' }, { status: { $exists: false } }] });
+        // ሁለቱንም ከKYC ኮሌክሽን እና ከUser ኮሌክሽን pending የሆኑትን ይቆጥራል
+        const kycPendingKYC = await KYC.countDocuments({ $or: [{ status: 'pending' }, { status: 'under_review' }, { status: 'undefined' }, { status: { $exists: false } }] });
+        const kycPendingUser = await User.countDocuments({ kycStatus: 'pending' });
+        const kycPending = Math.max(kycPendingKYC, kycPendingUser);
+        
         res.json({ success: true, data: { totalUsers, kycPending, todayVolume: "0 USDT / 0 ETB", activeEscrow: "0 USDT" } });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error fetching stats' });
@@ -587,153 +590,47 @@ app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
 // --- Admin KYC Requests Route ---
 app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
     try {
-        const pendingKycs = await KYC.find({ 
+        let pendingKycs = await KYC.find({ 
             $or: [
                 { status: { $in: ['pending', 'under_review', 'undefined'] } },
                 { status: { $exists: false } }
             ] 
-        }).populate('userId', 'email').sort({ _id: -1 });
+        }).populate('userId', 'email fullName').sort({ _id: -1 });
+
+        if (pendingKycs.length === 0) {
+            const pendingUsers = await User.find({ kycStatus: 'pending' }).sort({ _id: -1 });
+            pendingKycs = pendingUsers.map(u => ({
+                _id: u._id,
+                userId: u,
+                email: u.email,
+                fullName: u.fullName || 'User',
+                frontImage: u.kycData?.frontImage || '',
+                backImage: u.kycData?.backImage || '',
+                selfieImage: u.kycData?.selfieImage || '',
+                status: 'pending',
+                idNumber: u.kycData?.idNumber || '',
+                dob: u.kycData?.dateOfBirth || '',
+                address: u.kycData?.residentialAddress || '',
+                docType: u.kycData?.docType || 'national_id'
+            }));
+        }
 
         const data = pendingKycs.map(kyc => ({
             _id: kyc._id,
-    userId: kyc.userId ? kyc.userId.email : (kyc.email || 'Unknown User'),
+            userId: kyc.userId && kyc.userId.email ? kyc.userId.email : (kyc.email || 'Unknown User'),
             frontImage: kyc.frontImage || '',
             backImage: kyc.backImage || '',
             selfieImage: kyc.selfieImage || '',
             status: kyc.status || 'pending',
-            fullName: kyc.fullName,
-            idNumber: kyc.idNumber,
-            dateOfBirth: kyc.dob,
-            address: kyc.address,
-            docType: kyc.docType
+            fullName: kyc.fullName || 'User',
+            idNumber: kyc.idNumber || '',
+            dateOfBirth: kyc.dob || kyc.dateOfBirth || '',
+            address: kyc.address || kyc.residentialAddress || '',
+            docType: kyc.docType || 'national_id'
         }));
         return res.json({ success: true, data, requests: pendingKycs });
     } catch (err) {
+        console.error("KYC Fetch Error:", err);
         res.status(500).json({ success: false, message: 'Error fetching KYC requests' });
     }
-});
-
-// --- Admin KYC Action Route ---
-app.post('/api/admin/kyc-action', verifyAdmin, async (req, res) => {
-    try {
-        const { kycId, status } = req.body; 
-        const newStatus = status === 'approved' ? 'approved' : 'rejected';
-        const kycRecord = await KYC.findById(kycId);
-        if (!kycRecord) {
-            // Try updating user directly if KYC collection item not found by ID
-            const userRecord = await User.findById(kycId);
-            if (userRecord) {
-                userRecord.kycStatus = newStatus === 'approved' ? 'verified' : 'rejected';
-                await userRecord.save();
-                return res.json({ success: true, message: `User KYC status updated to ${newStatus} successfully.` });
-            }
-            return res.status(404).json({ success: false, message: 'KYC record not found.' });
-        }
-
-        kycRecord.status = newStatus;
-        await kycRecord.save();
-
-        if (kycRecord.userId) {
-            await User.findByIdAndUpdate(kycRecord.userId, { kycStatus: newStatus === 'approved' ? 'verified' : 'rejected' });
-        }
-        res.json({ success: true, message: `KYC status updated to ${newStatus} successfully.` });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Error updating KYC status' });
-    }
-});
-
-// --- Admin Get All Users Route ---
-app.get('/api/admin/users', verifyAdmin, async (req, res) => {
-    try {
-        const users = await User.find({}).select('-password').sort({ _id: -1 });
-        res.json({ success: true, count: users.length, data: users });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Server error while fetching users.' });
-    }
-});
-
-// --- Admin Settings Route ---
-app.post('/api/admin/settings', verifyAdmin, async (req, res) => {
-    res.json({ success: true, message: 'Settings updated successfully' });
-});
-
-// --- Admin User Action Route ---
-app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
-    try {
-        const { userId, action } = req.body; 
-        const isBanned = action === 'ban';
-        await User.findByIdAndUpdate(userId, { isBanned });
-        res.json({ success: true, message: `User successfully ${action === 'ban' ? 'banned' : 'unbanned'}` });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Error updating user status' });
-    }
-});
-
-// የ KYC ማስገቢያ ራውት
-// --- User KYC Submit Route ---
-app.post('/api/kyc/submit', verifyToken, async (req, res) => {
-    try {
-        const { 
-            fullName, 
-            idNumber, 
-            dateOfBirth, 
-            residentialAddress, 
-            docType, 
-            frontImage, 
-            backImage, 
-            selfieImage 
-        } = req.body;
-
-        if (!fullName || !frontImage || !selfieImage) {
-            return res.status(400).json({ 
-                success: false, 
-                message: "Full name, front ID image, and selfie image are required." 
-            });
-        }
-
-        const userId = req.user._id || req.user.id;
-
-        // ከላይ በተገለጸው አንዱ የ KYC ሞዴል (KYC) እንጠቀማለን
-        let kycRecord = await KYC.findOne({ userId: userId });
-        
-        if (kycRecord) {
-            kycRecord.fullName = fullName;
-            kycRecord.idNumber = idNumber;
-            kycRecord.dob = dateOfBirth;
-            kycRecord.address = residentialAddress;
-            kycRecord.docType = docType || 'national_id';
-            kycRecord.frontImage = frontImage;
-            kycRecord.backImage = backImage;
-            kycRecord.selfieImage = selfieImage;
-            kycRecord.status = 'pending';
-            await kycRecord.save();
-        } else {
-            await KYC.create({
-                userId: userId,
-                fullName,
-                idNumber,
-                dob: dateOfBirth,
-                address: residentialAddress,
-                docType: docType || 'national_id',
-                frontImage,
-                backImage,
-                selfieImage,
-                status: 'pending'
-            });
-        }
-
-        // የተጠቃሚውን የ kycStatus በ User ሞዴል ውስጥም ማሻሻል
-        await User.findByIdAndUpdate(userId, { kycStatus: 'pending' });
-
-        res.status(200).json({ success: true, message: "KYC submitted successfully" });
-    } catch (error) {
-        console.error("KYC Submission Error:", error);
-        res.status(500).json({ success: false, message: "Server error during KYC submission" });
-    }
-});
-
-// --- Server Port Listener ---
-const serverPort = process.env.PORT || 5000;
-app.listen(serverPort, '0.0.0.0', () => {
-    console.log(`Server is running on port ${serverPort}`);
 });
