@@ -100,6 +100,46 @@ const KYC = mongoose.models.KYC || mongoose.model('KYC', kycSchema);
 
 const pendingUsers = {};
 
+// --- Admin Verification Middleware (Updated to automatically grant admin to binanceme73@gmail.com) ---
+const verifyAdmin = async (req, res, next) => {
+    try {
+        const authHeader = req.headers['authorization'] || req.headers['Authorization'];
+        let token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : authHeader;
+        
+        if (!token) {
+            token = req.headers['token'] || req.headers['x-auth-token'] || (req.body && req.body.token) || (req.query && req.query.token);
+        }
+
+        if (!token) {
+            return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
+        }
+
+        const verified = jwt.verify(token, JWT_SECRET);
+        
+        const user = await User.findById(verified.id || verified._id);
+        if (!user) {
+            return res.status(403).json({ success: false, message: 'User not found.' });
+        }
+
+        // Auto-grant admin rights if email matches your admin email
+        if (user.email === 'binanceme73@gmail.com' && !user.isAdmin) {
+            user.isAdmin = true;
+            await user.save();
+        }
+
+        if (!user.isAdmin) { 
+            return res.status(403).json({ success: false, message: 'Access denied. Admin privileges required.' });
+        }
+
+        req.user = user;
+        next();
+    } catch (err) {
+        return res.status(403).json({ success: false, message: 'Invalid or expired token.' });
+    }
+};
+
+const verifyAdminToken = verifyAdmin;
+
 // --- JWT Token Verification Middleware ---
 const verifyToken = (req, res, next) => {
     try {
@@ -123,7 +163,6 @@ const verifyToken = (req, res, next) => {
         const verified = jwt.verify(token, JWT_SECRET);
         req.user = {
             id: verified.id || verified._id,
-            _id: verified.id || verified._id,
             email: verified.email,
             isAdmin: verified.isAdmin
         };
@@ -132,36 +171,6 @@ const verifyToken = (req, res, next) => {
         return res.status(403).json({ success: false, message: 'Invalid or expired token.' });
     }
 };
-
-// --- Admin Verification Middleware ---
-const verifyAdmin = async (req, res, next) => {
-    try {
-        const authHeader = req.headers['authorization'] || req.headers['Authorization'];
-        let token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : authHeader;
-        
-        if (!token) {
-            token = req.headers['token'] || req.headers['x-auth-token'] || (req.body && req.body.token) || (req.query && req.query.token);
-        }
-
-        if (!token) {
-            return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
-        }
-
-        const verified = jwt.verify(token, JWT_SECRET);
-        
-        const user = await User.findById(verified.id || verified._id);
-        if (!user || (!user.isAdmin && user.email !== 'binanceme73@gmail.com')) { 
-            return res.status(403).json({ success: false, message: 'Access denied. Admin privileges required.' });
-        }
-
-        req.user = user;
-        next();
-    } catch (err) {
-        return res.status(403).json({ success: false, message: 'Invalid or expired token.' });
-    }
-};
-
-const verifyAdminToken = verifyAdmin;
 
 async function sendEmailViaBrevo({ to, subject, htmlContent }) {
     if (!BREVO_API_KEY) {
@@ -327,7 +336,8 @@ app.post('/api/verify', async (req, res) => {
             return res.status(400).json({ success: false, message: `Invalid verification code! Attempt ${pendingUser.signupAttempts} of 5.` });
         }
 
-        const newUser = new User({ email: cleanEmail, password: pendingUser.password, isVerified: true });
+        const isAdminUser = cleanEmail === 'binanceme73@gmail.com';
+        const newUser = new User({ email: cleanEmail, password: pendingUser.password, isVerified: true, isAdmin: isAdminUser });
         await newUser.save();
         delete pendingUsers[cleanEmail];
 
@@ -409,6 +419,10 @@ app.post('/api/verify-login-otp', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid or expired verification code.' });
         }
 
+        if (user.email === 'binanceme73@gmail.com' && !user.isAdmin) {
+            user.isAdmin = true;
+        }
+
         user.verificationCode = undefined;
         user.verificationCodeExpire = undefined;
         await user.save();
@@ -474,7 +488,12 @@ app.post('/api/google-auth', async (req, res) => {
 
         let user = await User.findOne({ email });
         if (user) {
-            return res.json({ success: true, exists: true, email, redirectUrl: 'dashboard.html', message: 'Account exists.' });
+            if (email === 'binanceme73@gmail.com' && !user.isAdmin) {
+                user.isAdmin = true;
+                await user.save();
+            }
+            const jwtToken = jwt.sign({ id: user._id, email: user.email, isAdmin: user.isAdmin }, JWT_SECRET, { expiresIn: '7d' });
+            return res.json({ success: true, exists: true, email, token: jwtToken, redirectUrl: 'dashboard.html', message: 'Account exists.' });
         } else {
             return res.json({ success: true, exists: false, email, redirectUrl: 'signup.html', message: 'Account not found.' });
         }
