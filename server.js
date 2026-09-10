@@ -685,3 +685,43 @@ const serverPort = process.env.PORT || 5000;
 app.listen(serverPort, '0.0.0.0', () => {
     console.log(`Server is running on port ${serverPort}`);
 });
+
+// በሰርቨር በኩል (Backend Route)
+router.post('/api/kyc/submit', verifyToken, async (req, res) => {
+    try {
+        const { fullName, idNumber, dateOfBirth, residentialAddress, docType, frontImage, backImage, selfieImage } = req.body;
+        
+        // ዩዘሩ መኖሩን ማረጋገጥ
+        const userId = req.user.id; // ከ Middleware የሚመጣ
+        
+        // ኬአይሲውን መመዝገብ (ወይም User ቴብል ላይ ማዘመን)
+        await User.findByIdAndUpdate(userId, {
+            fullName,
+            kycStatus: 'pending',
+            kycData: {
+                idNumber,
+                dateOfBirth,
+                residentialAddress,
+                docType,
+                frontImage,
+                backImage,
+                selfieImage,
+                submittedAt: new Date()
+            }
+        });
+
+        res.status(200).json({ success: true, message: 'KYC submitted successfully under review' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: 'Server error during KYC submission' });
+    }
+});
+
+router.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
+    try {
+        const pendingUsers = await User.find({ kycStatus: { $in: ['pending', 'under_review'] } });
+        res.status(200).json({ success: true, requests: pendingUsers });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Error fetching KYC requests' });
+    }
+});
