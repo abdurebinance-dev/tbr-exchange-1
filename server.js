@@ -26,7 +26,7 @@ const EMAIL_FROM = process.env.EMAIL_FROM || 'tbrexchange@gmail.com';
 app.use(cors({
     origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'token', 'x-auth-token']
 }));
 
 app.use(express.json({ limit: '50mb' }));
@@ -92,7 +92,7 @@ const KYC = mongoose.models.KYC || mongoose.model('KYC', kycSchema);
 
 const pendingUsers = {};
 
-// --- JWT Token Verification Middleware ---
+// --- JWT Token Verification Middleware (Flexible for all headers/body/query) ---
 const verifyToken = (req, res, next) => {
     try {
         let token = null;
@@ -124,8 +124,12 @@ const verifyToken = (req, res, next) => {
 const verifyAdmin = async (req, res, next) => {
     try {
         const authHeader = req.headers['authorization'] || req.headers['Authorization'];
-        const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : authHeader;
+        let token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : authHeader;
         
+        if (!token) {
+            token = req.headers['token'] || req.headers['x-auth-token'] || (req.body && req.body.token) || (req.query && req.query.token);
+        }
+
         if (!token) {
             return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
         }
@@ -670,7 +674,7 @@ app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
     }
 });
 
-// --- User KYC Submit Route ---
+// --- User KYC Submit Route (Updated to support dual storage in KYC & User collections) ---
 app.post('/api/kyc/submit', verifyToken, async (req, res) => {
     try {
         const { 
@@ -697,10 +701,15 @@ app.post('/api/kyc/submit', verifyToken, async (req, res) => {
             return res.status(400).json({ success: false, message: "User ID not found in token." });
         }
 
+        const userDoc = await User.findById(userId);
+        const userEmail = userDoc ? userDoc.email : '';
+
+        // 1. Save or Update in KYC Collection
         let kycRecord = await KYC.findOne({ userId: userId });
         
         if (kycRecord) {
             kycRecord.fullName = fullName;
+            kycRecord.email = userEmail;
             kycRecord.idNumber = idNumber || '';
             kycRecord.dob = dateOfBirth || '';
             kycRecord.address = residentialAddress || '';
@@ -714,6 +723,7 @@ app.post('/api/kyc/submit', verifyToken, async (req, res) => {
             await KYC.create({
                 userId: userId,
                 fullName,
+                email: userEmail,
                 idNumber: idNumber || '',
                 dob: dateOfBirth || '',
                 address: residentialAddress || '',
@@ -725,7 +735,20 @@ app.post('/api/kyc/submit', verifyToken, async (req, res) => {
             });
         }
 
-        await User.findByIdAndUpdate(userId, { kycStatus: 'pending' });
+        // 2. Also save inside User kycData and set kycStatus to 'pending' so it appears reliably everywhere
+        await User.findByIdAndUpdate(userId, { 
+            kycStatus: 'pending',
+            kycData: {
+                idNumber: idNumber || '',
+                dateOfBirth: dateOfBirth || '',
+                residentialAddress: residentialAddress || '',
+                docType: docType || 'national_id',
+                frontImage,
+                backImage: backImage || '',
+                selfieImage,
+                submittedAt: new Date()
+            }
+        });
 
         res.status(200).json({ success: true, message: "KYC submitted successfully" });
     } catch (error) {
