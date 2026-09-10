@@ -403,27 +403,27 @@
             if (res.ok && json.success) { alert(json.message); loadAdminData(); }
         }
 
-        async function saveRates() {
-            const buyRate = document.getElementById('buyRateInput').value;
-            const sellRate = document.getElementById('sellRateInput'.value);
-            const platformFee = document.getElementById('feeInput').value;
+       async function saveRates() {
+    const buyRate = document.getElementById('buyRateInput').value;
+    const sellRate = document.getElementById('sellRateInput').value; // বন্ধንቁሩ ተስተካክሏል
+    const platformFee = document.getElementById('feeInput').value;
 
-            try {
-                const res = await fetch('/api/admin/settings', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
-                    body: JSON.stringify({ buyRate, sellRate, platformFee })
-                });
-                const json = await res.json();
-                if (res.ok && json.success) {
-                    alert('Rate & Fee settings saved successfully!');
-                } else {
-                    alert('Failed to save settings.');
-                }
-            } catch (err) {
-                alert('Network error while saving settings.');
-            }
+    try {
+        const res = await fetch('/api/admin/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+            body: JSON.stringify({ buyRate, sellRate, platformFee })
+        });
+        const json = await res.json();
+        if (res.ok && json.success) {
+            alert('Rate & Fee settings saved successfully!');
+        } else {
+            alert('Failed to save settings.');
         }
+    } catch (err) {
+        alert('Network error while saving settings.');
+    }
+}
     </script>
 </body>
 </html>
