@@ -71,7 +71,7 @@ const kycSchema = new mongoose.Schema({
     address: { type: String },
     docType: { type: String, default: 'national_id' },
     frontImage: { type: String, required: true }, 
-    backImage: { type: String },                   
+    backImage: { type: String },                  
     selfieImage: { type: String, required: true }, 
     status: { type: String, default: 'pending' }, 
     rejectionReason: { type: String, default: '' },
@@ -82,26 +82,26 @@ const KYC = mongoose.models.KYC || mongoose.model('KYC', kycSchema);
 
 const pendingUsers = {};
 
-// Helper Function: Verify Token Middleware
-function verifyToken(req, res, next) {
+// --- JWT Token Verification Middleware ---
+const verifyToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
-    
+
     if (!token) {
-        return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
+        return res.status(401).json({ success: false, message: 'No token provided.' });
     }
 
-    try {
-        const verified = jwt.verify(token, JWT_SECRET);
-        req.user = verified; 
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) {
+            return res.status(403).json({ success: false, message: 'Invalid or expired token.' });
+        }
+        req.user = user; 
         next();
-    } catch (err) {
-        res.status(403).json({ success: false, message: 'Invalid or expired token.' });
-    }
-}
+    });
+};
 
-// Helper Function: Verify Admin Middleware
-async function verifyAdmin(req, res, next) {
+// --- Admin Verification Middleware ---
+const verifyAdmin = async (req, res, next) => {
     try {
         const authHeader = req.headers['authorization'];
         const token = authHeader && authHeader.split(' ')[1];
@@ -127,7 +127,7 @@ async function verifyAdmin(req, res, next) {
     } catch (err) {
         return res.status(403).json({ success: false, message: 'Invalid or expired token.' });
     }
-}
+};
 
 async function sendEmailViaBrevo({ to, subject, htmlContent }) {
     if (!BREVO_API_KEY) {
@@ -528,45 +528,6 @@ app.post('/api/reset-password', async (req, res) => {
         res.status(500).json({ success: false, message: error.message || 'Server error during password reset.' });
     }
 });
-
-// --- JWT Token Verification Middleware ---
-const verifyToken = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-
-    if (!token) {
-        return res.status(401).json({ success: false, message: 'No token provided.' });
-    }
-
-    jwt.verify(token, JWT_SECRET, (err, user) => {
-        if (err) {
-            return res.status(403).json({ success: false, message: 'Invalid or expired token.' });
-        }
-        req.user = user; 
-        next();
-    });
-};
-
-// --- Admin Verification Middleware ---
-const verifyAdmin = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-
-    if (!token) {
-        return res.status(401).json({ success: false, message: 'No token provided.' });
-    }
-
-    jwt.verify(token, JWT_SECRET, (err, user) => {
-        if (err) {
-            return res.status(403).json({ success: false, message: 'Invalid or expired token.' });
-        }
-        if (!user.isAdmin) {
-            return res.status(403).json({ success: false, message: 'Access denied. Admin only.' });
-        }
-        req.user = user;
-        next();
-    });
-};
 
 // --- Admin Login Route ---
 app.post('/api/admin/login', async (req, res) => {
