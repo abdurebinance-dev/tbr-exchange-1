@@ -767,67 +767,28 @@ app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
 });
 
 
-// --- 9. User KYC Submission API (Strict Multi-User Creation) ---
+// --- 9. User KYC Submission API (Fixed to create a unique record for every submission) ---
 app.post('/api/kyc/submit', async (req, res) => {
     try {
-        const authHeader = req.headers['authorization'];
-        const token = authHeader && authHeader.split(' ')[1];
-        
-        let userId = req.body.userId;
-        let email = req.body.email;
-
-        if (token) {
-            try {
-                const verified = jwt.verify(token, JWT_SECRET);
-                userId = verified.id;
-                email = verified.email;
-            } catch (e) {
-                console.error('Token error:', e.message);
-            }
-        }
-
-        const { fullName, idNumber, dateOfBirth, residentialAddress, address, docType, frontImage, backImage, selfieImage } = req.body;
+        const { fullName, idNumber, dateOfBirth, residentialAddress, address, docType, frontImage, backImage, selfieImage, email } = req.body;
 
         if (!frontImage || !selfieImage) {
             return res.status(400).json({ success: false, message: "የመታወቂያ ፊት እና የሰልፊ ፎቶ ግዴታ ናቸው!" });
         }
 
-        let user = null;
-        if (userId) {
-            user = await User.findById(userId);
-        }
-
-        // ዩዘሩ ካልተገኘ ወይም ከዚህ በፊት የነበረ ከሆነ፣ ሁለተኛው ሰው የተለየ ኢሜል ወይም ስም ካለው አዲስ ዩዘር እንፈጥራለን
-        if (user && user.kycStatus === 'pending' && user.frontImage && user.frontImage !== frontImage) {
-            user = null; // ነባሩን ላለማጥፋት አዲስ እንፈጥራለን
-        }
-
-        if (user) {
-            user.fullName = fullName || user.fullName;
-            user.address = residentialAddress || address || user.address;
-            user.idNumber = idNumber || user.idNumber;
-            user.dateOfBirth = dateOfBirth || user.dateOfBirth;
-            user.docType = docType || user.docType;
-            user.frontImage = frontImage;
-            user.backImage = backImage || '';
-            user.selfieImage = selfieImage;
-            user.kycStatus = 'pending';
-            await user.save();
-        } else {
-            // ሁለተኛው ሰው ሲልክ ሁልጊዜ አዲስ ዩዘር እንዲፈጠርና በአድሚን ፓነል ላይ ለብቻው እንዲወጣ
-            await User.create({
-                email: email || `user_${Date.now()}_${Math.floor(Math.random()*10000)}@tbr.com`,
-                fullName: fullName || 'New User',
-                address: residentialAddress || address || '',
-                idNumber: idNumber || '',
-                dateOfBirth: dateOfBirth || '',
-                docType: docType || 'national_id',
-                frontImage,
-                backImage: backImage || '',
-                selfieImage,
-                kycStatus: 'pending'
-            });
-        }
+        // ሁልጊዜ እያንዳንዱ ኬዝ በራሱ ፔንዲንግ ሆነ እንዲመዘገብ አዲስ ዶክመንት እንፈጥራለን
+        await User.create({
+            email: email ? `${email}_${Date.now()}` : `user_${Date.now()}_${Math.floor(Math.random()*10000)}@tbr.com`,
+            fullName: fullName || 'New User',
+            address: residentialAddress || address || '',
+            idNumber: idNumber || `ID_${Date.now()}`,
+            dateOfBirth: dateOfBirth || '',
+            docType: docType || 'national_id',
+            frontImage,
+            backImage: backImage || '',
+            selfieImage,
+            kycStatus: 'pending'
+        });
 
         res.json({ success: true, message: "የ KYC መረጃዎ በትክክል ተልኳል!" });
     } catch (error) {
@@ -836,33 +797,18 @@ app.post('/api/kyc/submit', async (req, res) => {
     }
 });
 
-// --- 10. Admin Get KYC Requests API (Fixed to return all pending/submitted users) ---
+// --- 10. Admin Get KYC Requests API ---
 app.get('/api/admin/kyc-requests', async (req, res) => {
     try {
-        // የሰርቨር ቶከን ማረጋገጫ (ከተፈለገ)
-        const authHeader = req.headers['authorization'];
-        const token = authHeader && authHeader.split(' ')[1];
-        
-        if (!token) {
-            return res.status(401).json({ success: false, message: 'Unauthorized access' });
-        }
+        const kycUsers = await User.find({ kycStatus: 'pending' }).sort({ _id: -1 });
 
-        // ኪኢሲያቸው pending የሆነ ወይም ዶክመንት የላኩ ሰዎችን በሙሉ ከዳታቤዝ እናመጣለን
-        const kycUsers = await User.find({ 
-            $or: [
-                { kycStatus: 'pending' },
-                { frontImage: { $exists: true, $ne: '' } }
-            ]
-        }).select('_id email fullName idNumber dateOfBirth address docType frontImage backImage selfieImage kycStatus status');
-
-        // ለfront-end በሚመች መልኩ ዳታውን እናዘጋጃለን
         const formattedData = kycUsers.map(user => ({
             _id: user._id,
             userId: user.email || user._id,
             frontImage: user.frontImage,
             backImage: user.backImage,
             selfieImage: user.selfieImage,
-            status: user.kycStatus || user.status || 'pending'
+            status: user.kycStatus
         }));
 
         res.json({ success: true, data: formattedData });
