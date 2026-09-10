@@ -288,15 +288,15 @@
                     }
                     let html = '';
                     json.data.forEach(item => {
-                        const frontImg = item.frontImage || item.kycFront || '#';
-                        const backImg = item.backImage || item.kycBack || '#';
-                        const selfieImg = item.selfieImage || item.kycSelfie || item.userImage || '#';
+                        const frontImg = item.frontImage || item.kycFront || '';
+                        const backImg = item.backImage || item.kycBack || '';
+                        const selfieImg = item.selfieImage || item.kycSelfie || item.userImage || '';
                         const userId = item.userId || item.email || 'N/A';
 
                         html += `<tr>
                             <td>User ID: ${userId}</td>
                             <td>
-                                <button onclick="viewKycDetails('${frontImg}', '${backImg}', '${selfieImg}', '${userId}')" class="btn btn-sm" style="color: #f3ba2f; background: #181a20; border: 1px solid #f3ba2f; padding: 5px 12px; border-radius: 4px; cursor: pointer;">
+                                <button onclick='openKycModal(${JSON.stringify(item)})' class="btn btn-sm" style="color: #f3ba2f; background: #181a20; border: 1px solid #f3ba2f; padding: 5px 12px; border-radius: 4px; cursor: pointer;">
                                     <i class="fas fa-eye"></i> View Documents & Selfie
                                 </button>
                             </td>
@@ -312,8 +312,8 @@
             } catch (err) { console.error(err); }
         }
 
-        // ፖፕ-አፕ (Modal) ዊንዶውስ የ Front ID, Back ID እና Selfie ፎቶዎችን በአንድ ላይ ለማሳየት
-        function viewKycDetails(frontUrl, backUrl, selfieUrl, email) {
+        // Updated Modal to map directly to frontImage, backImage, and selfieImage
+        function openKycModal(kycItem) {
             let modal = document.getElementById('kycModal');
             if (!modal) {
                 modal = document.createElement('div');
@@ -342,10 +342,10 @@
                 document.body.appendChild(modal);
             }
             
-            document.getElementById('modalUserEmail').innerText = `KYC Verification Details for: ${email}`;
-            document.getElementById('modalFrontImg').src = frontUrl;
-            document.getElementById('modalBackImg').src = backUrl;
-            document.getElementById('modalSelfieImg').src = selfieUrl;
+            document.getElementById('modalUserEmail').innerText = `KYC Verification Details for: ${kycItem.userId || kycItem.email || 'N/A'}`;
+            document.getElementById('modalFrontImg').src = kycItem.frontImage || '';
+            document.getElementById('modalBackImg').src = kycItem.backImage || '';
+            document.getElementById('modalSelfieImg').src = kycItem.selfieImage || '';
             modal.style.display = 'flex';
         }
 

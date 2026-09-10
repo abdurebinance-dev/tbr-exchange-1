@@ -573,10 +573,11 @@ app.post('/api/admin/login', async (req, res) => {
 });
 
 // --- Admin Stats Route ---
+// --- Admin Stats Route ---
 app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
     try {
         const totalUsers = await User.countDocuments({});
-        const kycPending = await KYC.countDocuments({ status: 'pending' });
+        const kycPending = await KYC.countDocuments({ $or: [{ status: 'pending' }, { status: 'under_review' }, { status: 'undefined' }, { status: { $exists: false } }] });
         res.json({ success: true, data: { totalUsers, kycPending, todayVolume: "0 USDT / 0 ETB", activeEscrow: "0 USDT" } });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error fetching stats' });
@@ -586,27 +587,27 @@ app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
 // --- Admin KYC Requests Route ---
 app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
     try {
-        const pendingKycs = await KYC.find({ status: { $in: ['pending', 'under_review'] } }).populate('userId', 'email').sort({ _id: -1 });
-        if (pendingKycs.length > 0) {
-            const data = pendingKycs.map(kyc => ({
-                _id: kyc._id,
-                userId: kyc.userId ? kyc.userId.email : (kyc.email || 'Unknown User'),
-                frontImage: kyc.frontImage || '#',
-                backImage: kyc.backImage || '#',
-                selfieImage: kyc.selfieImage || '#',
-                status: kyc.status,
-                fullName: kyc.fullName,
-                idNumber: kyc.idNumber,
-                dateOfBirth: kyc.dob,
-                address: kyc.address,
-                docType: kyc.docType
-            }));
-            return res.json({ success: true, data, requests: pendingKycs });
-        }
+        const pendingKycs = await KYC.find({ 
+            $or: [
+                { status: { $in: ['pending', 'under_review', 'undefined'] } },
+                { status: { $exists: false } }
+            ] 
+        }).populate('userId', 'email').sort({ _id: -1 });
 
-        // Fallback to checking User collection kycStatus if separate KYC collection is empty
-        const pendingUsers = await User.find({ kycStatus: { $in: ['pending', 'under_review'] } });
-        res.status(200).json({ success: true, requests: pendingUsers, data: pendingUsers });
+        const data = pendingKycs.map(kyc => ({
+            _id: kyc._id,
+    userId: kyc.userId ? kyc.userId.email : (kyc.email || 'Unknown User'),
+            frontImage: kyc.frontImage || '',
+            backImage: kyc.backImage || '',
+            selfieImage: kyc.selfieImage || '',
+            status: kyc.status || 'pending',
+            fullName: kyc.fullName,
+            idNumber: kyc.idNumber,
+            dateOfBirth: kyc.dob,
+            address: kyc.address,
+            docType: kyc.docType
+        }));
+        return res.json({ success: true, data, requests: pendingKycs });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Error fetching KYC requests' });
     }
