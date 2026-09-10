@@ -89,7 +89,7 @@ const kycSchema = new mongoose.Schema({
     address: { type: String },
     docType: { type: String, default: 'national_id' },
     frontImage: { type: String, required: true }, 
-    backImage: { type: String },                    
+    backImage: { type: String },                     
     selfieImage: { type: String, required: true }, 
     status: { type: String, default: 'pending' }, 
     rejectionReason: { type: String, default: '' },
@@ -578,26 +578,51 @@ app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
     }
 });
 
-// --- Admin KYC Requests Route (Fixed & Simplified) ---
+// --- Admin KYC Requests Route ---
 app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
     try {
-        // Fetch all KYC documents directly and cleanly without conflicting lookups
-        const kycRequests = await KYC.find({}).sort({ _id: -1 });
+        let pendingKycs = await KYC.find({ 
+            $or: [
+                { status: { $in: ['pending', 'under_review', 'undefined'] } },
+                { status: { $exists: false } }
+            ] 
+        }).populate('userId', 'email fullName').sort({ _id: -1 });
 
-        const data = kycRequests.map(kyc => ({
-            _id: kyc._id,
-            userId: kyc.userId || '',
-            email: kyc.email || '',
-            frontImage: kyc.frontImage || '',
-            backImage: kyc.backImage || '',
-            selfieImage: kyc.selfieImage || '',
-            status: kyc.status || 'pending',
-            fullName: kyc.fullName || 'User',
-            idNumber: kyc.idNumber || '',
-            dateOfBirth: kyc.dob || '',
-            address: kyc.address || '',
-            docType: kyc.docType || 'national_id'
-        }));
+        if (pendingKycs.length === 0) {
+            const pendingUsers = await User.find({ kycStatus: 'pending' }).sort({ _id: -1 });
+            pendingKycs = pendingUsers.map(u => ({
+                _id: u._id,
+                userId: u,
+                email: u.email,
+                fullName: u.fullName || 'User',
+                frontImage: u.kycData?.frontImage || '',
+                backImage: u.kycData?.backImage || '',
+                selfieImage: u.kycData?.selfieImage || '',
+                status: 'pending',
+                idNumber: u.kycData?.idNumber || '',
+                dob: u.kycData?.dateOfBirth || '',
+                address: u.kycData?.residentialAddress || '',
+                docType: u.kycData?.docType || 'national_id'
+            }));
+        }
+
+        const data = pendingKycs.map(kyc => {
+            const userEmail = kyc.userId && typeof kyc.userId === 'object' ? kyc.userId.email : (kyc.email || 'User');
+            return {
+                _id: kyc._id,
+                userId: userEmail,
+                email: userEmail,
+                frontImage: kyc.frontImage || '',
+                backImage: kyc.backImage || '',
+                selfieImage: kyc.selfieImage || '',
+                status: kyc.status || 'pending',
+                fullName: kyc.fullName || (kyc.userId && kyc.userId.fullName) || 'User',
+                idNumber: kyc.idNumber || '',
+                dateOfBirth: kyc.dob || kyc.dateOfBirth || '',
+                address: kyc.address || kyc.residentialAddress || '',
+                docType: kyc.docType || 'national_id'
+            };
+        });
 
         return res.json({ success: true, data: data, requests: data });
     } catch (err) {
