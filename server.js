@@ -670,15 +670,46 @@ app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
 });
 
 // --- User KYC Submit Route ---
+const Kyc = require('./models/Kyc'); // ሞዴሉን ከላይ ማስገባት (Import ማድረግ)
+
+// የ KYC ማስገቢያ ራውት
 app.post('/api/kyc/submit', verifyToken, async (req, res) => {
     try {
-        const { fullName, idNumber, dateOfBirth, residentialAddress, docType, frontImage, backImage, selfieImage } = req.body;
-        const userId = req.user.id; 
+        const { 
+            fullName, 
+            idNumber, 
+            dateOfBirth, 
+            residentialAddress, 
+            docType, 
+            frontImage, 
+            backImage, 
+            selfieImage 
+        } = req.body;
+
+        if (!fullName || !frontImage || !selfieImage) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Full name, front ID image, and selfie image are required." 
+            });
+        }
+
+        let kycRecord = await Kyc.findOne({ userId: req.user._id || req.user.id });
         
-        await User.findByIdAndUpdate(userId, {
-            fullName,
-            kycStatus: 'pending',
-            kycData: {
+        if (kycRecord) {
+            kycRecord.fullName = fullName;
+            kycRecord.idNumber = idNumber;
+            kycRecord.dateOfBirth = dateOfBirth;
+            kycRecord.residentialAddress = residentialAddress;
+            kycRecord.docType = docType;
+            kycRecord.frontImage = frontImage;
+            kycRecord.backImage = backImage;
+            kycRecord.selfieImage = selfieImage;
+            kycRecord.status = 'pending';
+            await kycRecord.save();
+        } else {
+            await Kyc.create({
+                userId: req.user._id || req.user.id,
+                fullName,
                 idNumber,
                 dateOfBirth,
                 residentialAddress,
@@ -686,28 +717,14 @@ app.post('/api/kyc/submit', verifyToken, async (req, res) => {
                 frontImage,
                 backImage,
                 selfieImage,
-                submittedAt: new Date()
-            }
-        });
+                status: 'pending'
+            });
+        }
 
-        // Also create a entry in KYC collection for admin panel compatibility
-        await KYC.create({
-            userId,
-            fullName,
-            idNumber,
-            dob: dateOfBirth,
-            address: residentialAddress,
-            docType: docType || 'national_id',
-            frontImage,
-            backImage,
-            selfieImage,
-            status: 'pending'
-        });
-
-        res.status(200).json({ success: true, message: 'KYC submitted successfully under review' });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ success: false, message: 'Server error during KYC submission' });
+        res.status(200).json({ success: true, message: "KYC submitted successfully" });
+    } catch (error) {
+        console.error("KYC Submission Error:", error);
+        res.status(500).json({ success: false, message: "Server error during KYC submission" });
     }
 });
 
