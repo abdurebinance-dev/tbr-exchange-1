@@ -634,6 +634,78 @@ app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
         res.status(500).json({ success: false, message: 'Error fetching KYC requests' });
     }
 });
+
+// --- User KYC Submit Route ---
+app.post('/api/kyc/submit', verifyToken, async (req, res) => {
+    try {
+        const { 
+            fullName, 
+            idNumber, 
+            dateOfBirth, 
+            residentialAddress, 
+            docType, 
+            frontImage, 
+            backImage, 
+            selfieImage 
+        } = req.body;
+
+        if (!fullName || !frontImage || !selfieImage) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Full name, front ID image, and selfie image are required." 
+            });
+        }
+
+        const userId = req.user._id || req.user.id;
+
+        let kycRecord = await KYC.findOne({ userId: userId });
+        
+        if (kycRecord) {
+            kycRecord.fullName = fullName;
+            kycRecord.idNumber = idNumber;
+            kycRecord.dob = dateOfBirth;
+            kycRecord.address = residentialAddress;
+            kycRecord.docType = docType || 'national_id';
+            kycRecord.frontImage = frontImage;
+            kycRecord.backImage = backImage || '';
+            kycRecord.selfieImage = selfieImage;
+            kycRecord.status = 'pending';
+            await kycRecord.save();
+        } else {
+            await KYC.create({
+                userId: userId,
+                fullName,
+                idNumber,
+                dob: dateOfBirth,
+                address: residentialAddress,
+                docType: docType || 'national_id',
+                frontImage,
+                backImage: backImage || '',
+                selfieImage,
+                status: 'pending'
+            });
+        }
+
+        await User.findByIdAndUpdate(userId, { kycStatus: 'pending' });
+
+        res.status(200).json({ success: true, message: "KYC submitted successfully" });
+    } catch (error) {
+        console.error("KYC Submission Error:", error);
+        res.status(500).json({ success: false, message: "Server error during KYC submission" });
+    }
+});
+
+// --- Admin Get All Users Route ---
+app.get('/api/admin/users', verifyAdminToken, async (req, res) => {
+    try {
+        const users = await User.find({}).select('-password').sort({ _id: -1 });
+        res.json({ success: true, count: users.length, data: users });
+    } catch (error) {
+        console.error("Fetch Users Error:", error);
+        res.status(500).json({ success: false, message: 'Server error while fetching users.' });
+    }
+});
+
 // --- Server Port Listener ---
 const serverPort = process.env.PORT || 10000;
 app.listen(serverPort, '0.0.0.0', () => {
