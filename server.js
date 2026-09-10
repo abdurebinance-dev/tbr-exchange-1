@@ -608,7 +608,7 @@ async function verifyAdmin(req, res, next) {
         req.user = user;
         next();
     } catch (err) {
-        res.status(403).json({ success: false, message: 'Invalid or expired token.' });
+        return res.status(403).json({ success: false, message: 'Invalid or expired token.' });
     }
 }
 
@@ -712,7 +712,7 @@ app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
     }
 });
 
-// --- 3. Get KYC Requests for Admin (Fixed with KYC Model & Populate) ---
+// --- 3. Get KYC Requests for Admin ---
 app.get('/api/admin/kyc-requests', verifyAdmin, async (req, res) => {
     try {
         const pendingKycs = await KYC.find({ status: 'pending' }).populate('userId', 'email').sort({ _id: -1 });
@@ -752,8 +752,10 @@ app.post('/api/admin/kyc-action', verifyAdmin, async (req, res) => {
         kycRecord.status = newStatus;
         await kycRecord.save();
 
-        const userStatus = newStatus === 'approved' ? 'verified' : 'rejected';
-        await User.findByIdAndUpdate(kycRecord.userId, { kycStatus: userStatus });
+        if (kycRecord.userId) {
+            const userStatus = newStatus === 'approved' ? 'verified' : 'rejected';
+            await User.findByIdAndUpdate(kycRecord.userId, { kycStatus: userStatus });
+        }
         
         res.json({ success: true, message: `KYC status updated to ${newStatus} successfully.` });
     } catch (error) {
@@ -788,7 +790,8 @@ app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
         const { userId, action } = req.body; 
         const isBanned = action === 'ban';
         await User.findByIdAndUpdate(userId, { isBanned });
-        res.json({ success: true, message: `User successfully ${action}ned` });
+        const actionMessage = action === 'ban' ? 'banned' : 'unbanned';
+        res.json({ success: true, message: `User successfully ${actionMessage}` });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error updating user status' });
     }
