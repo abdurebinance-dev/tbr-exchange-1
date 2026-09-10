@@ -106,7 +106,7 @@
             <button class="nav-tab" onclick="switchTab('rates', event)"><i class="fa-solid fa-sliders"></i> 2. Rate & Fee Management</button>
             <button class="nav-tab" onclick="switchTab('kyc', event)"><i class="fa-solid fa-id-card"></i> 3. KYC Panel</button>
             <button class="nav-tab" onclick="switchTab('escrow', event)"><i class="fa-solid fa-scale-balanced"></i> 4. P2P Escrow & Disputes</button>
-            <button class="nav-tab" onclick="switchTab('users', event)"><i class="fa-solid fa-users"></i> 6. User Control & Ban</button>
+            <button class="nav-tab" onclick="switchTab('users', event)"><i class="fa-solid fa-users"></i> 5. User Control & Ban</button>
         </div>
 
         <!-- STATS OVERVIEW -->
@@ -405,7 +405,7 @@
 
         async function saveRates() {
             const buyRate = document.getElementById('buyRateInput').value;
-            const sellRate = document.getElementById('sellRateInput').value;
+            const sellRate = document.getElementById('sellRateInput'.value);
             const platformFee = document.getElementById('feeInput').value;
 
             try {
