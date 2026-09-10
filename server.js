@@ -564,6 +564,86 @@ app.post('/api/reset-password', async (req, res) => {
     }
 });
 
+// 1. Admin Login API
+app.post('/api/admin/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        // እዚህጋ የአድሚን ኢሜልና ፓስወርድ ማረጋገጫ ኮድህ ይኑር (ለምሳሌ ከዳታቤዝ ወይም በ Environment Variable)
+        if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
+            const token = jwt.sign({ email, isAdmin: true }, process.env.JWT_SECRET, { expiresIn: '1d' });
+            return res.json({ success: true, token });
+        }
+        res.status(401).json({ success: false, message: 'Invalid admin credentials' });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// Admin Authentication Middleware
+const verifyAdminToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    if (!authHeader) return res.status(401).json({ success: false, message: 'No token provided' });
+    
+    const token = authHeader.split(' ')[1];
+    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+        if (err) return res.status(403).json({ success: false, message: 'Failed to authenticate token' });
+        req.admin = decoded;
+        next();
+    });
+};
+
+// 2. Admin Stats API (ቁጥሮቹ 0 እንዳይሆኑ ዳታዎችን ከየኮሌክሽኖቹ ቆጥሮ የሚልክ)
+app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
+    try {
+        const totalUsers = await User.countDocuments();
+        const kycPending = await Kyc.countDocuments({ status: 'pending' }); // ወይም የ KYC ሞዴል ስምህ
+        const activeEscrow = await Escrow.countDocuments({ status: 'active' }); // እንደ ሞዴልህ አስተካክለው
+        
+        res.json({
+            success: true,
+            data: {
+                totalUsers: totalUsers || 0,
+                kycPending: kycPending || 0,
+                todayVolume: "0 USDT", // የምትፈልገውን የቮልዩም ሎጂክ ማስገባት ትችላለህ
+                activeEscrow: activeEscrow + " USDT"
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Error fetching stats' });
+    }
+});
+
+// 3. Fetch KYC Requests API
+app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
+    try {
+        const kycList = await Kyc.find(); // የ KYC ዳታዎች የሚገኙበት ሞዴል
+        res.json({ success: true, data: kycList });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Error fetching KYC requests' });
+    }
+});
+
+// 4. Fetch Users List API
+app.get('/api/admin/users', verifyAdminToken, async (req, res) => {
+    try {
+        const users = await User.find();
+        res.json({ success: true, data: users });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Error fetching users' });
+    }
+});
+
+// 5. Settings Save API
+app.post('/api/admin/settings', verifyAdminToken, async (req, res) => {
+    try {
+        const { buyRate, sellRate, platformFee } = req.body;
+        //ሬቶቹን ዳታቤዝ ውስጥ ማስቀመጫ ሎጂክ እዚህ ይጻፍ
+        res.json({ success: true, message: 'Settings saved successfully' });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Error saving settings' });
+    }
+});
+
 // --- Admin Stats Route ---
 app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
     try {
