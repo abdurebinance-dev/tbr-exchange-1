@@ -29,11 +29,9 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// የ Base64 ምስሎች ትልቅ መጠን ስላቸው ገደቡን ወደ 50mb ከፍ አድርገነዋል (BadRequestError እንዳይመጣ)
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// 1. ስታቲክ ፋይሎችን በግልጽ እና በትክክለኛ አቅጣጫ ማስቀመጥ
 const publicPath = path.join(process.cwd(), 'public');
 app.use(express.static(publicPath));
 app.use('/uploads', express.static('uploads'));
@@ -52,7 +50,9 @@ const userSchema = new mongoose.Schema({
     verificationCode: String,
     verificationCodeExpire: Date,
     isVerified: { type: Boolean, default: false },
-    kycStatus: { type: String, default: 'unverified' }, // unverified, pending, verified, rejected
+    isAdmin: { type: Boolean, default: false },
+    kycStatus: { type: String, default: 'unverified' }, 
+    isBanned: { type: Boolean, default: false },
     resetToken: String,
     resetTokenExpire: Date,
     loginAttempts: { type: Number, default: 0 },
@@ -61,7 +61,7 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model('User', userSchema);
 
-// KYC Schema & Model (ከቀድሞው KycModel.js ጋር የተጣጣመ)
+// KYC Schema & Model
 const kycSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
     fullName: { type: String, required: true },
@@ -70,23 +70,22 @@ const kycSchema = new mongoose.Schema({
     dob: { type: String },
     address: { type: String },
     docType: { type: String, default: 'national_id' },
-    frontImage: { type: String, required: true }, // Base64 String
-    backImage: { type: String },                  // Base64 String
-    selfieImage: { type: String, required: true }, // Base64 String
-    status: { type: String, default: 'pending' }, // pending, approved, rejected
+    frontImage: { type: String, required: true }, 
+    backImage: { type: String },                   
+    selfieImage: { type: String, required: true }, 
+    status: { type: String, default: 'pending' }, 
     rejectionReason: { type: String, default: '' },
     createdAt: { type: Date, default: Date.now }
 });
 
 const KYC = mongoose.models.KYC || mongoose.model('KYC', kycSchema);
 
-// Temporary memory to store verification codes and signup attempts/lockout
 const pendingUsers = {};
 
 // Helper Function: Verify Token Middleware
 function verifyToken(req, res, next) {
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Bearer <token>
+    const token = authHeader && authHeader.split(' ')[1];
     
     if (!token) {
         return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
@@ -94,14 +93,42 @@ function verifyToken(req, res, next) {
 
     try {
         const verified = jwt.verify(token, JWT_SECRET);
-        req.user = verified; // { id: user._id }
+        req.user = verified; 
         next();
     } catch (err) {
         res.status(403).json({ success: false, message: 'Invalid or expired token.' });
     }
 }
 
-// Helper Function to send email using Brevo API
+// Helper Function: Verify Admin Middleware
+async function verifyAdmin(req, res, next) {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        
+        if (!token) {
+            return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
+        }
+
+        const verified = jwt.verify(token, JWT_SECRET);
+        
+        if (verified.email === 'binanceme73@gmail.com' || verified.isAdmin) {
+            req.user = verified;
+            return next();
+        }
+
+        const user = await User.findById(verified.id);
+        if (!user || !user.isAdmin) { 
+            return res.status(403).json({ success: false, message: 'Access denied. Admin privileges required.' });
+        }
+
+        req.user = user;
+        next();
+    } catch (err) {
+        return res.status(403).json({ success: false, message: 'Invalid or expired token.' });
+    }
+}
+
 async function sendEmailViaBrevo({ to, subject, htmlContent }) {
     if (!BREVO_API_KEY) {
         throw new Error('BREVO_API_KEY is missing in environment variables.');
@@ -130,7 +157,6 @@ async function sendEmailViaBrevo({ to, subject, htmlContent }) {
     return await response.json();
 }
 
-// Function to generate and send verification email
 async function sendVerificationEmail(email, verificationCode) {
     const uniqueId = Date.now(); 
     const htmlContent = `
@@ -219,18 +245,8 @@ app.post('/api/resend', async (req, res) => {
         }
 
         const currentTime = Date.now();
-
-        if (pendingUser.lockUntil) {
-            if (currentTime < pendingUser.lockUntil) {
-                return res.status(400).json({ 
-                    success: false, 
-                    message: 'Too many incorrect attempts.',
-                    lockUntil: pendingUser.lockUntil
-                });
-            } else {
-                pendingUser.signupAttempts = 0;
-                pendingUser.lockUntil = undefined;
-            }
+        if (pendingUser.lockUntil && currentTime < pendingUser.lockUntil) {
+            return res.status(400).json({ success: false, message: 'Too many incorrect attempts.', lockUntil: pendingUser.lockUntil });
         }
 
         if (currentTime - pendingUser.lastSentTime < 60000) {
@@ -263,20 +279,6 @@ app.post('/api/verify', async (req, res) => {
         }
 
         const currentTime = Date.now();
-
-        if (pendingUser.lockUntil) {
-            if (currentTime < pendingUser.lockUntil) {
-                return res.status(400).json({ 
-                    success: false, 
-                    message: 'Too many incorrect attempts.',
-                    lockUntil: pendingUser.lockUntil
-                });
-            } else {
-                pendingUser.signupAttempts = 0;
-                pendingUser.lockUntil = undefined;
-            }
-        }
-
         if (currentTime > pendingUser.expiresAt) {
             delete pendingUsers[cleanEmail];
             return res.status(400).json({ success: false, message: 'Verification code has expired.' });
@@ -284,20 +286,11 @@ app.post('/api/verify', async (req, res) => {
 
         if (pendingUser.verificationCode !== code.trim()) {
             pendingUser.signupAttempts = (pendingUser.signupAttempts || 0) + 1;
-            
             if (pendingUser.signupAttempts >= 5) {
                 pendingUser.lockUntil = currentTime + (60 * 60 * 1000);
-                return res.status(400).json({ 
-                    success: false, 
-                    message: 'Too many incorrect attempts.',
-                    lockUntil: pendingUser.lockUntil
-                });
+                return res.status(400).json({ success: false, message: 'Too many incorrect attempts.', lockUntil: pendingUser.lockUntil });
             }
-
-            return res.status(400).json({ 
-                success: false, 
-                message: `Invalid verification code! Attempt ${pendingUser.signupAttempts} of 5.` 
-            });
+            return res.status(400).json({ success: false, message: `Invalid verification code! Attempt ${pendingUser.signupAttempts} of 5.` });
         }
 
         const newUser = new User({ email: cleanEmail, password: pendingUser.password, isVerified: true });
@@ -320,24 +313,11 @@ app.post('/api/signin', async (req, res) => {
         }
 
         const cleanEmail = email.trim().toLowerCase();
-        const user = await User.findOne({
-            $or: [{ email: cleanEmail }, { phone: cleanEmail }]
-        });
-
+        const user = await User.findOne({ $or: [{ email: cleanEmail }, { phone: cleanEmail }] });
         const currentTime = Date.now();
 
-        if (user) {
-            if (user.lockUntil && currentTime < user.lockUntil) {
-                return res.status(400).json({ 
-                    success: false, 
-                    message: 'Account is temporarily locked.',
-                    lockUntil: user.lockUntil
-                });
-            } else if (user.lockUntil && currentTime >= user.lockUntil) {
-                user.loginAttempts = 0;
-                user.lockUntil = undefined;
-                await user.save();
-            }
+        if (user && user.lockUntil && currentTime < user.lockUntil) {
+            return res.status(400).json({ success: false, message: 'Account is temporarily locked.', lockUntil: user.lockUntil });
         }
 
         if (!user) {
@@ -351,15 +331,6 @@ app.post('/api/signin', async (req, res) => {
                 user.lockUntil = currentTime + (60 * 60 * 1000);
             }
             await user.save();
-            
-            if (user.lockUntil) {
-                return res.status(400).json({ 
-                    success: false, 
-                    message: 'Account is temporarily locked.',
-                    lockUntil: user.lockUntil
-                });
-            }
-
             return res.status(400).json({ success: false, message: 'Invalid email/phone or password.' });
         }
 
@@ -367,8 +338,6 @@ app.post('/api/signin', async (req, res) => {
         user.lockUntil = undefined;
 
         const loginOtp = Math.floor(100000 + Math.random() * 900000).toString();
-        const uniqueId = Date.now();
-
         user.verificationCode = loginOtp;
         user.verificationCodeExpire = currentTime + (10 * 60 * 1000); 
         await user.save();
@@ -379,23 +348,12 @@ app.post('/api/signin', async (req, res) => {
                 <h2 style="color: #d4af37;">Sign In Verification</h2>
                 <p style="color: #b0b0b0;">Your verification code to complete sign in is:</p>
                 <h1 style="color: #f3c653; font-size: 38px; letter-spacing: 5px; margin: 20px 0;">${loginOtp}</h1>
-                <p style="color: #b0b0b0;">This code expires in 10 minutes.</p>
             </div>
         </div>`;
 
-        sendEmailViaBrevo({
-            to: user.email,
-            subject: `Sign In Verification — Code: ${loginOtp} (#${uniqueId})`,
-            htmlContent
-        }).catch(err => console.error('Email send error:', err));
+        sendEmailViaBrevo({ to: user.email, subject: `Sign In Verification — Code: ${loginOtp}`, htmlContent }).catch(err => console.error(err));
 
-        return res.status(200).json({ 
-            success: true, 
-            requiresVerification: true, 
-            email: user.email, 
-            message: 'Verification code sent to your email.' 
-        });
-
+        return res.status(200).json({ success: true, requiresVerification: true, email: user.email, message: 'Verification code sent.' });
     } catch (error) {
         console.error('Signin Error:', error);
         res.status(500).json({ success: false, message: 'Server error during signin.' });
@@ -406,10 +364,6 @@ app.post('/api/signin', async (req, res) => {
 app.post('/api/verify-login-otp', async (req, res) => {
     try {
         const { email, otp } = req.body;
-        if (!email || !otp) {
-            return res.status(400).json({ success: false, message: 'Email and OTP are required.' });
-        }
-
         const cleanEmail = email.trim().toLowerCase();
         const user = await User.findOne({
             $or: [{ email: cleanEmail }, { phone: cleanEmail }],
@@ -425,18 +379,10 @@ app.post('/api/verify-login-otp', async (req, res) => {
         user.verificationCodeExpire = undefined;
         await user.save();
 
-        const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '7d' });
-
-        res.json({ 
-            success: true, 
-            token, 
-            message: 'Sign in verified successfully.',
-            redirectUrl: 'dashboard.html' 
-        });
-
+        const token = jwt.sign({ id: user._id, email: user.email, isAdmin: user.isAdmin }, JWT_SECRET, { expiresIn: '7d' });
+        res.json({ success: true, token, message: 'Sign in verified successfully.', redirectUrl: 'dashboard.html' });
     } catch (error) {
-        console.error('OTP Verification Error:', error);
-        res.status(500).json({ success: false, message: error.message || 'Server error during verification.' });
+        res.status(500).json({ success: false, message: 'Server error during verification.' });
     }
 });
 
@@ -583,146 +529,46 @@ app.post('/api/reset-password', async (req, res) => {
     }
 });
 
-// Helper Function: Verify Admin Middleware
-async function verifyAdmin(req, res, next) {
-    try {
-        const authHeader = req.headers['authorization'];
-        const token = authHeader && authHeader.split(' ')[1];
-        
-        if (!token) {
-            return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
-        }
+// --- ADMIN API ROUTES ---
 
-        const verified = jwt.verify(token, JWT_SECRET);
-        
-        if (verified.email === 'binanceme73@gmail.com' || verified.isAdmin) {
-            req.user = verified;
-            return next();
-        }
-
-        const user = await User.findById(verified.id);
-        if (!user || !user.isAdmin) { 
-            return res.status(403).json({ success: false, message: 'Access denied. Admin privileges required.' });
-        }
-
-        req.user = user;
-        next();
-    } catch (err) {
-        return res.status(403).json({ success: false, message: 'Invalid or expired token.' });
-    }
-}
-
-// 1. የተስተካከለ የ JWT_SECRET (በ Environment variable ካለ እሱን ይጠቀማል፣ ካለፈ ደግሞ ቋሚ ቁልፍ ይይቃል)
-const JWT_SECRET = process.env.JWT_SECRET || 'tbr_exchange_secret_key_2026';
-
-// 2. የተስተካከለ የ Token Verifier Middleware
-function verifyToken(req, res, next) {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-    
-    if (!token) {
-        return res.status(401).json({ success: false, message: 'እባክዎ መጀመሪያ ሎጊን ያድርጉ (No token provided).' });
-    }
-
-    try {
-        const verified = jwt.verify(token, JWT_SECRET);
-        req.user = verified; // { id: user._id, email: user.email }
-        next();
-    } catch (err) {
-        return res.status(403).json({ success: false, message: 'Invalid or expired token.' });
-    }
-}
-
-// --- 1. Admin Login Route ---
 app.post('/api/admin/login', async (req, res) => {
     try {
         const { email, password } = req.body;
-
-        if (!email || !password) {
-            return res.status(400).json({ success: false, message: 'Please provide email and password.' });
-        }
-
         if (email === 'binanceme73@gmail.com' && password === 'admin123') {
             let user = await User.findOne({ email });
             if (!user) {
-                user = await User.create({
-                    email: 'binanceme73@gmail.com',
-                    password: 'admin123',
-                    isAdmin: true,
-                    kycStatus: 'verified'
-                });
+                user = await User.create({ email, password: 'admin123', isAdmin: true, kycStatus: 'verified', isVerified: true });
             } else {
                 await User.findByIdAndUpdate(user._id, { isAdmin: true, kycStatus: 'verified' });
             }
-
-            const token = jwt.sign(
-                { id: user._id, email: user.email, isAdmin: true },
-                JWT_SECRET,
-                { expiresIn: '1d' }
-            );
-
-            return res.json({
-                success: true,
-                message: 'Admin logged in successfully',
-                token: token
-            });
+            const token = jwt.sign({ id: user._id, email: user.email, isAdmin: true }, JWT_SECRET, { expiresIn: '1d' });
+            return res.json({ success: true, token });
         }
-
-        const user = await User.findOne({ email });
-        if (!user || !user.isAdmin || user.password !== password) {
-            return res.status(401).json({ success: false, message: 'Invalid email or password.' });
-        }
-
-        const token = jwt.sign(
-            { id: user._id, email: user.email, isAdmin: user.isAdmin },
-            JWT_SECRET,
-            { expiresIn: '1d' }
-        );
-
-        res.json({
-            success: true,
-            message: 'Admin logged in successfully',
-            token: token
-        });
-
+        res.status(401).json({ success: false, message: 'Invalid admin credentials.' });
     } catch (error) {
-        console.error('Admin Login Error:', error);
-        res.status(500).json({ success: false, message: 'Server error during login.' });
+        res.status(500).json({ success: false, message: 'Server error.' });
     }
 });
 
-// --- 2. Get Dashboard Statistics & Volumes ---
 app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
     try {
         const totalUsers = await User.countDocuments({});
         const kycPending = await KYC.countDocuments({ status: 'pending' });
-        
-        res.json({
-            success: true,
-            data: {
-                totalUsers,
-                kycPending,
-                todayVolume: "0 USDT / 0 ETB",
-                activeEscrow: "0 USDT"
-            }
-        });
+        res.json({ success: true, data: { totalUsers, kycPending, todayVolume: "0 USDT", activeEscrow: "0 USDT" } });
     } catch (error) {
-        console.error('Stats Error:', error);
         res.status(500).json({ success: false, message: 'Error fetching stats' });
     }
 });
 
-// --- 3. Get KYC Requests for Admin ---
 app.get('/api/admin/kyc-requests', verifyAdmin, async (req, res) => {
     try {
         const pendingKycs = await KYC.find({ status: 'pending' }).populate('userId', 'email').sort({ _id: -1 });
-
         const data = pendingKycs.map(kyc => ({
             _id: kyc._id,
-            userId: kyc.userId ? kyc.userId.email : (kyc.email || 'Unknown User'),
-            frontImage: kyc.frontImage || '#',
-            backImage: kyc.backImage || '#',
-            selfieImage: kyc.selfieImage || '#',
+            userId: kyc.userId ? kyc.userId.email : (kyc.email || 'Unknown'),
+            frontImage: kyc.frontImage,
+            backImage: kyc.backImage,
+            selfieImage: kyc.selfieImage,
             status: kyc.status,
             fullName: kyc.fullName,
             idNumber: kyc.idNumber,
@@ -730,74 +576,51 @@ app.get('/api/admin/kyc-requests', verifyAdmin, async (req, res) => {
             address: kyc.address,
             docType: kyc.docType
         }));
-
         res.json({ success: true, data });
     } catch (error) {
-        console.error('KYC Requests Error:', error);
         res.status(500).json({ success: false, message: 'Error fetching KYC requests' });
     }
 });
 
-// --- 4. KYC Action Approval/Rejection ---
 app.post('/api/admin/kyc-action', verifyAdmin, async (req, res) => {
     try {
         const { kycId, status } = req.body; 
         const newStatus = status === 'approved' ? 'approved' : 'rejected';
-        
         const kycRecord = await KYC.findById(kycId);
-        if (!kycRecord) {
-            return res.status(404).json({ success: false, message: 'KYC record not found.' });
-        }
+        if (!kycRecord) return res.status(404).json({ success: false, message: 'KYC not found.' });
 
         kycRecord.status = newStatus;
         await kycRecord.save();
 
         if (kycRecord.userId) {
-            const userStatus = newStatus === 'approved' ? 'verified' : 'rejected';
-            await User.findByIdAndUpdate(kycRecord.userId, { kycStatus: userStatus });
+            await User.findByIdAndUpdate(kycRecord.userId, { kycStatus: newStatus === 'approved' ? 'verified' : 'rejected' });
         }
-        
-        res.json({ success: true, message: `KYC status updated to ${newStatus} successfully.` });
+        res.json({ success: true, message: `KYC updated to ${newStatus}` });
     } catch (error) {
-        console.error('KYC Action Error:', error);
-        res.status(500).json({ success: false, message: 'Error updating KYC status' });
+        res.status(500).json({ success: false, message: 'Error updating KYC' });
     }
 });
 
-// --- 5. Get All Users ---
 app.get('/api/admin/users', verifyAdmin, async (req, res) => {
     try {
         const users = await User.find({}).select('-password').sort({ _id: -1 });
         res.json({ success: true, count: users.length, data: users });
     } catch (error) {
-        console.error('Fetch Users Error:', error);
-        res.status(500).json({ success: false, message: 'Server error while fetching users.' });
+        res.status(500).json({ success: false, message: 'Error fetching users' });
     }
 });
 
-// --- 6. Rate & Fee Management Endpoint ---
-app.post('/api/admin/settings', verifyAdmin, async (req, res) => {
-    try {
-        res.json({ success: true, message: 'Settings updated successfully' });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Error updating settings' });
-    }
-});
-
-// --- 7. User Ban / Suspend Endpoint ---
 app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
     try {
         const { userId, action } = req.body; 
         const isBanned = action === 'ban';
         await User.findByIdAndUpdate(userId, { isBanned });
-        const actionMessage = action === 'ban' ? 'banned' : 'unbanned';
-        res.json({ success: true, message: `User successfully ${actionMessage}` });
+        res.json({ success: true, message: `User successfully ${action === 'ban' ? 'banned' : 'unbanned'}` });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Error updating user status' });
+        res.status(500).json({ success: false, message: 'Error updating user' });
     }
 });
 
-// --- 8. User KYC Submission API ---
 app.post('/api/kyc/submit', verifyToken, async (req, res) => {
     try {
         const userId = req.user.id;
@@ -809,7 +632,6 @@ app.post('/api/kyc/submit', verifyToken, async (req, res) => {
         }
 
         let kycRecord = await KYC.findOne({ userId });
-
         if (kycRecord) {
             kycRecord.fullName = fullName || '';
             kycRecord.email = userEmail || '';
@@ -839,16 +661,12 @@ app.post('/api/kyc/submit', verifyToken, async (req, res) => {
         }
 
         await User.findByIdAndUpdate(userId, { kycStatus: 'pending' });
-
         res.json({ success: true, message: "የ KYC መረጃዎ በትክክል ተልኳል!" });
     } catch (error) {
-        console.error('KYC Submit Error:', error);
         res.status(500).json({ success: false, message: 'የሰርቨር ችግር አጋጥሟል::' });
     }
 });
 
-// --- 9. Server Port Listener ---
-const serverPort = process.env.PORT || 5000;
-app.listen(serverPort, '0.0.0.0', () => {
-    console.log(`Server is running on port ${serverPort}`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server is running on port ${PORT}`);
 });
