@@ -612,6 +612,27 @@ async function verifyAdmin(req, res, next) {
     }
 }
 
+// 1. የተስተካከለ የ JWT_SECRET (በ Environment variable ካለ እሱን ይጠቀማል፣ ካለፈ ደግሞ ቋሚ ቁልፍ ይይቃል)
+const JWT_SECRET = process.env.JWT_SECRET || 'tbr_exchange_secret_key_2026';
+
+// 2. የተስተካከለ የ Token Verifier Middleware
+function verifyToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    
+    if (!token) {
+        return res.status(401).json({ success: false, message: 'እባክዎ መጀመሪያ ሎጊን ያድርጉ (No token provided).' });
+    }
+
+    try {
+        const verified = jwt.verify(token, JWT_SECRET);
+        req.user = verified; // { id: user._id, email: user.email }
+        next();
+    } catch (err) {
+        return res.status(403).json({ success: false, message: 'Invalid or expired token.' });
+    }
+}
+
 // --- 1. Admin Login Route ---
 app.post('/api/admin/login', async (req, res) => {
     try {
