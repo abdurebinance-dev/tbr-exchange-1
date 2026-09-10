@@ -52,6 +52,16 @@ const userSchema = new mongoose.Schema({
     isVerified: { type: Boolean, default: false },
     isAdmin: { type: Boolean, default: false },
     kycStatus: { type: String, default: 'unverified' }, 
+    kycData: {
+        idNumber: String,
+        dateOfBirth: String,
+        residentialAddress: String,
+        docType: String,
+        frontImage: String,
+        backImage: String,
+        selfieImage: String,
+        submittedAt: Date
+    },
     isBanned: { type: Boolean, default: false },
     resetToken: String,
     resetTokenExpire: Date,
@@ -71,7 +81,7 @@ const kycSchema = new mongoose.Schema({
     address: { type: String },
     docType: { type: String, default: 'national_id' },
     frontImage: { type: String, required: true }, 
-    backImage: { type: String },                  
+    backImage: { type: String },                     
     selfieImage: { type: String, required: true }, 
     status: { type: String, default: 'pending' }, 
     rejectionReason: { type: String, default: '' },
@@ -128,6 +138,8 @@ const verifyAdmin = async (req, res, next) => {
         return res.status(403).json({ success: false, message: 'Invalid or expired token.' });
     }
 };
+
+const verifyAdminToken = verifyAdmin;
 
 async function sendEmailViaBrevo({ to, subject, htmlContent }) {
     if (!BREVO_API_KEY) {
@@ -553,7 +565,7 @@ app.post('/api/admin/login', async (req, res) => {
             return res.status(401).json({ success: false, message: 'Invalid email or password.' });
         }
 
-        const token = jwt.sign({ id: user._id, email: user.email, isAdmin: user.isAdmin }, JWT_SECRET, { expiresIn: '1d' });
+        const token = jwt.sign({ id: user._id, email: user.email, isAdmin: true }, JWT_SECRET, { expiresIn: '1d' });
         res.json({ success: true, message: 'Admin logged in successfully', token });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Server error during login.' });
@@ -572,24 +584,30 @@ app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
 });
 
 // --- Admin KYC Requests Route ---
-app.get('/api/admin/kyc-requests', verifyAdmin, async (req, res) => {
+app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
     try {
-        const pendingKycs = await KYC.find({ status: 'pending' }).populate('userId', 'email').sort({ _id: -1 });
-        const data = pendingKycs.map(kyc => ({
-            _id: kyc._id,
-            userId: kyc.userId ? kyc.userId.email : (kyc.email || 'Unknown User'),
-            frontImage: kyc.frontImage || '#',
-            backImage: kyc.backImage || '#',
-            selfieImage: kyc.selfieImage || '#',
-            status: kyc.status,
-            fullName: kyc.fullName,
-            idNumber: kyc.idNumber,
-            dateOfBirth: kyc.dob,
-            address: kyc.address,
-            docType: kyc.docType
-        }));
-        res.json({ success: true, data });
-    } catch (error) {
+        const pendingKycs = await KYC.find({ status: { $in: ['pending', 'under_review'] } }).populate('userId', 'email').sort({ _id: -1 });
+        if (pendingKycs.length > 0) {
+            const data = pendingKycs.map(kyc => ({
+                _id: kyc._id,
+                userId: kyc.userId ? kyc.userId.email : (kyc.email || 'Unknown User'),
+                frontImage: kyc.frontImage || '#',
+                backImage: kyc.backImage || '#',
+                selfieImage: kyc.selfieImage || '#',
+                status: kyc.status,
+                fullName: kyc.fullName,
+                idNumber: kyc.idNumber,
+                dateOfBirth: kyc.dob,
+                address: kyc.address,
+                docType: kyc.docType
+            }));
+            return res.json({ success: true, data, requests: pendingKycs });
+        }
+
+        // Fallback to checking User collection kycStatus if separate KYC collection is empty
+        const pendingUsers = await User.find({ kycStatus: { $in: ['pending', 'under_review'] } });
+        res.status(200).json({ success: true, requests: pendingUsers, data: pendingUsers });
+    } catch (err) {
         res.status(500).json({ success: false, message: 'Error fetching KYC requests' });
     }
 });
@@ -600,7 +618,16 @@ app.post('/api/admin/kyc-action', verifyAdmin, async (req, res) => {
         const { kycId, status } = req.body; 
         const newStatus = status === 'approved' ? 'approved' : 'rejected';
         const kycRecord = await KYC.findById(kycId);
-        if (!kycRecord) return res.status(404).json({ success: false, message: 'KYC record not found.' });
+        if (!kycRecord) {
+            // Try updating user directly if KYC collection item not found by ID
+            const userRecord = await User.findById(kycId);
+            if (userRecord) {
+                userRecord.kycStatus = newStatus === 'approved' ? 'verified' : 'rejected';
+                await userRecord.save();
+                return res.json({ success: true, message: `User KYC status updated to ${newStatus} successfully.` });
+            }
+            return res.status(404).json({ success: false, message: 'KYC record not found.' });
+        }
 
         kycRecord.status = newStatus;
         await kycRecord.save();
@@ -645,7 +672,6 @@ app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
 app.post('/api/kyc/submit', verifyToken, async (req, res) => {
     try {
         const { fullName, idNumber, dateOfBirth, residentialAddress, docType, frontImage, backImage, selfieImage } = req.body;
-        
         const userId = req.user.id; 
         
         await User.findByIdAndUpdate(userId, {
@@ -663,6 +689,20 @@ app.post('/api/kyc/submit', verifyToken, async (req, res) => {
             }
         });
 
+        // Also create a entry in KYC collection for admin panel compatibility
+        await KYC.create({
+            userId,
+            fullName,
+            idNumber,
+            dob: dateOfBirth,
+            address: residentialAddress,
+            docType: docType || 'national_id',
+            frontImage,
+            backImage,
+            selfieImage,
+            status: 'pending'
+        });
+
         res.status(200).json({ success: true, message: 'KYC submitted successfully under review' });
     } catch (err) {
         console.error(err);
@@ -674,44 +714,4 @@ app.post('/api/kyc/submit', verifyToken, async (req, res) => {
 const serverPort = process.env.PORT || 5000;
 app.listen(serverPort, '0.0.0.0', () => {
     console.log(`Server is running on port ${serverPort}`);
-});
-
-// በሰርቨር በኩል (Backend Route)
-app.post('/api/kyc/submit', verifyToken, async (req, res) => {
-    try {
-        const { fullName, idNumber, dateOfBirth, residentialAddress, docType, frontImage, backImage, selfieImage } = req.body;
-        
-        // ዩዘሩ መኖሩን ማረጋገጥ
-        const userId = req.user.id; // ከ Middleware የሚመጣ
-        
-        // ኬአይሲውን መመዝገብ (ወይም User ቴብል ላይ ማዘመን)
-        await User.findByIdAndUpdate(userId, {
-            fullName,
-            kycStatus: 'pending',
-            kycData: {
-                idNumber,
-                dateOfBirth,
-                residentialAddress,
-                docType,
-                frontImage,
-                backImage,
-                selfieImage,
-                submittedAt: new Date()
-            }
-        });
-
-        res.status(200).json({ success: true, message: 'KYC submitted successfully under review' });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ success: false, message: 'Server error during KYC submission' });
-    }
-});
-
-app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
-    try {
-        const pendingUsers = await User.find({ kycStatus: { $in: ['pending', 'under_review'] } });
-        res.status(200).json({ success: true, requests: pendingUsers });
-    } catch (err) {
-        res.status(500).json({ success: false, message: 'Error fetching KYC requests' });
-    }
 });
