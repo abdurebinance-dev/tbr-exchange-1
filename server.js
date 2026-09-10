@@ -22,7 +22,15 @@ const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 const BREVO_API_KEY = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : '';
 const EMAIL_FROM = process.env.EMAIL_FROM || 'tbrexchange@gmail.com';
 
-// Middleware
+// Middleware - Updated Content Security Policy (CSP) headers to allow eval/inline scripts if needed by frontend/admin assets
+app.use((req, res, next) => {
+    res.setHeader(
+        'Content-Security-Policy',
+        "default-src * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src * 'unsafe-inline'; img-src * data: blob: 'unsafe-inline'; style-src * 'unsafe-inline';"
+    );
+    next();
+});
+
 app.use(cors({
     origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
@@ -81,7 +89,7 @@ const kycSchema = new mongoose.Schema({
     address: { type: String },
     docType: { type: String, default: 'national_id' },
     frontImage: { type: String, required: true }, 
-    backImage: { type: String },                    
+    backImage: { type: String },                     
     selfieImage: { type: String, required: true }, 
     status: { type: String, default: 'pending' }, 
     rejectionReason: { type: String, default: '' },
