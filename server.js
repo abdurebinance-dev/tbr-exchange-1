@@ -45,16 +45,28 @@ app.use(express.static(publicPath));
 app.use('/uploads', express.static('uploads'));
 
 // MongoDB Connection
+// MongoDB Connection & Data Migration for existing users
 mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/tbr_exchange')
-.then(() => console.log('MongoDB Database Connected Successfully!'))
+.then(async () => {
+    console.log('MongoDB Database Connected Successfully!');
+    
+    try {
+        const users = await User.find({});
+        for (let user of users) {
+            if (user.email) {
+                const emailPrefix = user.email.split('@')[0];
+                if (user.fullName === 'User' || user.fullName !== emailPrefix) {
+                    user.fullName = emailPrefix;
+                    await user.save();
+                }
+            }
+        }
+        console.log('Existing users fullnames updated successfully based on email!');
+    } catch (migrationErr) {
+        console.error('Migration Error:', migrationErr);
+    }
+})
 .catch(err => console.log('MongoDB Connection Error:', err));
-
-// User Schema & Model
-const userSchema = new mongoose.Schema({
-    email: { type: String, required: true, unique: true, index: true, lowercase: true, trim: true },
-    phone: { type: String, index: true }, 
-    password: { type: String, required: true },
-    fullName: { type: String, default: 'User' },
     verificationCode: String,
     verificationCodeExpire: Date,
     isVerified: { type: Boolean, default: false },
