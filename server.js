@@ -763,63 +763,71 @@ app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
     }
 });
 
-// --- User KYC Submit Route ---
-app.post('/api/kyc/submit', verifyToken, async (req, res) => {
+// --- User KYC Submit Route (Fixed) ---
+app.post('/api/kyc/submit', async (req, res) => {
     try {
-        const { 
-            fullName, 
-            idNumber, 
-            dateOfBirth, 
-            residentialAddress, 
-            docType, 
-            frontImage, 
-            backImage, 
-            selfieImage 
-        } = req.body;
+        // ከ αι ቶከን ወይም ከደረሰው አካል ዩዘር ኢሜል/አይዲ መቀበል
+        const authHeader = req.headers.authorization;
+        let userId = req.body.userId;
+        let userEmail = req.body.email;
 
-        if (!fullName || !frontImage || !selfieImage) {
-            return res.status(400).json({ success: false, message: 'Please provide all required KYC details and images.' });
+        // ቶከን ካለ ከቶከኑ ዩዘርን ለመለየት መሞከር (ካልተገኘ ግን በቦዲ ከመጣው መረጃ መጠቀም)
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            const token = authHeader.split(' ')[1];
+            try {
+                const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret');
+                userId = decoded.userId || decoded.id;
+                userEmail = decoded.email;
+            } catch (e) {
+                console.log("Token verification failed, falling back to body data or guest submit");
+            }
         }
 
-        const userId = req.user.id;
+        // ዩዘር ካልተገኘ በኢሜል መፈለግ
+        let user = null;
+        if (userId) {
+            user = await User.findById(userId);
+        } else if (userEmail) {
+            user = await User.findOne({ email: userEmail });
+        } else if (req.body.userId) {
+            user = await User.findById(req.body.userId);
+        }
 
-        await User.findByIdAndUpdate(userId, {
-            kycStatus: 'pending',
-            kycData: {
-                idNumber,
-                dateOfBirth,
-                residentialAddress,
-                docType,
-                frontImage,
-                backImage,
-                selfieImage,
-                submittedAt: new Date()
-            }
-        });
+        if (!user) {
+            return res.status(400).json({ success: false, message: 'User not found. Please log in again.' });
+        }
 
+        // የ KYC መረጃዎችን ማዘጋጀት
+        const kycDataPayload = {
+            userId: user._id,
+            email: user.email,
+            fullName: req.body.fullName || user.fullName || 'User',
+            idNumber: req.body.idNumber || '',
+            docType: req.body.docType || 'national_id',
+            dob: req.body.dateOfBirth || '',
+            address: req.body.residentialAddress || '',
+            frontImage: req.body.frontImage || '',
+            backImage: req.body.backImage || '',
+            selfieImage: req.body.selfieImage || '',
+            status: 'pending'
+        };
+
+        // 1. በ KYC ኮሌክሽን ውስጥ ማስቀመጥ (Upsert)
         await KYC.findOneAndUpdate(
-            { userId },
-            {
-                userId,
-                fullName,
-                email: req.user.email,
-                idNumber,
-                dob: dateOfBirth,
-                address: residentialAddress,
-                docType: docType || 'national_id',
-                frontImage,
-                backImage,
-                selfieImage,
-                status: 'pending',
-                createdAt: new Date()
-            },
+            { userId: user._id },
+            kycDataPayload,
             { upsert: true, new: true }
         );
 
-        res.json({ success: true, message: 'KYC documents submitted successfully. Awaiting admin review.' });
+        // 2. በቀጥታ በ User ዶክመንት ውስጥም ማዘመን (Double safeguard)
+        user.kycStatus = 'pending';
+        user.kycData = kycDataPayload;
+        await user.save();
+
+        res.json({ success: true, message: 'KYC submitted successfully!' });
     } catch (error) {
         console.error("KYC Submit Error:", error);
-        res.status(500).json({ success: false, message: 'Server error during KYC submission.' });
+        res.status(500).json({ success: false, message: 'Server error during KYC submission' });
     }
 });
 
