@@ -315,97 +315,108 @@
 
     <script>
         async function loadUserProfile() {
+            // 1. መጀመሪያ localStorage ላይ ያለውን ፈጣን ውሂብ በማንበብ UI ማሳየት
+            let name = localStorage.getItem('userName') || localStorage.getItem('name') || "USER";
+            let email = localStorage.getItem('userEmail') || localStorage.getItem('email') || "user@example.com";
+            let kycStatus = localStorage.getItem('kycStatus') || 'not_submitted';
+
+            let displayName = name.toUpperCase();
+            document.getElementById('profileName').innerText = displayName;
+            document.getElementById('profileEmail').innerText = email;
+            document.getElementById('avatarInitial').innerText = displayName.charAt(0).toUpperCase();
+
+            // 2. ሰርቨር ጋር በመገናኘት ትክክለኛውን መረጃ ከ /api/auth/me ማምጣት
             try {
-                const token = localStorage.getItem('token');
+                const token = localStorage.getItem('token') || localStorage.getItem('authToken');
                 const headers = { 'Content-Type': 'application/json' };
                 if (token) {
                     headers['Authorization'] = `Bearer ${token}`;
                 }
-
-                let dbFullName = "USER";
-                let email = localStorage.getItem('userEmail') || "user@example.com";
-                let kycStatus = 'not_submitted';
 
                 const response = await fetch('/api/auth/me', { headers });
                 
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success && data.user) {
-                        dbFullName = data.user.fullName || data.user.name || "USER";
+                        name = data.user.fullName || data.user.name || name;
                         email = data.user.email || email;
-                        kycStatus = data.user.kycStatus || (data.user.isVerified ? 'verified' : 'not_submitted');
+                        kycStatus = data.user.kycStatus || (data.user.isVerified ? 'verified' : kycStatus);
+                        
+                        displayName = name.toUpperCase();
+                        document.getElementById('profileName').innerText = displayName;
+                        document.getElementById('profileEmail').innerText = email;
+                        document.getElementById('avatarInitial').innerText = displayName.charAt(0).toUpperCase();
+
+                        // LocalStorage ማዘመን
+                        localStorage.setItem('userName', name);
+                        localStorage.setItem('userEmail', email);
+                        localStorage.setItem('kycStatus', kycStatus);
                     }
                 }
+            } catch (e) {
+                console.log("Could not fetch from server, using local cache.");
+            }
 
-                let displayName = dbFullName.toUpperCase();
+            const bannerContainer = document.getElementById('kycBannerContainer');
+            const nameContainer = document.getElementById('profileName');
+            const kycStatusRowText = document.getElementById('kycStatusRowText');
 
-                document.getElementById('profileEmail').innerText = email;
-                document.getElementById('avatarInitial').innerText = displayName.charAt(0).toUpperCase();
+            if (kycStatus === 'verified' || kycStatus === 'approved' || kycStatus === true) {
+                nameContainer.innerHTML = `
+                    ${displayName} 
+                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; background: #00C087; color: #fff; border-radius: 50%; font-size: 10px; margin-left: 8px;" title="Verified">
+                        <i class="fa-solid fa-check"></i>
+                    </span>
+                `;
+                kycStatusRowText.innerHTML = `<span style="color: #00C087; font-weight: 600;">Verified <i class="fa-solid fa-circle-check"></i></span>`;
+            } else if (kycStatus === 'pending' || kycStatus === 'under_review') {
+                nameContainer.innerHTML = displayName;
+                kycStatusRowText.innerHTML = `<span style="color: #f0b90b; font-weight: 500;">Under Review</span>`;
+            } else if (kycStatus === 'rejected') {
+                nameContainer.innerHTML = displayName;
+                kycStatusRowText.innerHTML = `<a href="kyc-verify.html" style="color: #cf304a; text-decoration: none;">Rejected (Resubmit) <i class="fa-solid fa-chevron-right" style="font-size: 10px;"></i></a>`;
+            } else {
+                nameContainer.innerHTML = displayName;
+                kycStatusRowText.innerHTML = `<a href="kyc-verify.html" style="color: #f6465d; text-decoration: none;">Not Submitted <i class="fa-solid fa-chevron-right" style="font-size: 10px;"></i></a>`;
+            }
 
-                const bannerContainer = document.getElementById('kycBannerContainer');
-                const nameContainer = document.getElementById('profileName');
-                const kycStatusRowText = document.getElementById('kycStatusRowText');
-
-                if (kycStatus === 'verified' || kycStatus === 'approved' || kycStatus === true) {
-                    nameContainer.innerHTML = `
-                        ${displayName} 
-                        <span style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; background: #00C087; color: #fff; border-radius: 50%; font-size: 10px; margin-left: 8px;" title="Verified">
-                            <i class="fa-solid fa-check"></i>
-                        </span>
-                    `;
-                    kycStatusRowText.innerHTML = `<span style="color: #00C087; font-weight: 600;">Verified <i class="fa-solid fa-circle-check"></i></span>`;
-                } else if (kycStatus === 'pending' || kycStatus === 'under_review') {
-                    nameContainer.innerHTML = displayName;
-                    kycStatusRowText.innerHTML = `<span style="color: #f0b90b; font-weight: 500;">Under Review</span>`;
-                } else if (kycStatus === 'rejected') {
-                    nameContainer.innerHTML = displayName;
-                    kycStatusRowText.innerHTML = `<a href="kyc-verify.html" style="color: #cf304a; text-decoration: none;">Rejected (Resubmit) <i class="fa-solid fa-chevron-right" style="font-size: 10px;"></i></a>`;
-                } else {
-                    nameContainer.innerHTML = displayName;
-                    kycStatusRowText.innerHTML = `<a href="kyc-verify.html" style="color: #f6465d; text-decoration: none;">Not Submitted <i class="fa-solid fa-chevron-right" style="font-size: 10px;"></i></a>`;
-                }
-
-                if (kycStatus === 'not_submitted' || !kycStatus) {
-                    bannerContainer.innerHTML = `
-                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; margin-bottom: 20px;">
-                            <div>
-                                <h4 style="color: #f0b90b; margin: 0 0 5px 0;">Identity not verified</h4>
-                                <p style="color: #848e9c; margin: 0; font-size: 13px;">Verify your ID to post ads and unlock higher limits.</p>
-                            </div>
-                            <button onclick="window.location.href='kyc-verify.html'" style="background: #f0b90b; color: #000; border: none; padding: 10px 20px; font-weight: bold; border-radius: 4px; cursor: pointer;">VERIFY IDENTITY</button>
+            if (kycStatus === 'not_submitted' || !kycStatus) {
+                bannerContainer.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; margin-bottom: 20px;">
+                        <div>
+                            <h4 style="color: #f0b90b; margin: 0 0 5px 0;">Identity not verified</h4>
+                            <p style="color: #848e9c; margin: 0; font-size: 13px;">Verify your ID to post ads and unlock higher limits.</p>
                         </div>
-                    `;
-                } else if (kycStatus === 'pending' || kycStatus === 'under_review') {
-                    bannerContainer.innerHTML = `
-                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; margin-bottom: 20px;">
-                            <div>
-                                <h4 style="color: #f0b90b; margin: 0 0 5px 0;">Verification under review</h4>
-                                <p style="color: #848e9c; margin: 0; font-size: 13px;">We'll notify you by email. Typically 1-2 business days.</p>
-                            </div>
-                            <div style="color: #f0b90b; font-size: 20px;"><i class="fa-solid fa-shield-halved"></i></div>
+                        <button onclick="window.location.href='kyc-verify.html'" style="background: #f0b90b; color: #000; border: none; padding: 10px 20px; font-weight: bold; border-radius: 4px; cursor: pointer;">VERIFY IDENTITY</button>
+                    </div>
+                `;
+            } else if (kycStatus === 'pending' || kycStatus === 'under_review') {
+                bannerContainer.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; margin-bottom: 20px;">
+                        <div>
+                            <h4 style="color: #f0b90b; margin: 0 0 5px 0;">Verification under review</h4>
+                            <p style="color: #848e9c; margin: 0; font-size: 13px;">We'll notify you by email. Typically 1-2 business days.</p>
                         </div>
-                    `;
-                } else if (kycStatus === 'verified' || kycStatus === 'approved' || kycStatus === true) {
-                    bannerContainer.innerHTML = `
-                        <div style="padding: 15px 20px; background: #1a1a1a; border: 1px solid #00C087; border-radius: 8px; display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
-                            <span style="color: #00C087; font-size: 18px;">✔</span>
-                            <span style="color: #00C087; font-weight: bold;">Verified Identity - Your account is fully verified.</span>
+                        <div style="color: #f0b90b; font-size: 20px;"><i class="fa-solid fa-shield-halved"></i></div>
+                    </div>
+                `;
+            } else if (kycStatus === 'verified' || kycStatus === 'approved' || kycStatus === true) {
+                bannerContainer.innerHTML = `
+                    <div style="padding: 15px 20px; background: #1a1a1a; border: 1px solid #00C087; border-radius: 8px; display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+                        <span style="color: #00C087; font-size: 18px;">✔</span>
+                        <span style="color: #00C087; font-weight: bold;">Verified Identity - Your account is fully verified.</span>
+                    </div>
+                `;
+            } else if (kycStatus === 'rejected') {
+                bannerContainer.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px; background: #1a1a1a; border: 1px solid #cf304a; border-radius: 8px; margin-bottom: 20px;">
+                        <div>
+                            <h4 style="color: #cf304a; margin: 0 0 5px 0;">Verification Rejected</h4>
+                            <p style="color: #848e9c; margin: 0; font-size: 13px;">Please re-submit your correct documents for verification.</p>
                         </div>
-                    `;
-                } else if (kycStatus === 'rejected') {
-                    bannerContainer.innerHTML = `
-                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px; background: #1a1a1a; border: 1px solid #cf304a; border-radius: 8px; margin-bottom: 20px;">
-                            <div>
-                                <h4 style="color: #cf304a; margin: 0 0 5px 0;">Verification Rejected</h4>
-                                <p style="color: #848e9c; margin: 0; font-size: 13px;">Please re-submit your correct documents for verification.</p>
-                            </div>
-                            <button onclick="window.location.href='kyc-verify.html'" style="background: #cf304a; color: #fff; border: none; padding: 10px 20px; font-weight: bold; border-radius: 4px; cursor: pointer;">RESUBMIT</button>
-                        </div>
-                    `;
-                }
-
-            } catch (err) {
-                console.error("Error loading profile:", err);
+                        <button onclick="window.location.href='kyc-verify.html'" style="background: #cf304a; color: #fff; border: none; padding: 10px 20px; font-weight: bold; border-radius: 4px; cursor: pointer;">RESUBMIT</button>
+                    </div>
+                `;
             }
         }
 
