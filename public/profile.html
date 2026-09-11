@@ -326,7 +326,6 @@
                 let email = localStorage.getItem('userEmail') || "user@example.com";
                 let kycStatus = 'not_submitted';
 
-                // ሰርቨሩ ላይ ያሉትን የተጠቃሚ መረጃዎች ከ /api/auth/me በመጠየቅ ላይ
                 const response = await fetch('/api/auth/me', { headers });
                 
                 if (response.ok) {
@@ -338,7 +337,6 @@
                     }
                 }
 
-                // ሰርቨሩ ላይ ስም ከተመዘገበ ያንን ስም ሙሉ በሙሉ እንወስዳለን (Verified መሆን አለመሆኑ ስሙ እንዳይታይ የሚከለክለው ገደብ ተወግዷል)
                 let displayName = dbFullName.toUpperCase();
 
                 document.getElementById('profileEmail').innerText = email;

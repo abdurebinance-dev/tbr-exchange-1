@@ -520,7 +520,7 @@
     </div>
 
     <div class="container">
-        <div class="greeting" id="userGreeting">Evening, USER</div>
+        <div class="greeting" id="userGreeting">USER</div>
 
         <div class="top-grid">
             <div class="balance-card">
@@ -655,10 +655,14 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Default local fallback to USER
             const localEmail = localStorage.getItem('signupEmail') || localStorage.getItem('userEmail');
             if (localEmail) {
-                document.getElementById('userGreeting').innerText = `Evening, USER`;
+                const hour = new Date().getHours();
+                let timeGreeting = "Evening";
+                if (hour < 12) timeGreeting = "Morning";
+                else if (hour < 17) timeGreeting = "Afternoon";
+
+                document.getElementById('userGreeting').innerText = `${timeGreeting}, USER`;
                 document.getElementById('menuUserName').innerText = 'USER';
                 document.getElementById('menuUserEmail').innerText = localEmail;
             }
@@ -729,12 +733,10 @@
                         const userObj = data.user;
                         const userEmail = userObj.email || localStorage.getItem('userEmail') || '';
                         
-                        // 1. KYC status መወሰን
                         const status = userObj.kycStatus || (userObj.isVerified ? 'verified' : 'unverified');
                         localStorage.setItem('kycStatus', status);
                         updateKycButtonUI(status);
 
-                        // 2. የተጠቃሚውን ትክክለኛ ስም (Full Name) ከሰርቨር አምጥቶ ማሳየት
                         let displayName = 'USER';
                         if (userObj.fullName) {
                             displayName = userObj.fullName.toUpperCase();
@@ -742,13 +744,17 @@
                             displayName = userObj.name.toUpperCase();
                         }
 
-                        document.getElementById('userGreeting').innerText = `Evening, ${displayName}`;
+                        const hour = new Date().getHours();
+                        let timeGreeting = "Evening";
+                        if (hour < 12) timeGreeting = "Morning";
+                        else if (hour < 17) timeGreeting = "Afternoon";
+
+                        document.getElementById('userGreeting').innerText = `${timeGreeting}, ${displayName}`;
                         document.getElementById('menuUserName').innerText = displayName;
                         if (userEmail) {
                             document.getElementById('menuUserEmail').innerText = userEmail;
                         }
 
-                        // 3. Balance update
                         if (userObj.balance !== undefined) {
                             actualBalance = Number(userObj.balance).toFixed(2);
                             const isHidden = document.getElementById('balanceValue').innerText === '******';
