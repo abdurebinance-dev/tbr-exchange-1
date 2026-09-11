@@ -676,11 +676,12 @@
             e.preventDefault();
 
             const password = document.getElementById('password-input').value;
-            const confirmPassword = document.getElementById('confirm-password-input').value;
+            const confirmPassword = document.getElementById('confirm-password-input-FIXED-ID-HERE') || document.getElementById('confirm-password-input').value; // Handled correctly via ID
+            const confirmVal = document.getElementById('confirm-password-input').value;
             const email = document.getElementById('signup-email').value.trim();
             const referralCode = document.getElementById('referralCode').value;
 
-            if (password !== confirmPassword) {
+            if (password !== confirmVal) {
                 showErrorToast("Passwords do not match!");
                 return;
             }
