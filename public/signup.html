@@ -422,7 +422,6 @@
             : 'https://tbr-exchange-backend.onrender.com';
 
         window.onload = function () {
-            // Check if saved email exists in localStorage and populate it
             const savedEmail = localStorage.getItem('signupEmail');
             if (savedEmail) {
                 const emailInput = document.getElementById('signup-email');
@@ -451,7 +450,6 @@
             }
         };
 
-        // ኢሜል ሲጻፍ ራሱ በ LocalStorage እንዲቀመጥ ማድረግ
         document.getElementById('signup-email').addEventListener('input', function() {
             const email = this.value.trim();
             if (email) {
@@ -687,7 +685,6 @@
                 return;
             }
 
-            // ኢሜሉ በትክክል መያዙን እዚህም እናረጋግጣለን
             localStorage.setItem('signupEmail', email);
 
             try {
