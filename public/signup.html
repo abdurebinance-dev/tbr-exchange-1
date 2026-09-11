@@ -422,6 +422,7 @@
             : 'https://tbr-exchange-backend.onrender.com';
 
         window.onload = function () {
+            // Check if saved email exists in localStorage and populate it
             const savedEmail = localStorage.getItem('signupEmail');
             if (savedEmail) {
                 const emailInput = document.getElementById('signup-email');
@@ -676,7 +677,6 @@
             e.preventDefault();
 
             const password = document.getElementById('password-input').value;
-            const confirmPassword = document.getElementById('confirm-password-input-FIXED-ID-HERE') || document.getElementById('confirm-password-input').value; // Handled correctly via ID
             const confirmVal = document.getElementById('confirm-password-input').value;
             const email = document.getElementById('signup-email').value.trim();
             const referralCode = document.getElementById('referralCode').value;
