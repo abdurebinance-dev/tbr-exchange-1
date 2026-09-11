@@ -734,12 +734,12 @@
                         localStorage.setItem('kycStatus', status);
                         updateKycButtonUI(status);
 
-                        // 2. ዩዘሩ Verified (የተረጋገጠ) ከሆነ ብቻ ትክክለኛውን ስሙን ማሳየት፣ ካልሆነ ግን "USER" ማለት
+                        // 2. የተጠቃሚውን ትክክለኛ ስም (Full Name) ከሰርቨር አምጥቶ ማሳየት
                         let displayName = 'USER';
-                        const isVerified = (status === 'verified' || status === 'Approved' || status === 'approved' || userObj.isVerified === true);
-                        
-                        if (isVerified && userObj.fullName) {
+                        if (userObj.fullName) {
                             displayName = userObj.fullName.toUpperCase();
+                        } else if (userObj.name) {
+                            displayName = userObj.name.toUpperCase();
                         }
 
                         document.getElementById('userGreeting').innerText = `Evening, ${displayName}`;
