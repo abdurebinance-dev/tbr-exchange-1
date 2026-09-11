@@ -800,6 +800,74 @@
             }
         }
 
+        async function fetchUserData() {
+    try {
+        const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+        if (!token) {
+            console.log("No auth token found, redirecting to login...");
+            window.location.href = 'login.html';
+            return;
+        }
+
+        const response = await fetch('/api/auth/me', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            // ሰርቨሩ የሚመልሰውን መረጃ እዚህ እንቀበላለን (ဥပမာ: data.user.email እና data.user.name)
+            const user = data.user || data;
+            
+            const email = user.email || "user@example.com";
+            const name = user.fullName || user.name || "USER";
+
+            // LocalStorage ላይ እናስቀምጠዋለን ለሌሎች ገጾች አገልግሎት
+            localStorage.setItem('userEmail', email);
+            localStorage.setItem('userName', name);
+            if (user.kycStatus) {
+                localStorage.setItem('kycStatus', user.kycStatus);
+            }
+
+            // በ ገጹ ላይ ያሉትን ኢሜይል እና ስም ማሳያ ቦታዎች እናዘምናለን
+            updateUIElements(name, email);
+        } else {
+            console.error("Failed to fetch user profile");
+        }
+    } catch (error) {
+        console.error("Error connecting to server:", error);
+    }
+}
+
+function updateUIElements(name, email) {
+    // በሜኑ እና በሌሎች ቦታዎች ያሉትን የኢሜይል ማሳያዎች መቀየር
+    const emailElements = document.querySelectorAll('.user-email-display, #userEmail, #profileEmail');
+    emailElements.forEach(el => {
+        if (el) el.innerText = email;
+    });
+
+    const nameElements = document.querySelectorAll('.user-name-display, #userName, #profileName');
+    nameElements.forEach(el => {
+        if (el) el.innerText = name.toUpperCase();
+    });
+}
+
+// ገጹ ሲከፈት ይህንን ተግባር እንጠራዋለን
+window.addEventListener('DOMContentLoaded', () => {
+    // አስቀድሞ በ LocalStorage ያለውን በአፋጣኝ እናሳያለን
+    const cachedEmail = localStorage.getItem('userEmail');
+    const cachedName = localStorage.getItem('userName');
+    if (cachedEmail || cachedName) {
+        updateUIElements(cachedName || "USER", cachedEmail || "user@example.com");
+    }
+    
+    // ከዚያ ሰርቨር በመሄድ አዲሱን እና ትክክለኛውን መረጃ እናመጣለን
+    fetchUserData();
+});
+
         function goToKycPage() {
             window.location.href = 'kyc-verify.html';
         }
