@@ -675,8 +675,10 @@
                     balanceEyeBtn.classList.replace('fa-eye', 'fa-eye-slash');
                 } else {
                     balanceValueEl.innerText = actualBalance;
-                    balanceEyeBtn.classList.replace('fa-slash', 'fa-eye');
-                    balanceEyeBtn.classList.add('fa-eye');
+                    balanceEyeBtn.classList.replace('fa-eye-slash', 'fa-eye');
+                    if (!balanceEyeBtn.classList.contains('fa-eye')) {
+                        balanceEyeBtn.classList.add('fa-eye');
+                    }
                 }
             });
 
@@ -749,7 +751,8 @@
                         // 3. Balance update
                         if (userObj.balance !== undefined) {
                             actualBalance = Number(userObj.balance).toFixed(2);
-                            if (!isBalanceHidden) {
+                            const isHidden = document.getElementById('balanceValue').innerText === '******';
+                            if (!isHidden) {
                                 document.getElementById('balanceValue').innerText = actualBalance;
                             }
                         }
