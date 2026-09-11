@@ -484,8 +484,8 @@
 
             <div id="profile-dropdown-menu" class="profile-dropdown">
                 <div class="profile-header-info">
-                    <h4 id="menuUserName">ABDURAHMAN ASHEBIR</h4>
-                    <p id="menuUserEmail">binanceme73@gmail.com</p>
+                    <h4 id="menuUserName">USER</h4>
+                    <p id="menuUserEmail">user@gmail.com</p>
                 </div>
 
                 <a href="profile.html" class="dropdown-item">
@@ -520,7 +520,7 @@
     </div>
 
     <div class="container">
-        <div class="greeting" id="userGreeting">Evening, ABDURAHMAN</div>
+        <div class="greeting" id="userGreeting">Evening, USER</div>
 
         <div class="top-grid">
             <div class="balance-card">
@@ -655,12 +655,13 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const email = localStorage.getItem('signupEmail') || localStorage.getItem('userEmail');
-            if (email) {
-                const username = email.split('@')[0].toUpperCase();
+            // LocalStorage fallback 
+            const localEmail = localStorage.getItem('signupEmail') || localStorage.getItem('userEmail');
+            if (localEmail) {
+                const username = localEmail.split('@')[0].toUpperCase();
                 document.getElementById('userGreeting').innerText = `Evening, ${username}`;
                 document.getElementById('menuUserName').innerText = username;
-                document.getElementById('menuUserEmail').innerText = email;
+                document.getElementById('menuUserEmail').innerText = localEmail;
             }
 
             let isBalanceHidden = false;
@@ -675,7 +676,8 @@
                     balanceEyeBtn.classList.replace('fa-eye', 'fa-eye-slash');
                 } else {
                     balanceValueEl.innerText = actualBalance;
-                    balanceEyeBtn.classList.replace('fa-eye-slash', 'fa-eye');
+                    balanceEyeBtn.classList.replace('fa-slash', 'fa-eye');
+                    balanceEyeBtn.classList.add('fa-eye');
                 }
             });
 
@@ -724,11 +726,28 @@
                     const data = await res.json();
                     if (data.success && data.user) {
                         const userObj = data.user;
-                        const status = userObj.kycStatus || (userObj.isVerified ? 'verified' : 'unverified');
                         
+                        // 1. ስሙን ከሰርቨሩ መረጃ (ኢሜል በመቁረጥ ወይም ከ fullName በመውሰድ) አስተካክሎ መሙላት
+                        const userEmail = userObj.email || localStorage.getItem('userEmail') || '';
+                        let displayName = 'USER';
+                        if (userObj.fullName && userObj.fullName !== 'ABDURAHMAN ASHEBIR') {
+                            displayName = userObj.fullName.toUpperCase();
+                        } else if (userEmail) {
+                            displayName = userEmail.split('@')[0].toUpperCase();
+                        }
+
+                        document.getElementById('userGreeting').innerText = `Evening, ${displayName}`;
+                        document.getElementById('menuUserName').innerText = displayName;
+                        if (userEmail) {
+                            document.getElementById('menuUserEmail').innerText = userEmail;
+                        }
+
+                        // 2. KYC Status update
+                        const status = userObj.kycStatus || (userObj.isVerified ? 'verified' : 'unverified');
                         localStorage.setItem('kycStatus', status);
                         updateKycButtonUI(status);
 
+                        // 3. Balance update
                         if (userObj.balance !== undefined) {
                             actualBalance = Number(userObj.balance).toFixed(2);
                             if (!isBalanceHidden) {
@@ -748,31 +767,30 @@
         }
 
         function updateKycButtonUI(status) {
-    const btn = document.getElementById('kycStatusBtn');
-    const icon = document.getElementById('kycIcon');
-    const text = document.getElementById('kycBtnText');
+            const btn = document.getElementById('kycStatusBtn');
+            const icon = document.getElementById('kycIcon');
+            const text = document.getElementById('kycBtnText');
 
-    // ስታተሱ ባዶ ከሆነ (null, undefined, ወይም 'unverified') እንደ 'unverified' ይያዘው
-    if (!status || status === 'unverified' || status === 'Unverified') {
-        btn.style.background = 'rgba(239, 68, 68, 0.1)';
-        btn.style.color = '#ef4444';
-        btn.style.border = '1px solid rgba(239, 68, 68, 0.2)';
-        icon.className = 'fa-solid fa-triangle-exclamation';
-        text.innerText = 'Unverified';
-    } else if (status === 'pending' || status === 'Under Review' || status === 'under_review') {
-        btn.style.background = 'rgba(234, 179, 8, 0.1)';
-        btn.style.color = '#eab308';
-        btn.style.border = '1px solid rgba(234, 179, 8, 0.2)';
-        icon.className = 'fa-solid fa-clock';
-        text.innerText = 'Under Review';
-    } else if (status === 'verified' || status === 'Approved' || status === 'approved' || status === true) {
-        btn.style.background = 'rgba(16, 185, 129, 0.1)';
-        btn.style.color = '#10b981';
-        btn.style.border = '1px solid rgba(16, 185, 129, 0.2)';
-        icon.className = 'fa-solid fa-circle-check';
-        text.innerText = 'Verified';
-    }
-}
+            if (!status || status === 'unverified' || status === 'Unverified') {
+                btn.style.background = 'rgba(239, 68, 68, 0.1)';
+                btn.style.color = '#ef4444';
+                btn.style.border = '1px solid rgba(239, 68, 68, 0.2)';
+                icon.className = 'fa-solid fa-triangle-exclamation';
+                text.innerText = 'Unverified';
+            } else if (status === 'pending' || status === 'Under Review' || status === 'under_review') {
+                btn.style.background = 'rgba(234, 179, 8, 0.1)';
+                btn.style.color = '#eab308';
+                btn.style.border = '1px solid rgba(234, 179, 8, 0.2)';
+                icon.className = 'fa-solid fa-clock';
+                text.innerText = 'Under Review';
+            } else if (status === 'verified' || status === 'Approved' || status === 'approved' || status === true) {
+                btn.style.background = 'rgba(16, 185, 129, 0.1)';
+                btn.style.color = '#10b981';
+                btn.style.border = '1px solid rgba(16, 185, 129, 0.2)';
+                icon.className = 'fa-solid fa-circle-check';
+                text.innerText = 'Verified';
+            }
+        }
 
         function goToKycPage() {
             window.location.href = 'kyc-verify.html';
