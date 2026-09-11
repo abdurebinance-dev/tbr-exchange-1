@@ -797,6 +797,39 @@
                 console.error('Error fetching live rates:', e);
             }
         }
+        async function fetchUserData() {
+    try {
+        const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+        if (!token) return;
+
+        const response = await fetch('/api/auth/me', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+        if (data.success && data.user) {
+            // ስም እና ኢሜይል ካገኙ በኋላ በ HTML ውስጥ ያሉትን IDs በትክክል መሙላት
+            const fullName = data.user.fullName || data.user.name || "USER";
+            const email = data.user.email || "user@example.com";
+
+            // በሁሉም ገጾች ላይ ያሉትን IDs ማዘመን
+            document.querySelectorAll('#profileName, .user-name').forEach(el => el.innerText = fullName.toUpperCase());
+            document.querySelectorAll('#profileEmail, .user-email').forEach(el => el.innerText = email);
+
+            if(document.getElementById('avatarInitial')) {
+                document.getElementById('avatarInitial').innerText = fullName.charAt(0).toUpperCase();
+            }
+        }
+    } catch (err) {
+        console.error("Error fetching user data:", err);
+    }
+}
+
+window.addEventListener('DOMContentLoaded', fetchUserData);
 
         function updateKycButtonUI(status) {
             const btn = document.getElementById('kycStatusBtn');
