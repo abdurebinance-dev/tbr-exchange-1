@@ -619,6 +619,27 @@ app.post('/api/reset-password', async (req, res) => {
     }
 });
 
+// ምሳሌ በ Node.js / Express
+router.get('/me', verifyToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+        res.json({
+            success: true,
+            user: {
+                fullName: user.fullName || user.name,
+                email: user.email,
+                balance: user.balance,
+                kycStatus: user.kycStatus
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 // Get Current User Profile API Route
 app.get('/api/user', verifyToken, async (req, res) => {
     try {

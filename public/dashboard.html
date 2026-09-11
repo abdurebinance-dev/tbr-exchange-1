@@ -775,6 +775,33 @@
             }
         }
 
+        async function loadUserData() {
+    try {
+        const token = localStorage.getItem('token');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const res = await fetch('/api/auth/me', { headers });
+        const data = await res.json();
+        
+        // ኢሜይሉን ከሰርቨር ወይም ከ ሉካል ስቶሬጅ መቀበል
+        const userEmail = data.user?.email || localStorage.getItem('userEmail') || localStorage.getItem('signupEmail') || 'user@gmail.com';
+        const displayName = data.user?.fullName || data.user?.name || 'USER';
+
+        document.getElementById('userGreeting').innerText = `WELCOME, ${displayName.toUpperCase()}`;
+        document.getElementById('menuUserName').innerText = displayName.toUpperCase();
+        document.getElementById('menuUserEmail').innerText = userEmail;
+
+    } catch (e) {
+        console.error('Error loading user profile:', e);
+        // ሰርቨሩ ከጠፋ ወይም ኤረር ካመጣ በ ሉካል ስቶሬጅ ያለው ኢሜይል እንዲሞላ
+        const fallbackEmail = localStorage.getItem('userEmail') || localStorage.getItem('signupEmail') || 'user@gmail.com';
+        document.getElementById('menuUserEmail').innerText = fallbackEmail;
+    }
+}
+
         // Integrated dynamic live market rates fetcher
         async function loadLiveMarketRates() {
             try {
