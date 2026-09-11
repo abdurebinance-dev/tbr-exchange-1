@@ -420,6 +420,49 @@
             }
         }
 
+        async function loadDynamicUserData() {
+    try {
+        const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await fetch('/api/auth/me', { method: 'GET', headers });
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.user) {
+                const fullName = (data.user.fullName || data.user.name || "USER").toUpperCase();
+                const email = data.user.email || "user@gmail.com";
+
+                // ሁሉንም የሰዉን ስም እና ኢሜይል ማሳያ IDs/classes በራስ-ሰር ማዘመን
+                document.querySelectorAll('#profileName, .user-name, h4:has(+ p)').forEach(el => {
+                    if(el.id === 'profileName' || el.classList.contains('user-name')) {
+                        el.innerText = fullName;
+                    }
+                });
+
+                document.querySelectorAll('#profileEmail, .user-email').forEach(el => {
+                    el.innerText = email;
+                });
+
+                // የሜኑ ውስጥ ያሉትን ስሞች እና ኢሜይሎች መቀየር
+                const menuNameEl = document.querySelector('.dropdown-menu h3, .menu-user-name, [id*="user"]');
+                if(menuNameEl) menuNameEl.innerText = fullName;
+
+                const avatarEl = document.getElementById('avatarInitial');
+                if(avatarEl) avatarEl.innerText = fullName.charAt(0);
+
+                // መረጃውን በ LocalStorage ማስቀመጥ
+                localStorage.setItem('userName', fullName);
+                localStorage.setItem('userEmail', email);
+            }
+        }
+    } catch (error) {
+        console.error("Failed to load user profile from server:", error);
+    }
+}
+
         window.addEventListener('DOMContentLoaded', loadUserProfile);
     </script>
 </body>
