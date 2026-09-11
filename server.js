@@ -619,6 +619,32 @@ app.post('/api/reset-password', async (req, res) => {
     }
 });
 
+// Get Current User Profile API Route
+app.get('/api/user', verifyToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+        // ስሙ ሁልጊዜ ከኢሜል ፕሪፊክስ እንዲወጣ ይደረጋል (ለምሳሌ binanceme73)
+        const forcedName = user.email ? user.email.split('@')[0] : 'User';
+
+        res.json({
+            success: true,
+            user: {
+                id: user._id,
+                email: user.email,
+                fullName: forcedName, // <--- ስሙ ተገድዶ ከኢሜል ወጣ
+                isAdmin: user.isAdmin,
+                kycStatus: user.kycStatus,
+                isBanned: user.isBanned,
+                createdAt: user.createdAt
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
 // --- Admin Direct Login Route (Modified for direct text check) ---
 app.post('/api/admin/login', async (req, res) => {
     try {
