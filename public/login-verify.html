@@ -258,7 +258,7 @@
             ? 'http://localhost:5000' 
             : 'https://tbr-exchange-backend.onrender.com';
 
-        // ኢሜይሉን ከ LocalStorage ማምጣት (verify, signin, login ወይም signup)
+        // ኢሜይሉን ከ LocalStorage ማምጣት
         const email = localStorage.getItem('verifyEmail') || localStorage.getItem('signinEmail') || localStorage.getItem('loginEmail') || localStorage.getItem('signupEmail');
         if (!email) {
             alert('Session not found. Please sign in again.');
@@ -418,8 +418,19 @@
                 if (response.ok && data.success) {
                     messageDiv.style.color = '#51cf66';
                     messageDiv.innerText = 'Verification successful! Redirecting...';
+                    
+                    // Token ማከማቻ (localStorage)
+                    if (data.token) {
+                        localStorage.setItem('token', data.token);
+                    }
+                    if (data.user) {
+                        localStorage.setItem('userName', data.user.fullName || data.user.name || '');
+                        localStorage.setItem('userEmail', data.user.email || email);
+                    }
+
                     localStorage.removeItem('verifyEmail');
                     localStorage.removeItem('loginEmail');
+                    
                     setTimeout(() => {
                         window.location.href = data.redirectUrl || 'dashboard.html';
                     }, 1200);
