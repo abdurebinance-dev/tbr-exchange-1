@@ -470,7 +470,6 @@
             </div>
         </div>
         <div class="nav-right">
-            <!-- Dynamic KYC Status Button -->
             <button id="kycStatusBtn" onclick="goToKycPage()" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: bold; display: flex; align-items: center; gap: 6px;">
                 <i class="fa-solid fa-triangle-exclamation" id="kycIcon"></i> <span id="kycBtnText">Unverified</span>
             </button>
@@ -484,7 +483,6 @@
 
             <div id="profile-dropdown-menu" class="profile-dropdown">
                 <div class="profile-header-info">
-                    <!-- እዚህ ጋር የ ID ስሞች ተስተካክለዋል -->
                     <h4 id="menuUserName" class="user-name">USER</h4>
                     <p id="menuUserEmail" class="user-email">user@gmail.com</p>
                 </div>
@@ -521,7 +519,6 @@
     </div>
 
     <div class="container">
-        <!-- እዚህ ጋር የሰላምታ ቦታ ላይ class እና id ተጨምረዋል -->
         <div class="greeting" id="userGreeting">WELCOME, <span class="user-name">USER</span></div>
 
         <div class="top-grid">
@@ -722,7 +719,7 @@
 
         async function loadUserData() {
             try {
-                const token = localStorage.getItem('token');
+                const token = localStorage.getItem('token') || localStorage.getItem('authToken');
                 const headers = { 'Content-Type': 'application/json' };
                 if (token) {
                     headers['Authorization'] = `Bearer ${token}`;
@@ -752,7 +749,6 @@
                         if (hour < 12) timeGreeting = "Morning";
                         else if (hour < 17) timeGreeting = "Afternoon";
 
-                        // እዚህ ላይ ከተጠቃሚው መረጃ የተገኘውን ኢሜይል እና ስም በ HTML ውስጥ ባሉት ክላሶች በኩል እንሞላለን
                         document.querySelectorAll('.user-email').forEach(el => {
                             if (userEmail) el.innerText = userEmail;
                         });
@@ -797,39 +793,6 @@
                 console.error('Error fetching live rates:', e);
             }
         }
-        async function fetchUserData() {
-    try {
-        const token = localStorage.getItem('token') || localStorage.getItem('authToken');
-        if (!token) return;
-
-        const response = await fetch('/api/auth/me', {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        const data = await response.json();
-        if (data.success && data.user) {
-            // ስም እና ኢሜይል ካገኙ በኋላ በ HTML ውስጥ ያሉትን IDs በትክክል መሙላት
-            const fullName = data.user.fullName || data.user.name || "USER";
-            const email = data.user.email || "user@example.com";
-
-            // በሁሉም ገጾች ላይ ያሉትን IDs ማዘመን
-            document.querySelectorAll('#profileName, .user-name').forEach(el => el.innerText = fullName.toUpperCase());
-            document.querySelectorAll('#profileEmail, .user-email').forEach(el => el.innerText = email);
-
-            if(document.getElementById('avatarInitial')) {
-                document.getElementById('avatarInitial').innerText = fullName.charAt(0).toUpperCase();
-            }
-        }
-    } catch (err) {
-        console.error("Error fetching user data:", err);
-    }
-}
-
-window.addEventListener('DOMContentLoaded', fetchUserData);
 
         function updateKycButtonUI(status) {
             const btn = document.getElementById('kycStatusBtn');
@@ -857,53 +820,8 @@ window.addEventListener('DOMContentLoaded', fetchUserData);
             }
         }
 
-        async function loadDynamicUserData() {
-    try {
-        const token = localStorage.getItem('token') || localStorage.getItem('authToken');
-        const headers = { 'Content-Type': 'application/json' };
-        if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-        }
-
-        const response = await fetch('/api/auth/me', { method: 'GET', headers });
-        if (response.ok) {
-            const data = await response.json();
-            if (data.success && data.user) {
-                const fullName = (data.user.fullName || data.user.name || "USER").toUpperCase();
-                const email = data.user.email || "user@gmail.com";
-
-                // ሁሉንም የሰዉን ስም እና ኢሜይል ማሳያ IDs/classes በራስ-ሰር ማዘመን
-                document.querySelectorAll('#profileName, .user-name, h4:has(+ p)').forEach(el => {
-                    if(el.id === 'profileName' || el.classList.contains('user-name')) {
-                        el.innerText = fullName;
-                    }
-                });
-
-                document.querySelectorAll('#profileEmail, .user-email').forEach(el => {
-                    el.innerText = email;
-                });
-
-                // የሜኑ ውስጥ ያሉትን ስሞች እና ኢሜይሎች መቀየር
-                const menuNameEl = document.querySelector('.dropdown-menu h3, .menu-user-name, [id*="user"]');
-                if(menuNameEl) menuNameEl.innerText = fullName;
-
-                const avatarEl = document.getElementById('avatarInitial');
-                if(avatarEl) avatarEl.innerText = fullName.charAt(0);
-
-                // መረጃውን በ LocalStorage ማስቀመጥ
-                localStorage.setItem('userName', fullName);
-                localStorage.setItem('userEmail', email);
-            }
-        }
-    } catch (error) {
-        console.error("Failed to load user profile from server:", error);
-    }
-}
-
-window.addEventListener('DOMContentLoaded', loadDynamicUserData);
-
         function goToKycPage() {
-            window.location.href = 'kyc-verify.html';
+            window.location.href = 'kyc.html';
         }
     </script>
 </body>
