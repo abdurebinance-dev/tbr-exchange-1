@@ -748,30 +748,31 @@
         }
 
         function updateKycButtonUI(status) {
-            const btn = document.getElementById('kycStatusBtn');
-            const icon = document.getElementById('kycIcon');
-            const text = document.getElementById('kycBtnText');
+    const btn = document.getElementById('kycStatusBtn');
+    const icon = document.getElementById('kycIcon');
+    const text = document.getElementById('kycBtnText');
 
-            if (status === 'pending' || status === 'Under Review' || status === 'under_review') {
-                btn.style.background = 'rgba(234, 179, 8, 0.1)';
-                btn.style.color = '#eab308';
-                btn.style.border = '1px solid rgba(234, 179, 8, 0.2)';
-                icon.className = 'fa-solid fa-clock';
-                text.innerText = 'Under Review';
-            } else if (status === 'verified' || status === 'Approved' || status === 'approved' || status === true) {
-                btn.style.background = 'rgba(16, 185, 129, 0.1)';
-                btn.style.color = '#10b981';
-                btn.style.border = '1px solid rgba(16, 185, 129, 0.2)';
-                icon.className = 'fa-solid fa-circle-check';
-                text.innerText = 'Verified';
-            } else {
-                btn.style.background = 'rgba(239, 68, 68, 0.1)';
-                btn.style.color = '#ef4444';
-                btn.style.border = '1px solid rgba(239, 68, 68, 0.2)';
-                icon.className = 'fa-solid fa-triangle-exclamation';
-                text.innerText = 'Unverified';
-            }
-        }
+    // ስታተሱ ባዶ ከሆነ (null, undefined, ወይም 'unverified') እንደ 'unverified' ይያዘው
+    if (!status || status === 'unverified' || status === 'Unverified') {
+        btn.style.background = 'rgba(239, 68, 68, 0.1)';
+        btn.style.color = '#ef4444';
+        btn.style.border = '1px solid rgba(239, 68, 68, 0.2)';
+        icon.className = 'fa-solid fa-triangle-exclamation';
+        text.innerText = 'Unverified';
+    } else if (status === 'pending' || status === 'Under Review' || status === 'under_review') {
+        btn.style.background = 'rgba(234, 179, 8, 0.1)';
+        btn.style.color = '#eab308';
+        btn.style.border = '1px solid rgba(234, 179, 8, 0.2)';
+        icon.className = 'fa-solid fa-clock';
+        text.innerText = 'Under Review';
+    } else if (status === 'verified' || status === 'Approved' || status === 'approved' || status === true) {
+        btn.style.background = 'rgba(16, 185, 129, 0.1)';
+        btn.style.color = '#10b981';
+        btn.style.border = '1px solid rgba(16, 185, 129, 0.2)';
+        icon.className = 'fa-solid fa-circle-check';
+        text.innerText = 'Verified';
+    }
+}
 
         function goToKycPage() {
             window.location.href = 'kyc-verify.html';
