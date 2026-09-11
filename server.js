@@ -763,6 +763,29 @@ app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
     }
 });
 
+app.post('/api/kyc/submit', verifyToken, async (req, res) => {
+    try {
+        const { fullName, idNumber, dateOfBirth, residentialAddress, docType, frontImage, backImage, selfieImage } = req.body;
+        
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        // መረጃዎችን ማዘመን እና ስታተሱን ወደ pending መቀየር
+        user.fullName = fullName || user.fullName;
+        user.kycStatus = 'pending'; // 👈 ቁልፉ ነጥብ እዚህ ላይ ነው
+        
+        // እንደ አስፈላጊነቱ የፎቶ ሊንኮችን ወይም ፋይሎችን እዚህ ጋር ማስቀመጥ ይቻላል
+
+        await user.save();
+
+        res.json({ success: true, message: "KYC submitted successfully for review" });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // --- User KYC Submit Route (Completely Open & Fallback Safe) ---
 app.post('/api/kyc/submit', async (req, res) => {
     try {
