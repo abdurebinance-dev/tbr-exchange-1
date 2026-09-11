@@ -484,8 +484,9 @@
 
             <div id="profile-dropdown-menu" class="profile-dropdown">
                 <div class="profile-header-info">
-                    <h4 id="menuUserName">USER</h4>
-                    <p id="menuUserEmail">user@gmail.com</p>
+                    <!-- እዚህ ጋር የ ID ስሞች ተስተካክለዋል -->
+                    <h4 id="menuUserName" class="user-name">USER</h4>
+                    <p id="menuUserEmail" class="user-email">user@gmail.com</p>
                 </div>
 
                 <a href="profile.html" class="dropdown-item">
@@ -520,7 +521,8 @@
     </div>
 
     <div class="container">
-        <div class="greeting" id="userGreeting">USER</div>
+        <!-- እዚህ ጋር የሰላምታ ቦታ ላይ class እና id ተጨምረዋል -->
+        <div class="greeting" id="userGreeting">WELCOME, <span class="user-name">USER</span></div>
 
         <div class="top-grid">
             <div class="balance-card">
@@ -715,7 +717,7 @@
             });
 
             loadUserData();
-            loadLiveMarketRates(); // Added live rate updater integration
+            loadLiveMarketRates();
         });
 
         async function loadUserData() {
@@ -750,11 +752,16 @@
                         if (hour < 12) timeGreeting = "Morning";
                         else if (hour < 17) timeGreeting = "Afternoon";
 
+                        // እዚህ ላይ ከተጠቃሚው መረጃ የተገኘውን ኢሜይል እና ስም በ HTML ውስጥ ባሉት ክላሶች በኩል እንሞላለን
+                        document.querySelectorAll('.user-email').forEach(el => {
+                            if (userEmail) el.innerText = userEmail;
+                        });
+                        
+                        document.querySelectorAll('.user-name').forEach(el => {
+                            el.innerText = displayName;
+                        });
+
                         document.getElementById('userGreeting').innerText = `${timeGreeting}, ${displayName}`;
-                        document.getElementById('menuUserName').innerText = displayName;
-                        if (userEmail) {
-                            document.getElementById('menuUserEmail').innerText = userEmail;
-                        }
 
                         if (userObj.balance !== undefined) {
                             actualBalance = Number(userObj.balance).toFixed(2);
@@ -775,34 +782,6 @@
             }
         }
 
-        async function loadUserData() {
-    try {
-        const token = localStorage.getItem('token');
-        const headers = { 'Content-Type': 'application/json' };
-        if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-        }
-
-        const res = await fetch('/api/auth/me', { headers });
-        const data = await res.json();
-        
-        // ኢሜይሉን ከሰርቨር ወይም ከ ሉካል ስቶሬጅ መቀበል
-        const userEmail = data.user?.email || localStorage.getItem('userEmail') || localStorage.getItem('signupEmail') || 'user@gmail.com';
-        const displayName = data.user?.fullName || data.user?.name || 'USER';
-
-        document.getElementById('userGreeting').innerText = `WELCOME, ${displayName.toUpperCase()}`;
-        document.getElementById('menuUserName').innerText = displayName.toUpperCase();
-        document.getElementById('menuUserEmail').innerText = userEmail;
-
-    } catch (e) {
-        console.error('Error loading user profile:', e);
-        // ሰርቨሩ ከጠፋ ወይም ኤረር ካመጣ በ ሉካል ስቶሬጅ ያለው ኢሜይል እንዲሞላ
-        const fallbackEmail = localStorage.getItem('userEmail') || localStorage.getItem('signupEmail') || 'user@gmail.com';
-        document.getElementById('menuUserEmail').innerText = fallbackEmail;
-    }
-}
-
-        // Integrated dynamic live market rates fetcher
         async function loadLiveMarketRates() {
             try {
                 const res = await fetch('/api/market/rates');
