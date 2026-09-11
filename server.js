@@ -763,70 +763,58 @@ app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
     }
 });
 
-// --- User KYC Submit Route (Fixed) ---
+// --- User KYC Submit Route (Completely Open & Fallback Safe) ---
 app.post('/api/kyc/submit', async (req, res) => {
     try {
-        // ከ αι ቶከን ወይም ከደረሰው አካል ዩዘር ኢሜል/አይዲ መቀበል
-        const authHeader = req.headers.authorization;
-        let userId = req.body.userId;
-        let userEmail = req.body.email;
+        const { email, fullName, idNumber, docType, dateOfBirth, residentialAddress, frontImage, backImage, selfieImage } = req.body;
 
-        // ቶከን ካለ ከቶከኑ ዩዘርን ለመለየት መሞከር (ካልተገኘ ግን በቦዲ ከመጣው መረጃ መጠቀም)
-        if (authHeader && authHeader.startsWith('Bearer ')) {
-            const token = authHeader.split(' ')[1];
-            try {
-                const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret');
-                userId = decoded.userId || decoded.id;
-                userEmail = decoded.email;
-            } catch (e) {
-                console.log("Token verification failed, falling back to body data or guest submit");
-            }
+        if (!email) {
+            return res.status(400).json({ success: false, message: 'Email is required for KYC submission.' });
         }
 
-        // ዩዘር ካልተገኘ በኢሜል መፈለግ
-        let user = null;
-        if (userId) {
-            user = await User.findById(userId);
-        } else if (userEmail) {
-            user = await User.findOne({ email: userEmail });
-        } else if (req.body.userId) {
-            user = await User.findById(req.body.userId);
-        }
-
+        // 1. ዩዘሩን በኢሜል መፈለግ (ከሌለም ራሱ ፈጥሮ እንዲያልፍ ማድረግ ይቻላል)
+        let user = await User.findOne({ email: email.toLowerCase() });
+        
         if (!user) {
-            return res.status(400).json({ success: false, message: 'User not found. Please log in again.' });
+            // ዩዘሩ በሰርቨር ካልተገኘ በአዲስ መልክ ሪከርድ መፍጠር
+            user = new User({
+                email: email.toLowerCase(),
+                fullName: fullName || 'User',
+                kycStatus: 'pending'
+            });
+            await user.save();
         }
 
         // የ KYC መረጃዎችን ማዘጋጀት
         const kycDataPayload = {
             userId: user._id,
             email: user.email,
-            fullName: req.body.fullName || user.fullName || 'User',
-            idNumber: req.body.idNumber || '',
-            docType: req.body.docType || 'national_id',
-            dob: req.body.dateOfBirth || '',
-            address: req.body.residentialAddress || '',
-            frontImage: req.body.frontImage || '',
-            backImage: req.body.backImage || '',
-            selfieImage: req.body.selfieImage || '',
+            fullName: fullName || user.fullName || 'User',
+            idNumber: idNumber || '',
+            docType: docType || 'national_id',
+            dob: dateOfBirth || '',
+            address: residentialAddress || '',
+            frontImage: frontImage || '',
+            backImage: backImage || '',
+            selfieImage: selfieImage || '',
             status: 'pending'
         };
 
-        // 1. በ KYC ኮሌክሽን ውስጥ ማስቀመጥ (Upsert)
+        // 2. በ 'kycs' ኮሌክሽን ውስጥ ማስቀመጥ (Upsert) - ከዚህ በፊት ባዶ የነበረውን ይሞላል
         await KYC.findOneAndUpdate(
-            { userId: user._id },
+            { email: user.email },
             kycDataPayload,
             { upsert: true, new: true }
         );
 
-        // 2. በቀጥታ በ User ዶክመንት ውስጥም ማዘመን (Double safeguard)
+        // 3. በ User ዶክመንት ውስጥም kycStatus ማዘመን
         user.kycStatus = 'pending';
         user.kycData = kycDataPayload;
         await user.save();
 
-        res.json({ success: true, message: 'KYC submitted successfully!' });
+        res.json({ success: true, message: 'KYC submitted successfully and sent to admin!' });
     } catch (error) {
-        console.error("KYC Submit Error:", error);
+        console.error("KYC Submit Critical Error:", error);
         res.status(500).json({ success: false, message: 'Server error during KYC submission' });
     }
 });
