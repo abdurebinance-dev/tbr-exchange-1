@@ -624,66 +624,90 @@ app.post('/api/admin/login', async (req, res) => {
 app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
     try {
         const totalUsers = await User.countDocuments({});
-        const kycPendingKYC = await KYC.countDocuments({ $or: [{ status: 'pending' }, { status: 'under_review' }, { status: 'undefined' }, { status: { $exists: false } }] });
+        // ሁለቱንም KYC ኮሌክሽን እና ዩዘርስ ኮሌክሽን በመፈተሽ ትክክለኛውን የፔንዲንግ ብዛት ማግኘት
+        const kycPendingKYC = await KYC.countDocuments({ 
+            status: { $in: ['pending', 'under_review', 'undefined', null] } 
+        });
         const kycPendingUser = await User.countDocuments({ kycStatus: 'pending' });
         const kycPending = Math.max(kycPendingKYC, kycPendingUser);
         
         res.json({ success: true, data: { totalUsers, kycPending, todayVolume: "0 USDT / 0 ETB", activeEscrow: "0 USDT" } });
     } catch (error) {
+        console.error("Stats Error:", error);
         res.status(500).json({ success: false, message: 'Error fetching stats' });
     }
 });
 
-// --- Admin KYC Requests Route ---
+// --- Admin KYC Requests Route (Fixed to catch all submissions) ---
 app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
     try {
-        let pendingKycs = await KYC.find({ 
+        // 1. መጀመሪያ ከ KYC ኮሌክሽን መረጃዎችን መፈለግ
+        let kycRecords = await KYC.find({}).populate('userId', 'email fullName kycData kycStatus').sort({ _id: -1 });
+
+        // 2. በ KYC ኮሌክሽን ውስጥ ያልሆኑ ነገር ግን በ User ዶክመንት ውስጥ kycStatus ያላቸውን መፈለግ እና ማዋሃድ
+        const usersWithKyc = await User.find({ 
             $or: [
-                { status: { $in: ['pending', 'under_review', 'undefined'] } },
-                { status: { $exists: false } }
+                { kycStatus: { $in: ['pending', 'under_review'] } },
+                { 'kycData.frontImage': { $exists: true, $ne: '' } }
             ] 
-        }).populate('userId', 'email fullName').sort({ _id: -1 });
+        }).sort({ _id: -1 });
 
-        if (pendingKycs.length === 0) {
-            const pendingUsers = await User.find({ kycStatus: 'pending' }).sort({ _id: -1 });
-            pendingKycs = pendingUsers.map(u => ({
-                _id: u._id,
-                userId: u,
-                email: u.email,
-                fullName: u.fullName || 'User',
-                frontImage: u.kycData?.frontImage || '',
-                backImage: u.kycData?.backImage || '',
-                selfieImage: u.kycData?.selfieImage || '',
-                status: 'pending',
-                idNumber: u.kycData?.idNumber || '',
-                dob: u.kycData?.dateOfBirth || '',
-                address: u.kycData?.residentialAddress || '',
-                docType: u.kycData?.docType || 'national_id'
-            }));
-        }
-
-        const data = pendingKycs.map(kyc => {
-            const userEmail = kyc.userId && typeof kyc.userId === 'object' ? kyc.userId.email : (kyc.email || 'User');
+        // ሁለቱን መረጃዎች በአግባቡ ማቀናጀት (Mapping)
+        const combinedRequests = usersWithKyc.map(u => {
+            // በ KYC ኮሌክሽን ውስጥ የዚህ ዩዘር ሪከርድ አለ ወይ መፈተሽ
+            const existingKyc = kycRecords.find(k => k.userId && (k.userId._id.toString() === u._id.toString() || k.email === u.email));
+            
             return {
-                _id: kyc._id,
-                userId: userEmail,
-                email: userEmail,
-                frontImage: kyc.frontImage || '',
-                backImage: kyc.backImage || '',
-                selfieImage: kyc.selfieImage || '',
-                status: kyc.status || 'pending',
-                fullName: kyc.fullName || (kyc.userId && kyc.userId.fullName) || 'User',
-                idNumber: kyc.idNumber || '',
-                dateOfBirth: kyc.dob || kyc.dateOfBirth || '',
-                address: kyc.address || kyc.residentialAddress || '',
-                docType: kyc.docType || 'national_id'
+                _id: existingKyc ? existingKyc._id : u._id,
+                userId: u.email,
+                email: u.email,
+                frontImage: (existingKyc && existingKyc.frontImage) || (u.kycData && u.kycData.frontImage) || '',
+                backImage: (existingKyc && existingKyc.backImage) || (u.kycData && u.kycData.backImage) || '',
+                selfieImage: (existingKyc && existingKyc.selfieImage) || (u.kycData && u.kycData.selfieImage) || '',
+                status: (existingKyc && existingKyc.status) || u.kycStatus || 'pending',
+                fullName: (existingKyc && existingKyc.fullName) || u.fullName || 'User',
+                idNumber: (existingKyc && existingKyc.idNumber) || (u.kycData && u.kycData.idNumber) || '',
+                dateOfBirth: (existingKyc && existingKyc.dob) || (u.kycData && u.kycData.dateOfBirth) || '',
+                address: (existingKyc && existingKyc.address) || (u.kycData && u.kycData.residentialAddress) || '',
+                docType: (existingKyc && existingKyc.docType) || (u.kycData && u.kycData.docType) || 'national_id'
             };
         });
 
-        return res.json({ success: true, data: data, requests: data });
+        res.json({ success: true, data: combinedRequests, requests: combinedRequests });
     } catch (err) {
         console.error("KYC Fetch Error:", err);
         res.status(500).json({ success: false, message: 'Error fetching KYC requests' });
+    }
+});
+
+// --- Admin KYC Action Route ---
+app.post('/api/admin/kyc-action', verifyAdmin, async (req, res) => {
+    try {
+        const { kycId, status } = req.body; 
+        const newStatus = status === 'approved' ? 'approved' : 'rejected';
+        const userTargetStatus = status === 'approved' ? 'verified' : 'rejected';
+
+        // በ KYC ኮሌክሽን ማሻሻል
+        let kycRecord = await KYC.findById(kycId);
+        if (kycRecord) {
+            kycRecord.status = newStatus;
+            await kycRecord.save();
+            if (kycRecord.userId) {
+                await User.findByIdAndUpdate(kycRecord.userId, { kycStatus: userTargetStatus });
+            }
+        }
+
+        // በ User ዶክመንት በራሱም ካለ ማሻሻል (KYC ID ምናልባት የዩዘር ID ከሆነ)
+        const userRecord = await User.findById(kycId);
+        if (userRecord) {
+            userRecord.kycStatus = userTargetStatus;
+            await userRecord.save();
+        }
+
+        res.json({ success: true, message: `KYC status updated to ${newStatus} successfully.` });
+    } catch (error) {
+        console.error("KYC Action Error:", error);
+        res.status(500).json({ success: false, message: 'Error updating KYC status' });
     }
 });
 
