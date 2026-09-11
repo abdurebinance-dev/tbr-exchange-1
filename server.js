@@ -44,29 +44,6 @@ const publicPath = path.join(process.cwd(), 'public');
 app.use(express.static(publicPath));
 app.use('/uploads', express.static('uploads'));
 
-// MongoDB Connection & Data Migration for existing users
-mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/tbr_exchange')
-.then(async () => {
-    console.log('MongoDB Database Connected Successfully!');
-    
-    try {
-        const users = await User.find({});
-        for (let user of users) {
-            if (user.email) {
-                const emailPrefix = user.email.split('@')[0];
-                if (user.fullName === 'User' || user.fullName !== emailPrefix) {
-                    user.fullName = emailPrefix;
-                    await user.save();
-                }
-            }
-        }
-        console.log('Existing users fullnames updated successfully based on email!');
-    } catch (migrationErr) {
-        console.error('Migration Error:', migrationErr);
-    }
-})
-.catch(err => console.log('MongoDB Connection Error:', err));
-
 // User Schema & Model (የተስተካከለ - fullName ከኢሜል እንዲወጣ)
 const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true, index: true, lowercase: true, trim: true },
@@ -102,6 +79,30 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model('User', userSchema);
 
+// MongoDB Connection & Data Migration (FORCE all user fullnames to match email prefix)
+mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/tbr_exchange')
+.then(async () => {
+    console.log('MongoDB Database Connected Successfully!');
+    
+    try {
+        const users = await User.find({});
+        for (let user of users) {
+            if (user.email) {
+                const emailPrefix = user.email.split('@')[0];
+                // የእርስዎን ጨምሮ የሁሉም ዩዘሮች ስም ከኢሜል ፕሪፊክስ ጋር እንዲመሳሰል ይገደዳል
+                if (user.fullName !== emailPrefix) {
+                    user.fullName = emailPrefix;
+                    await user.save();
+                }
+            }
+        }
+        console.log('All users fullnames updated successfully based on their email prefix!');
+    } catch (migrationErr) {
+        console.error('Migration Error:', migrationErr);
+    }
+})
+.catch(err => console.log('MongoDB Connection Error:', err));
+
 // KYC Schema & Model
 const kycSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
@@ -112,7 +113,7 @@ const kycSchema = new mongoose.Schema({
     address: { type: String },
     docType: { type: String, default: 'national_id' },
     frontImage: { type: String, required: true }, 
-    backImage: { type: String },                    
+    backImage: { type: String },                     
     selfieImage: { type: String, required: true }, 
     status: { type: String, default: 'pending' }, 
     rejectionReason: { type: String, default: '' },
@@ -123,7 +124,7 @@ const KYC = mongoose.models.KYC || mongoose.model('KYC', kycSchema);
 
 const pendingUsers = {};
 
-// --- Admin Verification Middleware (Updated to automatically grant admin to binanceme73@gmail.com) ---
+// --- Admin Verification Middleware ---
 const verifyAdmin = async (req, res, next) => {
     try {
         const authHeader = req.headers['authorization'] || req.headers['Authorization'];
@@ -144,7 +145,6 @@ const verifyAdmin = async (req, res, next) => {
             return res.status(403).json({ success: false, message: 'User not found.' });
         }
 
-        // Auto-grant admin rights if email matches your admin email
         if (user.email === 'binanceme73@gmail.com' && !user.isAdmin) {
             user.isAdmin = true;
             await user.save();
@@ -241,7 +241,7 @@ async function sendVerificationEmail(email, verificationCode) {
     });
 }
 
-// 1. Signup Route (ኢሜል እና ፓስወርድ ተቀብሎ ኮድ የሚልክ)
+// 1. Signup Route
 app.post('/api/signup', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -332,7 +332,7 @@ app.post('/api/resend', async (req, res) => {
     }
 });
 
-// 3. Verify Code Route (እዚህ ጋር ከኢሜል ውስጥ ስሙን ቆርጦ fullName አድርጎ ይመዘግባል)
+// 3. Verify Code Route
 app.post('/api/verify', async (req, res) => {
     try {
         const { email, code } = req.body;
@@ -359,14 +359,13 @@ app.post('/api/verify', async (req, res) => {
             return res.status(400).json({ success: false, message: `Invalid verification code! Attempt ${pendingUser.signupAttempts} of 5.` });
         }
 
-        // ከኢሜል አድራሻው @ ምልክት በፊት ያለውን ቃል መውሰድ (ለምሳሌ binanceme73 ከ binanceme73@gmail.com)
         const emailPrefix = cleanEmail.split('@')[0];
-
         const isAdminUser = cleanEmail === 'binanceme73@gmail.com';
+        
         const newUser = new User({ 
             email: cleanEmail, 
             password: pendingUser.password, 
-            fullName: emailPrefix, // <-- ስሙ ከኢሜሉ ተቆርጦ ተሰጥቷል
+            fullName: emailPrefix, 
             isVerified: true, 
             isAdmin: isAdminUser 
         });
@@ -512,7 +511,7 @@ app.post('/api/resend-code', async (req, res) => {
     }
 });
 
-// 7. Google Auth Route (በጉግል ሲመዘገቡም ኢሜሉን ቆርጦ fullName የሚያደርግ)
+// 7. Google Auth Route
 app.post('/api/google-auth', async (req, res) => {
     try {
         const { token } = req.body;
@@ -528,16 +527,17 @@ app.post('/api/google-auth', async (req, res) => {
             const jwtToken = jwt.sign({ id: user._id, email: user.email, isAdmin: user.isAdmin }, JWT_SECRET, { expiresIn: '7d' });
             return res.json({ success: true, exists: true, email, token: jwtToken, redirectUrl: 'dashboard.html', message: 'Account exists.' });
         } else {
-            // በጉግል አዲስ አካውንት ሲፈጠር በሰርቨር በኩል መመዝገብ ካለበት ወይም ሬጅስትሬሽን ገጽ ከሄደ
             const emailPrefix = email.split('@')[0];
-            // ማስታወሻ: ዩዘሩ አዲስ ከሆነ አጠቃላይ የሲግንአፕ ፎርም እንዲሞላ የሚደረግ ከሆነ signup.html ይሄዳል፣ 
-            // ነገር ግን በቀጥታ መመዝገብ ከፈለገ ከታች ባለው መልኩ መፍጠር ይቻላል:
             return res.json({ success: true, exists: false, email, defaultName: emailPrefix, redirectUrl: 'signup.html', message: 'Account not found.' });
         }
     } catch (error) {
         console.error('Google Auth Error:', error);
         res.status(500).json({ success: false, message: 'Google authentication failed.' });
     }
+});
+
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
 });
 
 // 8. Forgot Password Route
