@@ -715,6 +715,7 @@
             });
 
             loadUserData();
+            loadLiveMarketRates(); // Added live rate updater integration
         });
 
         async function loadUserData() {
@@ -771,6 +772,23 @@
                 console.error('Error loading user profile:', e);
                 const localStatus = localStorage.getItem('kycStatus') || 'unverified';
                 updateKycButtonUI(localStatus);
+            }
+        }
+
+        // Integrated dynamic live market rates fetcher
+        async function loadLiveMarketRates() {
+            try {
+                const res = await fetch('/api/market/rates');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success) {
+                        if (data.liveRate) document.getElementById('liveRateValue').innerText = Number(data.liveRate).toFixed(2);
+                        if (data.bestBuy) document.getElementById('bestBuyValue').innerText = Number(data.bestBuy).toFixed(2) + ' ETB';
+                        if (data.bestSell) document.getElementById('bestSellValue').innerText = Number(data.bestSell).toFixed(2) + ' ETB';
+                    }
+                }
+            } catch (e) {
+                console.error('Error fetching live rates:', e);
             }
         }
 
