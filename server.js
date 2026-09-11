@@ -44,7 +44,6 @@ const publicPath = path.join(process.cwd(), 'public');
 app.use(express.static(publicPath));
 app.use('/uploads', express.static('uploads'));
 
-// MongoDB Connection
 // MongoDB Connection & Data Migration for existing users
 mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/tbr_exchange')
 .then(async () => {
@@ -67,6 +66,18 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/tbr_exchang
     }
 })
 .catch(err => console.log('MongoDB Connection Error:', err));
+
+// User Schema & Model (የተስተካከለ - fullName ከኢሜል እንዲወጣ)
+const userSchema = new mongoose.Schema({
+    email: { type: String, required: true, unique: true, index: true, lowercase: true, trim: true },
+    phone: { type: String, index: true }, 
+    password: { type: String, required: true },
+    fullName: { 
+        type: String, 
+        default: function() { 
+            return this.email ? this.email.split('@')[0] : 'User'; 
+        } 
+    },
     verificationCode: String,
     verificationCodeExpire: Date,
     isVerified: { type: Boolean, default: false },
