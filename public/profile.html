@@ -246,10 +246,10 @@
     <div class="container">
         <div class="profile-card">
             <div class="profile-info-left">
-                <div class="profile-avatar" id="avatarInitial">A</div>
+                <div class="profile-avatar" id="avatarInitial">U</div>
                 <div class="profile-details">
-                    <h2 id="profileName">ABDURAHMAN ASHEBIR</h2>
-                    <p id="profileEmail">binanceme73@gmail.com</p>
+                    <h2 id="profileName">USER</h2>
+                    <p id="profileEmail">user@example.com</p>
                 </div>
             </div>
             <a href="settings.html" class="settings-btn"><i class="fa-solid fa-gear"></i> Settings</a>
@@ -317,8 +317,13 @@
         async function loadUserProfile() {
             try {
                 const token = localStorage.getItem('token');
-                let fullName = "ABDURAHMAN ASHEBIR";
-                let email = "binanceme73@gmail.com";
+                if (!token) {
+                    window.location.href = 'signin.html';
+                    return;
+                }
+
+                let dbFullName = "USER";
+                let email = "user@example.com";
                 let kycStatus = 'not_submitted';
 
                 const response = await fetch('/api/user/profile', {
@@ -327,13 +332,19 @@
                 const data = await response.json();
 
                 if (data.success && data.user) {
-                    fullName = data.user.fullName || fullName;
+                    dbFullName = data.user.fullName || "USER";
                     email = data.user.email || email;
                     kycStatus = data.user.kycStatus || 'not_submitted';
                 }
 
+                // KYC ጸድቆ (Verified) ከሆነ ትክክለኛው ስም ይታያል፣ ካልሆነ ግን "USER" ይባላል
+                let displayName = "USER";
+                if (kycStatus === 'verified' || kycStatus === 'approved') {
+                    displayName = dbFullName;
+                }
+
                 document.getElementById('profileEmail').innerText = email;
-                document.getElementById('avatarInitial').innerText = fullName.charAt(0).toUpperCase();
+                document.getElementById('avatarInitial').innerText = displayName.charAt(0).toUpperCase();
 
                 const bannerContainer = document.getElementById('kycBannerContainer');
                 const nameContainer = document.getElementById('profileName');
@@ -341,20 +352,20 @@
 
                 if (kycStatus === 'verified' || kycStatus === 'approved') {
                     nameContainer.innerHTML = `
-                        ${fullName} 
+                        ${displayName} 
                         <span style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; background: #00C087; color: #fff; border-radius: 50%; font-size: 10px; margin-left: 8px;" title="Verified">
                             <i class="fa-solid fa-check"></i>
                         </span>
                     `;
                     kycStatusRowText.innerHTML = `<span style="color: #00C087; font-weight: 600;">Verified <i class="fa-solid fa-circle-check"></i></span>`;
                 } else if (kycStatus === 'pending' || kycStatus === 'under_review') {
-                    nameContainer.innerHTML = fullName;
+                    nameContainer.innerHTML = displayName; // "USER"
                     kycStatusRowText.innerHTML = `<span style="color: #f0b90b; font-weight: 500;">Under Review</span>`;
                 } else if (kycStatus === 'rejected') {
-                    nameContainer.innerHTML = fullName;
+                    nameContainer.innerHTML = displayName; // "USER"
                     kycStatusRowText.innerHTML = `<a href="kyc-verify.html" style="color: #cf304a; text-decoration: none;">Rejected (Resubmit) <i class="fa-solid fa-chevron-right" style="font-size: 10px;"></i></a>`;
                 } else {
-                    nameContainer.innerHTML = fullName;
+                    nameContainer.innerHTML = displayName; // "USER"
                     kycStatusRowText.innerHTML = `<a href="kyc-verify.html" style="color: #f6465d; text-decoration: none;">Not Submitted <i class="fa-solid fa-chevron-right" style="font-size: 10px;"></i></a>`;
                 }
 
