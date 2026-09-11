@@ -430,7 +430,6 @@
                     emailInput.value = savedEmail;
                 }
                 checkRateLimitStatus(savedEmail);
-                localStorage.removeItem('signupEmail');
             }
 
             if (typeof google !== 'undefined' && google.accounts) {
@@ -452,9 +451,11 @@
             }
         };
 
+        // ኢሜል ሲጻፍ ራሱ በ LocalStorage እንዲቀመጥ ማድረግ
         document.getElementById('signup-email').addEventListener('input', function() {
             const email = this.value.trim();
             if (email) {
+                localStorage.setItem('signupEmail', email);
                 checkRateLimitStatus(email);
             }
         });
@@ -685,6 +686,9 @@
                 showErrorToast("Passwords do not match!");
                 return;
             }
+
+            // ኢሜሉ በትክክል መያዙን እዚህም እናረጋግጣለን
+            localStorage.setItem('signupEmail', email);
 
             try {
                 const response = await fetch(`${API_BASE_URL}/api/signup`, {
