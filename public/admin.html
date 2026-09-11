@@ -210,6 +210,7 @@
     </div>
 
     <script>
+        const API_BASE = 'https://tbr-exchange-backend.onrender.com';
         const getToken = () => localStorage.getItem('adminToken');
 
         window.addEventListener('DOMContentLoaded', () => {
@@ -226,7 +227,7 @@
             const errEl = document.getElementById('loginError');
 
             try {
-                const res = await fetch('/api/admin/login', {
+                const res = await fetch(`${API_BASE}/api/admin/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password })
@@ -251,7 +252,7 @@
         }
 
         function switchTab(tabId, event) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-content').reverse?.() || document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
             document.getElementById('tab-' + tabId).classList.add('active');
             event.currentTarget.classList.add('active');
@@ -265,7 +266,7 @@
 
         async function fetchStats() {
             try {
-                const res = await fetch('/api/admin/stats', { headers: { 'Authorization': 'Bearer ' + getToken() } });
+                const res = await fetch(`${API_BASE}/api/admin/stats`, { headers: { 'Authorization': 'Bearer ' + getToken() } });
                 const json = await res.json();
                 if (res.ok && json.success) {
                     document.getElementById('statUserCount').innerText = json.data.totalUsers;
@@ -278,7 +279,7 @@
 
         async function fetchKycRequests() {
             try {
-                const res = await fetch('/api/admin/kyc-requests', { headers: { 'Authorization': 'Bearer ' + getToken() } });
+                const res = await fetch(`${API_BASE}/api/admin/kyc-requests`, { headers: { 'Authorization': 'Bearer ' + getToken() } });
                 const json = await res.json();
                 if (res.ok && json.success) {
                     const tbody = document.getElementById('kycTableBody');
@@ -288,11 +289,7 @@
                     }
                     let html = '';
                     json.data.forEach(item => {
-                        const frontImg = item.frontImage || item.kycFront || '';
-                        const backImg = item.backImage || item.kycBack || '';
-                        const selfieImg = item.selfieImage || item.kycSelfie || item.userImage || '';
                         const userId = item.userId || item.email || 'N/A';
-
                         html += `<tr>
                             <td>User ID: ${userId}</td>
                             <td>
@@ -312,7 +309,6 @@
             } catch (err) { console.error(err); }
         }
 
-        // Updated Modal to map directly to frontImage, backImage, and selfieImage
         function openKycModal(kycItem) {
             let modal = document.getElementById('kycModal');
             if (!modal) {
@@ -343,16 +339,16 @@
             }
             
             document.getElementById('modalUserEmail').innerText = `KYC Verification Details for: ${kycItem.userId || kycItem.email || 'N/A'}`;
-            document.getElementById('modalFrontImg').src = kycItem.frontImage || '';
-            document.getElementById('modalBackImg').src = kycItem.backImage || '';
-            document.getElementById('modalSelfieImg').src = kycItem.selfieImage || '';
+            document.getElementById('modalFrontImg').src = kycItem.frontImage || kycItem.kycFront || '';
+            document.getElementById('modalBackImg').src = kycItem.backImage || kycItem.kycBack || '';
+            document.getElementById('modalSelfieImg').src = kycItem.selfieImage || kycItem.kycSelfie || kycItem.userImage || '';
             modal.style.display = 'flex';
         }
 
         async function performKycAction(kycId, status) {
             let rejectionReason = status === 'rejected' ? prompt('Reason for rejection:', 'Invalid documents') : '';
             if (status === 'rejected' && !rejectionReason) return;
-            const res = await fetch('/api/admin/kyc-action', {
+            const res = await fetch(`${API_BASE}/api/admin/kyc-action`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
                 body: JSON.stringify({ kycId, status, rejectionReason })
@@ -363,7 +359,7 @@
 
         async function fetchUsersList() {
             try {
-                const res = await fetch('/api/admin/users', { headers: { 'Authorization': 'Bearer ' + getToken() } });
+                const res = await fetch(`${API_BASE}/api/admin/users`, { headers: { 'Authorization': 'Bearer ' + getToken() } });
                 const json = await res.json();
                 if (res.ok && json.success) {
                     const tbody = document.getElementById('userTableBody');
@@ -394,7 +390,7 @@
         async function toggleUserBan(userId, currentStatus) {
             const action = currentStatus ? 'unban' : 'ban';
             if (!confirm(`Are you sure you want to ${action} this user?`)) return;
-            const res = await fetch('/api/admin/user-action', {
+            const res = await fetch(`${API_BASE}/api/admin/user-action`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
                 body: JSON.stringify({ userId, action })
@@ -403,27 +399,27 @@
             if (res.ok && json.success) { alert(json.message); loadAdminData(); }
         }
 
-       async function saveRates() {
-    const buyRate = document.getElementById('buyRateInput').value;
-    const sellRate = document.getElementById('sellRateInput').value; // বন্ধንቁሩ ተስተካክሏል
-    const platformFee = document.getElementById('feeInput').value;
+        async function saveRates() {
+            const buyRate = document.getElementById('buyRateInput').value;
+            const sellRate = document.getElementById('sellRateInput').value;
+            const platformFee = document.getElementById('feeInput').value;
 
-    try {
-        const res = await fetch('/api/admin/settings', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
-            body: JSON.stringify({ buyRate, sellRate, platformFee })
-        });
-        const json = await res.json();
-        if (res.ok && json.success) {
-            alert('Rate & Fee settings saved successfully!');
-        } else {
-            alert('Failed to save settings.');
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/settings`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+                    body: JSON.stringify({ buyRate, sellRate, platformFee })
+                });
+                const json = await res.json();
+                if (res.ok && json.success) {
+                    alert('Rate & Fee settings saved successfully!');
+                } else {
+                    alert('Failed to save settings.');
+                }
+            } catch (err) {
+                alert('Network error while saving settings.');
+            }
         }
-    } catch (err) {
-        alert('Network error while saving settings.');
-    }
-}
     </script>
 </body>
 </html>
