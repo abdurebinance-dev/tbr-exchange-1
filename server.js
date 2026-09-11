@@ -620,7 +620,7 @@ app.post('/api/reset-password', async (req, res) => {
 });
 
 // ምሳሌ በ Node.js / Express
-router.get('/me', verifyToken, async (req, res) => {
+app.get('/me', verifyToken, async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
         if (!user) {
