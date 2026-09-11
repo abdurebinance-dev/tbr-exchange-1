@@ -645,6 +645,33 @@ app.get('/api/user', verifyToken, async (req, res) => {
     }
 });
 
+// (ሌሎች የኮድ ክፍሎችህ እና ራውቶችህ እዚህ ይኖራሉ...)
+
+// አዲሱን ራውት ከታች ከሌሎች ራውቶች ጋር አያይዘው
+app.get('/api/auth/me', verifyToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select('-password');
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        res.json({
+            success: true,
+            user: {
+                fullName: user.fullName || user.name,
+                email: user.email,
+                kycStatus: user.kycStatus
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// የፋይሉ መጨረሻ ላይ ሰርቨሩን የሚያስነሳው ክፍል (app.listen) ይኖራል
+app.listen(process.env.PORT || 5000, () => {
+    console.log('Server is running successfully');
+});
+
 // --- Admin Direct Login Route (Modified for direct text check) ---
 app.post('/api/admin/login', async (req, res) => {
     try {
