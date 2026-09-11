@@ -181,7 +181,7 @@
                         </tr>
                     </thead>
                     <tbody id="escrowTableBody">
-                        <tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No active disputes or escrow trades found.</td></tr>
+                        <tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Loading escrow disputes...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -252,7 +252,7 @@
         }
 
         function switchTab(tabId, event) {
-            document.querySelectorAll('.tab-content').reverse?.() || document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
             document.getElementById('tab-' + tabId).classList.add('active');
             event.currentTarget.classList.add('active');
@@ -261,6 +261,7 @@
         async function loadAdminData() {
             fetchStats();
             fetchKycRequests();
+            fetchEscrowDisputes();
             fetchUsersList();
         }
 
@@ -307,6 +308,56 @@
                     tbody.innerHTML = html;
                 }
             } catch (err) { console.error(err); }
+        }
+
+        async function fetchEscrowDisputes() {
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/escrow-disputes`, { headers: { 'Authorization': 'Bearer ' + getToken() } });
+                const json = await res.json();
+                const tbody = document.getElementById('escrowTableBody');
+                if (res.ok && json.success && json.data.length > 0) {
+                    let html = '';
+                    json.data.forEach(trade => {
+                        html += `<tr>
+                            <td>${trade._id}</td>
+                            <td>${trade.buyerEmail || 'Buyer'} / ${trade.sellerEmail || 'Seller'}</td>
+                            <td>${trade.amount} USDT</td>
+                            <td><span class="badge-pending">${trade.status || 'Disputed'}</span></td>
+                            <td>
+                                <button class="btn btn-approve" onclick="resolveEscrow('${trade._id}', 'release')">Release to Buyer</button>
+                                <button class="btn btn-reject" onclick="resolveEscrow('${trade._id}', 'refund')">Refund Seller</button>
+                            </td>
+                        </tr>`;
+                    });
+                    tbody.innerHTML = html;
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No active disputes or escrow trades found.</td></tr>`;
+                }
+            } catch (err) {
+                console.error('Error loading escrow disputes:', err);
+                document.getElementById('escrowTableBody').innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No active disputes or escrow trades found.</td></tr>`;
+            }
+        }
+
+        async function resolveEscrow(tradeId, action) {
+            if (!confirm(`Are you sure you want to resolve this trade with action: ${action}?`)) return;
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/escrow-action`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+                    body: JSON.stringify({ tradeId, action })
+                });
+                const json = await res.json();
+                if (res.ok && json.success) {
+                    alert(json.message || 'Escrow resolved successfully.');
+                    fetchEscrowDisputes();
+                    fetchStats();
+                } else {
+                    alert(json.message || 'Failed to resolve escrow.');
+                }
+            } catch (err) {
+                alert('Network error while resolving escrow.');
+            }
         }
 
         function openKycModal(kycItem) {

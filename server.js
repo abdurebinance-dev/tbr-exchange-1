@@ -582,6 +582,47 @@ app.post('/api/reset-password', async (req, res) => {
     }
 });
 
+// --- Admin Direct Login Route ---
+app.post('/api/admin/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        if (!email || !password) {
+            return res.status(400).json({ success: false, message: 'Email and password are required.' });
+        }
+
+        const cleanEmail = email.trim().toLowerCase();
+        const user = await User.findOne({ email: cleanEmail });
+
+        if (!user) {
+            return res.status(400).json({ success: false, message: 'Invalid admin credentials.' });
+        }
+
+        // ኢሜሉ የአድሚን መሆኑን እና ፓስወርዱ ትክክል መሆኑን ማረጋገጥ
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ success: false, message: 'Invalid admin credentials.' });
+        }
+
+        // አድሚን መብት እንዲኖረው ማድረግ (ለ binanceme73@gmail.com በራስ-ሰር እንዲስተካከል)
+        if (cleanEmail === 'binanceme73@gmail.com' && !user.isAdmin) {
+            user.isAdmin = true;
+            await user.save();
+        }
+
+        if (!user.isAdmin) {
+            return res.status(403).json({ success: false, message: 'Access denied. Admin privileges required.' });
+        }
+
+        // ቶከን ማመንጨት
+        const token = jwt.sign({ id: user._id, email: user.email, isAdmin: user.isAdmin }, JWT_SECRET, { expiresIn: '7d' });
+        
+        res.json({ success: true, token, message: 'Admin logged in successfully.' });
+    } catch (error) {
+        console.error('Admin Login Error:', error);
+        res.status(500).json({ success: false, message: 'Server error during admin login.' });
+    }
+});
+
 // --- Admin Stats Route ---
 app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
     try {
