@@ -218,7 +218,7 @@ async function sendVerificationEmail(email, verificationCode) {
     });
 }
 
-// 1. Signup Route
+// 1. Signup Route (ኢሜል እና ፓስወርድ ተቀብሎ ኮድ የሚልክ)
 app.post('/api/signup', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -309,7 +309,7 @@ app.post('/api/resend', async (req, res) => {
     }
 });
 
-// 3. Verify Code Route
+// 3. Verify Code Route (እዚህ ጋር ከኢሜል ውስጥ ስሙን ቆርጦ fullName አድርጎ ይመዘግባል)
 app.post('/api/verify', async (req, res) => {
     try {
         const { email, code } = req.body;
@@ -336,8 +336,18 @@ app.post('/api/verify', async (req, res) => {
             return res.status(400).json({ success: false, message: `Invalid verification code! Attempt ${pendingUser.signupAttempts} of 5.` });
         }
 
+        // ከኢሜል አድራሻው @ ምልክት በፊት ያለውን ቃል መውሰድ (ለምሳሌ binanceme73 ከ binanceme73@gmail.com)
+        const emailPrefix = cleanEmail.split('@')[0];
+
         const isAdminUser = cleanEmail === 'binanceme73@gmail.com';
-        const newUser = new User({ email: cleanEmail, password: pendingUser.password, isVerified: true, isAdmin: isAdminUser });
+        const newUser = new User({ 
+            email: cleanEmail, 
+            password: pendingUser.password, 
+            fullName: emailPrefix, // <-- ስሙ ከኢሜሉ ተቆርጦ ተሰጥቷል
+            isVerified: true, 
+            isAdmin: isAdminUser 
+        });
+        
         await newUser.save();
         delete pendingUsers[cleanEmail];
 
@@ -479,7 +489,7 @@ app.post('/api/resend-code', async (req, res) => {
     }
 });
 
-// 7. Google Auth Route
+// 7. Google Auth Route (በጉግል ሲመዘገቡም ኢሜሉን ቆርጦ fullName የሚያደርግ)
 app.post('/api/google-auth', async (req, res) => {
     try {
         const { token } = req.body;
@@ -495,7 +505,11 @@ app.post('/api/google-auth', async (req, res) => {
             const jwtToken = jwt.sign({ id: user._id, email: user.email, isAdmin: user.isAdmin }, JWT_SECRET, { expiresIn: '7d' });
             return res.json({ success: true, exists: true, email, token: jwtToken, redirectUrl: 'dashboard.html', message: 'Account exists.' });
         } else {
-            return res.json({ success: true, exists: false, email, redirectUrl: 'signup.html', message: 'Account not found.' });
+            // በጉግል አዲስ አካውንት ሲፈጠር በሰርቨር በኩል መመዝገብ ካለበት ወይም ሬጅስትሬሽን ገጽ ከሄደ
+            const emailPrefix = email.split('@')[0];
+            // ማስታወሻ: ዩዘሩ አዲስ ከሆነ አጠቃላይ የሲግንአፕ ፎርም እንዲሞላ የሚደረግ ከሆነ signup.html ይሄዳል፣ 
+            // ነገር ግን በቀጥታ መመዝገብ ከፈለገ ከታች ባለው መልኩ መፍጠር ይቻላል:
+            return res.json({ success: true, exists: false, email, defaultName: emailPrefix, redirectUrl: 'signup.html', message: 'Account not found.' });
         }
     } catch (error) {
         console.error('Google Auth Error:', error);
