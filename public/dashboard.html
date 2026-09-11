@@ -655,12 +655,11 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // LocalStorage fallback 
+            // Default local fallback to USER
             const localEmail = localStorage.getItem('signupEmail') || localStorage.getItem('userEmail');
             if (localEmail) {
-                const username = localEmail.split('@')[0].toUpperCase();
-                document.getElementById('userGreeting').innerText = `Evening, ${username}`;
-                document.getElementById('menuUserName').innerText = username;
+                document.getElementById('userGreeting').innerText = `Evening, USER`;
+                document.getElementById('menuUserName').innerText = 'USER';
                 document.getElementById('menuUserEmail').innerText = localEmail;
             }
 
@@ -726,14 +725,19 @@
                     const data = await res.json();
                     if (data.success && data.user) {
                         const userObj = data.user;
-                        
-                        // 1. ስሙን ከሰርቨሩ መረጃ (ኢሜል በመቁረጥ ወይም ከ fullName በመውሰድ) አስተካክሎ መሙላት
                         const userEmail = userObj.email || localStorage.getItem('userEmail') || '';
+                        
+                        // 1. KYC status መወሰን
+                        const status = userObj.kycStatus || (userObj.isVerified ? 'verified' : 'unverified');
+                        localStorage.setItem('kycStatus', status);
+                        updateKycButtonUI(status);
+
+                        // 2. ዩዘሩ Verified (የተረጋገጠ) ከሆነ ብቻ ትክክለኛውን ስሙን ማሳየት፣ ካልሆነ ግን "USER" ማለት
                         let displayName = 'USER';
-                        if (userObj.fullName && userObj.fullName !== 'ABDURAHMAN ASHEBIR') {
+                        const isVerified = (status === 'verified' || status === 'Approved' || status === 'approved' || userObj.isVerified === true);
+                        
+                        if (isVerified && userObj.fullName) {
                             displayName = userObj.fullName.toUpperCase();
-                        } else if (userEmail) {
-                            displayName = userEmail.split('@')[0].toUpperCase();
                         }
 
                         document.getElementById('userGreeting').innerText = `Evening, ${displayName}`;
@@ -741,11 +745,6 @@
                         if (userEmail) {
                             document.getElementById('menuUserEmail').innerText = userEmail;
                         }
-
-                        // 2. KYC Status update
-                        const status = userObj.kycStatus || (userObj.isVerified ? 'verified' : 'unverified');
-                        localStorage.setItem('kycStatus', status);
-                        updateKycButtonUI(status);
 
                         // 3. Balance update
                         if (userObj.balance !== undefined) {
