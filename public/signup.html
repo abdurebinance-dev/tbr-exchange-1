@@ -541,6 +541,29 @@
             body: JSON.stringify({ token: response.credential })
         });
 
+        // የመጨረሻውን ተጠቃሚ በ numericId ፈልግ
+const lastUser = await User.findOne().sort({ numericId: -1 });
+let nextIdNumber = 1;
+
+if (lastUser && lastUser.numericId) {
+    nextIdNumber = lastUser.numericId + 1;
+}
+
+const newNumericId = nextIdNumber;
+const newUserId = 'TBR-' + String(newNumericId).padStart(6, '0');
+
+// አዲሱን ተጠቃሚ ሲመዘገብ userId እና numericId አብሮ ማስቀመጥ
+const newUser = new User({
+    name,
+    email,
+    password,
+    numericId: newNumericId,
+    userId: newUserId,
+    createdAt: new Date()
+});
+
+await newUser.save();
+
         const data = await res.json();
         if (data.success) {
             // ከባክኤንድ የመጣውን ትክክለኛ አዲስ ቶከን እና ኢሜይል ማስቀመጥ

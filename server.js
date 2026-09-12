@@ -964,35 +964,40 @@ app.post('/api/kyc/submit', async (req, res) => {
 
 async function assignIdsToExistingUsers() {
     try {
+        // 1. መጀመሪያ እስካሁን ትክክለኛ userId የሌላቸውን ተጠቃሚዎች በተመዘገቡበት ሰዓት (createdAt ወይም _id) ቅደም ተከተል እንፈልጋለን
         const usersWithoutId = await User.find({ 
-            $or: [{ userId: { $exists: false } }, { userId: null }, { userId: "" }] 
-        }).sort({ createdAt: 1 });
+            $or: [
+                { userId: { $exists: false } }, 
+                { userId: null }, 
+                { userId: "" },
+                { userId: /^TBR-0+$/ } // TBR-000000 የሆኑትንም ጨምሮ
+            ] 
+        }).sort({ createdAt: 1 }); // ከቀድሞው ጀምሮ እስከ አዲሱ
 
         if (usersWithoutId.length === 0) return;
 
-        const lastUserWithId = await User.findOne({ 
-            userId: { $regex: /^TBR-\d+$/ } 
-        }).sort({ userId: -1 });
+        // 2. እስካሁን የተሰጠ ትልቁን ቁጥር እንፈልጋለን
+        const lastAssignedUser = await User.findOne({ 
+            userId: { $regex: /^TBR-\d+$/, $ne: 'TBR-000000' } 
+        }).sort({ numericId: -1 });
 
-        let nextIdNumber = 1;
-        if (lastUserWithId && lastUserWithId.userId) {
-            const parts = lastUserWithId.userId.split('-');
-            if (parts.length === 2) {
-                nextIdNumber = parseInt(parts[1], 10) + 1;
-            }
-        }
+        let nextIdNumber = lastAssignedUser && lastAssignedUser.numericId ? lastAssignedUser.numericId + 1 : 1;
 
+        // 3. ለእያንዳንዱ ነባር ተጠቃሚ በቅደም ተከተል ID እንሰጣቸዋለን
         for (let user of usersWithoutId) {
-            user.userId = `TBR-${String(nextIdNumber).padStart(6, '0')}`;
+            user.numericId = nextIdNumber;
+            user.userId = 'TBR-' + String(nextIdNumber).padStart(6, '0');
             await user.save();
             nextIdNumber++;
         }
-
-        console.log(`Successfully assigned IDs to ${usersWithoutId.length} existing users.`);
+        console.log("Existing users successfully assigned with sequential IDs!");
     } catch (err) {
-        console.error('Error assigning IDs to existing users:', err);
+        console.error("Error assigning IDs to existing users:", err);
     }
 }
+
+// ሰርቨሩ ሲነሳ ይህንን ፌንክሽን አንዴ እንጠራዋለን
+assignIdsToExistingUsers();
 
 // Server Listen
 app.listen(PORT, () => {
