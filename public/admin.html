@@ -390,9 +390,12 @@
             }
             
             document.getElementById('modalUserEmail').innerText = `KYC Verification Details for: ${kycItem.userId || kycItem.email || 'N/A'}`;
-            document.getElementById('modalFrontImg').src = kycItem.frontImage || kycItem.kycFront || '';
-            document.getElementById('modalBackImg').src = kycItem.backImage || kycItem.kycBack || '';
-            document.getElementById('modalSelfieImg').src = kycItem.selfieImage || kycItem.kycSelfie || kycItem.userImage || '';
+            
+            // የተስተካከለው የፎቶ ማንበቢያ (Database ველ ስሞች ሊለያዩ ስለሚችሉ ሁሉንም አማራጮች ያካትታል)
+            document.getElementById('modalFrontImg').src = kycItem.frontImage || kycItem.frontId || kycItem.kycFront || '';
+            document.getElementById('modalBackImg').src = kycItem.backImage || kycItem.backId || kycItem.kycBack || '';
+            document.getElementById('modalSelfieImg').src = kycItem.selfieImage || kycItem.selfie || kycItem.userPhoto || kycItem.kycSelfie || '';
+            
             modal.style.display = 'flex';
         }
 
