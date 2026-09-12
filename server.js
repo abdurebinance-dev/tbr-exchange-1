@@ -650,6 +650,20 @@ app.get('/me', verifyToken, async (req, res) => {
     }
 });
 
+function loadKycData(status = 'pending') {
+    fetch(`https://tbr-exchange-backend.onrender.com/api/admin/kyc?status=${status}`, {
+        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('adminToken') }
+    })
+    .then(res => res.json())
+    .then(data => {
+        // ዳታው ሁሉንም የሚመጣ ከሆነ በ JavaScript ማጣራት ይቻላል:
+        const filteredData = data.filter(item => item.status === status);
+        
+        renderKycTable(filteredData, status);
+    })
+    .catch(err => console.error('Error:', err));
+}
+
 // የሚፈልጉትን ስተሰት (status) እየቀየሩ ዳታ የሚጠራ ፈንክሽን
 function loadKycData(status) {
     // የአዝራሮቹን active status መቀየር (CSS ለማስተካከል)
