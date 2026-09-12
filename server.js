@@ -964,7 +964,8 @@ app.post('/api/kyc/submit', async (req, res) => {
 });
 
 // ከዚህ በፊት ID የሌላቸውን ነባር ተጠቃሚዎች በቅደም ተከተል አስተካክሎ ID የሚሰጥ
-async function fixExistingUsersIds() {
+// 1. ፈንክሽኑን እዚህ ጋር ይግለጹ (Define ያድርጉ)
+async function assignIdsToExistingUsers() {
     try {
         const usersWithoutId = await User.find({ 
             $or: [
@@ -974,7 +975,7 @@ async function fixExistingUsersIds() {
                 { userId: "TBR------" },
                 { userId: /^TBR-0+$/ }
             ] 
-        }).sort({ createdAt: 1 }); // ከተመዘገቡበት ቅደም ተከተል አንፃር
+        }).sort({ createdAt: 1 });
 
         if (usersWithoutId.length === 0) return;
 
@@ -996,10 +997,8 @@ async function fixExistingUsersIds() {
     }
 }
 
-// Server Listen
+// 2. ሰርቨሩ ሲጀምር ይጠራዋል
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
-    
-    // ሰርቨሩ ሲጀምር ይህንን ፌንክሽን እዚህ ውስጥ አብሮ እንዲጠራ እናደርጋለን
     assignIdsToExistingUsers();
 });
