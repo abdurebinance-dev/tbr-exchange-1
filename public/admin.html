@@ -146,11 +146,20 @@
             </div>
         </div>
 
-        <div class="kyc-filter-buttons" style="margin-bottom: 15px;">
-    <button id="btn-pending-kyc" class="filter-btn active" onclick="loadKycData('pending')">Pending KYC</button>
-    <button id="btn-approved-kyc" class="filter-btn" onclick="loadKycData('approved')">Approved KYC</button>
-    <button id="btn-rejected-kyc" class="filter-btn" onclick="loadKycData('rejected')">Rejected KYC</button>
-</div>
+       <!-- TAB 3: KYC PANEL -->
+<div id="tab-kyc" class="tab-content">
+    <div class="section-title"><i class="fa-solid fa-user-shield"></i> Manual KYC Verification Submissions</div>
+    
+    <!-- አዝራሮቹን እዚህ ጋር ይለጥፏቸው -->
+    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+        <button id="btn-pending-kyc" class="btn" onclick="loadKycData('pending')" style="background: rgba(240, 185, 11, 0.2); color: #f0b90b; border: 1px solid #f0b90b; font-weight: bold; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Pending KYC</button>
+        <button id="btn-approved-kyc" class="btn" onclick="loadKycData('approved')" style="background: rgba(14, 203, 129, 0.2); color: #0ecb81; border: 1px solid #0ecb81; font-weight: bold; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Approved KYC</button>
+        <button id="btn-rejected-kyc" class="btn" onclick="loadKycData('rejected')" style="background: rgba(246, 70, 93, 0.2); color: #f6465d; border: 1px solid #f6465d; font-weight: bold; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Rejected KYC</button>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <!-- ሰንጠረዡ ይቀጥላል -->
 
         <!-- TAB 3: KYC PANEL -->
         <div id="tab-kyc" class="tab-content">
