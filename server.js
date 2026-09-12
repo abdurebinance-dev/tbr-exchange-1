@@ -650,6 +650,57 @@ app.get('/me', verifyToken, async (req, res) => {
     }
 });
 
+// የሚፈልጉትን ስተሰት (status) እየቀየሩ ዳታ የሚጠራ ፈንክሽን
+function loadKycData(status) {
+    // የአዝራሮቹን active status መቀየር (CSS ለማስተካከል)
+    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(`btn-${status}-kyc`).classList.add('active');
+
+    // ከ Backend ዳታውን መጥራት (የእርስዎን API ፖይንት በኮዱ መሰረት ያስተካክሉት)
+    fetch(`https://tbr-exchange-backend.onrender.com/api/admin/kyc?status=${status}`, {
+        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('adminToken') }
+    })
+    .then(res => res.json())
+    .then(data => {
+        renderKycTable(data, status);
+    })
+    .catch(err => console.error('Error loading KYC data:', err));
+}
+
+// ታብሉን የሚሞላው እና እንደ status-ው Actions ዎችን (Approve/Reject አዝራሮችን) የሚያስተካክለው ፈንክሽን
+function renderKycTable(kycList, currentStatus) {
+    const tableBody = document.getElementById('kycTableBody'); // የታብሉ tbody ID
+    tableBody.innerHTML = '';
+
+    if (!kycList || kycList.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 20px;">ምንም ${currentStatus} የሆነ KYC አልተገኘም</td></tr>`;
+        return;
+    }
+
+    kycList.forEach(item => {
+        // Pending ከሆነ Approve/Reject አዝራሮች ይታያሉ፤ Approved ወይም Rejected ከሆኑ ግን እንደ ስተሰቱ status-ው ብቻ ይታያል
+        let actionButtons = '';
+        if (currentStatus === 'pending') {
+            actionButtons = `
+                <button onclick="updateKycStatus('${item.userId}', 'approved')" class="approve-btn">Approve</button>
+                <button onclick="updateKycStatus('${item.userId}', 'rejected')" class="reject-btn">Reject</button>
+            `;
+        } else {
+            actionButtons = `<span class="status-badge ${currentStatus}">${currentStatus.toUpperCase()}</span>`;
+        }
+
+        const row = `
+            <tr>
+                <td>User ID: ${item.userId}</td>
+                <td><button onclick="viewDocuments('${item.userId}')" class="view-doc-btn">🔍 View Documents & Selfie</button></td>
+                <td><span class="status-${item.status}">${item.status}</span></td>
+                <td>${actionButtons}</td>
+            </tr>
+        `;
+        tableBody.innerHTML += row;
+    });
+}
+
 // Get Current User Profile API Route
 app.get('/api/user', verifyToken, async (req, res) => {
     try {
