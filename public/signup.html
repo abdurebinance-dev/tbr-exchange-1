@@ -422,6 +422,10 @@
             : 'https://tbr-exchange-backend.onrender.com';
 
         window.onload = function () {
+            // የድሮ የቆዩ ውሂቦች እንዳይደባለቁ ማጽዳት (Clean old caching data)
+            localStorage.removeItem('userEmail');
+            localStorage.removeItem('authToken');
+
             const savedEmail = localStorage.getItem('signupEmail');
             if (savedEmail) {
                 const emailInput = document.getElementById('signup-email');
@@ -539,6 +543,13 @@
                         showErrorToast('Account already exists! Please sign in.');
                         setTimeout(() => window.location.href = 'signin.html', 1500);
                     } else {
+                        // <--- የተስተካከለው ቦታ: ከጉግል ሲገባ ትክክለኛውን ኢሜይል እና ቶከን መያዝ
+                        if (data.email) {
+                            localStorage.setItem('signupEmail', data.email);
+                        }
+                        if (data.token) {
+                            localStorage.setItem('authToken', data.token);
+                        }
                         window.location.href = data.redirectUrl || 'dashboard.html';
                     }
                 } else {

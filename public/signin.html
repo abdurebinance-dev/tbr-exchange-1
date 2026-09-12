@@ -29,18 +29,6 @@
             box-sizing: border-box;
             box-shadow: 0 15px 35px rgba(0,0,0,0.7);
         }
-        /* የተስተካከለው የሎጎ ስታይል */
-        .logo {
-            font-size: 20px;
-            font-weight: 900;
-            color: #111;
-            background: linear-gradient(135deg, #f5d77f 0%, #d4af37 50%, #aa8621 100%);
-            padding: 6px 14px;
-            border-radius: 8px;
-            display: inline-flex;
-            align-items: center;
-            letter-spacing: 1px;
-        }
         .passkey-btn {
             background: #1a1a1a;
             color: #fff;
@@ -239,10 +227,9 @@
 </head>
 <body>
     <div class="form-container">
-        <!-- ሎጎው በትክክል እንዲታይ ተደረገ -->
         <div class="logo-header" style="display: flex; justify-content: center; align-items: center; margin-bottom: 20px;">
-    <img src="logo.png" alt="TBR Exchange Logo" style="height: 38px; object-fit: contain;">
-</div>
+            <img src="logo.png" alt="TBR Exchange Logo" style="height: 38px; object-fit: contain;">
+        </div>
         
         <h2 style="margin: 0 0 5px 0; font-size: 22px; text-align: center;">Welcome back</h2>
         <div class="subtitle" style="text-align: center; color: #888; font-size: 14px; margin-bottom: 25px;">Sign in to your TBR account</div>
@@ -323,6 +310,10 @@
         }
 
         window.onload = function () {
+            // ሲገቡ የድሮ የቆዩ ውሂቦች እንዳይደባለቁ ማጽዳት (Clean old caching data)
+            localStorage.removeItem('userEmail');
+            localStorage.removeItem('authToken');
+
             if (typeof google !== 'undefined' && google.accounts) {
                 google.accounts.id.initialize({
                     client_id: "661544926174-8kp01crhke9m1vmjf6kcts5o2e7sqek8.apps.googleusercontent.com",
@@ -446,6 +437,7 @@
             hideError();
         }
 
+        // --- የተስተካከለው የ Google Sign-in ሎጂክ ---
         async function handleGoogleResponse(response) {
             try {
                 const res = await fetch(`${API_BASE_URL}/api/google-auth`, {
@@ -457,6 +449,13 @@
                 const data = await res.json();
                 if (data.success) {
                     if (data.exists) {
+                        // ሰርቨሩ የላከውን ትክክለኛ ኢሜይል እና ቶከን localStorage ላይ መያዝ (እንዳይደባለቅ)
+                        if (data.email) {
+                            localStorage.setItem('userEmail', data.email);
+                        }
+                        if (data.token) {
+                            localStorage.setItem('authToken', data.token);
+                        }
                         window.location.href = data.redirectUrl || 'dashboard.html';
                     } else {
                         localStorage.setItem('signupEmail', data.email);
@@ -518,6 +517,10 @@
 
                 if (response.ok && data.success) {
                     localStorage.removeItem(attemptsKey); 
+                    // የኢሜይል መረጃን በ localStorage ማስቀመጥ (ለዳሽቦርድ)
+                    if (data.email) {
+                        localStorage.setItem('userEmail', data.email);
+                    }
                     if (data.requiresVerification) {
                         localStorage.setItem('verifyEmail', data.email);
                         window.location.href = 'login-verify.html';
