@@ -266,19 +266,19 @@
         <div class="stats-grid">
             <div class="stat-card">
                 <div class="label">Reputation</div>
-                <div class="value">100%</div>
+                <div class="value" id="statReputation">100%</div>
             </div>
             <div class="stat-card">
                 <div class="label">Total Trades</div>
-                <div class="value">0</div>
+                <div class="value" id="statTotalTrades">0</div>
             </div>
             <div class="stat-card">
                 <div class="label">Completion Rate</div>
-                <div class="value">100%</div>
+                <div class="value" id="statCompletionRate">100%</div>
             </div>
             <div class="stat-card">
                 <div class="label">Volume</div>
-                <div class="value">0 USDT</div>
+                <div class="value" id="statVolume">0 USDT</div>
             </div>
         </div>
 
@@ -290,7 +290,7 @@
             </div>
             <div class="info-row">
                 <span>Two-Factor Auth (2FA)</span>
-                <span style="color: #f6465d;">Disabled</span>
+                <span id="twoFactorStatus" style="color: #f6465d;">Disabled</span>
             </div>
             <div class="info-row">
                 <span>Member Since</span>
@@ -321,7 +321,7 @@
     <script>
         function copyUserId() {
             const userIdText = document.getElementById('userUniqueId').innerText;
-            if (userIdText.includes('Loading') || userIdText.includes('TBR-000000')) return;
+            if (userIdText.includes('Loading') || userIdText.includes('TBR-000000') || userIdText.includes('TBR------')) return;
             
             navigator.clipboard.writeText(userIdText).then(() => {
                 const copyTextSpan = document.getElementById('copyText');
@@ -341,12 +341,34 @@
             let email = localStorage.getItem('userEmail') || localStorage.getItem('email') || "user@example.com";
             let kycStatus = localStorage.getItem('kycStatus') || 'not_submitted';
             let userId = localStorage.getItem('userUniqueId') || '';
+            let totalTrades = localStorage.getItem('totalTrades') || '0';
+            let volume = localStorage.getItem('volume') || '0 USDT';
+            let completionRate = localStorage.getItem('completionRate') || '100%';
+            let reputation = localStorage.getItem('reputation') || '100%';
+            let is2FA = localStorage.getItem('is2FA') === 'true';
+            let memberSince = localStorage.getItem('memberSince') || '2026';
 
             let displayName = name.toUpperCase();
             document.getElementById('profileName').innerText = displayName;
             document.getElementById('profileEmail').innerText = email;
             if (userId) document.getElementById('userUniqueId').innerText = userId;
             document.getElementById('avatarInitial').innerText = displayName.charAt(0).toUpperCase();
+
+            // Set stats elements default/cached
+            document.getElementById('statTotalTrades').innerText = totalTrades;
+            document.getElementById('statVolume').innerText = volume;
+            document.getElementById('statCompletionRate').innerText = completionRate;
+            document.getElementById('statReputation').innerText = reputation;
+            document.getElementById('memberSince').innerText = memberSince;
+
+            const twoFactorEl = document.getElementById('twoFactorStatus');
+            if (is2FA) {
+                twoFactorEl.innerText = 'Enabled';
+                twoFactorEl.style.color = '#00C087';
+            } else {
+                twoFactorEl.innerText = 'Disabled';
+                twoFactorEl.style.color = '#f6465d';
+            }
 
             try {
                 const token = localStorage.getItem('token') || localStorage.getItem('authToken');
@@ -363,15 +385,18 @@
                         name = data.user.fullName || data.user.name || name;
                         email = data.user.email || email;
                         kycStatus = data.user.kycStatus || (data.user.isVerified ? 'verified' : kycStatus);
+                        totalTrades = data.user.totalTrades !== undefined ? data.user.totalTrades : totalTrades;
+                        volume = data.user.volume !== undefined ? data.user.volume + ' USDT' : volume;
+                        completionRate = data.user.completionRate !== undefined ? data.user.completionRate + '%' : completionRate;
+                        reputation = data.user.reputation !== undefined ? data.user.reputation + '%' : reputation;
+                        is2FA = data.user.is2FAEnabled || data.user.twoFactorEnabled || is2FA;
+                        memberSince = data.user.createdAt ? new Date(data.user.createdAt).getFullYear() : memberSince;
                         
-                        // ከሰርቨር የሚመጣውን ትክክለኛ user ID መቀበል (ለምሳሌ data.user.userId ወይም data.user.numericId)
                         if (data.user.userId) {
                             userId = data.user.userId;
                         } else if (data.user.numericId) {
                             userId = 'TBR-' + String(data.user.numericId).padStart(6, '0');
                         } else if (data.user._id) {
-                            // ዳታቤዝ ውስጥ ኢንዴክስ ከሌለ የሰውንየውን የተመዝጋቢነት ቅደም ተከተል የሚያሳይ ቁጥር ከሰርቨር እንዲመጣ ማድረግ ይቻላል
-                            // ለጊዜው ሰርቨር ካላመጣ በስተጀርባ የተሰጠውን ID መጠቀም ይቻላል
                             userId = data.user.customId || ('TBR-' + String(data.user._id).slice(-6).toUpperCase());
                         }
 
@@ -381,17 +406,37 @@
                         document.getElementById('userUniqueId').innerText = userId;
                         document.getElementById('avatarInitial').innerText = displayName.charAt(0).toUpperCase();
 
+                        // Update stats display
+                        document.getElementById('statTotalTrades').innerText = totalTrades;
+                        document.getElementById('statVolume').innerText = volume;
+                        document.getElementById('statCompletionRate').innerText = completionRate;
+                        document.getElementById('statReputation').innerText = reputation;
+                        document.getElementById('memberSince').innerText = memberSince;
+
+                        if (is2FA) {
+                            twoFactorEl.innerText = 'Enabled';
+                            twoFactorEl.style.color = '#00C087';
+                        } else {
+                            twoFactorEl.innerText = 'Disabled';
+                            twoFactorEl.style.color = '#f6465d';
+                        }
+
                         localStorage.setItem('userName', name);
                         localStorage.setItem('userEmail', email);
                         localStorage.setItem('kycStatus', kycStatus);
                         localStorage.setItem('userUniqueId', userId);
+                        localStorage.setItem('totalTrades', totalTrades);
+                        localStorage.setItem('volume', volume);
+                        localStorage.setItem('completionRate', completionRate);
+                        localStorage.setItem('reputation', reputation);
+                        localStorage.setItem('is2FA', is2FA);
+                        localStorage.setItem('memberSince', memberSince);
                     }
                 }
             } catch (e) {
                 console.log("Could not fetch from server, using local cache.");
             }
 
-            // አሁን ሰርቨሩ መለያ ቁጥር እስካላመጣ ድረስ TBR-000000 እንዳይሆን እናስተካክላለን
             if (!userId || userId === 'TBR-000000') {
                 document.getElementById('userUniqueId').innerText = 'TBR------';
             }
