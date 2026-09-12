@@ -641,7 +641,8 @@ app.get('/me', verifyToken, async (req, res) => {
                 fullName: user.fullName || user.name,
                 email: user.email,
                 balance: user.balance,
-                kycStatus: user.kycStatus
+                kycStatus: user.kycStatus,
+                userId: user.userId // እዚህ ጋር ይጨመራል
             }
         });
     } catch (err) {
@@ -962,39 +963,41 @@ app.post('/api/kyc/submit', async (req, res) => {
     }
 });
 
-async function assignIdsToExistingUsers() {
+// ከዚህ በፊት ID የሌላቸውን ነባር ተጠቃሚዎች በቅደም ተከተል አስተካክሎ ID የሚሰጥ
+async function fixExistingUsersIds() {
     try {
-        // 1. መጀመሪያ እስካሁን ትክክለኛ userId የሌላቸውን ተጠቃሚዎች በተመዘገቡበት ሰዓት (createdAt ወይም _id) ቅደም ተከተል እንፈልጋለን
         const usersWithoutId = await User.find({ 
             $or: [
                 { userId: { $exists: false } }, 
                 { userId: null }, 
                 { userId: "" },
-                { userId: /^TBR-0+$/ } // TBR-000000 የሆኑትንም ጨምሮ
+                { userId: "TBR------" },
+                { userId: /^TBR-0+$/ }
             ] 
-        }).sort({ createdAt: 1 }); // ከቀድሞው ጀምሮ እስከ አዲሱ
+        }).sort({ createdAt: 1 }); // ከተመዘገቡበት ቅደም ተከተል አንፃር
 
         if (usersWithoutId.length === 0) return;
 
-        // 2. እስካሁን የተሰጠ ትልቁን ቁጥር እንፈልጋለን
-        const lastAssignedUser = await User.findOne({ 
-            userId: { $regex: /^TBR-\d+$/, $ne: 'TBR-000000' } 
+        const lastUser = await User.findOne({ 
+            userId: { $regex: /^TBR-\d+$/, $nin: ['TBR-000000', 'TBR------'] } 
         }).sort({ numericId: -1 });
 
-        let nextIdNumber = lastAssignedUser && lastAssignedUser.numericId ? lastAssignedUser.numericId + 1 : 1;
+        let nextIdNumber = lastUser && lastUser.numericId ? lastUser.numericId + 1 : 1;
 
-        // 3. ለእያንዳንዱ ነባር ተጠቃሚ በቅደም ተከተል ID እንሰጣቸዋለን
         for (let user of usersWithoutId) {
             user.numericId = nextIdNumber;
             user.userId = 'TBR-' + String(nextIdNumber).padStart(6, '0');
             await user.save();
             nextIdNumber++;
         }
-        console.log("Existing users successfully assigned with sequential IDs!");
+        console.log("Migration completed: Existing users got sequential IDs.");
     } catch (err) {
-        console.error("Error assigning IDs to existing users:", err);
+        console.error("Migration error:", err);
     }
 }
+
+// ዳታቤዙ ከተገናኘ በኋላ ይህንን ፌንክሽን አንዴ ይጠሩት
+// fixExistingUsersIds();
 
 // ሰርቨሩ ሲነሳ ይህንን ፌንክሽን አንዴ እንጠራዋለን
 assignIdsToExistingUsers();
