@@ -793,17 +793,18 @@ app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
                 userId: u.email || u.username,
                 email: u.email,
                 frontImage: f,
+                frontId: f,
                 backImage: b,
+                backId: b,
                 selfieImage: s,
+                selfie: s,
                 status: kyc?.status || u.kycStatus || 'pending',
                 fullName: kyc?.fullName || u.fullName || 'User'
             };
         });
 
         const activeRequests = requests.filter(r => r.status === 'pending' || r.frontImage || r.selfieImage);
-        
-        // ፍሮንትኤንዱ የሚፈልገውን ትክክለኛ ፎርማት (Object with success & data) መመለስ
-        return res.json({ success: true, data: activeRequests }); 
+        return res.json({ success: true, data: activeRequests });
     } catch (error) {
         console.error("KYC Fetch Error:", error);
         return res.status(500).json({ success: false, data: [] });
