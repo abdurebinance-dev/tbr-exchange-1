@@ -251,7 +251,7 @@
                     <h2 id="profileName">USER</h2>
                     <p class="user-email" id="profileEmail">user@example.com</p>
                     <div class="user-id-container" style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
-                        <span id="userUniqueId" style="color: #f3ba2f; font-size: 13px; font-weight: 600;">TBR-000000</span>
+                        <span id="userUniqueId" style="color: #f3ba2f; font-size: 13px; font-weight: 600;">TBR-Loading...</span>
                         <button id="copyBtn" onclick="copyUserId()" title="Copy ID" style="background: transparent; border: none; color: #888; cursor: pointer; padding: 0; font-size: 12px; display: flex; align-items: center; gap: 4px;">
                             <i class="fas fa-copy"></i> <span id="copyText">Copy</span>
                         </button>
@@ -321,6 +321,8 @@
     <script>
         function copyUserId() {
             const userIdText = document.getElementById('userUniqueId').innerText;
+            if (userIdText.includes('Loading') || userIdText.includes('TBR-000000')) return;
+            
             navigator.clipboard.writeText(userIdText).then(() => {
                 const copyTextSpan = document.getElementById('copyText');
                 copyTextSpan.innerText = 'Copied!';
@@ -338,26 +340,12 @@
             let name = localStorage.getItem('userName') || localStorage.getItem('name') || "USER";
             let email = localStorage.getItem('userEmail') || localStorage.getItem('email') || "user@example.com";
             let kycStatus = localStorage.getItem('kycStatus') || 'not_submitted';
-            
-            // የ ተጠቃሚውን ID ከተለያየ የቁልፍ ስሞች ለመፈለግ (ከሌለ በ ID ሰሌዳ ወይም በ MongoDB _id ላይ በመመስረት ፎርማት ይደረጋል)
-            let rawId = localStorage.getItem('userId') || localStorage.getItem('userUniqueId') || localStorage.getItem('_id');
-            let userId = 'TBR-000000';
-            if (rawId && rawId !== 'undefined' && rawId !== 'null') {
-                // መለያው ቁጥር ብቻ ከሆነ ከፊት TBR- ጨምሮ በ 6 ዲጂት እንዲሆን ማድረግ
-                if (/^\d+$/.test(rawId)) {
-                    userId = 'TBR-' + String(rawId).padStart(6, '0');
-                } else if (rawId.startsWith('TBR-')) {
-                    userId = rawId;
-                } else {
-                    // ሐሺሽ (MongoDB ObjectId) ከሆነ የመጨረሻዎቹን 6 ቁምፊዎች ወይም ኢንዴክስ መጠቀም ይቻላል
-                    userId = 'TBR-' + rawId.slice(-6).toUpperCase();
-                }
-            }
+            let userId = localStorage.getItem('userUniqueId') || '';
 
             let displayName = name.toUpperCase();
             document.getElementById('profileName').innerText = displayName;
             document.getElementById('profileEmail').innerText = email;
-            document.getElementById('userUniqueId').innerText = userId;
+            if (userId) document.getElementById('userUniqueId').innerText = userId;
             document.getElementById('avatarInitial').innerText = displayName.charAt(0).toUpperCase();
 
             try {
@@ -376,17 +364,17 @@
                         email = data.user.email || email;
                         kycStatus = data.user.kycStatus || (data.user.isVerified ? 'verified' : kycStatus);
                         
-                        let serverId = data.user.userId || data.user.id || data.user._id;
-                        if (serverId) {
-                            if (/^\d+$/.test(serverId)) {
-                                userId = 'TBR-' + String(serverId).padStart(6, '0');
-                            } else if (serverId.startsWith('TBR-')) {
-                                userId = serverId;
-                            } else {
-                                userId = 'TBR-' + String(serverId).slice(-6).toUpperCase();
-                            }
+                        // ከሰርቨር የሚመጣውን ትክክለኛ user ID መቀበል (ለምሳሌ data.user.userId ወይም data.user.numericId)
+                        if (data.user.userId) {
+                            userId = data.user.userId;
+                        } else if (data.user.numericId) {
+                            userId = 'TBR-' + String(data.user.numericId).padStart(6, '0');
+                        } else if (data.user._id) {
+                            // ዳታቤዝ ውስጥ ኢንዴክስ ከሌለ የሰውንየውን የተመዝጋቢነት ቅደም ተከተል የሚያሳይ ቁጥር ከሰርቨር እንዲመጣ ማድረግ ይቻላል
+                            // ለጊዜው ሰርቨር ካላመጣ በስተጀርባ የተሰጠውን ID መጠቀም ይቻላል
+                            userId = data.user.customId || ('TBR-' + String(data.user._id).slice(-6).toUpperCase());
                         }
-                        
+
                         displayName = name.toUpperCase();
                         document.getElementById('profileName').innerText = displayName;
                         document.getElementById('profileEmail').innerText = email;
@@ -401,6 +389,11 @@
                 }
             } catch (e) {
                 console.log("Could not fetch from server, using local cache.");
+            }
+
+            // አሁን ሰርቨሩ መለያ ቁጥር እስካላመጣ ድረስ TBR-000000 እንዳይሆን እናስተካክላለን
+            if (!userId || userId === 'TBR-000000') {
+                document.getElementById('userUniqueId').innerText = 'TBR------';
             }
 
             const bannerContainer = document.getElementById('kycBannerContainer');
