@@ -250,11 +250,10 @@
                 <div class="profile-details">
                     <h2 id="profileName">USER</h2>
                     <p class="user-email" id="profileEmail">user@example.com</p>
-                    <!-- የተጠቃሚ ልዩ መለያ ቁጥር (User ID) ከኮፒ በተን ጋር -->
                     <div class="user-id-container" style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
                         <span id="userUniqueId" style="color: #f3ba2f; font-size: 13px; font-weight: 600;">TBR-000000</span>
-                        <button onclick="copyUserId()" title="Copy ID" style="background: transparent; border: none; color: #888; cursor: pointer; padding: 0; font-size: 12px; display: flex; align-items: center; gap: 4px;">
-                            <i class="fas fa-copy"></i> Copy
+                        <button id="copyBtn" onclick="copyUserId()" title="Copy ID" style="background: transparent; border: none; color: #888; cursor: pointer; padding: 0; font-size: 12px; display: flex; align-items: center; gap: 4px;">
+                            <i class="fas fa-copy"></i> <span id="copyText">Copy</span>
                         </button>
                     </div>
                 </div>
@@ -262,7 +261,6 @@
             <a href="settings.html" class="settings-btn"><i class="fa-solid fa-gear"></i> Settings</a>
         </div>
 
-        <!-- Dynamic KYC Banner Container -->
         <div id="kycBannerContainer"></div>
 
         <div class="stats-grid">
@@ -321,22 +319,40 @@
     </div>
 
     <script>
-        // User ID ቱን ኮፒ ለማድረግ የሚያስችል ፊንክሽን
         function copyUserId() {
             const userIdText = document.getElementById('userUniqueId').innerText;
             navigator.clipboard.writeText(userIdText).then(() => {
-                alert('User ID copied: ' + userIdText);
+                const copyTextSpan = document.getElementById('copyText');
+                copyTextSpan.innerText = 'Copied!';
+                copyTextSpan.style.color = '#00C087';
+                setTimeout(() => {
+                    copyTextSpan.innerText = 'Copy';
+                    copyTextSpan.style.color = '#888';
+                }, 2000);
             }).catch(err => {
                 console.error('Failed to copy text: ', err);
             });
         }
 
         async function loadUserProfile() {
-            // 1. መጀመሪያ localStorage ላይ ያለውን ፈጣን ውሂብ በማንበብ UI ማሳየት
             let name = localStorage.getItem('userName') || localStorage.getItem('name') || "USER";
             let email = localStorage.getItem('userEmail') || localStorage.getItem('email') || "user@example.com";
             let kycStatus = localStorage.getItem('kycStatus') || 'not_submitted';
-            let userId = localStorage.getItem('userUniqueId') || 'TBR-000000';
+            
+            // የ ተጠቃሚውን ID ከተለያየ የቁልፍ ስሞች ለመፈለግ (ከሌለ በ ID ሰሌዳ ወይም በ MongoDB _id ላይ በመመስረት ፎርማት ይደረጋል)
+            let rawId = localStorage.getItem('userId') || localStorage.getItem('userUniqueId') || localStorage.getItem('_id');
+            let userId = 'TBR-000000';
+            if (rawId && rawId !== 'undefined' && rawId !== 'null') {
+                // መለያው ቁጥር ብቻ ከሆነ ከፊት TBR- ጨምሮ በ 6 ዲጂት እንዲሆን ማድረግ
+                if (/^\d+$/.test(rawId)) {
+                    userId = 'TBR-' + String(rawId).padStart(6, '0');
+                } else if (rawId.startsWith('TBR-')) {
+                    userId = rawId;
+                } else {
+                    // ሐሺሽ (MongoDB ObjectId) ከሆነ የመጨረሻዎቹን 6 ቁምፊዎች ወይም ኢንዴክስ መጠቀም ይቻላል
+                    userId = 'TBR-' + rawId.slice(-6).toUpperCase();
+                }
+            }
 
             let displayName = name.toUpperCase();
             document.getElementById('profileName').innerText = displayName;
@@ -344,7 +360,6 @@
             document.getElementById('userUniqueId').innerText = userId;
             document.getElementById('avatarInitial').innerText = displayName.charAt(0).toUpperCase();
 
-            // 2. ሰርቨር ጋር በመገናኘት ትክክለኛውን መረጃ ከ /api/auth/me ማምጣት
             try {
                 const token = localStorage.getItem('token') || localStorage.getItem('authToken');
                 const headers = { 'Content-Type': 'application/json' };
@@ -360,7 +375,17 @@
                         name = data.user.fullName || data.user.name || name;
                         email = data.user.email || email;
                         kycStatus = data.user.kycStatus || (data.user.isVerified ? 'verified' : kycStatus);
-                        userId = data.user.userId || userId;
+                        
+                        let serverId = data.user.userId || data.user.id || data.user._id;
+                        if (serverId) {
+                            if (/^\d+$/.test(serverId)) {
+                                userId = 'TBR-' + String(serverId).padStart(6, '0');
+                            } else if (serverId.startsWith('TBR-')) {
+                                userId = serverId;
+                            } else {
+                                userId = 'TBR-' + String(serverId).slice(-6).toUpperCase();
+                            }
+                        }
                         
                         displayName = name.toUpperCase();
                         document.getElementById('profileName').innerText = displayName;
@@ -368,7 +393,6 @@
                         document.getElementById('userUniqueId').innerText = userId;
                         document.getElementById('avatarInitial').innerText = displayName.charAt(0).toUpperCase();
 
-                        // LocalStorage ማዘመን
                         localStorage.setItem('userName', name);
                         localStorage.setItem('userEmail', email);
                         localStorage.setItem('kycStatus', kycStatus);
