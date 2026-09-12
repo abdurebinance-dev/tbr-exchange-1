@@ -6,318 +6,336 @@
     <title>Profile - TBR Exchange</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body {
-            background-color: #080808;
+        * {
             margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            color: #fff;
-            padding-top: 75px;
-            padding-bottom: 70px;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
+        body {
+            background-color: #0b0e11;
+            color: #eaecef;
+            min-height: 100vh;
+        }
+
+        /* Navbar Styling */
         .navbar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            background: #121212;
-            border-bottom: 1px solid #262626;
-            padding: 12px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            z-index: 1000;
-            box-sizing: border-box;
+            background-color: #181a20;
+            padding: 15px 30px;
+            border-bottom: 1px solid #2b313a;
         }
+
         .nav-left {
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 30px;
         }
-        .logo-container img {
-            height: 32px;
-            width: auto;
-            object-fit: contain;
-            display: block;
+
+        .logo {
+            font-size: 22px;
+            font-weight: bold;
+            color: #f0b90b;
+            letter-spacing: 1px;
+            text-decoration: none;
         }
+
         .nav-links {
             display: flex;
-            gap: 15px;
+            gap: 20px;
         }
+
         .nav-links a {
-            color: #888;
+            color: #848e9c;
             text-decoration: none;
-            font-size: 13px;
+            font-size: 14px;
             font-weight: 500;
+            transition: color 0.2s;
             display: flex;
             align-items: center;
             gap: 6px;
-            padding: 6px 10px;
-            border-radius: 8px;
-            transition: 0.2s;
         }
-        .nav-links a.active, .nav-links a:hover {
-            color: #d4af37;
-            background: rgba(212, 175, 55, 0.08);
-            border: 1px solid rgba(212, 175, 55, 0.2);
+
+        .nav-links a:hover, .nav-links a.active {
+            color: #f0b90b;
         }
-        
+
         .nav-right {
             display: flex;
             align-items: center;
             gap: 15px;
-            color: #aaa;
+        }
+
+        .nav-right a {
+            color: #eaecef;
             font-size: 16px;
+            text-decoration: none;
         }
 
-        @media(max-width: 900px) {
-            .navbar .nav-links { display: none; }
-            .navbar { padding: 12px 15px; }
-        }
-
+        /* Main Container */
         .container {
-            max-width: 900px;
+            max-width: 1000px;
             margin: 30px auto;
             padding: 0 20px;
         }
 
-        .profile-card {
-            background: #121212;
-            border: 1px solid #262626;
-            border-radius: 18px;
-            padding: 30px;
-            margin-bottom: 20px;
+        /* Profile Header Card */
+        .profile-header {
+            background-color: #181a20;
+            border: 1px solid #2b313a;
+            border-radius: 12px;
+            padding: 25px;
             display: flex;
-            align-items: center;
             justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
         }
-        .profile-info-left {
+
+        .profile-user-info {
             display: flex;
             align-items: center;
             gap: 20px;
         }
+
         .profile-avatar {
             width: 70px;
             height: 70px;
-            background: rgba(212, 175, 55, 0.1);
-            border: 2px solid #d4af37;
+            background: linear-gradient(135deg, #f0b90b, #ff8c00);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #d4af37;
             font-size: 28px;
             font-weight: bold;
+            color: #000;
         }
+
         .profile-details h2 {
-            margin: 0 0 5px 0;
             font-size: 20px;
             color: #fff;
-            text-transform: uppercase;
+            margin-bottom: 4px;
             display: flex;
             align-items: center;
         }
+
         .profile-details p {
-            margin: 0;
-            font-size: 13px;
-            color: #888;
+            color: #848e9c;
+            font-size: 14px;
+            margin-bottom: 8px;
         }
+
+        .user-id-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #2b313a;
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #f0b90b;
+            font-family: monospace;
+        }
+
+        .user-id-badge span.copy-btn {
+            color: #848e9c;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .user-id-badge span.copy-btn:hover {
+            color: #f0b90b;
+        }
+
         .settings-btn {
-            background: transparent;
-            border: 1px solid #333;
-            color: #fff;
+            background: #2b313a;
+            color: #eaecef;
+            border: 1px solid #474d57;
             padding: 8px 16px;
-            border-radius: 10px;
+            border-radius: 6px;
             font-size: 13px;
             cursor: pointer;
             display: flex;
             align-items: center;
             gap: 6px;
             text-decoration: none;
-            transition: 0.2s;
-        }
-        .settings-btn:hover {
-            border-color: #d4af37;
-            color: #d4af37;
+            transition: background 0.2s;
         }
 
-        .stats-grid {
+        .settings-btn:hover {
+            background: #363c4e;
+        }
+
+        /* Stats Row */
+        .stats-row {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 15px;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
         }
+
         .stat-card {
-            background: #121212;
-            border: 1px solid #262626;
-            border-radius: 14px;
+            background-color: #181a20;
+            border: 1px solid #2b313a;
+            border-radius: 8px;
             padding: 20px;
             text-align: center;
         }
-        .stat-card .label {
+
+        .stat-card .title {
+            color: #848e9c;
             font-size: 11px;
-            color: #777;
-            margin-bottom: 8px;
             text-transform: uppercase;
-        }
-        .stat-card .value {
-            font-size: 18px;
-            font-weight: bold;
-            color: #d4af37;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
         }
 
+        .stat-card .value {
+            color: #fff;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        /* Account Details Section */
         .section-box {
-            background: #121212;
-            border: 1px solid #262626;
-            border-radius: 18px;
+            background-color: #181a20;
+            border: 1px solid #2b313a;
+            border-radius: 12px;
             padding: 25px;
         }
+
         .section-box h3 {
-            margin: 0 0 20px 0;
             font-size: 16px;
             color: #fff;
-            border-bottom: 1px solid #222;
-            padding-bottom: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #2b313a;
         }
-        .info-row {
+
+        .detail-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 12px 0;
-            border-bottom: 1px solid #1a1a1a;
-            font-size: 13px;
+            border-bottom: 1px solid #22262d;
+            font-size: 14px;
         }
-        .info-row:last-child { border-bottom: none; }
-        .info-row span:first-child { color: #888; }
-        .info-row span:last-child { color: #fff; font-weight: 500; }
 
-        .mobile-bottom-nav {
-            display: none;
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background: #121212;
-            border-top: 1px solid #262626;
-            padding: 8px 0;
-            justify-content: space-around;
-            align-items: center;
-            z-index: 1000;
+        .detail-row:last-child {
+            border-bottom: none;
         }
-        .mobile-bottom-nav a {
-            color: #888;
-            text-decoration: none;
-            font-size: 11px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 3px;
+
+        .detail-label {
+            color: #848e9c;
         }
-        .mobile-bottom-nav a.active { color: #d4af37; }
-        @media(max-width: 900px) {
-            .mobile-bottom-nav { display: flex; }
-            .stats-grid { grid-template-columns: repeat(2, 1fr); }
-            .profile-card { flex-direction: column; align-items: flex-start; gap: 15px; }
+
+        .detail-value {
+            color: #eaecef;
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            .stats-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .profile-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
         }
     </style>
 </head>
 <body>
 
-    <div class="navbar">
+    <!-- Navbar -->
+    <nav class="navbar">
         <div class="nav-left">
-            <div class="logo-container">
-                <img src="logo.png" alt="TBR Exchange Logo">
-            </div>
+            <a href="index.html" class="logo">TBR</a>
             <div class="nav-links">
-                <a href="dashboard.html"><i class="fa-solid fa-house"></i> Dashboard</a>
+                <a href="dashboard.html"><i class="fa-solid fa-chart-pie"></i> Dashboard</a>
                 <a href="market.html"><i class="fa-solid fa-store"></i> Market</a>
-                <a href="my-ads.html"><i class="fa-solid fa-bullhorn"></i> My Ads</a>
+                <a href="my-ads.html"><i class="fa-solid fa-rectangle-ad"></i> My Ads</a>
                 <a href="trades.html"><i class="fa-solid fa-right-left"></i> Trades</a>
                 <a href="wallet.html"><i class="fa-solid fa-wallet"></i> Wallet</a>
-                <a href="leaderboard.html"><i class="fa-solid fa-trophy"></i> Top Traders</a>
+                <a href="top-traders.html"><i class="fa-solid fa-trophy"></i> Top Traders</a>
             </div>
         </div>
         <div class="nav-right">
-            <a href="notifications.html" style="color: inherit; text-decoration: none;"><i class="fa-regular fa-bell"></i></a>
-            <a href="dashboard.html" style="color: #d4af37; text-decoration: none; font-size: 18px;"><i class="fa-solid fa-house"></i></a>
+            <a href="notifications.html"><i class="fa-regular fa-bell"></i></a>
+            <a href="profile.html" style="color: #f0b90b;"><i class="fa-solid fa-user"></i></a>
         </div>
-    </div>
+    </nav>
 
+    <!-- Main Content -->
     <div class="container">
-        <div class="profile-card">
-            <div class="profile-info-left">
-                <div class="profile-avatar" id="avatarInitial">U</div>
+        
+        <!-- Dynamic KYC / Banner Notifications -->
+        <div id="kycBannerContainer"></div>
+
+        <!-- Profile Header -->
+        <div class="profile-header">
+            <div class="profile-user-info">
+                <div class="profile-avatar" id="avatarInitial">B</div>
                 <div class="profile-details">
-                    <h2 id="profileName">USER</h2>
-                    <p class="user-email" id="profileEmail">user@example.com</p>
-                    <div class="user-id-container" style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
-                        <span id="userUniqueId" style="color: #f3ba2f; font-size: 13px; font-weight: 600;">TBR-Loading...</span>
-                        <button id="copyBtn" onclick="copyUserId()" title="Copy ID" style="background: transparent; border: none; color: #888; cursor: pointer; padding: 0; font-size: 12px; display: flex; align-items: center; gap: 4px;">
-                            <i class="fas fa-copy"></i> <span id="copyText">Copy</span>
-                        </button>
+                    <h2 id="profileName">LOADING...</h2>
+                    <p id="profileEmail">loading@example.com</p>
+                    <div class="user-id-badge">
+                        ID: <span id="userUniqueId">TBR------</span> 
+                        <span class="copy-btn" onclick="copyUserId()" title="Copy ID">
+                            <i class="fa-regular fa-copy"></i> <span id="copyText">Copy</span>
+                        </span>
                     </div>
                 </div>
             </div>
             <a href="settings.html" class="settings-btn"><i class="fa-solid fa-gear"></i> Settings</a>
         </div>
 
-        <div id="kycBannerContainer"></div>
-
-        <div class="stats-grid">
+        <!-- Stats Row -->
+        <div class="stats-row">
             <div class="stat-card">
-                <div class="label">Reputation</div>
+                <div class="title">Reputation</div>
                 <div class="value" id="statReputation">100%</div>
             </div>
             <div class="stat-card">
-                <div class="label">Total Trades</div>
+                <div class="title">Total Trades</div>
                 <div class="value" id="statTotalTrades">0</div>
             </div>
             <div class="stat-card">
-                <div class="label">Completion Rate</div>
+                <div class="title">Completion Rate</div>
                 <div class="value" id="statCompletionRate">100%</div>
             </div>
             <div class="stat-card">
-                <div class="label">Volume</div>
+                <div class="title">Volume</div>
                 <div class="value" id="statVolume">0 USDT</div>
             </div>
         </div>
 
+        <!-- Account Details Box -->
         <div class="section-box">
             <h3>Account Details</h3>
-            <div class="info-row">
-                <span>KYC Verification</span>
-                <span id="kycStatusRowText"><a href="kyc-verify.html" style="color: #f6465d; text-decoration: none;">Not Submitted <i class="fa-solid fa-chevron-right" style="font-size: 10px;"></i></a></span>
+            
+            <div class="detail-row">
+                <span class="detail-label">KYC Verification</span>
+                <span class="detail-value" id="kycStatusRowText">Not Submitted</span>
             </div>
-            <div class="info-row">
-                <span>Two-Factor Auth (2FA)</span>
-                <span id="twoFactorStatus" style="color: #f6465d;">Disabled</span>
+            
+            <div class="detail-row">
+                <span class="detail-label">Two-Factor Auth (2FA)</span>
+                <span class="detail-value" id="twoFactorStatus" style="color: #f6465d;">Disabled</span>
             </div>
-            <div class="info-row">
-                <span>Member Since</span>
-                <span id="memberSince">2026</span>
+            
+            <div class="detail-row">
+                <span class="detail-label">Member Since</span>
+                <span class="detail-value" id="memberSince">2026</span>
             </div>
         </div>
+
     </div>
 
-    <div class="mobile-bottom-nav">
-        <a href="dashboard.html">
-            <i class="fa-solid fa-house"></i>
-            <span>Home</span>
-        </a>
-        <a href="wallet.html">
-            <i class="fa-solid fa-wallet"></i>
-            <span>Wallet</span>
-        </a>
-        <a href="market.html">
-            <i class="fa-solid fa-store"></i>
-            <span>Market</span>
-        </a>
-        <a href="profile.html" class="active">
-            <i class="fa-solid fa-user"></i>
-            <span>Profile</span>
-        </a>
-    </div>
-
+    <!-- Script to Load Profile and Manage IDs -->
     <script>
         function copyUserId() {
             const userIdText = document.getElementById('userUniqueId').innerText;
@@ -340,7 +358,20 @@
             let name = localStorage.getItem('userName') || localStorage.getItem('name') || "USER";
             let email = localStorage.getItem('userEmail') || localStorage.getItem('email') || "user@example.com";
             let kycStatus = localStorage.getItem('kycStatus') || 'not_submitted';
-            let userId = localStorage.getItem('userUniqueId') || '';
+            let userId = localStorage.getItem('userUniqueId');
+            
+            // ── Fallback ID generation if missing ──
+            if (!userId || userId === 'TBR------' || userId === 'TBR-000000' || userId.includes('Loading')) {
+                let hash = 0;
+                for (let i = 0; i < email.length; i++) {
+                    hash = ((hash << 5) - hash) + email.charCodeAt(i);
+                    hash |= 0;
+                }
+                let uniqueNum = Math.abs(hash) % 900000 + 100000;
+                userId = 'TBR-' + uniqueNum;
+                localStorage.setItem('userUniqueId', userId);
+            }
+
             let totalTrades = localStorage.getItem('totalTrades') || '0';
             let volume = localStorage.getItem('volume') || '0 USDT';
             let completionRate = localStorage.getItem('completionRate') || '100%';
@@ -351,10 +382,9 @@
             let displayName = name.toUpperCase();
             document.getElementById('profileName').innerText = displayName;
             document.getElementById('profileEmail').innerText = email;
-            if (userId) document.getElementById('userUniqueId').innerText = userId;
+            document.getElementById('userUniqueId').innerText = userId;
             document.getElementById('avatarInitial').innerText = displayName.charAt(0).toUpperCase();
 
-            // Set stats elements default/cached
             document.getElementById('statTotalTrades').innerText = totalTrades;
             document.getElementById('statVolume').innerText = volume;
             document.getElementById('statCompletionRate').innerText = completionRate;
@@ -406,7 +436,6 @@
                         document.getElementById('userUniqueId').innerText = userId;
                         document.getElementById('avatarInitial').innerText = displayName.charAt(0).toUpperCase();
 
-                        // Update stats display
                         document.getElementById('statTotalTrades').innerText = totalTrades;
                         document.getElementById('statVolume').innerText = volume;
                         document.getElementById('statCompletionRate').innerText = completionRate;
@@ -434,11 +463,7 @@
                     }
                 }
             } catch (e) {
-                console.log("Could not fetch from server, using local cache.");
-            }
-
-            if (!userId || userId === 'TBR-000000') {
-                document.getElementById('userUniqueId').innerText = 'TBR------';
+                console.log("Could not fetch from server, using local cache & generated ID.");
             }
 
             const bannerContainer = document.getElementById('kycBannerContainer');
