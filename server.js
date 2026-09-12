@@ -769,48 +769,35 @@ app.get('/api/admin/escrow-disputes', verifyAdmin, async (req, res) => {
 });
 
 // 2. KYC Requests API (የተስተካከለ - ፎቶዎችን በትክክል ለማስተላለፍ)
+// --- Admin KYC Requests API (የተስተካከለ - ከ KYC ኮሌክሽን በቀጥታ የሚያነብ) ---
 app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
     try {
+        // በቀጥታ ከ KYC ኮሌክሽን መረጃዎችን ማምጣት
         const kycList = await KYC.find({}).lean();
-        const userList = await User.find({}).lean();
 
-        const requests = userList.map(u => {
-            const kyc = kycList.find(k => 
-                (k.userId && k.userId.toString() === u._id.toString()) || 
-                (k.email && u.email && k.email.toLowerCase() === u.email.toLowerCase())
-            );
+        const requests = kycList.map(kyc => {
+            let f = kyc.frontImage || '';
+            let b = kyc.backImage || '';
+            let s = kyc.selfieImage || '';
 
-            let f = kyc?.frontImage || kyc?.frontId || kyc?.kycFront || kyc?.front || u?.kycData?.frontImage || u?.kycData?.frontId || u?.frontImage || '';
-            let b = kyc?.backImage || kyc?.backId || kyc?.kycBack || kyc?.back || u?.kycData?.backImage || u?.kycData?.backId || u?.backImage || '';
-            let s = kyc?.selfieImage || kyc?.selfie || kyc?.kycSelfie || kyc?.userPhoto || u?.kycData?.selfieImage || u?.kycData?.selfie || u?.selfieImage || '';
-
+            // ፎቶዎቹ Buffer ሆኖ ከተቀመጡ ወደ Base64 መቀየር
             if (Buffer.isBuffer(f)) f = `data:image/jpeg;base64,${f.toString('base64')}`;
             if (Buffer.isBuffer(b)) b = `data:image/jpeg;base64,${b.toString('base64')}`;
             if (Buffer.isBuffer(s)) s = `data:image/jpeg;base64,${s.toString('base64')}`;
 
             return {
-                _id: kyc?._id || u._id,
-                userId: u.email || u.username,
-                email: u.email,
+                _id: kyc._id,
+                userId: kyc.userId || kyc.email || 'N/A',
+                email: kyc.email || '',
                 frontImage: f,
-                frontId: f,
-                kycFront: f,
-                front: f,
                 backImage: b,
-                backId: b,
-                kycBack: b,
-                back: b,
                 selfieImage: s,
-                selfie: s,
-                userPhoto: s,
-                kycSelfie: s,
-                status: kyc?.status || u.kycStatus || 'pending',
-                fullName: kyc?.fullName || u.fullName || 'User'
+                status: kyc.status || 'pending',
+                fullName: kyc.fullName || 'User'
             };
         });
 
-        const activeRequests = requests.filter(r => r.status === 'pending' || r.frontImage || r.selfieImage);
-        return res.json({ success: true, data: activeRequests });
+        return res.json({ success: true, data: requests });
     } catch (error) {
         console.error("KYC Fetch Error:", error);
         return res.status(500).json({ success: false, data: [] });
