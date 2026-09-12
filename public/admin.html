@@ -146,24 +146,16 @@
             </div>
         </div>
 
-       <!-- TAB 3: KYC PANEL -->
-<div id="tab-kyc" class="tab-content">
-    <div class="section-title"><i class="fa-solid fa-user-shield"></i> Manual KYC Verification Submissions</div>
-    
-    <!-- አዝራሮቹን እዚህ ጋር ይለጥፏቸው -->
-    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-        <button id="btn-pending-kyc" class="btn" onclick="loadKycData('pending')" style="background: rgba(240, 185, 11, 0.2); color: #f0b90b; border: 1px solid #f0b90b; font-weight: bold; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Pending KYC</button>
-        <button id="btn-approved-kyc" class="btn" onclick="loadKycData('approved')" style="background: rgba(14, 203, 129, 0.2); color: #0ecb81; border: 1px solid #0ecb81; font-weight: bold; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Approved KYC</button>
-        <button id="btn-rejected-kyc" class="btn" onclick="loadKycData('rejected')" style="background: rgba(246, 70, 93, 0.2); color: #f6465d; border: 1px solid #f6465d; font-weight: bold; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Rejected KYC</button>
-    </div>
-
-    <div class="table-container">
-        <table>
-            <!-- ሰንጠረዡ ይቀጥላል -->
-
         <!-- TAB 3: KYC PANEL -->
         <div id="tab-kyc" class="tab-content">
             <div class="section-title"><i class="fa-solid fa-user-shield"></i> Manual KYC Verification Submissions</div>
+            
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <button id="btn-pending-kyc" class="btn" onclick="loadKycData('pending')" style="background: rgba(240, 185, 11, 0.2); color: #f0b90b; border: 1px solid #f0b90b; font-weight: bold; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Pending KYC</button>
+                <button id="btn-approved-kyc" class="btn" onclick="loadKycData('approved')" style="background: rgba(14, 203, 129, 0.2); color: #0ecb81; border: 1px solid #0ecb81; font-weight: bold; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Approved KYC</button>
+                <button id="btn-rejected-kyc" class="btn" onclick="loadKycData('rejected')" style="background: rgba(246, 70, 93, 0.2); color: #f6465d; border: 1px solid #f6465d; font-weight: bold; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Rejected KYC</button>
+            </div>
+
             <div class="table-container">
                 <table>
                     <thead>
@@ -275,7 +267,7 @@
 
         async function loadAdminData() {
             fetchStats();
-            fetchKycRequests();
+            loadKycData('pending'); // በነባሪነት Pending ዎችን ይዞ ይምጣ
             fetchEscrowDisputes();
             fetchUsersList();
         }
@@ -293,18 +285,23 @@
             } catch (err) { console.error('Error loading stats:', err); }
         }
 
-        async function fetchKycRequests() {
+        // የ KYC ዳታዎችን በ Status (pending, approved, rejected) ለመጥራት የተስተካከለ ፈንክሽን
+        async function loadKycData(status = 'pending') {
             try {
-                const res = await fetch(`${API_BASE}/api/admin/kyc-requests`, { headers: { 'Authorization': 'Bearer ' + getToken() } });
+                const res = await fetch(`${API_BASE}/api/admin/kyc-requests?status=${status}`, { headers: { 'Authorization': 'Bearer ' + getToken() } });
                 const json = await res.json();
+                const tbody = document.getElementById('kycTableBody');
+                
                 if (res.ok && json.success) {
-                    const tbody = document.getElementById('kycTableBody');
-                    if (json.data.length === 0) {
-                        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">No KYC requests found.</td></tr>`;
+                    // ዳታው ሰርቨሩ ላይ ካልተጣራ በ JavaScript እናጣራዋለን
+                    const dataList = (json.data || []).filter(item => item.status === status);
+
+                    if (dataList.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">No ${status} KYC requests found.</td></tr>`;
                         return;
                     }
                     let html = '';
-                    json.data.forEach(item => {
+                    dataList.forEach(item => {
                         const userId = item.userId || item.email || 'N/A';
                         html += `<tr>
                             <td>User ID: ${userId}</td>
@@ -321,8 +318,13 @@
                         </tr>`;
                     });
                     tbody.innerHTML = html;
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">No KYC requests found.</td></tr>`;
                 }
-            } catch (err) { console.error(err); }
+            } catch (err) { 
+                console.error(err); 
+                document.getElementById('kycTableBody').innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Error loading KYC data.</td></tr>`;
+            }
         }
 
         async function fetchEscrowDisputes() {
@@ -375,52 +377,48 @@
             }
         }
 
-   function openKycModal(kycItem) {
-    console.log("Full KYC Object Data:", kycItem);
-
-    let modal = document.getElementById('kycModal');
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'kycModal';
-        modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 9999;";
-        modal.innerHTML = `
-            <div style="background: #1e2329; padding: 25px; border-radius: 12px; max-width: 900px; width: 95%; color: #fff; text-align: center; position: relative; border: 1px solid #30363d; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
-                <h3 id="modalUserEmail" style="margin-bottom: 20px; color: #f3ba2f; font-size: 18px;"></h3>
-                <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px;">
-                    <div>
-                        <p style="margin-bottom: 5px; font-size: 13px; color: #848e9c; font-weight: bold;">Front ID</p>
-                        <img id="modalFrontImg" src="" style="width: 260px; height: 170px; object-fit: cover; border-radius: 6px; border: 1px solid #474d57; cursor: pointer;" onclick="window.open(this.src)" title="Click to zoom">
+        function openKycModal(kycItem) {
+            let modal = document.getElementById('kycModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'kycModal';
+                modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 9999;";
+                modal.innerHTML = `
+                    <div style="background: #1e2329; padding: 25px; border-radius: 12px; max-width: 900px; width: 95%; color: #fff; text-align: center; position: relative; border: 1px solid #30363d; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+                        <h3 id="modalUserEmail" style="margin-bottom: 20px; color: #f3ba2f; font-size: 18px;"></h3>
+                        <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px;">
+                            <div>
+                                <p style="margin-bottom: 5px; font-size: 13px; color: #848e9c; font-weight: bold;">Front ID</p>
+                                <img id="modalFrontImg" src="" style="width: 260px; height: 170px; object-fit: cover; border-radius: 6px; border: 1px solid #474d57; cursor: pointer;" onclick="window.open(this.src)" title="Click to zoom">
+                            </div>
+                            <div>
+                                <p style="margin-bottom: 5px; font-size: 13px; color: #848e9c; font-weight: bold;">Back ID</p>
+                                <img id="modalBackImg" src="" style="width: 260px; height: 170px; object-fit: cover; border-radius: 6px; border: 1px solid #474d57; cursor: pointer;" onclick="window.open(this.src)" title="Click to zoom">
+                            </div>
+                            <div>
+                                <p style="margin-bottom: 5px; font-size: 13px; color: #f3ba2f; font-weight: bold;">Selfie / User Photo</p>
+                                <img id="modalSelfieImg" src="" style="width: 260px; height: 170px; object-fit: cover; border-radius: 6px; border: 1px solid #f3ba2f; cursor: pointer;" onclick="window.open(this.src)" title="Click to zoom">
+                            </div>
+                        </div>
+                        <button onclick="document.getElementById('kycModal').style.display='none'" style="background: #f3ba2f; color: #000; border: none; padding: 10px 25px; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 14px;">Close Panel</button>
                     </div>
-                    <div>
-                        <p style="margin-bottom: 5px; font-size: 13px; color: #848e9c; font-weight: bold;">Back ID</p>
-                        <img id="modalBackImg" src="" style="width: 260px; height: 170px; object-fit: cover; border-radius: 6px; border: 1px solid #474d57; cursor: pointer;" onclick="window.open(this.src)" title="Click to zoom">
-                    </div>
-                    <div>
-                        <p style="margin-bottom: 5px; font-size: 13px; color: #f3ba2f; font-weight: bold;">Selfie / User Photo</p>
-                        <img id="modalSelfieImg" src="" style="width: 260px; height: 170px; object-fit: cover; border-radius: 6px; border: 1px solid #f3ba2f; cursor: pointer;" onclick="window.open(this.src)" title="Click to zoom">
-                    </div>
-                </div>
-                <button onclick="document.getElementById('kycModal').style.display='none'" style="background: #f3ba2f; color: #000; border: none; padding: 10px 25px; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 14px;">Close Panel</button>
-            </div>
-        `;
-        document.body.appendChild(modal);
-    }
-    
-    document.getElementById('modalUserEmail').innerText = `KYC Verification Details for: ${kycItem.userId || kycItem.email || kycItem.userEmail || 'N/A'}`;
-    
-    // ሁሉንም ሊሆኑ የሚችሉ የምስል አድራሻ ველዎችን መፈተሽ
-    const front = kycItem.frontImage || kycItem.frontId || kycItem.kycFront || kycItem.front || kycItem.idFront || kycItem.front_image || kycItem.documentFront || '';
-    const back = kycItem.backImage || kycItem.backId || kycItem.kycBack || kycItem.back || kycItem.idBack || kycItem.back_image || kycItem.documentBack || '';
-    const selfie = kycItem.selfieImage || kycItem.selfie || kycItem.userPhoto || kycItem.kycSelfie || kycItem.photo || kycItem.user_photo || kycItem.selfie_image || '';
+                `;
+                document.body.appendChild(modal);
+            }
+            
+            document.getElementById('modalUserEmail').innerText = `KYC Verification Details for: ${kycItem.userId || kycItem.email || kycItem.userEmail || 'N/A'}`;
+            
+            const front = kycItem.frontImage || kycItem.frontId || kycItem.kycFront || kycItem.front || kycItem.idFront || kycItem.front_image || kycItem.documentFront || '';
+            const back = kycItem.backImage || kycItem.backId || kycItem.kycBack || kycItem.back || kycItem.idBack || kycItem.back_image || kycItem.documentBack || '';
+            const selfie = kycItem.selfieImage || kycItem.selfie || kycItem.userPhoto || kycItem.kycSelfie || kycItem.photo || kycItem.user_photo || kycItem.selfie_image || '';
 
-    console.log("Resolved Image Paths -> Front:", front, "Back:", back, "Selfie:", selfie);
+            document.getElementById('modalFrontImg').src = front;
+            document.getElementById('modalBackImg').src = back;
+            document.getElementById('modalSelfieImg').src = selfie;
+            
+            modal.style.display = 'flex';
+        }
 
-    document.getElementById('modalFrontImg').src = front;
-    document.getElementById('modalBackImg').src = back;
-    document.getElementById('modalSelfieImg').src = selfie;
-    
-    modal.style.display = 'flex';
-}
         async function performKycAction(kycId, status) {
             let rejectionReason = status === 'rejected' ? prompt('Reason for rejection:', 'Invalid documents') : '';
             if (status === 'rejected' && !rejectionReason) return;
@@ -430,7 +428,12 @@
                 body: JSON.stringify({ kycId, status, rejectionReason })
             });
             const json = await res.json();
-            if (res.ok && json.success) { alert(json.message); loadAdminData(); }
+            if (res.ok && json.success) { 
+                alert(json.message); 
+                loadAdminData(); 
+            } else {
+                alert(json.message || 'Action failed.');
+            }
         }
 
         async function fetchUsersList() {
