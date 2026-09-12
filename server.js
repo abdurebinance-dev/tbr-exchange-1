@@ -996,13 +996,10 @@ async function fixExistingUsersIds() {
     }
 }
 
-// ዳታቤዙ ከተገናኘ በኋላ ይህንን ፌንክሽን አንዴ ይጠሩት
-// fixExistingUsersIds();
-
-// ሰርቨሩ ሲነሳ ይህንን ፌንክሽን አንዴ እንጠራዋለን
-assignIdsToExistingUsers();
-
 // Server Listen
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
+    
+    // ሰርቨሩ ሲጀምር ይህንን ፌንክሽን እዚህ ውስጥ አብሮ እንዲጠራ እናደርጋለን
+    assignIdsToExistingUsers();
 });
