@@ -769,18 +769,11 @@ app.get('/api/admin/escrow-disputes', verifyAdmin, async (req, res) => {
 });
 
 // 2. KYC Requests API (የተስተካከለ - ፎቶዎችን በትክክል ለማስተላለፍ)
-// --- Admin KYC Requests API (Pending የሆኑትን ብቻ የሚያሳይ) ---
+// --- Admin KYC Requests API (ሁሉንም ሪከርዶች የሚያሳይ - ስታተስ ሳይመርጥ) ---
 app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
     try {
-        // በቀጥታ ስታተሳቸው 'pending' የሆኑትን ብቻ ከ KYC ኮሌክሽን ማምጣት
-        const kycList = await KYC.find({ 
-            $or: [
-                { status: 'pending' }, 
-                { status: { $exists: false } }, 
-                { status: null }, 
-                { status: "" }
-            ] 
-        }).lean();
+        // ማንኛውንም ስታተስ ያላቸውን ወይም pending የሆኑትን ከ KYC ኮሌክሽን ማምጣት
+        const kycList = await KYC.find({}).lean();
 
         const requests = kycList.map(kyc => {
             let f = kyc.frontImage || '';
@@ -803,7 +796,13 @@ app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
             };
         });
 
-        return res.json({ success: true, data: requests });
+        // ስታተሳቸው 'approved' ወይም 'rejected' ካልሆኑት ውጪ ያሉትን ማሳየት
+        const pendingRequests = requests.filter(r => {
+            const st = String(r.status).toLowerCase();
+            return st === 'pending' || st === '' || !st;
+        });
+
+        return res.json({ success: true, data: pendingRequests.length > 0 ? pendingRequests : requests });
     } catch (error) {
         console.error("KYC Fetch Error:", error);
         return res.status(500).json({ success: false, data: [] });
