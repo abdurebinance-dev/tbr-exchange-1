@@ -759,16 +759,16 @@ app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
     }
 });
 
-// 1. Escrow Disputes API (404 ኤርር እንዳይፈጥር)
+// 1. Escrow Disputes API (የ length ኤርር እንዳይፈጥር በ Array መልክ መመለስ)
 app.get('/api/admin/escrow-disputes', verifyAdminToken, async (req, res) => {
     try {
-        res.json({ success: true, disputes: [] });
+        res.json([]); // በቀጥታ አርሬ መመለስ
     } catch (err) {
-        res.status(500).json({ success: false, message: 'Error fetching disputes' });
+        res.status(500).json([]);
     }
 });
 
-// 2. KYC Requests API (ፎቶዎችን በትክክል ለማምጣት)
+// 2. KYC Requests API (ፎቶዎችን ከየትኛውም የሰንጠረዥ ቦታ አግኝቶ ለማምጣት)
 app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
     try {
         const kycList = await KYC.find({}).lean();
@@ -780,10 +780,12 @@ app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
                 (k.email && u.email && k.email.toLowerCase() === u.email.toLowerCase())
             );
 
-            let f = kyc?.frontImage || kyc?.frontId || kyc?.kycFront || u?.kycData?.frontImage || u?.kycData?.frontId || u?.frontImage || '';
-            let b = kyc?.backImage || kyc?.backId || kyc?.kycBack || u?.kycData?.backImage || u?.kycData?.backId || u?.backImage || '';
-            let s = kyc?.selfieImage || kyc?.selfie || kyc?.kycSelfie || u?.kycData?.selfieImage || u?.kycData?.selfie || u?.selfieImage || '';
+            // ሁሉም ሊሆኑ የሚችሉ የፎቶ ველዎች (Properties)
+            let f = kyc?.frontImage || kyc?.frontId || kyc?.kycFront || kyc?.front || u?.kycData?.frontImage || u?.kycData?.frontId || u?.frontImage || '';
+            let b = kyc?.backImage || kyc?.backId || kyc?.kycBack || kyc?.back || u?.kycData?.backImage || u?.kycData?.backId || u?.backImage || '';
+            let s = kyc?.selfieImage || kyc?.selfie || kyc?.kycSelfie || kyc?.userPhoto || u?.kycData?.selfieImage || u?.kycData?.selfie || u?.selfieImage || '';
 
+            // ፎቶዎቹ በ Buffer መልክ ከተቀመጡ ወደ Base64 መቀየር
             if (Buffer.isBuffer(f)) f = `data:image/jpeg;base64,${f.toString('base64')}`;
             if (Buffer.isBuffer(b)) b = `data:image/jpeg;base64,${b.toString('base64')}`;
             if (Buffer.isBuffer(s)) s = `data:image/jpeg;base64,${s.toString('base64')}`;
@@ -800,11 +802,14 @@ app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
             };
         });
 
-        const activeRequests = requests.filter(r => r.status === 'pending' || r.frontImage);
-        return res.json({ success: true, data: activeRequests, requests: activeRequests });
+        // ፎቶ ያላቸውን ወይም ፔንዲንግ የሆኑትን ማጣራት
+        const activeRequests = requests.filter(r => r.status === 'pending' || r.frontImage || r.selfieImage);
+        
+        // ፍሮንትኤንዱ በቀጥታ ሊቀበለው በሚችለው መልኩ መላክ
+        return res.json(activeRequests); 
     } catch (error) {
         console.error("KYC Fetch Error:", error);
-        return res.status(500).json({ success: false, message: "Server error fetching KYC" });
+        return res.status(500).json([]);
     }
 });
 
