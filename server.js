@@ -759,21 +759,19 @@ app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
     }
 });
 
-// --- Admin KYC Requests Route (Fixed & Safe) ---
+// --- Admin KYC Requests Route (Fully Verified & Synced with Admin Panel) ---
 app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
     try {
-        // 1. መረጃዎችን ከ KYC ኮሌክሽን እና ከ User ኮሌክሽን ማምጣት
         let kycRecords = await KYC.find({}).sort({ _id: -1 });
         const users = await User.find({}).sort({ _id: -1 });
 
         const combinedRequests = users.map(u => {
-            // ተዛማጁን የ KYC ሪከርድ መፈለግ
             const existingKyc = kycRecords.find(k => 
                 (k.userId && k.userId.toString() === u._id.toString()) || 
                 (k.email && u.email && k.email.toLowerCase() === u.email.toLowerCase())
             );
             
-            // የፎቶ ሊንኮችን ከሁለቱም ቦታዎች መፈለግ
+            // የፎቶ ሊንኮችን ከሁለቱም ቦታዎች (KYC collection ወይም User.kycData) ማግኘት
             const fImg = (existingKyc && (existingKyc.frontImage || existingKyc.frontId)) || (u.kycData && (u.kycData.frontImage || u.kycData.frontId)) || '';
             const bImg = (existingKyc && (existingKyc.backImage || existingKyc.backId)) || (u.kycData && (u.kycData.backImage || u.kycData.backId)) || '';
             const sImg = (existingKyc && (existingKyc.selfieImage || existingKyc.selfie || existingKyc.kycSelfie)) || (u.kycData && (u.kycData.selfieImage || u.kycData.selfie)) || '';
@@ -782,22 +780,20 @@ app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
                 _id: existingKyc ? existingKyc._id : u._id,
                 userId: u.email,
                 email: u.email,
+                // ከፊት ለፊት በአድሚን ኮድ (openKycModal) የሚጠበቁት ስሞች በትክክል እንዲሄዱ ማድረግ
                 frontImage: fImg,
-                frontId: fImg,
                 backImage: bImg,
-                backId: bImg,
                 selfieImage: sImg,
-                kycSelfie: sImg,
                 status: (existingKyc && existingKyc.status) || u.kycStatus || 'pending',
                 fullName: (existingKyc && existingKyc.fullName) || u.fullName || 'User',
                 idNumber: (existingKyc && existingKyc.idNumber) || (u.kycData && u.kycData.idNumber) || '',
-                dateOfBirth: (existingKyc && (existingKyc.dob || existingKyc.dateOfBirth)) || (u.kycData && (u.kycData.dob || u.kycData.dateOfBirth)) || '',
-                address: (existingKyc && (existingKyc.address || existingKyc.residentialAddress)) || (u.kycData && (u.kycData.address || u.kycData.residentialAddress)) || '',
+                dateOfBirth: (existingKyc && (existingKyc.dob || existingKyc.dateOfBirth)) || (u.kycData && (u.kycData.dateOfBirth || u.kycData.dob)) || '',
+                address: (existingKyc && (existingKyc.address || existingKyc.residentialAddress)) || (u.kycData && (u.kycData.residentialAddress || u.kycData.address)) || '',
                 docType: (existingKyc && existingKyc.docType) || (u.kycData && u.kycData.docType) || 'national_id'
             };
         });
 
-        // 👈 ቁልፉ ነጥብ፡ ፎቶ የላኩትን ወይም ኬዋይሲ የጠየቁትን ብቻ ማጣራት (ባዶ ሪከርዶችን ማስወገድ)
+        // ፎቶ የላኩትን ወይም ኬዋይሲ የጠየቁትን ብቻ ማጣራት
         const validRequests = combinedRequests.filter(item => item.frontImage || item.status === 'pending');
 
         res.json({ success: true, data: validRequests, requests: validRequests });
@@ -806,6 +802,7 @@ app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
         res.status(500).json({ success: false, message: 'Error fetching KYC requests' });
     }
 });
+
 // --- Admin KYC Action Route ---
 app.post('/api/admin/kyc-action', verifyAdmin, async (req, res) => {
     try {
