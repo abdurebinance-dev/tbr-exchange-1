@@ -768,8 +768,8 @@ app.get('/api/admin/escrow-disputes', verifyAdmin, async (req, res) => {
     }
 });
 
-// 2. KYC Requests API
-app.get('/api/admin/kyc-requests', verifyAdmin, async (req, res) => {
+// 2. KYC Requests API (የተስተካከለ - ፎቶዎችን በትክክል ለማስተላለፍ)
+app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
     try {
         const kycList = await KYC.find({}).lean();
         const userList = await User.find({}).lean();
@@ -794,10 +794,16 @@ app.get('/api/admin/kyc-requests', verifyAdmin, async (req, res) => {
                 email: u.email,
                 frontImage: f,
                 frontId: f,
+                kycFront: f,
+                front: f,
                 backImage: b,
                 backId: b,
+                kycBack: b,
+                back: b,
                 selfieImage: s,
                 selfie: s,
+                userPhoto: s,
+                kycSelfie: s,
                 status: kyc?.status || u.kycStatus || 'pending',
                 fullName: kyc?.fullName || u.fullName || 'User'
             };
