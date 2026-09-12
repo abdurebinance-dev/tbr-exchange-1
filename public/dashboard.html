@@ -685,6 +685,17 @@
                 }
             });
 
+            // በዳሽቦርድ JS ፋይል ውስጥ
+const currentUserEmail = localStorage.getItem('userEmail');
+
+if (!currentUserEmail) {
+    // ኢሜይል ከሌለ ወደ ሲንኢን መመለስ
+    window.location.href = 'signin.html';
+} else {
+    // ዳሽቦርዱ ላይ የዛን ሰውን ኢሜይል ወይም መረጃ ማሳየት
+    console.log("Logged in user:", currentUserEmail);
+}
+
             const profileBtn = document.getElementById('profile-icon-btn');
             const profileMenu = document.getElementById('profile-dropdown-menu');
 
