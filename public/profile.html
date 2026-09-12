@@ -207,7 +207,7 @@
             background: #181a20;
             border: 1px solid #2b313a;
             border-radius: 12px;
-            margin-top: 25px; /* ከ አካውንት ዲቴልስ በታች እንዲሆን ተደረገ */
+            margin-bottom: 25px;
         }
 
         .kyc-banner-left h4 {
@@ -358,6 +358,15 @@
             </div>
         </div>
 
+        <!-- KYC Verification Banner (ሁልጊዜ ከስታትስቲክስ በታች እና ከ አካውንት ዲቴልስ በላይ በግልጽ እንዲታይ ተደረገ) -->
+        <div id="kycBannerContainer" class="kyc-banner">
+            <div class="kyc-banner-left">
+                <h4 id="kycBannerTitle">Identity not verified</h4>
+                <p id="kycBannerDesc">Verify your ID to post ads and unlock 10× higher limits.</p>
+            </div>
+            <a href="kyc-verify.html" id="kycBannerBtn" class="verify-btn">VERIFY IDENTITY</a>
+        </div>
+
         <!-- Account Details Box -->
         <div class="section-box">
             <h3>Account Details</h3>
@@ -378,15 +387,6 @@
                 <span class="detail-label">Member Since</span>
                 <span class="detail-value" id="memberSince">2026</span>
             </div>
-        </div>
-
-        <!-- KYC Verification Banner (አሁን ከ "Account Details" በታች ተዛወረ) -->
-        <div id="kycBannerContainer" class="kyc-banner">
-            <div class="kyc-banner-left">
-                <h4 id="kycBannerTitle">Identity not verified</h4>
-                <p id="kycBannerDesc">Verify your ID to post ads and unlock 10× higher limits.</p>
-            </div>
-            <a href="kyc-verify.html" id="kycBannerBtn" class="verify-btn">VERIFY IDENTITY</a>
         </div>
 
     </div>
@@ -529,7 +529,12 @@
             const bannerContainer = document.getElementById('kycBannerContainer');
 
             if (kycStatus === 'verified' || kycStatus === 'approved' || kycStatus === true) {
-                nameContainer.innerHTML = displayName;
+                nameContainer.innerHTML = `
+                    ${displayName} 
+                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; background: #00C087; color: #fff; border-radius: 50%; font-size: 10px; margin-left: 8px;" title="Verified">
+                        <i class="fa-solid fa-check"></i>
+                    </span>
+                `;
                 kycStatusRowText.innerHTML = `<span style="color: #00C087; font-weight: 600;">Verified <i class="fa-solid fa-circle-check"></i></span>`;
                 
                 bannerTitle.innerText = "Verified Identity";
@@ -538,38 +543,31 @@
                 bannerBtn.style.display = "none";
                 bannerContainer.style.borderColor = "#00C087";
             } else if (kycStatus === 'pending' || kycStatus === 'under_review') {
-                nameContainer.innerHTML = displayName;
                 kycStatusRowText.innerHTML = `<span style="color: #f0b90b; font-weight: 500;">Under Review</span>`;
                 
                 bannerTitle.innerText = "Verification under review";
                 bannerTitle.style.color = "#f0b90b";
                 bannerDesc.innerText = "We'll notify you by email. Typically 1-2 business days.";
                 bannerBtn.style.display = "none";
-                bannerContainer.style.borderColor = "#2b313a";
             } else if (kycStatus === 'rejected') {
-                nameContainer.innerHTML = displayName;
                 kycStatusRowText.innerHTML = `<a href="kyc-verify.html" style="color: #cf304a; text-decoration: none;">Rejected (Resubmit) <i class="fa-solid fa-chevron-right" style="font-size: 10px;"></i></a>`;
                 
                 bannerTitle.innerText = "Verification Rejected";
                 bannerTitle.style.color = "#cf304a";
                 bannerDesc.innerText = "Please re-submit your correct documents for verification.";
                 bannerBtn.innerText = "RESUBMIT";
-                bannerBtn.style.display = "inline-block";
                 bannerBtn.style.background = "#cf304a";
                 bannerBtn.style.color = "#fff";
                 bannerContainer.style.borderColor = "#cf304a";
             } else {
-                nameContainer.innerHTML = displayName;
                 kycStatusRowText.innerHTML = `<a href="kyc-verify.html" style="color: #f6465d; text-decoration: none;">Not Submitted <i class="fa-solid fa-chevron-right" style="font-size: 10px;"></i></a>`;
                 
                 bannerTitle.innerText = "Identity not verified";
                 bannerTitle.style.color = "#f0b90b";
                 bannerDesc.innerText = "Verify your ID to post ads and unlock 10× higher limits.";
                 bannerBtn.innerText = "VERIFY IDENTITY";
-                bannerBtn.style.display = "inline-block";
                 bannerBtn.style.background = "#f0b90b";
                 bannerBtn.style.color = "#000";
-                bannerContainer.style.borderColor = "#2b313a";
             }
         }
 
