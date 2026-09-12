@@ -759,51 +759,52 @@ app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
     }
 });
 
+// 1. Escrow Disputes API (404 ኤርር እንዳይፈጥር)
+app.get('/api/admin/escrow-disputes', verifyAdminToken, async (req, res) => {
+    try {
+        res.json({ success: true, disputes: [] });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Error fetching disputes' });
+    }
+});
+
+// 2. KYC Requests API (ፎቶዎችን በትክክል ለማምጣት)
 app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
     try {
-        const kycRecords = await KYC.find({}).lean();
-        const users = await User.find({}).lean();
+        const kycList = await KYC.find({}).lean();
+        const userList = await User.find({}).lean();
 
-        // ሁለቱንም ሰንጠረዦች በማቀናጀት ፎቶዎችን መፈለግ
-        const combinedRequests = users.map(u => {
-            // በኢሜል ወይም በID ማዛመድ
-            const kyc = kycRecords.find(k => 
-                (k.userId && u._id && k.userId.toString() === u._id.toString()) || 
+        const requests = userList.map(u => {
+            const kyc = kycList.find(k => 
+                (k.userId && k.userId.toString() === u._id.toString()) || 
                 (k.email && u.email && k.email.toLowerCase() === u.email.toLowerCase())
             );
 
-            // ከየትኛውም ቦታ (KYC ሰንጠረዥ ወይም User ሰንጠረዥ ውስጥ ያሉ ፎቶዎች)
-            let front = (kyc && (kyc.frontImage || kyc.frontId || kyc.kycFront)) || (u.kycData && (u.kycData.frontImage || u.kycData.frontId)) || u.frontImage || '';
-            let back = (kyc && (kyc.backImage || ky.backId || kyc.kycBack)) || (u.kycData && (u.kycData.backImage || u.kycData.backId)) || u.backImage || '';
-            let selfie = (kyc && (kyc.selfieImage || kyc.selfie || kyc.kycSelfie)) || (u.kycData && (u.kycData.selfieImage || u.kycData.selfie)) || u.selfieImage || '';
+            let f = kyc?.frontImage || kyc?.frontId || kyc?.kycFront || u?.kycData?.frontImage || u?.kycData?.frontId || u?.frontImage || '';
+            let b = kyc?.backImage || kyc?.backId || kyc?.kycBack || u?.kycData?.backImage || u?.kycData?.backId || u?.backImage || '';
+            let s = kyc?.selfieImage || kyc?.selfie || kyc?.kycSelfie || u?.kycData?.selfieImage || u?.kycData?.selfie || u?.selfieImage || '';
 
-            // ፎቶዎቹ በ Buffer መልክ ከተቀመጡ ወደ Base64 መቀየር
-            if (Buffer.isBuffer(front)) front = `data:image/jpeg;base64,${front.toString('base64')}`;
-            if (Buffer.isBuffer(back)) back = `data:image/jpeg;base64,${back.toString('base64')}`;
-            if (Buffer.isBuffer(selfie)) selfie = `data:image/jpeg;base64,${selfie.toString('base64')}`;
+            if (Buffer.isBuffer(f)) f = `data:image/jpeg;base64,${f.toString('base64')}`;
+            if (Buffer.isBuffer(b)) b = `data:image/jpeg;base64,${b.toString('base64')}`;
+            if (Buffer.isBuffer(s)) s = `data:image/jpeg;base64,${s.toString('base64')}`;
 
             return {
-                _id: kyc ? kyc._id : u._id,
+                _id: kyc?._id || u._id,
                 userId: u.email || u.username,
                 email: u.email,
-                frontImage: front,
-                backImage: back,
-                selfieImage: selfie,
-                status: (kyc && kyc.status) || u.kycStatus || 'pending',
-                fullName: (kyc && kyc.fullName) || u.fullName || 'User',
-                idNumber: (kyc && kyc.idNumber) || (u.kycData && u.kycData.idNumber) || '',
-                dateOfBirth: (kyc && (kyc.dob || kyc.dateOfBirth)) || '',
-                address: (kyc && (kyc.address || kyc.residentialAddress)) || ''
+                frontImage: f,
+                backImage: b,
+                selfieImage: s,
+                status: kyc?.status || u.kycStatus || 'pending',
+                fullName: kyc?.fullName || u.fullName || 'User'
             };
         });
 
-        // ፎቶ የላኩትን ብቻ ማጣራት (ወይም ፔንዲንግ የሆኑትን)
-        const validRequests = combinedRequests.filter(item => item.frontImage || item.status === 'pending');
-
-        res.json({ success: true, data: validRequests, requests: validRequests });
-    } catch (err) {
-        console.error("KYC Fetch Error:", err);
-        res.status(500).json({ success: false, message: 'Error fetching KYC requests' });
+        const activeRequests = requests.filter(r => r.status === 'pending' || r.frontImage);
+        return res.json({ success: true, data: activeRequests, requests: activeRequests });
+    } catch (error) {
+        console.error("KYC Fetch Error:", error);
+        return res.status(500).json({ success: false, message: "Server error fetching KYC" });
     }
 });
 
