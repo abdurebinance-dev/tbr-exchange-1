@@ -761,44 +761,43 @@ app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
 
 app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
     try {
-        const kycRecords = await KYC.find({}).sort({ _id: -1 });
-        const users = await User.find({}).sort({ _id: -1 });
+        const kycRecords = await KYC.find({}).lean();
+        const users = await User.find({}).lean();
 
+        // ሁለቱንም ሰንጠረዦች በማቀናጀት ፎቶዎችን መፈለግ
         const combinedRequests = users.map(u => {
-            const existingKyc = kycRecords.find(k => 
-                (k.userId && k.userId.toString() === u._id.toString()) || 
+            // በኢሜል ወይም በID ማዛመድ
+            const kyc = kycRecords.find(k => 
+                (k.userId && u._id && k.userId.toString() === u._id.toString()) || 
                 (k.email && u.email && k.email.toLowerCase() === u.email.toLowerCase())
             );
-            
-            // ከየትኛውም የዴታቤዝ ቦታ (KYC ሞዴል፣ User ሞዴል ወይም kycData) የፎቶ ველዎችን በሁሉም ሊሆኑ በሚችሉ ስሞች መፈለግ
-            const fImg = (existingKyc && (existingKyc.frontImage || existingKyc.frontId || existingKyc.kycFront || existingKyc.idFront)) || 
-                         (u.kycData && (u.kycData.frontImage || u.kycData.frontId || u.kycData.kycFront)) || 
-                         u.frontImage || u.frontId || '';
 
-            const bImg = (existingKyc && (existingKyc.backImage || existingKyc.backId || existingKyc.kycBack || existingKyc.idBack)) || 
-                         (u.kycData && (u.kycData.backImage || u.kycData.backId || u.kycData.kycBack)) || 
-                         u.backImage || u.backId || '';
+            // ከየትኛውም ቦታ (KYC ሰንጠረዥ ወይም User ሰንጠረዥ ውስጥ ያሉ ፎቶዎች)
+            let front = (kyc && (kyc.frontImage || kyc.frontId || kyc.kycFront)) || (u.kycData && (u.kycData.frontImage || u.kycData.frontId)) || u.frontImage || '';
+            let back = (kyc && (kyc.backImage || ky.backId || kyc.kycBack)) || (u.kycData && (u.kycData.backImage || u.kycData.backId)) || u.backImage || '';
+            let selfie = (kyc && (kyc.selfieImage || kyc.selfie || kyc.kycSelfie)) || (u.kycData && (u.kycData.selfieImage || u.kycData.selfie)) || u.selfieImage || '';
 
-            const sImg = (existingKyc && (existingKyc.selfieImage || existingKyc.selfie || existingKyc.kycSelfie || existingKyc.userPhoto)) || 
-                         (u.kycData && (u.kycData.selfieImage || u.kycData.selfie || u.kycData.kycSelfie)) || 
-                         u.selfieImage || u.selfie || '';
+            // ፎቶዎቹ በ Buffer መልክ ከተቀመጡ ወደ Base64 መቀየር
+            if (Buffer.isBuffer(front)) front = `data:image/jpeg;base64,${front.toString('base64')}`;
+            if (Buffer.isBuffer(back)) back = `data:image/jpeg;base64,${back.toString('base64')}`;
+            if (Buffer.isBuffer(selfie)) selfie = `data:image/jpeg;base64,${selfie.toString('base64')}`;
 
             return {
-                _id: existingKyc ? existingKyc._id : u._id,
-                userId: u.email,
+                _id: kyc ? kyc._id : u._id,
+                userId: u.email || u.username,
                 email: u.email,
-                frontImage: fImg,
-                backImage: bImg,
-                selfieImage: sImg,
-                status: (existingKyc && existingKyc.status) || u.kycStatus || 'pending',
-                fullName: (existingKyc && existingKyc.fullName) || u.fullName || 'User',
-                idNumber: (existingKyc && (existingKyc.idNumber || existingKyc.idNo)) || (u.kycData && u.kycData.idNumber) || '',
-                dateOfBirth: (existingKyc && (existingKyc.dob || existingKyc.dateOfBirth)) || '',
-                address: (existingKyc && (existingKyc.address || existingKyc.residentialAddress)) || ''
+                frontImage: front,
+                backImage: back,
+                selfieImage: selfie,
+                status: (kyc && kyc.status) || u.kycStatus || 'pending',
+                fullName: (kyc && kyc.fullName) || u.fullName || 'User',
+                idNumber: (kyc && kyc.idNumber) || (u.kycData && u.kycData.idNumber) || '',
+                dateOfBirth: (kyc && (kyc.dob || kyc.dateOfBirth)) || '',
+                address: (kyc && (kyc.address || kyc.residentialAddress)) || ''
             };
         });
 
-        // ፎቶ ያላቸውን ወይም ፔንዲንግ የሆኑትን ማጣራት
+        // ፎቶ የላኩትን ብቻ ማጣራት (ወይም ፔንዲንግ የሆኑትን)
         const validRequests = combinedRequests.filter(item => item.frontImage || item.status === 'pending');
 
         res.json({ success: true, data: validRequests, requests: validRequests });
