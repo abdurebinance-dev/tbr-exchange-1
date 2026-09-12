@@ -728,7 +728,7 @@ if (!currentUserEmail) {
             loadLiveMarketRates();
         });
 
-        async function loadUserData() {
+       async function loadUserData() {
             try {
                 const token = localStorage.getItem('token') || localStorage.getItem('authToken');
                 const headers = { 'Content-Type': 'application/json' };
@@ -736,23 +736,34 @@ if (!currentUserEmail) {
                     headers['Authorization'] = `Bearer ${token}`;
                 }
 
-                const res = await fetch('/api/auth/me', { headers });
+                // ከሬንደር ወይም ከሎካል ሆስት ጋር በትክክል እንዲያወራ ዩአርኤሉን ማስተካከል
+                const API_BASE = window.location.hostname.includes('localhost') ? '' : 'https://tbr-exchange-backend.onrender.com';
+                const res = await fetch(`${API_BASE}/api/auth/me`, { headers });
                 
                 if (res.ok) {
                     const data = await res.json();
                     if (data.success && data.user) {
                         const userObj = data.user;
-                        const userEmail = userObj.email || localStorage.getItem('userEmail') || '';
+                        
+                        // አሮጌ ኬሽ የተደረገ ኢሜይል እንዳይነበብ ከሰርቨር የመጣውን ትክክለኛ አዲስ ኢሜይል ብቻ መያዝ
+                        const userEmail = userObj.email || '';
+                        if (userEmail) {
+                            localStorage.setItem('userEmail', userEmail);
+                        }
                         
                         const status = userObj.kycStatus || (userObj.isVerified ? 'verified' : 'unverified');
                         localStorage.setItem('kycStatus', status);
-                        updateKycButtonUI(status);
+                        if (typeof updateKycButtonUI === 'function') {
+                            updateKycButtonUI(status);
+                        }
 
                         let displayName = 'USER';
                         if (userObj.fullName) {
                             displayName = userObj.fullName.toUpperCase();
                         } else if (userObj.name) {
                             displayName = userObj.name.toUpperCase();
+                        } else if (userEmail) {
+                            displayName = userEmail.split('@')[0].toUpperCase();
                         }
 
                         const hour = new Date().getHours();
@@ -768,24 +779,33 @@ if (!currentUserEmail) {
                             el.innerText = displayName;
                         });
 
-                        document.getElementById('userGreeting').innerText = `${timeGreeting}, ${displayName}`;
+                        const greetingEl = document.getElementById('userGreeting');
+                        if (greetingEl) {
+                            greetingEl.innerText = `${timeGreeting}, ${displayName}`;
+                        }
 
                         if (userObj.balance !== undefined) {
                             actualBalance = Number(userObj.balance).toFixed(2);
-                            const isHidden = document.getElementById('balanceValue').innerText === '******';
-                            if (!isHidden) {
-                                document.getElementById('balanceValue').innerText = actualBalance;
+                            const balanceValEl = document.getElementById('balanceValue');
+                            if (balanceValEl) {
+                                const isHidden = balanceValEl.innerText === '******';
+                                if (!isHidden) {
+                                    balanceValEl.innerText = actualBalance;
+                                }
                             }
                         }
                     }
                 } else {
-                    const localStatus = localStorage.getItem('kycStatus') || 'unverified';
-                    updateKycButtonUI(localStatus);
+                    // ቶከኑ ካለፈ ወይም ስህተት ከኖር ሙሉ መረጃውን አጽድቶ ወደ መግቢያው መውሰድ
+                    localStorage.clear();
+                    window.location.href = 'signin.html';
                 }
             } catch (e) {
                 console.error('Error loading user profile:', e);
                 const localStatus = localStorage.getItem('kycStatus') || 'unverified';
-                updateKycButtonUI(localStatus);
+                if (typeof updateKycButtonUI === 'function') {
+                    updateKycButtonUI(localStatus);
+                }
             }
         }
 

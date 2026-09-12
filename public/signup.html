@@ -530,36 +530,39 @@
         }
 
         async function handleGoogleResponse(response) {
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/google-auth`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token: response.credential })
-                });
+    try {
+        // ከመግባቱ በፊት የቆዩ መረጃዎች እንዳይደባለቁ ማጽዳት
+        localStorage.clear(); 
+        sessionStorage.clear();
 
-                const data = await res.json();
-                if (data.success) {
-                    if (data.exists) {
-                        showErrorToast('Account already exists! Please sign in.');
-                        setTimeout(() => window.location.href = 'signin.html', 1500);
-                    } else {
-                        // <--- የተስተካከለው ቦታ: ከጉግል ሲገባ ትክክለኛውን ኢሜይል እና ቶከን መያዝ
-                        if (data.email) {
-                            localStorage.setItem('signupEmail', data.email);
-                        }
-                        if (data.token) {
-                            localStorage.setItem('authToken', data.token);
-                        }
-                        window.location.href = data.redirectUrl || 'dashboard.html';
-                    }
-                } else {
-                    showErrorToast(data.message || 'Google authentication failed.');
-                }
-            } catch (err) {
-                console.error('Error:', err);
-                showErrorToast('Server error during Google sign-up.');
+        const res = await fetch(`${API_BASE_URL}/api/google-auth`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: response.credential })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+            // ከባክኤንድ የመጣውን ትክክለኛ አዲስ ቶከን እና ኢሜይል ማስቀመጥ
+            if (data.token) {
+                localStorage.setItem('authToken', data.token);
             }
+            if (data.user && data.user.email) {
+                localStorage.setItem('userEmail', data.user.email);
+            } else if (data.email) {
+                localStorage.setItem('userEmail', data.email);
+            }
+
+            // ወደ ዳሽቦርድ መውሰድ
+            window.location.href = data.redirectUrl || 'dashboard.html';
+        } else {
+            showErrorToast(data.message || 'Google authentication failed.');
         }
+    } catch (err) {
+        console.error('Error:', err);
+        showErrorToast('Server error during Google sign-up.');
+    }
+}
 
         let toastTimer = null;
 

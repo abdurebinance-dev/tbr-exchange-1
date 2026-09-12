@@ -439,36 +439,39 @@
 
         // --- የተስተካከለው የ Google Sign-in ሎጂክ ---
         async function handleGoogleResponse(response) {
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/google-auth`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token: response.credential })
-                });
+    try {
+        // ከመግባቱ በፊት የቆዩ መረጃዎች እንዳይደባለቁ ማጽዳት
+        localStorage.clear(); 
+        sessionStorage.clear();
 
-                const data = await res.json();
-                if (data.success) {
-                    if (data.exists) {
-                        // ሰርቨሩ የላከውን ትክክለኛ ኢሜይል እና ቶከን localStorage ላይ መያዝ (እንዳይደባለቅ)
-                        if (data.email) {
-                            localStorage.setItem('userEmail', data.email);
-                        }
-                        if (data.token) {
-                            localStorage.setItem('authToken', data.token);
-                        }
-                        window.location.href = data.redirectUrl || 'dashboard.html';
-                    } else {
-                        localStorage.setItem('signupEmail', data.email);
-                        window.location.href = 'signup.html';
-                    }
-                } else {
-                    showError("Authentication Failed", data.message || 'Google authentication failed.');
-                }
-            } catch (err) {
-                console.error('Error:', err);
-                showError("Server Error", 'Server error during Google sign-in.');
+        const res = await fetch(`${API_BASE_URL}/api/google-auth`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: response.credential })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+            // ከባክኤንድ የመጣውን ትክክለኛ አዲስ ቶከን እና ኢሜይል ማስቀመጥ
+            if (data.token) {
+                localStorage.setItem('authToken', data.token);
             }
+            if (data.user && data.user.email) {
+                localStorage.setItem('userEmail', data.user.email);
+            } else if (data.email) {
+                localStorage.setItem('userEmail', data.email);
+            }
+
+            // ወደ ዳሽቦርድ መውሰድ
+            window.location.href = data.redirectUrl || 'dashboard.html';
+        } else {
+            showErrorToast(data.message || 'Google authentication failed.');
         }
+    } catch (err) {
+        console.error('Error:', err);
+        showErrorToast('Server error during Google sign-up.');
+    }
+}
 
         function showError(title, message) {
             const msgBox = document.getElementById('responseMessage');
