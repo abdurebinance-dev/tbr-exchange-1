@@ -759,55 +759,49 @@ app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
     }
 });
 
-// 1. Escrow Disputes API (የ length ኤርር እንዳይፈጥር በ Array መልክ መመለስ)
-app.get('/api/admin/escrow-disputes', verifyAdminToken, async (req, res) => {
+// --- KYC Submission Route (የተስተካከለ) ---
+app.post('/api/kyc/submit', async (req, res) => {
     try {
-        res.json([]); // በቀጥታ አርሬ መመለስ
-    } catch (err) {
-        res.status(500).json([]);
-    }
-});
+        const { userId, email, fullName, frontImage, backImage, selfieImage } = req.body;
 
-// 2. KYC Requests API (ፎቶዎችን ከየትኛውም የሰንጠረዥ ቦታ አግኝቶ ለማምጣት)
-app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
-    try {
-        const kycList = await KYC.find({}).lean();
-        const userList = await User.find({}).lean();
+        // 1. መረጃውን በ KYC ኮሌክሽን ውስጥ መመዝገብ ወይም ማዘመን
+        let kycRecord = await KYC.findOne({ $or: [{ userId }, { email }] });
+        
+        if (kycRecord) {
+            kycRecord.frontImage = frontImage || kycRecord.frontImage;
+            kycRecord.backImage = backImage || kycRecord.backImage;
+            kycRecord.selfieImage = selfieImage || kycRecord.selfieImage;
+            kycRecord.fullName = fullName || kycRecord.fullName;
+            kycRecord.status = 'pending';
+            await kycRecord.save();
+        } else {
+            kycRecord = new KYC({
+                userId,
+                email,
+                fullName,
+                frontImage,
+                backImage,
+                selfieImage,
+                status: 'pending'
+            });
+            await kycRecord.save();
+        }
 
-        const requests = userList.map(u => {
-            const kyc = kycList.find(k => 
-                (k.userId && k.userId.toString() === u._id.toString()) || 
-                (k.email && u.email && k.email.toLowerCase() === u.email.toLowerCase())
-            );
+        // 2. በ User ዶክመንት ላይም የ KYC ሁኔታን እና ፎቶዎችን ማዘመን (ከተፈለገ)
+        if (userId) {
+            await User.findByIdAndUpdate(userId, {
+                kycStatus: 'pending',
+                'kycData.frontImage': frontImage,
+                'kycData.backImage': backImage,
+                'kycData.selfieImage': selfieImage,
+                fullName: fullName || undefined
+            });
+        }
 
-            let f = kyc?.frontImage || kyc?.frontId || kyc?.kycFront || kyc?.front || u?.kycData?.frontImage || u?.kycData?.frontId || u?.frontImage || '';
-            let b = kyc?.backImage || kyc?.backId || kyc?.kycBack || kyc?.back || u?.kycData?.backImage || u?.kycData?.backId || u?.backImage || '';
-            let s = kyc?.selfieImage || kyc?.selfie || kyc?.kycSelfie || kyc?.userPhoto || u?.kycData?.selfieImage || u?.kycData?.selfie || u?.selfieImage || '';
-
-            if (Buffer.isBuffer(f)) f = `data:image/jpeg;base64,${f.toString('base64')}`;
-            if (Buffer.isBuffer(b)) b = `data:image/jpeg;base64,${b.toString('base64')}`;
-            if (Buffer.isBuffer(s)) s = `data:image/jpeg;base64,${s.toString('base64')}`;
-
-            return {
-                _id: kyc?._id || u._id,
-                userId: u.email || u.username,
-                email: u.email,
-                frontImage: f,
-                frontId: f,
-                backImage: b,
-                backId: b,
-                selfieImage: s,
-                selfie: s,
-                status: kyc?.status || u.kycStatus || 'pending',
-                fullName: kyc?.fullName || u.fullName || 'User'
-            };
-        });
-
-        const activeRequests = requests.filter(r => r.status === 'pending' || r.frontImage || r.selfieImage);
-        return res.json({ success: true, data: activeRequests });
+        res.json({ success: true, message: 'KYC documents submitted successfully and pending review.' });
     } catch (error) {
-        console.error("KYC Fetch Error:", error);
-        return res.status(500).json({ success: false, data: [] });
+        console.error("KYC Submission Error:", error);
+        res.status(500).json({ success: false, message: 'Error submitting KYC documents' });
     }
 });
 
