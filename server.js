@@ -103,6 +103,15 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/tbr_exchang
 })
 .catch(err => console.log('MongoDB Connection Error:', err));
 
+mongoose.connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+}).then(() => {
+    console.log("Connected to MongoDB successfully");
+    assignIdsToExistingUsers();
+
+}).catch(err => console.error("MongoDB connection error:", err));
+
 // KYC Schema & Model
 const kycSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
@@ -952,6 +961,38 @@ app.post('/api/kyc/submit', async (req, res) => {
         res.status(500).json({ success: false, message: 'Server error during KYC submission' });
     }
 });
+
+async function assignIdsToExistingUsers() {
+    try {
+        const usersWithoutId = await User.find({ 
+            $or: [{ userId: { $exists: false } }, { userId: null }, { userId: "" }] 
+        }).sort({ createdAt: 1 });
+
+        if (usersWithoutId.length === 0) return;
+
+        const lastUserWithId = await User.findOne({ 
+            userId: { $regex: /^TBR-\d+$/ } 
+        }).sort({ userId: -1 });
+
+        let nextIdNumber = 1;
+        if (lastUserWithId && lastUserWithId.userId) {
+            const parts = lastUserWithId.userId.split('-');
+            if (parts.length === 2) {
+                nextIdNumber = parseInt(parts[1], 10) + 1;
+            }
+        }
+
+        for (let user of usersWithoutId) {
+            user.userId = `TBR-${String(nextIdNumber).padStart(6, '0')}`;
+            await user.save();
+            nextIdNumber++;
+        }
+
+        console.log(`Successfully assigned IDs to ${usersWithoutId.length} existing users.`);
+    } catch (err) {
+        console.error('Error assigning IDs to existing users:', err);
+    }
+}
 
 // Server Listen
 app.listen(PORT, () => {

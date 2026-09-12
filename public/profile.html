@@ -250,6 +250,13 @@
                 <div class="profile-details">
                     <h2 id="profileName">USER</h2>
                     <p class="user-email" id="profileEmail">user@example.com</p>
+                    <!-- የተጠቃሚ ልዩ መለያ ቁጥር (User ID) ከኮፒ በተን ጋር -->
+                    <div class="user-id-container" style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+                        <span id="userUniqueId" style="color: #f3ba2f; font-size: 13px; font-weight: 600;">TBR-000000</span>
+                        <button onclick="copyUserId()" title="Copy ID" style="background: transparent; border: none; color: #888; cursor: pointer; padding: 0; font-size: 12px; display: flex; align-items: center; gap: 4px;">
+                            <i class="fas fa-copy"></i> Copy
+                        </button>
+                    </div>
                 </div>
             </div>
             <a href="settings.html" class="settings-btn"><i class="fa-solid fa-gear"></i> Settings</a>
@@ -314,15 +321,27 @@
     </div>
 
     <script>
+        // User ID ቱን ኮፒ ለማድረግ የሚያስችል ፊንክሽን
+        function copyUserId() {
+            const userIdText = document.getElementById('userUniqueId').innerText;
+            navigator.clipboard.writeText(userIdText).then(() => {
+                alert('User ID copied: ' + userIdText);
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+            });
+        }
+
         async function loadUserProfile() {
             // 1. መጀመሪያ localStorage ላይ ያለውን ፈጣን ውሂብ በማንበብ UI ማሳየት
             let name = localStorage.getItem('userName') || localStorage.getItem('name') || "USER";
             let email = localStorage.getItem('userEmail') || localStorage.getItem('email') || "user@example.com";
             let kycStatus = localStorage.getItem('kycStatus') || 'not_submitted';
+            let userId = localStorage.getItem('userUniqueId') || 'TBR-000000';
 
             let displayName = name.toUpperCase();
             document.getElementById('profileName').innerText = displayName;
             document.getElementById('profileEmail').innerText = email;
+            document.getElementById('userUniqueId').innerText = userId;
             document.getElementById('avatarInitial').innerText = displayName.charAt(0).toUpperCase();
 
             // 2. ሰርቨር ጋር በመገናኘት ትክክለኛውን መረጃ ከ /api/auth/me ማምጣት
@@ -341,16 +360,19 @@
                         name = data.user.fullName || data.user.name || name;
                         email = data.user.email || email;
                         kycStatus = data.user.kycStatus || (data.user.isVerified ? 'verified' : kycStatus);
+                        userId = data.user.userId || userId;
                         
                         displayName = name.toUpperCase();
                         document.getElementById('profileName').innerText = displayName;
                         document.getElementById('profileEmail').innerText = email;
+                        document.getElementById('userUniqueId').innerText = userId;
                         document.getElementById('avatarInitial').innerText = displayName.charAt(0).toUpperCase();
 
                         // LocalStorage ማዘመን
                         localStorage.setItem('userName', name);
                         localStorage.setItem('userEmail', email);
                         localStorage.setItem('kycStatus', kycStatus);
+                        localStorage.setItem('userUniqueId', userId);
                     }
                 }
             } catch (e) {
