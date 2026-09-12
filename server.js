@@ -769,18 +769,24 @@ app.get('/api/admin/escrow-disputes', verifyAdmin, async (req, res) => {
 });
 
 // 2. KYC Requests API (የተስተካከለ - ፎቶዎችን በትክክል ለማስተላለፍ)
-// --- Admin KYC Requests API (የተስተካከለ - ከ KYC ኮሌክሽን በቀጥታ የሚያነብ) ---
+// --- Admin KYC Requests API (Pending የሆኑትን ብቻ የሚያሳይ) ---
 app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
     try {
-        // በቀጥታ ከ KYC ኮሌክሽን መረጃዎችን ማምጣት
-        const kycList = await KYC.find({}).lean();
+        // በቀጥታ ስታተሳቸው 'pending' የሆኑትን ብቻ ከ KYC ኮሌክሽን ማምጣት
+        const kycList = await KYC.find({ 
+            $or: [
+                { status: 'pending' }, 
+                { status: { $exists: false } }, 
+                { status: null }, 
+                { status: "" }
+            ] 
+        }).lean();
 
         const requests = kycList.map(kyc => {
             let f = kyc.frontImage || '';
             let b = kyc.backImage || '';
             let s = kyc.selfieImage || '';
 
-            // ፎቶዎቹ Buffer ሆኖ ከተቀመጡ ወደ Base64 መቀየር
             if (Buffer.isBuffer(f)) f = `data:image/jpeg;base64,${f.toString('base64')}`;
             if (Buffer.isBuffer(b)) b = `data:image/jpeg;base64,${b.toString('base64')}`;
             if (Buffer.isBuffer(s)) s = `data:image/jpeg;base64,${s.toString('base64')}`;
