@@ -360,8 +360,7 @@
             }
         }
 
-        function openKycModal(kycItem) {
-    // ፎቶዎቹ በትክክል ምን ስም እንደተሰጣቸው ለማየት
+   function openKycModal(kycItem) {
     console.log("Full KYC Object Data:", kycItem);
 
     let modal = document.getElementById('kycModal');
@@ -394,10 +393,12 @@
     
     document.getElementById('modalUserEmail').innerText = `KYC Verification Details for: ${kycItem.userId || kycItem.email || kycItem.userEmail || 'N/A'}`;
     
-    // ዳታቤዝ ውስጥ ሊኖሩ የሚችሉ ሁሉንም possible ველ ስሞች ማመሳከሪያ
-    const front = kycItem.frontImage || kycItem.frontId || kycItem.kycFront || kycItem.front || kycItem.idFront || '';
-    const back = kycItem.backImage || kycItem.backId || kycItem.kycBack || kycItem.back || kycItem.idBack || '';
-    const selfie = kycItem.selfieImage || kycItem.selfie || kycItem.userPhoto || kycItem.kycSelfie || kycItem.photo || '';
+    // ሁሉንም ሊሆኑ የሚችሉ የምስል አድራሻ ველዎችን መፈተሽ
+    const front = kycItem.frontImage || kycItem.frontId || kycItem.kycFront || kycItem.front || kycItem.idFront || kycItem.front_image || kycItem.documentFront || '';
+    const back = kycItem.backImage || kycItem.backId || kycItem.kycBack || kycItem.back || kycItem.idBack || kycItem.back_image || kycItem.documentBack || '';
+    const selfie = kycItem.selfieImage || kycItem.selfie || kycItem.userPhoto || kycItem.kycSelfie || kycItem.photo || kycItem.user_photo || kycItem.selfie_image || '';
+
+    console.log("Resolved Image Paths -> Front:", front, "Back:", back, "Selfie:", selfie);
 
     document.getElementById('modalFrontImg').src = front;
     document.getElementById('modalBackImg').src = back;
@@ -405,7 +406,6 @@
     
     modal.style.display = 'flex';
 }
-
         async function performKycAction(kycId, status) {
             let rejectionReason = status === 'rejected' ? prompt('Reason for rejection:', 'Invalid documents') : '';
             if (status === 'rejected' && !rejectionReason) return;
