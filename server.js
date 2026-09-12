@@ -759,32 +759,35 @@ app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
     }
 });
 
-// --- Admin KYC Requests Route (Fixed to catch all submissions) ---
+// --- Admin KYC Requests Route (Fixed to include all alias keys) ---
 app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
     try {
-        // 1. መጀመሪያ ከ KYC ኮሌክሽን መረጃዎችን መፈለግ
         let kycRecords = await KYC.find({}).populate('userId', 'email fullName kycData kycStatus').sort({ _id: -1 });
-
-        // 2. በ KYC ኮሌክሽን ውስጥ ያልሆኑ ነገር ግን በ User ዶክመንት ውስጥ kycStatus ያላቸውን መፈለግ እና ማዋሃድ
         const usersWithKyc = await User.find({ 
             $or: [
                 { kycStatus: { $in: ['pending', 'under_review'] } },
-                { 'kycData.frontImage': { $exists: true, $ne: '' } }
+                { 'kycData.frontImage': { $exists: true, $ne: '' } },
+                { 'kycData.frontId': { $exists: true, $ne: '' } }
             ] 
         }).sort({ _id: -1 });
 
-        // ሁለቱን መረጃዎች በአግባቡ ማቀናጀት (Mapping)
         const combinedRequests = usersWithKyc.map(u => {
-            // በ KYC ኮሌክሽን ውስጥ የዚህ ዩዘር ሪከርድ አለ ወይ መፈተሽ
             const existingKyc = kycRecords.find(k => k.userId && (k.userId._id.toString() === u._id.toString() || k.email === u.email));
             
+            const fImg = (existingKyc && (existingKyc.frontImage || existingKyc.frontId)) || (u.kycData && (u.kycData.frontImage || u.kycData.frontId)) || '';
+            const bImg = (existingKyc && (existingKyc.backImage || existingKyc.backId)) || (u.kycData && (u.kycData.backImage || u.kycData.backId)) || '';
+            const sImg = (existingKyc && (existingKyc.selfieImage || existingKyc.selfie)) || (u.kycData && (u.kycData.selfieImage || u.kycData.selfie)) || '';
+
             return {
                 _id: existingKyc ? existingKyc._id : u._id,
                 userId: u.email,
                 email: u.email,
-                frontImage: (existingKyc && existingKyc.frontImage) || (u.kycData && u.kycData.frontImage) || '',
-                backImage: (existingKyc && existingKyc.backImage) || (u.kycData && u.kycData.backImage) || '',
-                selfieImage: (existingKyc && existingKyc.selfieImage) || (u.kycData && u.kycData.selfieImage) || '',
+                frontImage: fImg,
+                frontId: fImg,
+                backImage: bImg,
+                backId: bImg,
+                selfieImage: sImg,
+                kycSelfie: sImg,
                 status: (existingKyc && existingKyc.status) || u.kycStatus || 'pending',
                 fullName: (existingKyc && existingKyc.fullName) || u.fullName || 'User',
                 idNumber: (existingKyc && existingKyc.idNumber) || (u.kycData && u.kycData.idNumber) || '',
@@ -800,7 +803,6 @@ app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
         res.status(500).json({ success: false, message: 'Error fetching KYC requests' });
     }
 });
-
 // --- Admin KYC Action Route ---
 app.post('/api/admin/kyc-action', verifyAdmin, async (req, res) => {
     try {
