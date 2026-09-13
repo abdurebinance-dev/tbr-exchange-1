@@ -65,24 +65,36 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener("DOMContentLoaded", function() {
     const themeToggleBtn = document.getElementById("theme-toggle");
     
+    // ከዚህ በፊት የተመረጠውን ከለር ቼክ ማድረግ
     if (localStorage.getItem("theme") === "light") {
         document.body.style.backgroundColor = "#ffffff";
         document.body.style.color = "#000000";
-        if(themeToggleBtn) themeToggleBtn.className = "fa-solid fa-sun";
+        if(themeToggleBtn) {
+            themeToggleBtn.classList.remove("fa-moon");
+            themeToggleBtn.classList.add("fa-sun");
+        }
     }
 
+    // የጨረቃ/የፀሐይ አዝራሩ ሲጫን የሚሰራው ትዕዛዝ
     if (themeToggleBtn) {
         themeToggleBtn.style.cursor = "pointer";
         themeToggleBtn.addEventListener("click", function() {
-            if (document.body.style.backgroundColor === "rgb(255, 255, 255)") {
+            // የአሁኑ ከለር ነጭ (Light Mode) መሆኑን ማረጋገጥ
+            const currentBg = window.getComputedStyle(document.body).backgroundColor;
+            
+            if (currentBg === "rgb(255, 255, 255)") {
+                // ወደ Dark mode መቀየር
                 document.body.style.backgroundColor = "#080808";
                 document.body.style.color = "#ffffff";
-                themeToggleBtn.className = "fa-solid fa-moon";
+                themeToggleBtn.classList.remove("fa-sun");
+                themeToggleBtn.classList.add("fa-moon");
                 localStorage.setItem("theme", "dark");
             } else {
+                // ወደ Light mode መቀየር
                 document.body.style.backgroundColor = "#ffffff";
                 document.body.style.color = "#000000";
-                themeToggleBtn.className = "fa-solid fa-sun";
+                themeToggleBtn.classList.remove("fa-moon");
+                themeToggleBtn.classList.add("fa-sun");
                 localStorage.setItem("theme", "light");
             }
         });
