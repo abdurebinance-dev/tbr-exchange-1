@@ -267,7 +267,7 @@
 
         async function loadAdminData() {
             fetchStats();
-            loadKycData('pending'); // በነባሪነት Pending ዎችን ይዞ ይምጣ
+            loadKycData('pending');
             fetchEscrowDisputes();
             fetchUsersList();
         }
@@ -285,7 +285,6 @@
             } catch (err) { console.error('Error loading stats:', err); }
         }
 
-        // የ KYC ዳታዎችን በ Status (pending, approved, rejected) ለመጥራት የተስተካከለ ፈንክሽን
         async function loadKycData(status = 'pending') {
             try {
                 const res = await fetch(`${API_BASE}/api/admin/kyc-requests?status=${status}`, { headers: { 'Authorization': 'Bearer ' + getToken() } });
@@ -293,7 +292,6 @@
                 const tbody = document.getElementById('kycTableBody');
                 
                 if (res.ok && json.success) {
-                    // ዳታው ሰርቨሩ ላይ ካልተጣራ በ JavaScript እናጣራዋለን
                     const dataList = (json.data || []).filter(item => item.status === status);
 
                     if (dataList.length === 0) {
@@ -493,7 +491,7 @@
                 if (res.ok && json.success) {
                     alert('Rate & Fee settings saved successfully!');
                 } else {
-                    alert('Failed to save settings.');
+                    alert(json.message || 'Failed to save settings.');
                 }
             } catch (err) {
                 alert('Network error while saving settings.');
