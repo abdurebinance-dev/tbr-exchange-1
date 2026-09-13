@@ -62,3 +62,31 @@ document.addEventListener('DOMContentLoaded', () => {
         calcInput.addEventListener('input', calculate);
     }
 });
+document.addEventListener("DOMContentLoaded", function() {
+    const themeToggleBtn = document.getElementById("themeToggleBtn");
+    
+    // ከዚህ በፊት ተጠቃሚው የመረጠውን ከለር ማስታወስ
+    if (localStorage.getItem("theme") === "light") {
+        document.body.style.backgroundColor = "#ffffff";
+        document.body.style.color = "#000000";
+        if(themeToggleBtn) themeToggleBtn.innerHTML = '<i class="fas fa-sun"></i>';
+    }
+
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener("click", function() {
+            if (document.body.style.backgroundColor === "rgb(255, 255, 255)") {
+                // ወደ Dark mode መመለስ
+                document.body.style.backgroundColor = "#080808";
+                document.body.style.color = "#ffffff";
+                themeToggleBtn.innerHTML = '<i class="fas fa-moon"></i>';
+                localStorage.setItem("theme", "dark");
+            } else {
+                // ወደ Light mode መቀየር
+                document.body.style.backgroundColor = "#ffffff";
+                document.body.style.color = "#000000";
+                themeToggleBtn.innerHTML = '<i class="fas fa-sun"></i>';
+                localStorage.setItem("theme", "light");
+            }
+        });
+    }
+});
