@@ -1033,13 +1033,29 @@ app.post('/api/kyc/submit', verifyToken, async (req, res) => {
             return res.status(404).json({ success: false, message: "User not found" });
         }
 
-        // መረጃዎችን ማዘመን እና ስታተሱን ወደ pending መቀየር
+        // 1. User ዶክመንት ማዘመን
         user.fullName = fullName || user.fullName;
-        user.kycStatus = 'pending'; // 👈 ቁልፉ ነጥብ እዚህ ላይ ነው
-        
-        // እንደ አስፈላጊነቱ የፎቶ ሊንኮችን ወይም ፋይሎችን እዚህ ጋር ማስቀመጥ ይቻላል
-
+        user.kycStatus = 'pending';
         await user.save();
+
+        // 2. ለ Admin Panel የሚሆን Independent KYC Collection ማዘመን (Upsert)
+        await KYC.findOneAndUpdate(
+            { userId: user._id },
+            {
+                userId: user._id,
+                email: user.email,
+                fullName,
+                idNumber,
+                dob: dateOfBirth,
+                address: residentialAddress,
+                docType,
+                frontImage,
+                backImage,
+                selfieImage,
+                status: 'pending'
+            },
+            { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
 
         res.json({ success: true, message: "KYC submitted successfully for review" });
     } catch (error) {
