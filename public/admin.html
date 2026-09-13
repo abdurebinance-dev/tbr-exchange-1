@@ -286,21 +286,32 @@
         }
 
 async function loadKycData(status = 'pending') {
+    // የጫንከውን ታብ አክቲቭ ስቴት ማስተካከል
+    document.querySelectorAll('#tab-kyc button.btn').forEach(b => {
+        if (b.id) b.style.opacity = '0.6';
+    });
+    const activeBtn = document.getElementById(`btn-${status}-kyc`);
+    if (activeBtn) activeBtn.style.opacity = '1';
+
     try {
-        const res = await fetch(`${API_BASE}/api/admin/kyc-requests?status=${status}`, { headers: { 'Authorization': 'Bearer ' + getToken() } });
+        const res = await fetch(`${API_BASE}/api/admin/kyc-requests`, { headers: { 'Authorization': 'Bearer ' + getToken() } });
         const json = await res.json();
         const tbody = document.getElementById('kycTableBody');
         
         if (res.ok && json.success) {
-            let dataList = json.data || json.requests || json.kycRequests || json.users || [];
-            if (!Array.isArray(dataList) && Array.isArray(json)) {
-                dataList = json;
+            let rawList = json.data || json.requests || json.kycRequests || json.users || [];
+            if (!Array.isArray(rawList) && Array.isArray(json)) {
+                rawList = json;
             }
 
-            console.log("ACTUAL KYC OBJECT FROM SERVER:", dataList);
+            // ትክክለኛውን status ማጣሪያ (strict match)
+            const dataList = rawList.filter(item => {
+                const itemStatus = (item.status || item.kycStatus || 'pending').toLowerCase().trim();
+                return itemStatus === status.toLowerCase().trim();
+            });
 
             if (dataList.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">No KYC requests found.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">No ${status} KYC requests found.</td></tr>`;
                 return;
             }
 
