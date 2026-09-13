@@ -807,17 +807,23 @@ app.post('/api/admin/login', async (req, res) => {
 });
 
 // --- Admin Stats Route ---
-app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
+app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
     try {
         const totalUsers = await User.countDocuments({});
-        // ሁለቱንም KYC ኮሌክሽን እና ዩዘርስ ኮሌክሽን በመፈተሽ ትክክለኛውን የፔንዲንግ ብዛት ማግኘት
-        const kycPendingKYC = await KYC.countDocuments({ 
-            status: { $in: ['pending', 'under_review', 'undefined', null] } 
+        // ትክክለኛው የKYC ፔንዲንግ ብዛት ከKYC ኮሌክሽን ብቻ
+        const kycPending = await KYC.countDocuments({ 
+            status: { $in: ['pending', 'under_review', 'submitted', ''] } 
         });
-        const kycPendingUser = await User.countDocuments({ kycStatus: 'pending' });
-        const kycPending = Math.max(kycPendingKYC, kycPendingUser);
         
-        res.json({ success: true, data: { totalUsers, kycPending, todayVolume: "0 USDT / 0 ETB", activeEscrow: "0 USDT" } });
+        res.json({ 
+            success: true, 
+            data: { 
+                totalUsers, 
+                kycPending, 
+                todayVolume: "0 USDT / 0 ETB", 
+                activeEscrow: "0 USDT" 
+            } 
+        });
     } catch (error) {
         console.error("Stats Error:", error);
         res.status(500).json({ success: false, message: 'Error fetching stats' });
