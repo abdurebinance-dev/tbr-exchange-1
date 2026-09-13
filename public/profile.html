@@ -407,41 +407,23 @@
             });
         }
 
-      async function loadUserProfile() {
+        async function loadUserProfile() {
     let name = localStorage.getItem('userName') || localStorage.getItem('name') || "USER";
-    let email = localStorage.getItem('userEmail') || localStorage.getItem('email') || "";
+    let email = localStorage.getItem('userEmail') || localStorage.getItem('email') || "user@example.com";
     let kycStatus = localStorage.getItem('kycStatus') || 'not_submitted';
+    let rejectionReason = localStorage.getItem('kycRejectionReason') || 'Document check failed';
     let userId = localStorage.getItem('userUniqueId');
     
     if (!userId || userId === 'TBR------' || userId === 'TBR-000000' || userId.includes('Loading')) {
-        if (email) {
-            let hash = 0;
-            for (let i = 0; i < email.length; i++) {
-                hash = ((hash << 5) - hash) + email.charCodeAt(i);
-                hash |= 0;
-            }
-            let uniqueNum = Math.abs(hash) % 900000 + 100000;
-            userId = 'TBR-' + uniqueNum;
-            localStorage.setItem('userUniqueId', userId);
-        } else {
-            userId = 'TBR------';
+        let hash = 0;
+        for (let i = 0; i < email.length; i++) {
+            hash = ((hash << 5) - hash) + email.charCodeAt(i);
+            hash |= 0;
         }
+        let uniqueNum = Math.abs(hash) % 900000 + 100000;
+        userId = 'TBR-' + uniqueNum;
+        localStorage.setItem('userUniqueId', userId);
     }
-
-    const usernameFallback = (name && name !== "USER") ? name : (email ? email.split('@')[0] : 'User');
-    const userObj = { email, username: usernameFallback, kycStatus, fullName: localStorage.getItem('fullName') || '' };
-    const displayName = (userObj.kycStatus === 'approved' && userObj.fullName) ? userObj.fullName : (userObj.username || 'User');
-
-    // UI elements update
-    const profileNameEl = document.getElementById('profileNameDisplay');
-    if (profileNameEl) profileNameEl.innerText = displayName;
-
-    const emailEl = document.getElementById('userEmailDisplay');
-    if (emailEl) emailEl.innerText = email || 'No email';
-
-    const idEl = document.getElementById('userIdDisplay');
-    if (idEl) idEl.innerText = userId;
-}
 
             let totalTrades = localStorage.getItem('totalTrades') || '0';
             let volume = localStorage.getItem('volume') || '0 USDT';
