@@ -367,37 +367,42 @@
         }
 
         function renderKycs(tbody, list) {
-            let html = '';
-            list.forEach(item => {
-                const userId = item.userId || item.email || item.userEmail || item._id || 'N/A';
-                const currentStatus = String(item.status || item.kycStatus || 'pending').toLowerCase();
-                const isResolved = currentStatus === 'approved' || currentStatus === 'verified' || currentStatus === 'rejected';
-                
-                let badgeClass = 'badge-pending';
-                if (currentStatus === 'approved' || currentStatus === 'verified') badgeClass = 'badge-approved';
-                else if (currentStatus === 'rejected') badgeClass = 'badge-rejected';
+    let html = '';
+    list.forEach(item => {
+        const userEmail = item.email || item.userEmail || item.userId || item._id || 'N/A';
+        const userName = item.fullName || item.name || '';
+        const currentStatus = String(item.status || item.kycStatus || 'pending').toLowerCase();
+        const isResolved = currentStatus === 'approved' || currentStatus === 'verified' || currentStatus === 'rejected';
+        
+        let badgeClass = 'badge-pending';
+        if (currentStatus === 'approved' || currentStatus === 'verified') badgeClass = 'badge-approved';
+        else if (currentStatus === 'rejected') badgeClass = 'badge-rejected';
 
-                const safeJsonStr = JSON.stringify(item).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
+        const safeJsonStr = JSON.stringify(item).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
 
-                html += `<tr>
-                    <td>User: ${userId} <br><small style="color:gray;">db status: [${currentStatus}]</small></td>
-                    <td>
-                        <button onclick='openKycModal(${safeJsonStr})' class="btn btn-sm" style="color: #f3ba2f; background: #181a20; border: 1px solid #f3ba2f; padding: 5px 12px; border-radius: 4px; cursor: pointer;">
-                            <i class="fas fa-eye"></i> View Docs
-                        </button>
-                    </td>
-                    <td><span class="${badgeClass}">${currentStatus}</span></td>
-                    <td>
-                        ${isResolved 
-                            ? `<span style="color: var(--text-muted); font-weight: 600; font-size: 12px;">Completed</span>` 
-                            : `<button class="btn btn-approve" onclick="performKycAction('${item._id || item.id}', 'approved')">Approve</button>
-                               <button class="btn btn-reject" onclick="performKycAction('${item._id || item.id}', 'rejected')">Reject</button>`
-                        }
-                    </td>
-                </tr>`;
-            });
-            tbody.innerHTML = html;
-        }
+        html += `<tr>
+            <td>
+                <strong>${userEmail}</strong>
+                ${userName ? `<br><small style="color: var(--text-muted); font-size: 11px;">${userName}</small>` : ''}
+                <br><small style="color:gray;">db status: [${currentStatus}]</small>
+            </td>
+            <td>
+                <button onclick='openKycModal(${safeJsonStr})' class="btn btn-sm" style="color: #f3ba2f; background: #181a20; border: 1px solid #f3ba2f; padding: 5px 12px; border-radius: 4px; cursor: pointer;">
+                    <i class="fas fa-eye"></i> View Docs
+                </button>
+            </td>
+            <td><span class="${badgeClass}">${currentStatus}</span></td>
+            <td>
+                ${isResolved 
+                    ? `<span style="color: var(--text-muted); font-weight: 600; font-size: 12px;">Completed</span>` 
+                    : `<button class="btn btn-approve" onclick="performKycAction('${item._id || item.id}', 'approved')">Approve</button>
+                       <button class="btn btn-reject" onclick="performKycAction('${item._id || item.id}', 'rejected')">Reject</button>`
+                }
+            </td>
+        </tr>`;
+    });
+    tbody.innerHTML = html;
+}
 
         async function fetchEscrowDisputes() {
             try {
@@ -461,7 +466,7 @@
                         <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px;">
                             <div>
                                 <p style="margin-bottom: 5px; font-size: 13px; color: #848e9c; font-weight: bold;">Front ID</p>
-                                <img id="modalFrontImg" src="" style="width: 260px; height: 170px; object-fit: cover; border-radius: 6px; border: 1px solid #474d57; cursor: pointer;" onclick="window.open(this.src)" title="Click to zoom">
+                                <img id="modalSelfieImg" src="" style="width: 400px; height: 260px; object-fit: contain; background: #0b0e11; border-radius: 6px; border: 2px solid #f3ba2f; cursor: pointer;" onclick="window.open(this.src)" title="Click to zoom">
                             </div>
                             <div>
                                 <p style="margin-bottom: 5px; font-size: 13px; color: #848e9c; font-weight: bold;">Back ID</p>
