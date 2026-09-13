@@ -353,7 +353,7 @@
             </div>
         </div>
 
-        <!-- KYC Verification Banner (አክብበውት ወደነበረው የዩዘር ፔል ቦታ የተስተካከለ) -->
+        <!-- KYC Verification Banner -->
         <div id="kycBannerContainer" class="kyc-banner">
             <div class="kyc-banner-left">
                 <h4 id="kycBannerTitle">Identity not verified</h4>
@@ -408,63 +408,35 @@
         }
 
         async function loadUserProfile() {
-    let name = localStorage.getItem('userName') || localStorage.getItem('name') || "USER";
-    let email = localStorage.getItem('userEmail') || localStorage.getItem('email') || "user@example.com";
-    let kycStatus = localStorage.getItem('kycStatus') || 'not_submitted';
-    let rejectionReason = localStorage.getItem('kycRejectionReason') || 'Document check failed';
-    let userId = localStorage.getItem('userUniqueId');
-
-    let userId = localStorage.getItem('userUniqueId');
-
-        // እዚህ አስገባው:
-        const storedFullName = localStorage.getItem('fullName') || '';
-        const usernameFallback = (name && name !== "USER") ? name : email.split('@')[0];
-        const displayName = (kycStatus === 'approved' && storedFullName) 
-            ? storedFullName 
-            : (usernameFallback || email.split('@')[0]);
-        const profileNameEl = document.getElementById('profileNameDisplay');
-        if (profileNameEl) {
-            profileNameEl.innerText = displayName;
-        }
-    
-    if (!userId || userId === 'TBR------' || userId === 'TBR-000000' || userId.includes('Loading')) {
-        let hash = 0;
-        for (let i = 0; i < email.length; i++) {
-            hash = ((hash << 5) - hash) + email.charCodeAt(i);
-            hash |= 0;
-        }
-        let uniqueNum = Math.abs(hash) % 900000 + 100000;
-        userId = 'TBR-' + uniqueNum;
-        localStorage.setItem('userUniqueId', userId);
-    }
+            let name = localStorage.getItem('userName') || localStorage.getItem('name') || "USER";
+            let email = localStorage.getItem('userEmail') || localStorage.getItem('email') || "user@example.com";
+            let kycStatus = String(localStorage.getItem('kycStatus') || 'not_submitted').toLowerCase();
+            let rejectionReason = localStorage.getItem('kycRejectionReason') || 'Document check failed';
+            let storedFullName = localStorage.getItem('fullName') || '';
+            let userId = localStorage.getItem('userUniqueId');
+            
+            if (!userId || userId === 'TBR------' || userId === 'TBR-000000' || String(userId).includes('Loading')) {
+                if (email) {
+                    let hash = 0;
+                    for (let i = 0; i < email.length; i++) {
+                        hash = ((hash << 5) - hash) + email.charCodeAt(i);
+                        hash |= 0;
+                    }
+                    let uniqueNum = Math.abs(hash) % 900000 + 100000;
+                    userId = 'TBR-' + uniqueNum;
+                    localStorage.setItem('userUniqueId', userId);
+                } else {
+                    userId = 'TBR-100000';
+                    localStorage.setItem('userUniqueId', userId);
+                }
+            }
 
             let totalTrades = localStorage.getItem('totalTrades') || '0';
             let volume = localStorage.getItem('volume') || '0 USDT';
             let completionRate = localStorage.getItem('completionRate') || '100%';
             let reputation = localStorage.getItem('reputation') || '100%';
-            let is2FA = localStorage.getItem('is2FA') === 'true';
+            let is2FA = localStorage.getItem('is2FA') === 'true' || localStorage.getItem('twoFactorEnabled') === 'true';
             let memberSince = localStorage.getItem('memberSince') || '2026';
-
-            let displayName = name.toUpperCase();
-            document.getElementById('profileName').innerText = displayName;
-            document.getElementById('profileEmail').innerText = email;
-            document.getElementById('userUniqueId').innerText = userId;
-            document.getElementById('avatarInitial').innerText = displayName.charAt(0).toUpperCase();
-
-            document.getElementById('statTotalTrades').innerText = totalTrades;
-            document.getElementById('statVolume').innerText = volume;
-            document.getElementById('statCompletionRate').innerText = completionRate;
-            document.getElementById('statReputation').innerText = reputation;
-            document.getElementById('memberSince').innerText = memberSince;
-
-            const twoFactorEl = document.getElementById('twoFactorStatus');
-            if (is2FA) {
-                twoFactorEl.innerText = 'Enabled';
-                twoFactorEl.style.color = '#00C087';
-            } else {
-                twoFactorEl.innerText = 'Disabled';
-                twoFactorEl.style.color = '#f6465d';
-            }
 
             try {
                 const token = localStorage.getItem('token') || localStorage.getItem('authToken');
@@ -483,6 +455,7 @@
                         email = user.email || email;
                         kycStatus = String(user.kycStatus || kycStatus).toLowerCase();
                         rejectionReason = user.kycRejectionReason || user.rejectionReason || rejectionReason;
+                        storedFullName = user.fullName || storedFullName;
                         totalTrades = user.totalTrades !== undefined ? user.totalTrades : totalTrades;
                         volume = user.volume !== undefined ? user.volume + ' USDT' : volume;
                         completionRate = user.completionRate !== undefined ? user.completionRate + '%' : completionRate;
@@ -498,35 +471,40 @@
                             userId = user.customId || ('TBR-' + String(user._id).slice(-6).toUpperCase());
                         }
 
-                        displayName = name.toUpperCase();
-                        document.getElementById('profileName').innerText = displayName;
-                        document.getElementById('profileEmail').innerText = email;
-                        document.getElementById('userUniqueId').innerText = userId;
-                        document.getElementById('avatarInitial').innerText = displayName.charAt(0).toUpperCase();
-
-                        document.getElementById('statTotalTrades').innerText = totalTrades;
-                        document.getElementById('statVolume').innerText = volume;
-                        document.getElementById('statCompletionRate').innerText = completionRate;
-                        document.getElementById('statReputation').innerText = reputation;
-                        document.getElementById('memberSince').innerText = memberSince;
-
-                        if (is2FA) {
-                            twoFactorEl.innerText = 'Enabled';
-                            twoFactorEl.style.color = '#00C087';
-                        } else {
-                            twoFactorEl.innerText = 'Disabled';
-                            twoFactorEl.style.color = '#f6465d';
-                        }
-
                         localStorage.setItem('userName', name);
                         localStorage.setItem('userEmail', email);
                         localStorage.setItem('kycStatus', kycStatus);
                         localStorage.setItem('kycRejectionReason', rejectionReason);
                         localStorage.setItem('userUniqueId', userId);
+                        if (storedFullName) localStorage.setItem('fullName', storedFullName);
                     }
                 }
             } catch (e) {
                 console.log("Could not fetch from server, using local cache.");
+            }
+
+            const usernameFallback = (name && name !== "USER") ? name : (email ? email.split('@')[0] : 'User');
+            const displayName = (kycStatus === 'approved' || kycStatus === 'verified') && storedFullName 
+                ? storedFullName 
+                : usernameFallback;
+
+            document.getElementById('profileEmail').innerText = email;
+            document.getElementById('userUniqueId').innerText = userId;
+            document.getElementById('avatarInitial').innerText = String(displayName).charAt(0).toUpperCase();
+
+            document.getElementById('statTotalTrades').innerText = totalTrades;
+            document.getElementById('statVolume').innerText = volume;
+            document.getElementById('statCompletionRate').innerText = completionRate;
+            document.getElementById('statReputation').innerText = reputation;
+            document.getElementById('memberSince').innerText = memberSince;
+
+            const twoFactorEl = document.getElementById('twoFactorStatus');
+            if (is2FA) {
+                twoFactorEl.innerText = 'Enabled';
+                twoFactorEl.style.color = '#00C087';
+            } else {
+                twoFactorEl.innerText = 'Disabled';
+                twoFactorEl.style.color = '#f6465d';
             }
 
             const nameContainer = document.getElementById('profileName');
@@ -536,9 +514,9 @@
             const bannerAction = document.getElementById('kycBannerAction');
             const bannerContainer = document.getElementById('kycBannerContainer');
 
-            // 1. Not Submitted (ቀይ ከለር, ወደ KYC መሄጃ)
+            // 1. Not Submitted
             if (kycStatus === 'not_submitted' || kycStatus === 'unverified') {
-                nameContainer.innerHTML = displayName;
+                nameContainer.innerHTML = displayName.toUpperCase();
                 kycStatusRowText.innerHTML = `<a href="kyc-verify.html" style="color: #f6465d; text-decoration: none;">Not Submitted <i class="fa-solid fa-chevron-right" style="font-size: 10px;"></i></a>`;
                 
                 bannerContainer.style.borderColor = '#f6465d';
@@ -548,8 +526,9 @@
                 bannerDesc.innerText = "Verify your ID to post ads and unlock 10× higher limits.";
                 bannerAction.innerHTML = `<a href="kyc-verify.html" class="verify-btn" style="background:#f6465d; color:#fff;">VERIFY IDENTITY</a>`;
             } 
-            // 2. Pending (ቢጫ ከለር, under review, መሄጃ በተን የለም)
+            // 2. Pending
             else if (kycStatus === 'pending' || kycStatus === 'under_review') {
+                nameContainer.innerHTML = displayName.toUpperCase();
                 kycStatusRowText.innerHTML = `<span style="color: #f3ba2f; font-weight: 500;">Under Review</span>`;
                 
                 bannerContainer.style.borderColor = '#f3ba2f';
@@ -559,10 +538,10 @@
                 bannerDesc.innerText = "You are under review. Please wait for admin verification. Action disabled.";
                 bannerAction.innerHTML = `<span style="color:#f3ba2f; font-size:13px; font-weight:500;">Under Review</span>`;
             } 
-            // 3. Approved / Verified (አረንጓዴ ከለር)
+            // 3. Approved / Verified
             else if (kycStatus === 'verified' || kycStatus === 'approved') {
                 nameContainer.innerHTML = `
-                    ${displayName} 
+                    ${displayName.toUpperCase()} 
                     <span style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; background: #0ecb81; color: #fff; border-radius: 50%; font-size: 10px; margin-left: 8px;" title="Verified">
                         <i class="fa-solid fa-check"></i>
                     </span>
@@ -576,8 +555,9 @@
                 bannerDesc.innerText = "Your identity verification is approved. Full access unlocked.";
                 bannerAction.innerHTML = "";
             } 
-            // 4. Rejected (ቀይ ከለር + ምክንያት + Resubmit በተን)
+            // 4. Rejected
             else if (kycStatus === 'rejected') {
+                nameContainer.innerHTML = displayName.toUpperCase();
                 kycStatusRowText.innerHTML = `<a href="kyc-verify.html" style="color: #f6465d; text-decoration: none;">Rejected (Resubmit) <i class="fa-solid fa-chevron-right" style="font-size: 10px;"></i></a>`;
                 
                 bannerContainer.style.borderColor = '#f6465d';
