@@ -64,11 +64,11 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 document.addEventListener("DOMContentLoaded", function() {
     const navbarHTML = `
-    <header class="navbar" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background: #121212; border-bottom: 1px solid #222;">
+    <header class="navbar" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background: #121212; border-bottom: 1px solid #222; width: 100%; position: sticky; top: 0; z-index: 1000;">
         <div class="nav-brand">
             <a href="dashboard.html" style="color: #f3ba2f; font-weight: bold; font-size: 20px; text-decoration: none;">TBR</a>
         </div>
-        <nav class="nav-links" style="display: flex; gap: 20px;">
+        <nav class="nav-links" style="display: flex; gap: 20px; align-items: center;">
             <a href="dashboard.html" style="color: #fff; text-decoration: none;">Dashboard</a>
             <a href="market.html" style="color: #fff; text-decoration: none;">Market</a>
             <a href="my-ads.html" style="color: #fff; text-decoration: none;">My Ads</a>
@@ -81,6 +81,12 @@ document.addEventListener("DOMContentLoaded", function() {
             <a href="profile.html" style="color: #fff; text-decoration: none;"><i class="fas fa-user"></i> Profile</a>
         </div>
     </header>`;
+
+    // ነባሩን Navbar ካለ ማስወገድ
+    const existingNavbar = document.querySelector('header.navbar');
+    if (existingNavbar) {
+        existingNavbar.remove();
+    }
 
     const placeholder = document.getElementById('navbar-placeholder');
     if (placeholder) {
