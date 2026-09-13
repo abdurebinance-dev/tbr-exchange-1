@@ -217,18 +217,46 @@
 
     <script>
         const API_BASE = 'https://tbr-exchange-backend.onrender.com';
-        const getToken = () => localStorage.getItem('adminToken');
-        let currentKycList = [];
+const getToken = () => localStorage.getItem('adminToken');
+let currentKycList = [];
 
-        window.addEventListener('DOMContentLoaded', () => {
-            if (getToken()) {
-                document.getElementById('loginOverlay').style.display = 'none';
-                document.getElementById('mainDashboard').style.display = 'block';
-                loadAdminData();
-            }
+async function loadAdminData() {
+    const tbody = document.getElementById('kycTableBody');
+    if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #848e9c; padding: 20px;">Loading KYC data...</td></tr>`;
+    }
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/kycs`, {
+            headers: { 'Authorization': `Bearer ${getToken()}` }
         });
-
+        if (!res.ok) throw new Error('Failed to fetch');
+        const data = await res.json();
+        currentKycList = Array.isArray(data) ? data : (data.kycs || []);
         
+        if (currentKycList.length === 0 && tbody) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #848e9c; padding: 20px;">No pending KYC submissions</td></tr>`;
+            return;
+        }
+        if (typeof renderKycs === 'function' && tbody) {
+            renderKycs(tbody, currentKycList);
+        }
+    } catch (error) {
+        console.error("KYC load error:", error);
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #f6465d; padding: 20px;">Error loading data. Check console.</td></tr>`;
+        }
+    }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    if (getToken()) {
+        document.getElementById('loginOverlay').style.display = 'none';
+        document.getElementById('mainDashboard').style.display = 'block';
+        loadAdminData();
+    }
+});
+
+
         async function adminLogin() {
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
