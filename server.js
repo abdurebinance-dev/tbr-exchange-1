@@ -741,6 +741,7 @@ app.get('/api/user', verifyToken, async (req, res) => {
     }
 });
 
+// --- User Profile & Auth Routes ---
 app.get('/api/user/profile', verifyToken, async (req, res) => {
     try {
         const user = await User.findById(req.user.id).select('-password');
@@ -761,9 +762,6 @@ app.get('/api/user/profile', verifyToken, async (req, res) => {
     }
 });
 
-// (ሌሎች የኮድ ክፍሎችህ እና ራውቶችህ እዚህ ይኖራሉ...)
-
-// አዲሱን ራውት ከታች ከሌሎች ራውቶች ጋር አያይዘው
 app.get('/api/auth/me', verifyToken, async (req, res) => {
     try {
         const user = await User.findById(req.user.id).select('-password');
@@ -783,12 +781,7 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
     }
 });
 
-// የፋይሉ መጨረሻ ላይ ሰርቨሩን የሚያስነሳው ክፍል (app.listen) ይኖራል
-app.listen(process.env.PORT || 5000, () => {
-    console.log('Server is running successfully');
-});
-
-// --- Admin Direct Login Route (Modified for direct text check) ---
+// --- Admin Direct Login Route ---
 app.post('/api/admin/login', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -803,7 +796,6 @@ app.post('/api/admin/login', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid admin credentials.' });
         }
 
-        // የ bcrypt ማረጋገጫን በመተው ቀጥታ በዳታቤዝ እንዳለው ፓስወርድ ማወዳደር
         if (password !== user.password) {
             return res.status(400).json({ success: false, message: 'Invalid admin credentials.' });
         }
@@ -830,7 +822,6 @@ app.post('/api/admin/login', async (req, res) => {
 app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
     try {
         const totalUsers = await User.countDocuments({});
-        // ትክክለኛው የKYC ፔንዲንግ ብዛት ከKYC ኮሌክሽን ብቻ
         const kycPending = await KYC.countDocuments({ 
             status: { $in: ['pending', 'under_review', 'submitted', ''] } 
         });
@@ -859,7 +850,7 @@ app.get('/api/admin/escrow-disputes', verifyAdmin, async (req, res) => {
     }
 });
 
-// 2. KYC Requests API (የተስተካከለ - ፎቶዎችን በትክክል ለማስተላለፍ)
+// 2. KYC Requests API
 app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
     try {
         const page = Math.max(1, parseInt(req.query.page, 10) || 1);
@@ -879,11 +870,9 @@ app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
         const formatImage = (img) => {
             if (!img) return '';
             if (Buffer.isBuffer(img)) {
-                // Optional: detect mime type if stored or default safely
                 return `data:image/jpeg;base64,${img.toString('base64')}`;
             }
             if (typeof img === 'string' && img.startsWith('data:image/')) return img;
-            // If stored as URL/path
             return img; 
         };
 
@@ -915,76 +904,90 @@ app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
     }
 });
 
-// --- KYC Submission Route (የተስተካከለ) ---
+// --- Unified KYC Submission Route ---
 app.post('/api/kyc/submit', async (req, res) => {
     try {
-        const { userId, email, fullName, frontImage, backImage, selfieImage } = req.body;
+        const { userId, email, fullName, idNumber, docType, dateOfBirth, residentialAddress, frontImage, backImage, selfieImage } = req.body;
 
-        // 1. መረጃውን በ KYC ኮሌክሽን ውስጥ መመዝገብ ወይም ማዘመን
-        let kycRecord = await KYC.findOne({ $or: [{ userId }, { email }] });
-        
-        if (kycRecord) {
-            kycRecord.frontImage = frontImage || kycRecord.frontImage;
-            kycRecord.backImage = backImage || kycRecord.backImage;
-            kycRecord.selfieImage = selfieImage || kycRecord.selfieImage;
-            kycRecord.fullName = fullName || kycRecord.fullName;
-            kycRecord.status = 'pending';
-            await kycRecord.save();
-        } else {
-            kycRecord = new KYC({
-                userId,
-                email,
-                fullName,
-                frontImage,
-                backImage,
-                selfieImage,
-                status: 'pending'
-            });
-            await kycRecord.save();
+        if (!email && !userId) {
+            return res.status(400).json({ success: false, message: 'Email or userId is required for KYC submission.' });
         }
 
-        // 2. በ User ዶክመንት ላይም የ KYC ሁኔታን እና ፎቶዎችን ማዘመን (ከተፈለገ)
+        let user = null;
         if (userId) {
-            await User.findByIdAndUpdate(userId, {
-                kycStatus: 'pending',
-                'kycData.frontImage': frontImage,
-                'kycData.backImage': backImage,
-                'kycData.selfieImage': selfieImage,
-                fullName: fullName || undefined
-            });
+            user = await User.findById(userId);
+        }
+        if (!user && email) {
+            user = await User.findOne({ email: email.toLowerCase() });
         }
 
-        res.json({ success: true, message: 'KYC documents submitted successfully and pending review.' });
+        if (!user) {
+            user = new User({
+                email: email ? email.toLowerCase() : `user_${Date.now()}@temp.com`,
+                fullName: fullName || 'User',
+                kycStatus: 'pending'
+            });
+            await user.save();
+        }
+
+        const kycDataPayload = {
+            userId: user._id,
+            email: user.email,
+            fullName: fullName || user.fullName || 'User',
+            idNumber: idNumber || '',
+            docType: docType || 'national_id',
+            dob: dateOfBirth || '',
+            address: residentialAddress || '',
+            frontImage: frontImage || '',
+            backImage: backImage || '',
+            selfieImage: selfieImage || '',
+            status: 'pending'
+        };
+
+        // Upsert in KYC collection
+        await KYC.findOneAndUpdate(
+            { email: user.email },
+            kycDataPayload,
+            { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
+
+        // Update User doc
+        user.kycStatus = 'pending';
+        user.kycData = kycDataPayload;
+        if (fullName) user.fullName = fullName;
+        await user.save();
+
+        res.json({ success: true, message: 'KYC submitted successfully and sent to admin!' });
     } catch (error) {
-        console.error("KYC Submission Error:", error);
-        res.status(500).json({ success: false, message: 'Error submitting KYC documents' });
+        console.error("KYC Submit Critical Error:", error);
+        res.status(500).json({ success: false, message: 'Server error during KYC submission' });
     }
 });
 
-// --- Admin KYC Action Route ---
+// --- Admin KYC Action Route (Single unified) ---
 app.post('/api/admin/kyc-action', verifyAdmin, async (req, res) => {
     try {
         const { kycId, status } = req.body; 
         const newStatus = status === 'approved' ? 'approved' : 'rejected';
         const userTargetStatus = status === 'approved' ? 'verified' : 'rejected';
 
-        // በ KYC ኮሌክሽን ማሻሻል
         let kycRecord = await KYC.findById(kycId);
-        if (kycRecord) {
-            kycRecord.status = newStatus;
-            await kycRecord.save();
-            if (kycRecord.userId) {
-                await User.findByIdAndUpdate(kycRecord.userId, { kycStatus: userTargetStatus });
+        if (!kycRecord) {
+            const userRecord = await User.findById(kycId);
+            if (userRecord) {
+                userRecord.kycStatus = userTargetStatus;
+                await userRecord.save();
+                return res.json({ success: true, message: `User KYC status updated to ${newStatus} successfully.` });
             }
+            return res.status(404).json({ success: false, message: 'KYC record not found.' });
         }
 
-        // በ User ዶክመንት በራሱም ካለ ማሻሻል (KYC ID ምናልባት የዩዘር ID ከሆነ)
-        const userRecord = await User.findById(kycId);
-        if (userRecord) {
-            userRecord.kycStatus = userTargetStatus;
-            await userRecord.save();
-        }
+        kycRecord.status = newStatus;
+        await kycRecord.save();
 
+        if (kycRecord.userId) {
+            await User.findByIdAndUpdate(kycRecord.userId, { kycStatus: userTargetStatus });
+        }
         res.json({ success: true, message: `KYC status updated to ${newStatus} successfully.` });
     } catch (error) {
         console.error("KYC Action Error:", error);
@@ -1003,35 +1006,6 @@ app.get('/api/admin/users', verifyAdminToken, async (req, res) => {
     }
 });
 
-// --- Admin KYC Action Route ---
-app.post('/api/admin/kyc-action', verifyAdmin, async (req, res) => {
-    try {
-        const { kycId, status } = req.body; 
-        const newStatus = status === 'approved' ? 'approved' : 'rejected';
-        let kycRecord = await KYC.findById(kycId);
-        
-        if (!kycRecord) {
-            const userRecord = await User.findById(kycId);
-            if (userRecord) {
-                userRecord.kycStatus = newStatus === 'approved' ? 'verified' : 'rejected';
-                await userRecord.save();
-                return res.json({ success: true, message: `User KYC status updated to ${newStatus} successfully.` });
-            }
-            return res.status(404).json({ success: false, message: 'KYC record not found.' });
-        }
-
-        kycRecord.status = newStatus;
-        await kycRecord.save();
-
-        if (kycRecord.userId) {
-            await User.findByIdAndUpdate(kycRecord.userId, { kycStatus: newStatus === 'approved' ? 'verified' : 'rejected' });
-        }
-        res.json({ success: true, message: `KYC status updated to ${newStatus} successfully.` });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Error updating KYC status' });
-    }
-});
-
 // --- Admin User Action Route ---
 app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
     try {
@@ -1044,144 +1018,7 @@ app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
     }
 });
 
-// --- KYC Submission Route (Combined: Updates User & creates/updates KYC collection) ---
-app.post('/api/kyc/submit', verifyToken, async (req, res) => {
-    try {
-        const { fullName, idNumber, dateOfBirth, residentialAddress, docType, frontImage, backImage, selfieImage } = req.body;
-        
-        const user = await User.findById(req.user.id);
-        if (!user) {
-            return res.status(404).json({ success: false, message: "User not found" });
-        }
-
-        // 1. User ዶክመንት ማዘመን
-        user.fullName = fullName || user.fullName;
-        user.kycStatus = 'pending';
-        user.kycData = {
-            frontImage,
-            backImage,
-            selfieImage,
-            idNumber,
-            dateOfBirth,
-            residentialAddress,
-            docType
-        };
-        await user.save();
-
-        // 2. ለ Admin Panel የሚሆን স্বতন্ত্র KYC Collection ማዘመን (Upsert)
-        const kycRecord = await KYC.findOneAndUpdate(
-            { userId: user._id },
-            {
-                userId: user._id,
-                email: user.email,
-                fullName: fullName || user.fullName,
-                idNumber,
-                dob: dateOfBirth,
-                address: residentialAddress,
-                docType,
-                frontImage,
-                backImage,
-                selfieImage,
-                status: 'pending'
-            },
-            { upsert: true, new: true, setDefaultsOnInsert: true }
-        );
-
-        res.json({ 
-            success: true, 
-            message: "KYC documents submitted successfully and sent to admin review",
-            data: kycRecord 
-        });
-    } catch (error) {
-        console.error("KYC Submission Error:", error);
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-// --- User KYC Submit Route (Completely Open & Fallback Safe) ---
-app.post('/api/kyc/submit', async (req, res) => {
-    try {
-        const { email, fullName, idNumber, docType, dateOfBirth, residentialAddress, frontImage, backImage, selfieImage } = req.body;
-
-        if (!email) {
-            return res.status(400).json({ success: false, message: 'Email is required for KYC submission.' });
-        }
-
-        // 1. ዩዘሩን በኢሜል መፈለግ (ከሌለም ራሱ ፈጥሮ እንዲያልፍ ማድረግ ይቻላል)
-        let user = await User.findOne({ email: email.toLowerCase() });
-        
-        if (!user) {
-            // ዩዘሩ በሰርቨር ካልተገኘ በአዲስ መልክ ሪከርድ መፍጠር
-            user = new User({
-                email: email.toLowerCase(),
-                fullName: fullName || 'User',
-                kycStatus: 'pending'
-            });
-            await user.save();
-        }
-
-       function updateHeaderKycBadge() {
-    const badgeEl = document.getElementById('headerKycBadge');
-    if (!badgeEl) return;
-
-    let kycStatus = (localStorage.getItem('kycStatus') || 'not_submitted').toLowerCase();
-    
-    badgeEl.className = 'nav-kyc-badge';
-    badgeEl.href = 'profile.html';
-
-    if (kycStatus === 'not_submitted' || kycStatus === 'unverified') {
-        badgeEl.classList.add('unverified');
-        badgeEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Unverified`;
-    } else if (kycStatus === 'pending' || kycStatus === 'under_review') {
-        badgeEl.classList.add('pending');
-        badgeEl.innerHTML = `<i class="fa-solid fa-clock"></i> Pending`;
-    } else if (kycStatus === 'verified' || kycStatus === 'approved') {
-        badgeEl.classList.add('approved');
-        badgeEl.innerHTML = `<i class="fa-solid fa-circle-check"></i> Verified`;
-    } else if (kycStatus === 'rejected') {
-        badgeEl.classList.add('rejected');
-        badgeEl.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> Rejected`;
-    }
-}
-
-window.addEventListener('DOMContentLoaded', updateHeaderKycBadge);
-
-        // የ KYC መረጃዎችን ማዘጋጀት
-        const kycDataPayload = {
-            userId: user._id,
-            email: user.email,
-            fullName: fullName || user.fullName || 'User',
-            idNumber: idNumber || '',
-            docType: docType || 'national_id',
-            dob: dateOfBirth || '',
-            address: residentialAddress || '',
-            frontImage: frontImage || '',
-            backImage: backImage || '',
-            selfieImage: selfieImage || '',
-            status: 'pending'
-        };
-
-        // 2. በ 'kycs' ኮሌክሽን ውስጥ ማስቀመጥ (Upsert) - ከዚህ በፊት ባዶ የነበረውን ይሞላል
-        await KYC.findOneAndUpdate(
-            { email: user.email },
-            kycDataPayload,
-            { upsert: true, new: true }
-        );
-
-        // 3. በ User ዶክመንት ውስጥም kycStatus ማዘመን
-        user.kycStatus = 'pending';
-        user.kycData = kycDataPayload;
-        await user.save();
-
-        res.json({ success: true, message: 'KYC submitted successfully and sent to admin!' });
-    } catch (error) {
-        console.error("KYC Submit Critical Error:", error);
-        res.status(500).json({ success: false, message: 'Server error during KYC submission' });
-    }
-});
-
-// ከዚህ በፊት ID የሌላቸውን ነባር ተጠቃሚዎች በቅደም ተከተል አስተካክሎ ID የሚሰጥ
-// 1. ፈንክሽኑን እዚህ ጋር ይግለጹ (Define ያድርጉ)
+// --- Migration function for existing IDs ---
 async function assignIdsToExistingUsers() {
     try {
         const usersWithoutId = await User.find({ 
@@ -1214,7 +1051,8 @@ async function assignIdsToExistingUsers() {
     }
 }
 
-// 2. ሰርቨሩ ሲጀምር ይጠራዋል
+// Server Listen
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
     assignIdsToExistingUsers();
