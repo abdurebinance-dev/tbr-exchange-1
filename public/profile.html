@@ -208,10 +208,10 @@
             border: 1px solid #2b313a;
             border-radius: 12px;
             margin-bottom: 25px;
+            transition: all 0.3s ease;
         }
 
         .kyc-banner-left h4 {
-            color: #f0b90b;
             margin: 0 0 5px 0;
             font-size: 16px;
         }
@@ -223,8 +223,6 @@
         }
 
         .verify-btn {
-            background: #f0b90b;
-            color: #000;
             border: none;
             padding: 10px 20px;
             font-weight: bold;
@@ -233,10 +231,7 @@
             text-decoration: none;
             font-size: 13px;
             transition: background 0.2s;
-        }
-
-        .verify-btn:hover {
-            background: #dfab0a;
+            display: inline-block;
         }
 
         /* Account Details Section */
@@ -358,13 +353,15 @@
             </div>
         </div>
 
-        <!-- KYC Verification Banner (ሁልጊዜ ከስታትስቲክስ በታች እና ከ አካውንት ዲቴልስ በላይ በግልጽ እንዲታይ ተደረገ) -->
+        <!-- KYC Verification Banner (አክብበውት ወደነበረው የዩዘር ፔል ቦታ የተስተካከለ) -->
         <div id="kycBannerContainer" class="kyc-banner">
             <div class="kyc-banner-left">
                 <h4 id="kycBannerTitle">Identity not verified</h4>
                 <p id="kycBannerDesc">Verify your ID to post ads and unlock 10× higher limits.</p>
             </div>
-            <a href="kyc-verify.html" id="kycBannerBtn" class="verify-btn">VERIFY IDENTITY</a>
+            <div id="kycBannerAction">
+                <a href="kyc-verify.html" id="kycBannerBtn" class="verify-btn" style="background:#f6465d; color:#fff;">VERIFY IDENTITY</a>
+            </div>
         </div>
 
         <!-- Account Details Box -->
@@ -391,7 +388,7 @@
 
     </div>
 
-    <!-- Script to Load Profile and Manage IDs -->
+    <!-- Script to Load Profile and Manage IDs & KYC States -->
     <script>
         function copyUserId() {
             const userIdText = document.getElementById('userUniqueId').innerText;
@@ -414,6 +411,7 @@
             let name = localStorage.getItem('userName') || localStorage.getItem('name') || "USER";
             let email = localStorage.getItem('userEmail') || localStorage.getItem('email') || "user@example.com";
             let kycStatus = localStorage.getItem('kycStatus') || 'not_submitted';
+            let rejectionReason = localStorage.getItem('kycRejectionReason') || 'Document check failed';
             let userId = localStorage.getItem('userUniqueId');
             
             if (!userId || userId === 'TBR------' || userId === 'TBR-000000' || userId.includes('Loading')) {
@@ -462,27 +460,29 @@
                     headers['Authorization'] = `Bearer ${token}`;
                 }
 
-                const response = await fetch('/api/auth/me', { headers });
+                const response = await fetch('/api/user/profile', { headers });
                 
                 if (response.ok) {
                     const data = await response.json();
-                    if (data.success && data.user) {
-                        name = data.user.fullName || data.user.name || name;
-                        email = data.user.email || email;
-                        kycStatus = data.user.kycStatus || (data.user.isVerified ? 'verified' : kycStatus);
-                        totalTrades = data.user.totalTrades !== undefined ? data.user.totalTrades : totalTrades;
-                        volume = data.user.volume !== undefined ? data.user.volume + ' USDT' : volume;
-                        completionRate = data.user.completionRate !== undefined ? data.user.completionRate + '%' : completionRate;
-                        reputation = data.user.reputation !== undefined ? data.user.reputation + '%' : reputation;
-                        is2FA = data.user.is2FAEnabled || data.user.twoFactorEnabled || is2FA;
-                        memberSince = data.user.createdAt ? new Date(data.user.createdAt).getFullYear() : memberSince;
+                    const user = data.user || data.data || data;
+                    if (user) {
+                        name = user.fullName || user.name || name;
+                        email = user.email || email;
+                        kycStatus = String(user.kycStatus || kycStatus).toLowerCase();
+                        rejectionReason = user.kycRejectionReason || user.rejectionReason || rejectionReason;
+                        totalTrades = user.totalTrades !== undefined ? user.totalTrades : totalTrades;
+                        volume = user.volume !== undefined ? user.volume + ' USDT' : volume;
+                        completionRate = user.completionRate !== undefined ? user.completionRate + '%' : completionRate;
+                        reputation = user.reputation !== undefined ? user.reputation + '%' : reputation;
+                        is2FA = user.is2FAEnabled || user.twoFactorEnabled || is2FA;
+                        memberSince = user.createdAt ? new Date(user.createdAt).getFullYear() : memberSince;
                         
-                        if (data.user.userId) {
-                            userId = data.user.userId;
-                        } else if (data.user.numericId) {
-                            userId = 'TBR-' + String(data.user.numericId).padStart(6, '0');
-                        } else if (data.user._id) {
-                            userId = data.user.customId || ('TBR-' + String(data.user._id).slice(-6).toUpperCase());
+                        if (user.userId) {
+                            userId = user.userId;
+                        } else if (user.numericId) {
+                            userId = 'TBR-' + String(user.numericId).padStart(6, '0');
+                        } else if (user._id) {
+                            userId = user.customId || ('TBR-' + String(user._id).slice(-6).toUpperCase());
                         }
 
                         displayName = name.toUpperCase();
@@ -508,13 +508,8 @@
                         localStorage.setItem('userName', name);
                         localStorage.setItem('userEmail', email);
                         localStorage.setItem('kycStatus', kycStatus);
+                        localStorage.setItem('kycRejectionReason', rejectionReason);
                         localStorage.setItem('userUniqueId', userId);
-                        localStorage.setItem('totalTrades', totalTrades);
-                        localStorage.setItem('volume', volume);
-                        localStorage.setItem('completionRate', completionRate);
-                        localStorage.setItem('reputation', reputation);
-                        localStorage.setItem('is2FA', is2FA);
-                        localStorage.setItem('memberSince', memberSince);
                     }
                 }
             } catch (e) {
@@ -525,49 +520,59 @@
             const kycStatusRowText = document.getElementById('kycStatusRowText');
             const bannerTitle = document.getElementById('kycBannerTitle');
             const bannerDesc = document.getElementById('kycBannerDesc');
-            const bannerBtn = document.getElementById('kycBannerBtn');
+            const bannerAction = document.getElementById('kycBannerAction');
             const bannerContainer = document.getElementById('kycBannerContainer');
 
-            if (kycStatus === 'verified' || kycStatus === 'approved' || kycStatus === true) {
+            // 1. Not Submitted (ቀይ ከለር, ወደ KYC መሄጃ)
+            if (kycStatus === 'not_submitted' || kycStatus === 'unverified') {
+                nameContainer.innerHTML = displayName;
+                kycStatusRowText.innerHTML = `<a href="kyc-verify.html" style="color: #f6465d; text-decoration: none;">Not Submitted <i class="fa-solid fa-chevron-right" style="font-size: 10px;"></i></a>`;
+                
+                bannerContainer.style.borderColor = '#f6465d';
+                bannerContainer.style.background = 'rgba(246, 70, 93, 0.05)';
+                bannerTitle.innerText = "Identity not verified";
+                bannerTitle.style.color = "#f6465d";
+                bannerDesc.innerText = "Verify your ID to post ads and unlock 10× higher limits.";
+                bannerAction.innerHTML = `<a href="kyc-verify.html" class="verify-btn" style="background:#f6465d; color:#fff;">VERIFY IDENTITY</a>`;
+            } 
+            // 2. Pending (ቢጫ ከለር, under review, መሄጃ በተን የለም)
+            else if (kycStatus === 'pending' || kycStatus === 'under_review') {
+                kycStatusRowText.innerHTML = `<span style="color: #f3ba2f; font-weight: 500;">Under Review</span>`;
+                
+                bannerContainer.style.borderColor = '#f3ba2f';
+                bannerContainer.style.background = 'rgba(243, 186, 47, 0.05)';
+                bannerTitle.innerText = "Under Review";
+                bannerTitle.style.color = "#f3ba2f";
+                bannerDesc.innerText = "You are under review. Please wait for admin verification. Action disabled.";
+                bannerAction.innerHTML = `<span style="color:#f3ba2f; font-size:13px; font-weight:500;">Under Review</span>`;
+            } 
+            // 3. Approved / Verified (አረንጓዴ ከለር)
+            else if (kycStatus === 'verified' || kycStatus === 'approved') {
                 nameContainer.innerHTML = `
                     ${displayName} 
-                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; background: #00C087; color: #fff; border-radius: 50%; font-size: 10px; margin-left: 8px;" title="Verified">
+                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; background: #0ecb81; color: #fff; border-radius: 50%; font-size: 10px; margin-left: 8px;" title="Verified">
                         <i class="fa-solid fa-check"></i>
                     </span>
                 `;
-                kycStatusRowText.innerHTML = `<span style="color: #00C087; font-weight: 600;">Verified <i class="fa-solid fa-circle-check"></i></span>`;
+                kycStatusRowText.innerHTML = `<span style="color: #0ecb81; font-weight: 600;">Verified <i class="fa-solid fa-circle-check"></i></span>`;
                 
-                bannerTitle.innerText = "Verified Identity";
-                bannerTitle.style.color = "#00C087";
-                bannerDesc.innerText = "Your account is fully verified.";
-                bannerBtn.style.display = "none";
-                bannerContainer.style.borderColor = "#00C087";
-            } else if (kycStatus === 'pending' || kycStatus === 'under_review') {
-                kycStatusRowText.innerHTML = `<span style="color: #f0b90b; font-weight: 500;">Under Review</span>`;
+                bannerContainer.style.borderColor = '#0ecb81';
+                bannerContainer.style.background = 'rgba(14, 203, 129, 0.05)';
+                bannerTitle.innerText = "Approved";
+                bannerTitle.style.color = "#0ecb81";
+                bannerDesc.innerText = "Your identity verification is approved. Full access unlocked.";
+                bannerAction.innerHTML = "";
+            } 
+            // 4. Rejected (ቀይ ከለር + ምክንያት + Resubmit በተን)
+            else if (kycStatus === 'rejected') {
+                kycStatusRowText.innerHTML = `<a href="kyc-verify.html" style="color: #f6465d; text-decoration: none;">Rejected (Resubmit) <i class="fa-solid fa-chevron-right" style="font-size: 10px;"></i></a>`;
                 
-                bannerTitle.innerText = "Verification under review";
-                bannerTitle.style.color = "#f0b90b";
-                bannerDesc.innerText = "We'll notify you by email. Typically 1-2 business days.";
-                bannerBtn.style.display = "none";
-            } else if (kycStatus === 'rejected') {
-                kycStatusRowText.innerHTML = `<a href="kyc-verify.html" style="color: #cf304a; text-decoration: none;">Rejected (Resubmit) <i class="fa-solid fa-chevron-right" style="font-size: 10px;"></i></a>`;
-                
-                bannerTitle.innerText = "Verification Rejected";
-                bannerTitle.style.color = "#cf304a";
-                bannerDesc.innerText = "Please re-submit your correct documents for verification.";
-                bannerBtn.innerText = "RESUBMIT";
-                bannerBtn.style.background = "#cf304a";
-                bannerBtn.style.color = "#fff";
-                bannerContainer.style.borderColor = "#cf304a";
-            } else {
-                kycStatusRowText.innerHTML = `<a href="kyc-verify.html" style="color: #f6465d; text-decoration: none;">Not Submitted <i class="fa-solid fa-chevron-right" style="font-size: 10px;"></i></a>`;
-                
-                bannerTitle.innerText = "Identity not verified";
-                bannerTitle.style.color = "#f0b90b";
-                bannerDesc.innerText = "Verify your ID to post ads and unlock 10× higher limits.";
-                bannerBtn.innerText = "VERIFY IDENTITY";
-                bannerBtn.style.background = "#f0b90b";
-                bannerBtn.style.color = "#000";
+                bannerContainer.style.borderColor = '#f6465d';
+                bannerContainer.style.background = 'rgba(246, 70, 93, 0.05)';
+                bannerTitle.innerText = "Rejected";
+                bannerTitle.style.color = "#f6465d";
+                bannerDesc.innerText = `Reason: ${rejectionReason}`;
+                bannerAction.innerHTML = `<a href="kyc-verify.html" class="verify-btn" style="background:#f6465d; color:#fff;">Resubmit ID</a>`;
             }
         }
 
