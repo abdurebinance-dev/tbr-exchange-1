@@ -850,7 +850,7 @@ app.get('/api/admin/escrow-disputes', verifyAdmin, async (req, res) => {
     }
 });
 
-// 2. KYC Requests API
+// 2. KYC Requests API (Updated to include fullName properly)
 app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
     try {
         const page = Math.max(1, parseInt(req.query.page, 10) || 1);
@@ -880,11 +880,11 @@ app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
             _id: kyc._id,
             userId: kyc.userId || kyc.email || 'N/A',
             email: kyc.email || '',
+            fullName: kyc.fullName || 'User', // ሙሉ ስም ከ KYC ዶክመንት
             frontImage: formatImage(kyc.frontImage),
             backImage: formatImage(kyc.backImage),
             selfieImage: formatImage(kyc.selfieImage),
             status: kyc.status || 'pending',
-            fullName: kyc.fullName || 'User',
             createdAt: kyc.createdAt || null
         }));
 

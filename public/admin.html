@@ -150,10 +150,11 @@
         <div id="tab-kyc" class="tab-content">
             <div class="section-title"><i class="fa-solid fa-user-shield"></i> Manual KYC Verification Submissions</div>
             
-            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; align-items: center; flex-wrap: wrap;">
                 <button id="btn-pending-kyc" class="btn" onclick="loadKycData('pending')" style="background: rgba(240, 185, 11, 0.2); color: #f0b90b; border: 1px solid #f0b90b; font-weight: bold; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Pending KYC</button>
                 <button id="btn-approved-kyc" class="btn" onclick="loadKycData('approved')" style="background: rgba(14, 203, 129, 0.2); color: #0ecb81; border: 1px solid #0ecb81; font-weight: bold; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Approved KYC</button>
                 <button id="btn-rejected-kyc" class="btn" onclick="loadKycData('rejected')" style="background: rgba(246, 70, 93, 0.2); color: #f6465d; border: 1px solid #f6465d; font-weight: bold; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Rejected KYC</button>
+                <input type="text" id="searchInput" class="input-box" placeholder="Search by email or name..." onkeyup="filterTableData()" style="max-width: 350px; margin-left: auto;">
             </div>
 
             <div class="table-container">
@@ -219,6 +220,7 @@
     <script>
         const API_BASE = 'https://tbr-exchange-backend.onrender.com';
         const getToken = () => localStorage.getItem('adminToken');
+        let currentKycList = [];
 
         window.addEventListener('DOMContentLoaded', () => {
             if (getToken()) {
@@ -285,96 +287,124 @@
             } catch (err) { console.error('Error loading stats:', err); }
         }
 
-async function loadKycData(targetStatus = 'pending') {
-    document.querySelectorAll('#tab-kyc button.btn').forEach(b => {
-        if (b.id) b.style.opacity = '0.6';
-    });
-    const activeBtn = document.getElementById(`btn-${targetStatus}-kyc`);
-    if (activeBtn) activeBtn.style.opacity = '1';
+        async function loadKycData(targetStatus = 'pending') {
+            document.querySelectorAll('#tab-kyc button.btn').forEach(b => {
+                if (b.id) b.style.opacity = '0.6';
+            });
+            const activeBtn = document.getElementById(`btn-${targetStatus}-kyc`);
+            if (activeBtn) activeBtn.style.opacity = '1';
 
-    const tbody = document.getElementById('kycTableBody');
-    if (!tbody) return;
+            const tbody = document.getElementById('kycTableBody');
+            if (!tbody) return;
 
-    try {
-        const res = await fetch(`${API_BASE}/api/admin/kyc-requests`, { 
-            headers: { 'Authorization': 'Bearer ' + getToken() } 
-        });
-        const json = await res.json();
-        
-        console.log("FULL RESPONSE JSON:", json);
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/kyc-requests`, { 
+                    headers: { 'Authorization': 'Bearer ' + getToken() } 
+                });
+                const json = await res.json();
+                
+                console.log("FULL RESPONSE JSON:", json);
 
-        let rawList = [];
-        if (Array.isArray(json)) rawList = json;
-        else if (Array.isArray(json.data)) rawList = json.data;
-        else if (Array.isArray(json.requests)) rawList = json.requests;
-        else if (json.data && Array.isArray(json.data.docs)) rawList = json.data.docs;
-        else if (json && typeof json === 'object') {
-            const foundKey = Object.keys(json).find(k => Array.isArray(json[k]));
-            if (foundKey) rawList = json[foundKey];
-        }
+                let rawList = [];
+                if (Array.isArray(json)) rawList = json;
+                else if (Array.isArray(json.data)) rawList = json.data;
+                else if (Array.isArray(json.requests)) rawList = json.requests;
+                else if (json.data && Array.isArray(json.data.docs)) rawList = json.data.docs;
+                else if (json && typeof json === 'object') {
+                    const foundKey = Object.keys(json).find(k => Array.isArray(json[k]));
+                    if (foundKey) rawList = json[foundKey];
+                }
 
-        console.log("Parsed rawList count:", rawList.length);
+                console.log("Parsed rawList count:", rawList.length);
 
-        if (rawList.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:orange;">DB/API returned 0 items total. Collection empty?</td></tr>`;
-            return;
-        }
+                if (rawList.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:orange;">DB/API returned 0 items total. Collection empty?</td></tr>`;
+                    currentKycList = [];
+                    return;
+                }
 
-        const statusesFound = rawList.map(i => i.status || i.kycStatus || 'UNDEFINED');
-        console.log("All DB statuses found:", statusesFound);
+                const statusesFound = rawList.map(i => i.status || i.kycStatus || 'UNDEFINED');
+                console.log("All DB statuses found:", statusesFound);
 
-        const filteredList = rawList.filter(item => {
-            const s = String(item.status || item.kycStatus || '').toLowerCase().trim();
-            const target = targetStatus.toLowerCase().trim();
-            if (target === 'pending') {
-                return s === '' || s === 'pending' || s === 'under_review' || s === 'submitted' || !item.status;
+                const filteredList = rawList.filter(item => {
+                    const s = String(item.status || item.kycStatus || '').toLowerCase().trim();
+                    const target = targetStatus.toLowerCase().trim();
+                    if (target === 'pending') {
+                        return s === '' || s === 'pending' || s === 'under_review' || s === 'submitted' || !item.status;
+                    }
+                    return s === target;
+                });
+
+                if (filteredList.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#ffcc00; padding:15px;">
+                        No strict match for '${targetStatus}'. DB has statuses: [${[...new Set(statusesFound)].join(', ')}]. <br>
+                        <button onclick="renderKycs(document.getElementById('kycTableBody'), window.lastRawKycList)" style="margin-top:10px; background:#f3ba2f; color:#000; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">Show All ${rawList.length} Items Anyway</button>
+                    </td></tr>`;
+                    window.lastRawKycList = rawList;
+                    currentKycList = [];
+                    return;
+                }
+
+                currentKycList = filteredList;
+                renderKycs(tbody, filteredList);
+            } catch (err) { 
+                console.error("KYC Load Error:", err); 
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:red;">Error: ${err.message}</td></tr>`;
             }
-            return s === target;
-        });
-
-        if (filteredList.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#ffcc00; padding:15px;">
-                No strict match for '${targetStatus}'. DB has statuses: [${[...new Set(statusesFound)].join(', ')}]. <br>
-                <button onclick="renderKycs(document.getElementById('kycTableBody'), window.lastRawKycList)" style="margin-top:10px; background:#f3ba2f; color:#000; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">Show All ${rawList.length} Items Anyway</button>
-            </td></tr>`;
-            window.lastRawKycList = rawList;
-            return;
         }
 
-        renderKycs(tbody, filteredList);
-    } catch (err) { 
-        console.error("KYC Load Error:", err); 
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:red;">Error: ${err.message}</td></tr>`;
-    }
-}
+        function filterTableData() {
+            const query = (document.getElementById('searchInput')?.value || '').toLowerCase().trim();
+            const tbody = document.getElementById('kycTableBody');
+            if (!tbody) return;
 
-function renderKycs(tbody, list) {
-    let html = '';
-    list.forEach(item => {
-        const userId = item.userId || item.email || item.userEmail || item._id || 'N/A';
-        const currentStatus = String(item.status || item.kycStatus || 'pending').toLowerCase();
-        let badgeClass = 'badge-pending';
-        if (currentStatus === 'approved' || currentStatus === 'verified') badgeClass = 'badge-approved';
-        else if (currentStatus === 'rejected') badgeClass = 'badge-rejected';
+            if (!query) {
+                renderKycs(tbody, currentKycList);
+                return;
+            }
 
-        const safeJsonStr = JSON.stringify(item).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
+            const searchFiltered = currentKycList.filter(item => {
+                const userId = String(item.userId || '').toLowerCase();
+                const email = String(item.email || item.userEmail || '').toLowerCase();
+                const fullName = String(item.fullName || item.name || '').toLowerCase();
+                return userId.includes(query) || email.includes(query) || fullName.includes(query);
+            });
 
-        html += `<tr>
-            <td>User: ${userId} <br><small style="color:gray;">db status: [${currentStatus}]</small></td>
-            <td>
-                <button onclick='openKycModal(${safeJsonStr})' class="btn btn-sm" style="color: #f3ba2f; background: #181a20; border: 1px solid #f3ba2f; padding: 5px 12px; border-radius: 4px; cursor: pointer;">
-                    <i class="fas fa-eye"></i> View Docs
-                </button>
-            </td>
-            <td><span class="${badgeClass}">${currentStatus}</span></td>
-            <td>
-                <button class="btn btn-approve" onclick="performKycAction('${item._id || item.id}', 'approved')">Approve</button>
-                <button class="btn btn-reject" onclick="performKycAction('${item._id || item.id}', 'rejected')">Reject</button>
-            </td>
-        </tr>`;
-    });
-    tbody.innerHTML = html;
-}
+            renderKycs(tbody, searchFiltered);
+        }
+
+        function renderKycs(tbody, list) {
+            let html = '';
+            list.forEach(item => {
+                const userId = item.userId || item.email || item.userEmail || item._id || 'N/A';
+                const currentStatus = String(item.status || item.kycStatus || 'pending').toLowerCase();
+                const isResolved = currentStatus === 'approved' || currentStatus === 'verified' || currentStatus === 'rejected';
+                
+                let badgeClass = 'badge-pending';
+                if (currentStatus === 'approved' || currentStatus === 'verified') badgeClass = 'badge-approved';
+                else if (currentStatus === 'rejected') badgeClass = 'badge-rejected';
+
+                const safeJsonStr = JSON.stringify(item).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
+
+                html += `<tr>
+                    <td>User: ${userId} <br><small style="color:gray;">db status: [${currentStatus}]</small></td>
+                    <td>
+                        <button onclick='openKycModal(${safeJsonStr})' class="btn btn-sm" style="color: #f3ba2f; background: #181a20; border: 1px solid #f3ba2f; padding: 5px 12px; border-radius: 4px; cursor: pointer;">
+                            <i class="fas fa-eye"></i> View Docs
+                        </button>
+                    </td>
+                    <td><span class="${badgeClass}">${currentStatus}</span></td>
+                    <td>
+                        ${isResolved 
+                            ? `<span style="color: var(--text-muted); font-weight: 600; font-size: 12px;">Completed</span>` 
+                            : `<button class="btn btn-approve" onclick="performKycAction('${item._id || item.id}', 'approved')">Approve</button>
+                               <button class="btn btn-reject" onclick="performKycAction('${item._id || item.id}', 'rejected')">Reject</button>`
+                        }
+                    </td>
+                </tr>`;
+            });
+            tbody.innerHTML = html;
+        }
 
         async function fetchEscrowDisputes() {
             try {
