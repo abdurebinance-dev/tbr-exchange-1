@@ -62,3 +62,30 @@ document.addEventListener('DOMContentLoaded', () => {
         calcInput.addEventListener('input', calculate);
     }
 });
+document.addEventListener("DOMContentLoaded", function() {
+    const navbarHTML = `
+    <header class="navbar" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background: #121212; border-bottom: 1px solid #222;">
+        <div class="nav-brand">
+            <a href="dashboard.html" style="color: #f3ba2f; font-weight: bold; font-size: 20px; text-decoration: none;">TBR</a>
+        </div>
+        <nav class="nav-links" style="display: flex; gap: 20px;">
+            <a href="dashboard.html" style="color: #fff; text-decoration: none;">Dashboard</a>
+            <a href="market.html" style="color: #fff; text-decoration: none;">Market</a>
+            <a href="my-ads.html" style="color: #fff; text-decoration: none;">My Ads</a>
+            <a href="trades.html" style="color: #fff; text-decoration: none;">Trades</a>
+            <a href="wallet.html" style="color: #fff; text-decoration: none;">Wallet</a>
+            <a href="top-traders.html" style="color: #fff; text-decoration: none;">Top Traders</a>
+        </nav>
+        <div class="nav-right" style="display: flex; align-items: center; gap: 15px;">
+            <div id="headerKycBadge" style="background: #0ecb81; color: #fff; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold;">Verified</div>
+            <a href="profile.html" style="color: #fff; text-decoration: none;"><i class="fas fa-user"></i> Profile</a>
+        </div>
+    </header>`;
+
+    const placeholder = document.getElementById('navbar-placeholder');
+    if (placeholder) {
+        placeholder.innerHTML = navbarHTML;
+    } else {
+        document.body.insertAdjacentHTML('afterbegin', navbarHTML);
+    }
+});
