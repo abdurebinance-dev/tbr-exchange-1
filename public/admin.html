@@ -228,38 +228,7 @@
             }
         });
 
-        import { collection, query, orderBy, limit, onSnapshot } from "firebase/firestore";
-        function streamKycs() {
-    const tbody = document.getElementById('kycTableBody');
-    if (tbody && !tbody.hasChildNodes()) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #848e9c; padding: 15px;">Loading KYC data...</td></tr>`;
-    }
-
-    const q = query(
-        collection(db, "kycs"), 
-        orderBy("createdAt", "desc"), 
-        limit(50)
-    );
-
-    onSnapshot(q, (querySnapshot) => {
-        const list = [];
-        querySnapshot.forEach((doc) => {
-            list.push({ id: doc.id, ...doc.data() });
-        });
-
-        if (list.length === 0 && tbody) {
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #848e9c; padding: 20px;">No pending KYC submissions</td></tr>`;
-            return;
-        }
-
-        if (typeof renderKycs === 'function' && tbody) {
-            renderKycs(tbody, list);
-        }
-    }, (error) => {
-        console.error("Firestore sync error:", error);
-    });
-}
-
+        
         async function adminLogin() {
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
