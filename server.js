@@ -1069,6 +1069,32 @@ app.post('/api/kyc/submit', async (req, res) => {
             await user.save();
         }
 
+        function updateHeaderKycBadge() {
+    const badgeEl = document.getElementById('headerKycBadge');
+    if (!badgeEl) return;
+
+    let kycStatus = (localStorage.getItem('kycStatus') || 'not_submitted').toLowerCase();
+    
+    badgeEl.className = 'nav-kyc-badge';
+    badgeEl.href = 'profile.html';
+
+    if (kycStatus === 'not_submitted' || kycStatus === 'unverified') {
+        badgeEl.classList.add('unverified');
+        badgeEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Unverified`;
+    } else if (kycStatus === 'pending' || kycStatus === 'under_review') {
+        badgeEl.classList.add('pending');
+        badgeEl.innerHTML = `<i class="fa-solid fa-clock"></i> Pending`;
+    } else if (kycStatus === 'verified' || kycStatus === 'approved') {
+        badgeEl.classList.add('approved');
+        badgeEl.innerHTML = `<i class="fa-solid fa-circle-check"></i> Verified`;
+    } else if (kycStatus === 'rejected') {
+        badgeEl.classList.add('rejected');
+        badgeEl.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> Rejected`;
+    }
+}
+
+window.addEventListener('DOMContentLoaded', updateHeaderKycBadge);
+
         // የ KYC መረጃዎችን ማዘጋጀት
         const kycDataPayload = {
             userId: user._id,

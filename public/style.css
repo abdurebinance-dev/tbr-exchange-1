@@ -434,3 +434,39 @@ input:focus {
         line-height: 1.4 !important;
     }
 }
+
+.nav-kyc-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.nav-kyc-badge.unverified {
+    background: rgba(246, 70, 93, 0.1);
+    color: #f6465d;
+    border: 1px solid rgba(246, 70, 93, 0.3);
+}
+
+.nav-kyc-badge.pending {
+    background: rgba(243, 186, 47, 0.1);
+    color: #f3ba2f;
+    border: 1px solid rgba(243, 186, 47, 0.3);
+}
+
+.nav-kyc-badge.approved {
+    background: rgba(14, 203, 129, 0.1);
+    color: #0ecb81;
+    border: 1px solid rgba(14, 203, 129, 0.3);
+}
+
+.nav-kyc-badge.rejected {
+    background: rgba(246, 70, 93, 0.15);
+    color: #f6465d;
+    border: 1px solid rgba(246, 70, 93, 0.5);
+}
