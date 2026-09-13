@@ -374,12 +374,6 @@ if (data.user.email && document.getElementById('emailInput')) {
     document.getElementById('emailInput').value = data.user.email;
 }
 
-// ሙሉ ስም (Full Name) በራሱ እንዳይሞላ ተዘግቷል
-// if (data.user.fullName && document.getElementById('fullNameInput')) {
-//     document.getElementById('fullNameInput').value = data.user.fullName;
-// }
-                    }
-
                     // የ KYC ስታተሱን በባጅ ማሳየት (Unverified, Pending, Approved, Rejected)
                     const status = data.user.kycStatus || 'unverified';
                     const statusText = document.getElementById('statusText');
