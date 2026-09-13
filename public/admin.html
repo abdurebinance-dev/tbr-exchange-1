@@ -286,68 +286,70 @@
         }
 
         async function loadKycData(status = 'pending') {
-            document.querySelectorAll('#tab-kyc button.btn').forEach(b => {
-                if (b.id) b.style.opacity = '0.6';
-            });
-            const activeBtn = document.getElementById(`btn-${status}-kyc`);
-            if (activeBtn) activeBtn.style.opacity = '1';
+    document.querySelectorAll('#tab-kyc button.btn').forEach(b => {
+        if (b.id) b.style.opacity = '0.6';
+    });
+    const activeBtn = document.getElementById(`btn-${status}-kyc`);
+    if (activeBtn) activeBtn.style.opacity = '1';
 
-            try {
-                const res = await fetch(`${API_BASE}/api/admin/kyc-requests`, { headers: { 'Authorization': 'Bearer ' + getToken() } });
-                const json = await res.json();
-                const tbody = document.getElementById('kycTableBody');
-                
-                console.log("KYC API Response:", json);
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/kyc-requests`, { headers: { 'Authorization': 'Bearer ' + getToken() } });
+        const json = await res.json();
+        const tbody = document.getElementById('kycTableBody');
+        
+        // ይህንን ኮንሶል ላይ ክፈተውና ዳታው የትኛው ኪይ (Key) ውስጥ እንዳለ እንይ
+        console.log("FULL KYC JSON:", json);
 
-                if (res.ok && json.success) {
-                    let rawList = json.data || json.requests || json.kycRequests || json.users || [];
-                    if (!Array.isArray(rawList) && Array.isArray(json)) {
-                        rawList = json;
-                    }
-
-                    // 100% ሹር እንዲሆን: ዳታው status የሌለው ከሆነ ለ pending ታብ ሁሉንም እናሳያለን፣ 
-                    // ለ approved/rejected ግን በትክክል እናጣራለን።
-                    const dataList = rawList.filter(item => {
-                        const itemStatus = (item.status || item.kycStatus || '').toLowerCase().trim();
-                        if (!itemStatus) {
-                            return status === 'pending'; // status የሌላቸውን በሙሉ እንደ pending እንቆጥራቸዋለን
-                        }
-                        return itemStatus === status.toLowerCase().trim();
-                    });
-
-                    if (dataList.length === 0) {
-                        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">No ${status} KYC requests found.</td></tr>`;
-                        return;
-                    }
-
-                    let html = '';
-                    dataList.forEach(item => {
-                        const userId = item.userId || item.email || item.userEmail || item._id || 'N/A';
-                        const currentStatus = item.status || item.kycStatus || 'pending';
-                        
-                        html += `<tr>
-                            <td>User: ${userId}</td>
-                            <td>
-                                <button onclick='openKycModal(${JSON.stringify(item)})' class="btn btn-sm" style="color: #f3ba2f; background: #181a20; border: 1px solid #f3ba2f; padding: 5px 12px; border-radius: 4px; cursor: pointer;">
-                                    <i class="fas fa-eye"></i> View Documents & Selfie
-                                </button>
-                            </td>
-                            <td><span class="badge-${currentStatus}">${currentStatus}</span></td>
-                            <td>
-                                <button class="btn btn-approve" onclick="performKycAction('${item._id || item.id}', 'approved')">Approve</button>
-                                <button class="btn btn-reject" onclick="performKycAction('${item._id || item.id}', 'rejected')">Reject</button>
-                            </td>
-                        </tr>`;
-                    });
-                    tbody.innerHTML = html;
-                } else {
-                    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Failed to load KYC requests.</td></tr>`;
-                }
-            } catch (err) { 
-                console.error("KYC Load Error:", err); 
-                document.getElementById('kycTableBody').innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Error loading KYC data.</td></tr>`;
+        if (res.ok) {
+            // ሁሉንም ሊሆኑ የሚችሉ ኪዮች እንፈትሻለን (ሰርቨሩ የላከውን ማናቸውንም ፎርማት ለመያዝ)
+            let dataList = [];
+            if (Array.isArray(json)) dataList = json;
+            else if (Array.isArray(json.data)) dataList = json.data;
+            else if (Array.isArray(json.requests)) dataList = json.requests;
+            else if (Array.isArray(json.kycRequests)) dataList = json.kycRequests;
+            else if (Array.isArray(json.users)) dataList = json.users;
+            else if (json.kyc && Array.isArray(json.kyc)) dataList = json.kyc;
+            else {
+                // ከላይ ካሉት ውጪ ከሆነ, አጠቃላይ jsonObject ውስጥ ያሉ አርሬዎችን እንፈልጋለን
+                const possibleKey = Object.keys(json).find(k => Array.isArray(json[k]));
+                if (possibleKey) dataList = json[possibleKey];
             }
+
+            console.log("Extracted Data List:", dataList);
+
+            if (!dataList || dataList.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Array is empty. Check Console (FULL KYC JSON).</td></tr>`;
+                return;
+            }
+
+            let html = '';
+            dataList.forEach(item => {
+                const userId = item.userId || item.email || item.userEmail || item._id || 'N/A';
+                const currentStatus = item.status || item.kycStatus || 'pending';
+                
+                html += `<tr>
+                    <td>User: ${userId}</td>
+                    <td>
+                        <button onclick='openKycModal(${JSON.stringify(item)})' class="btn btn-sm" style="color: #f3ba2f; background: #181a20; border: 1px solid #f3ba2f; padding: 5px 12px; border-radius: 4px; cursor: pointer;">
+                            <i class="fas fa-eye"></i> View Documents & Selfie
+                        </button>
+                    </td>
+                    <td><span class="badge-${currentStatus}">${currentStatus}</span></td>
+                    <td>
+                        <button class="btn btn-approve" onclick="performKycAction('${item._id || item.id}', 'approved')">Approve</button>
+                        <button class="btn btn-reject" onclick="performKycAction('${item._id || item.id}', 'rejected')">Reject</button>
+                    </td>
+                </tr>`;
+            });
+            tbody.innerHTML = html;
+        } else {
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Failed to load KYC requests.</td></tr>`;
         }
+    } catch (err) { 
+        console.error("KYC Load Error:", err); 
+        document.getElementById('kycTableBody').innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Error loading KYC data.</td></tr>`;
+    }
+}
 
         async function fetchEscrowDisputes() {
             try {
