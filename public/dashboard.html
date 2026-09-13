@@ -701,10 +701,23 @@
             console.log("Logged in user:", currentUserEmail);
         }
 
-        const userObj = window.currentUserData || { email: currentUserEmail, username: currentUserEmail.split('@')[0], kycStatus: 'pending', fullName: '' };
-        const displayName = (userObj.kycStatus === 'approved' && userObj.fullName) ? userObj.fullName : (userObj.username || (userObj.email || '').split('@')[0]);
-        const nameEl = document.getElementById('userNameDisplay');
-        if (nameEl) nameEl.innerText = displayName;
+        const storedFullName = localStorage.getItem('fullName') || '';
+    const kycStat = localStorage.getItem('kycStatus') || 'pending';
+    const userObj = window.currentUserData || { 
+        email: localStorage.getItem('userEmail') || '', 
+        username: (localStorage.getItem('userEmail') || '').split('@')[0], 
+        kycStatus: kycStat, 
+        fullName: storedFullName 
+    };
+
+    const fullNameVal = userObj.fullName || storedFullName;
+    const firstName = fullNameVal ? fullNameVal.trim().split(' ')[0] : '';
+    const displayName = (userObj.kycStatus === 'approved' && firstName) 
+        ? firstName 
+        : (userObj.username || (userObj.email || '').split('@')[0]);
+
+    const nameEl = document.getElementById('userNameDisplay');
+    if (nameEl) nameEl.innerText = displayName;
 
         const localEmail = localStorage.getItem('signupEmail') || localStorage.getItem('userEmail');
         if (localEmail) {
