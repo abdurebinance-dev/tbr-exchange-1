@@ -839,35 +839,38 @@
                         }
                         
                         const status = userObj.kycStatus || (userObj.isVerified ? 'verified' : 'unverified');
-                        localStorage.setItem('kycStatus', status);
-                        updateHeaderKycBadge();
+localStorage.setItem('kycStatus', status);
+updateHeaderKycBadge();
 
-                        let displayName = 'USER';
-                        if (userObj.fullName) {
-                            displayName = userObj.fullName.toUpperCase();
-                        } else if (userObj.name) {
-                            displayName = userObj.name.toUpperCase();
-                        } else if (userEmail) {
-                            displayName = userEmail.split('@')[0].toUpperCase();
-                        }
+let rawName = 'USER';
+if (userObj.fullName) {
+    rawName = userObj.fullName;
+} else if (userObj.name) {
+    rawName = userObj.name;
+} else if (userEmail) {
+    rawName = userEmail.split('@')[0];
+}
 
-                        const hour = new Date().getHours();
-                        let timeGreeting = "Evening";
-                        if (hour < 12) timeGreeting = "Morning";
-                        else if (hour < 17) timeGreeting = "Afternoon";
+const fullNameUpper = rawName.toUpperCase();
+const firstName = rawName.trim().split(' ')[0].toUpperCase();
 
-                        document.querySelectorAll('.user-email').forEach(el => {
-                            if (userEmail) el.innerText = userEmail;
-                        });
-                        
-                        document.querySelectorAll('.user-name').forEach(el => {
-                            el.innerText = displayName;
-                        });
+const hour = new Date().getHours();
+let timeGreeting = "Evening";
+if (hour < 12) timeGreeting = "Morning";
+else if (hour < 17) timeGreeting = "Afternoon";
 
-                        const greetingEl = document.getElementById('userGreeting');
-                        if (greetingEl) {
-                            greetingEl.innerText = `${timeGreeting}, ${displayName}`;
-                        }
+document.querySelectorAll('.user-email').forEach(el => {
+    if (userEmail) el.innerText = userEmail;
+});
+
+document.querySelectorAll('.user-name').forEach(el => {
+    el.innerText = fullNameUpper;
+});
+
+const greetingEl = document.getElementById('userGreeting');
+if (greetingEl) {
+    greetingEl.innerText = `${timeGreeting}, ${firstName}`;
+}
 
                         if (userObj.balance !== undefined) {
                             let actualBalance = Number(userObj.balance).toFixed(2);
