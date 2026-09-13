@@ -834,37 +834,58 @@ app.get('/api/admin/escrow-disputes', verifyAdmin, async (req, res) => {
 });
 
 // 2. KYC Requests API (የተስተካከለ - ፎቶዎችን በትክክል ለማስተላለፍ)
-// --- Admin KYC Requests API (ሁሉንም ያለ ማጣሪያ በቀጥታ የሚልክ) ---
 app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
     try {
-        const kycList = await KYC.find({}).lean();
+        const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+        const skip = (page - 1) * limit;
+        const statusFilter = req.query.status ? { status: req.query.status } : {};
 
-        const requests = kycList.map(kyc => {
-            let f = kyc.frontImage || '';
-            let b = kyc.backImage || '';
-            let s = kyc.selfieImage || '';
+        const [kycList, totalCount] = await Promise.all([
+            KYC.find(statusFilter)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .lean(),
+            KYC.countDocuments(statusFilter)
+        ]);
 
-            if (Buffer.isBuffer(f)) f = `data:image/jpeg;base64,${f.toString('base64')}`;
-            if (Buffer.isBuffer(b)) b = `data:image/jpeg;base64,${b.toString('base64')}`;
-            if (Buffer.isBuffer(s)) s = `data:image/jpeg;base64,${s.toString('base64')}`;
+        const formatImage = (img) => {
+            if (!img) return '';
+            if (Buffer.isBuffer(img)) {
+                // Optional: detect mime type if stored or default safely
+                return `data:image/jpeg;base64,${img.toString('base64')}`;
+            }
+            if (typeof img === 'string' && img.startsWith('data:image/')) return img;
+            // If stored as URL/path
+            return img; 
+        };
 
-            return {
-                _id: kyc._id,
-                userId: kyc.userId || kyc.email || 'N/A',
-                email: kyc.email || '',
-                frontImage: f,
-                backImage: b,
-                selfieImage: s,
-                status: kyc.status || 'pending',
-                fullName: kyc.fullName || 'User'
-            };
+        const requests = kycList.map(kyc => ({
+            _id: kyc._id,
+            userId: kyc.userId || kyc.email || 'N/A',
+            email: kyc.email || '',
+            frontImage: formatImage(kyc.frontImage),
+            backImage: formatImage(kyc.backImage),
+            selfieImage: formatImage(kyc.selfieImage),
+            status: kyc.status || 'pending',
+            fullName: kyc.fullName || 'User',
+            createdAt: kyc.createdAt || null
+        }));
+
+        return res.json({
+            success: true,
+            data: requests,
+            pagination: {
+                total: totalCount,
+                page,
+                limit,
+                totalPages: Math.ceil(totalCount / limit)
+            }
         });
-
-        // ምንም ማጣሪያ (Filter) ሳይደረግ ሁሉንም ዳታ በቀጥታ ይልካል
-        return res.json({ success: true, data: requests });
     } catch (error) {
         console.error("KYC Fetch Error:", error);
-        return res.status(500).json({ success: false, data: [] });
+        return res.status(500).json({ success: false, message: 'Internal server error', data: [] });
     }
 });
 
