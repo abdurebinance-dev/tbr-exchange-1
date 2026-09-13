@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 document.addEventListener("DOMContentLoaded", function() {
     const navbarHTML = `
-    <header class="navbar" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background: #121212; border-bottom: 1px solid #222; width: 100%; position: sticky; top: 0; z-index: 1000;">
+    <header class="navbar" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background: #121212; border-bottom: 1px solid #222; width: 100%; position: sticky; top: 0; z-index: 1000; box-sizing: border-box;">
         <div class="nav-brand">
             <a href="dashboard.html" style="color: #f3ba2f; font-weight: bold; font-size: 20px; text-decoration: none;">TBR</a>
         </div>
@@ -78,20 +78,18 @@ document.addEventListener("DOMContentLoaded", function() {
         </nav>
         <div class="nav-right" style="display: flex; align-items: center; gap: 15px;">
             <div id="headerKycBadge" style="background: #0ecb81; color: #fff; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold;">Verified</div>
-            <a href="profile.html" style="color: #fff; text-decoration: none;"><i class="fas fa-user"></i> Profile</a>
+            <a href="profile.html" style="color: #fff; text-decoration: none; display: flex; align-items: center; gap: 5px;"><i class="fas fa-user"></i> Profile</a>
         </div>
     </header>`;
 
-    // ነባሩን Navbar ካለ ማስወገድ
-    const existingNavbar = document.querySelector('header.navbar');
-    if (existingNavbar) {
-        existingNavbar.remove();
-    }
+    // በገጹ ላይ ያሉትን ሁሉንም የድሮ ናቪጌሽኖች ሙሉ በሙሉ ማስወገድ
+    document.querySelectorAll('header, .navbar, nav').forEach(el => {
+        // የገጹን ዋና ዋና የውስጥ ክፍሎች እንዳያጠፋ ልብ ይበሉ፣ header ብቻ ከሆነ የሚጠራው
+        if (el.tagName.toLowerCase() === 'header' || el.classList.contains('navbar')) {
+            el.remove();
+        }
+    });
 
-    const placeholder = document.getElementById('navbar-placeholder');
-    if (placeholder) {
-        placeholder.innerHTML = navbarHTML;
-    } else {
-        document.body.insertAdjacentHTML('afterbegin', navbarHTML);
-    }
+    // አዲሱን አውቶማቲክ Navbar በገጹ መጀመሪያ ላይ ማስገባት
+    document.body.insertAdjacentHTML('afterbegin', navbarHTML);
 });
