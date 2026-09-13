@@ -63,28 +63,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 document.addEventListener("DOMContentLoaded", function() {
-    const themeToggleBtn = document.getElementById("themeToggleBtn");
+    const themeToggleBtn = document.getElementById("theme-toggle");
     
-    // ከዚህ በፊት ተጠቃሚው የመረጠውን ከለር ማስታወስ
     if (localStorage.getItem("theme") === "light") {
         document.body.style.backgroundColor = "#ffffff";
         document.body.style.color = "#000000";
-        if(themeToggleBtn) themeToggleBtn.innerHTML = '<i class="fas fa-sun"></i>';
+        if(themeToggleBtn) themeToggleBtn.className = "fa-solid fa-sun";
     }
 
     if (themeToggleBtn) {
+        themeToggleBtn.style.cursor = "pointer";
         themeToggleBtn.addEventListener("click", function() {
             if (document.body.style.backgroundColor === "rgb(255, 255, 255)") {
-                // ወደ Dark mode መመለስ
                 document.body.style.backgroundColor = "#080808";
                 document.body.style.color = "#ffffff";
-                themeToggleBtn.innerHTML = '<i class="fas fa-moon"></i>';
+                themeToggleBtn.className = "fa-solid fa-moon";
                 localStorage.setItem("theme", "dark");
             } else {
-                // ወደ Light mode መቀየር
                 document.body.style.backgroundColor = "#ffffff";
                 document.body.style.color = "#000000";
-                themeToggleBtn.innerHTML = '<i class="fas fa-sun"></i>';
+                themeToggleBtn.className = "fa-solid fa-sun";
                 localStorage.setItem("theme", "light");
             }
         });
