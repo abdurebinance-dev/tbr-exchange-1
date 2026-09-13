@@ -485,9 +485,46 @@ if (data.user.email && document.getElementById('emailInput')) {
                 })
             });
 
+function showToast(message) {
+        let toast = document.getElementById('customToast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'customToast';
+            toast.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #1e2329;
+                color: #fff;
+                padding: 14px 22px;
+                border-radius: 8px;
+                border-left: 4px solid #f3ba2f;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.7);
+                z-index: 10000;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                border: 1px solid #30363d;
+                transition: opacity 0.3s ease;
+            `;
+            document.body.appendChild(toast);
+        }
+        toast.innerHTML = `
+            <i class="fas fa-check-circle" style="color: #0ecb81; font-size: 18px;"></i>
+            <span style="font-size: 14px; font-weight: 500;">${message}</span>
+        `;
+        toast.style.display = 'flex';
+        toast.style.opacity = '1';
+
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => { toast.style.display = 'none'; }, 300);
+        }, 3000);
+    }
+
             const result = await response.json();
             if (response.ok && result.success) {
-                alert('KYC successfully submitted for review!');
+                showToast("KYC successfully submitted for review!");
                 window.location.href = 'dashboard.html';
             } else {
                 alert(result.message || 'Error submitting KYC.');
