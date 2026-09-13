@@ -691,22 +691,27 @@
         </a>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const currentUserEmail = localStorage.getItem('userEmail');
-            if (!currentUserEmail) {
-                window.location.href = 'signin.html';
-                return;
-            } else {
-                console.log("Logged in user:", currentUserEmail);
-            }
+   <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const currentUserEmail = localStorage.getItem('userEmail');
+        if (!currentUserEmail) {
+            window.location.href = 'signin.html';
+            return;
+        } else {
+            console.log("Logged in user:", currentUserEmail);
+        }
 
-            const localEmail = localStorage.getItem('signupEmail') || localStorage.getItem('userEmail');
-            if (localEmail) {
-                const hour = new Date().getHours();
-                let timeGreeting = "Evening";
-                if (hour < 12) timeGreeting = "Morning";
-                else if (hour < 17) timeGreeting = "Afternoon";
+        const userObj = window.currentUserData || { email: currentUserEmail, username: currentUserEmail.split('@')[0], kycStatus: 'pending', fullName: '' };
+        const displayName = (userObj.kycStatus === 'approved' && userObj.fullName) ? userObj.fullName : (userObj.username || (userObj.email || '').split('@')[0]);
+        const nameEl = document.getElementById('userNameDisplay');
+        if (nameEl) nameEl.innerText = displayName;
+
+        const localEmail = localStorage.getItem('signupEmail') || localStorage.getItem('userEmail');
+        if (localEmail) {
+            const hour = new Date().getHours();
+            let timeGreeting = "Evening";
+            if (hour < 12) timeGreeting = "Morning";
+            else if (hour < 17) timeGreeting = "Afternoon";
 
                 document.getElementById('userGreeting').innerText = `${timeGreeting}, USER`;
                 document.getElementById('menuUserName').innerText = 'USER';
