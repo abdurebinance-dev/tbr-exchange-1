@@ -1024,6 +1024,7 @@ app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
     }
 });
 
+// --- KYC Submission Route (Combined: Updates User & creates/updates KYC collection) ---
 app.post('/api/kyc/submit', verifyToken, async (req, res) => {
     try {
         const { fullName, idNumber, dateOfBirth, residentialAddress, docType, frontImage, backImage, selfieImage } = req.body;
@@ -1036,15 +1037,24 @@ app.post('/api/kyc/submit', verifyToken, async (req, res) => {
         // 1. User ዶክመንት ማዘመን
         user.fullName = fullName || user.fullName;
         user.kycStatus = 'pending';
+        user.kycData = {
+            frontImage,
+            backImage,
+            selfieImage,
+            idNumber,
+            dateOfBirth,
+            residentialAddress,
+            docType
+        };
         await user.save();
 
-        // 2. ለ Admin Panel የሚሆን Independent KYC Collection ማዘመን (Upsert)
-        await KYC.findOneAndUpdate(
+        // 2. ለ Admin Panel የሚሆን স্বতন্ত্র KYC Collection ማዘመን (Upsert)
+        const kycRecord = await KYC.findOneAndUpdate(
             { userId: user._id },
             {
                 userId: user._id,
                 email: user.email,
-                fullName,
+                fullName: fullName || user.fullName,
                 idNumber,
                 dob: dateOfBirth,
                 address: residentialAddress,
@@ -1057,8 +1067,13 @@ app.post('/api/kyc/submit', verifyToken, async (req, res) => {
             { upsert: true, new: true, setDefaultsOnInsert: true }
         );
 
-        res.json({ success: true, message: "KYC submitted successfully for review" });
+        res.json({ 
+            success: true, 
+            message: "KYC documents submitted successfully and sent to admin review",
+            data: kycRecord 
+        });
     } catch (error) {
+        console.error("KYC Submission Error:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 });
