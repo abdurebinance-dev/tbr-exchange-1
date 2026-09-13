@@ -1069,7 +1069,7 @@ app.post('/api/kyc/submit', async (req, res) => {
             await user.save();
         }
 
-        function updateHeaderKycBadge() {
+       function updateHeaderKycBadge() {
     const badgeEl = document.getElementById('headerKycBadge');
     if (!badgeEl) return;
 

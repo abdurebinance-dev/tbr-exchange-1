@@ -445,6 +445,7 @@ input:focus {
     font-weight: 600;
     text-decoration: none;
     transition: all 0.2s ease;
+    margin-right: 10px;
 }
 
 .nav-kyc-badge.unverified {

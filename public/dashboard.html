@@ -83,6 +83,45 @@
             }
         }
 
+        .nav-kyc-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            margin-right: 10px;
+            cursor: pointer;
+            border: none;
+        }
+
+        .nav-kyc-badge.unverified {
+            background: rgba(246, 70, 93, 0.1);
+            color: #f6465d;
+            border: 1px solid rgba(246, 70, 93, 0.3);
+        }
+
+        .nav-kyc-badge.pending {
+            background: rgba(243, 186, 47, 0.1);
+            color: #f3ba2f;
+            border: 1px solid rgba(243, 186, 47, 0.3);
+        }
+
+        .nav-kyc-badge.approved {
+            background: rgba(14, 203, 129, 0.1);
+            color: #0ecb81;
+            border: 1px solid rgba(14, 203, 129, 0.3);
+        }
+
+        .nav-kyc-badge.rejected {
+            background: rgba(246, 70, 93, 0.15);
+            color: #f6465d;
+            border: 1px solid rgba(246, 70, 93, 0.5);
+        }
+
         .profile-dropdown {
             position: absolute;
             top: 45px;
@@ -470,9 +509,9 @@
             </div>
         </div>
         <div class="nav-right">
-            <button id="kycStatusBtn" onclick="goToKycPage()" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: bold; display: flex; align-items: center; gap: 6px;">
-                <i class="fa-solid fa-triangle-exclamation" id="kycIcon"></i> <span id="kycBtnText">Unverified</span>
-            </button>
+            <a href="profile.html" id="headerKycBadge" class="nav-kyc-badge unverified">
+                <i class="fa-solid fa-triangle-exclamation"></i> Unverified
+            </a>
 
             <i id="theme-toggle" class="fa-solid fa-moon" style="color: #d4af37; cursor: pointer;" title="Toggle Theme"></i>
             <a href="notifications.html" style="color: inherit; text-decoration: none;"><i class="fa-regular fa-bell" style="cursor: pointer;"></i></a>
@@ -508,10 +547,6 @@
                 <a href="download.html" class="dropdown-item">
                     <i class="fa-solid fa-mobile-screen"></i> Download App
                 </a>
-
-<a href="profile.html" id="headerKycBadge" class="nav-kyc-badge unverified">
-    <i class="fa-solid fa-triangle-exclamation"></i> Unverified
-</a>
 
                 <div class="dropdown-divider"></div>
 
@@ -643,7 +678,7 @@
             <span>Wallet</span>
         </a>
         <a href="market.html">
-            <i class="fa-solid fa-store"></i>
+            <i class="fa-store fa-solid"></i>
             <span>Market</span>
         </a>
         <a href="chat.html">
@@ -658,6 +693,14 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const currentUserEmail = localStorage.getItem('userEmail');
+            if (!currentUserEmail) {
+                window.location.href = 'signin.html';
+                return;
+            } else {
+                console.log("Logged in user:", currentUserEmail);
+            }
+
             const localEmail = localStorage.getItem('signupEmail') || localStorage.getItem('userEmail');
             if (localEmail) {
                 const hour = new Date().getHours();
@@ -675,64 +718,88 @@
             const balanceValueEl = document.getElementById('balanceValue');
             let actualBalance = "0.00";
 
-            balanceEyeBtn.addEventListener('click', () => {
-                isBalanceHidden = !isBalanceHidden;
-                if (isBalanceHidden) {
-                    balanceValueEl.innerText = '******';
-                    balanceEyeBtn.classList.replace('fa-eye', 'fa-eye-slash');
-                } else {
-                    balanceValueEl.innerText = actualBalance;
-                    balanceEyeBtn.classList.replace('fa-eye-slash', 'fa-eye');
-                    if (!balanceEyeBtn.classList.contains('fa-eye')) {
-                        balanceEyeBtn.classList.add('fa-eye');
+            if (balanceEyeBtn) {
+                balanceEyeBtn.addEventListener('click', () => {
+                    isBalanceHidden = !isBalanceHidden;
+                    if (isBalanceHidden) {
+                        balanceValueEl.innerText = '******';
+                        balanceEyeBtn.classList.replace('fa-eye', 'fa-eye-slash');
+                    } else {
+                        balanceValueEl.innerText = actualBalance;
+                        balanceEyeBtn.classList.replace('fa-eye-slash', 'fa-eye');
+                        if (!balanceEyeBtn.classList.contains('fa-eye')) {
+                            balanceEyeBtn.classList.add('fa-eye');
+                        }
                     }
-                }
-            });
-
-            // በዳሽቦርድ JS ፋይል ውስጥ
-const currentUserEmail = localStorage.getItem('userEmail');
-
-if (!currentUserEmail) {
-    // ኢሜይል ከሌለ ወደ ሲንኢን መመለስ
-    window.location.href = 'signin.html';
-} else {
-    // ዳሽቦርዱ ላይ የዛን ሰውን ኢሜይል ወይም መረጃ ማሳየት
-    console.log("Logged in user:", currentUserEmail);
-}
+                });
+            }
 
             const profileBtn = document.getElementById('profile-icon-btn');
             const profileMenu = document.getElementById('profile-dropdown-menu');
 
-            profileBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                profileMenu.classList.toggle('active');
-            });
+            if (profileBtn && profileMenu) {
+                profileBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    profileMenu.classList.toggle('active');
+                });
 
-            profileMenu.addEventListener('click', (e) => {
-                e.stopPropagation();
-            });
+                profileMenu.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                });
 
-            window.addEventListener('click', () => {
-                if (profileMenu.classList.contains('active')) {
-                    profileMenu.classList.remove('active');
-                }
-            });
+                window.addEventListener('click', () => {
+                    if (profileMenu.classList.contains('active')) {
+                        profileMenu.classList.remove('active');
+                    }
+                });
+            }
 
-            document.getElementById('signOutBtn').addEventListener('click', (e) => {
-                e.preventDefault();
-                localStorage.removeItem('signupEmail');
-                localStorage.removeItem('userEmail');
-                localStorage.removeItem('token');
-                localStorage.removeItem('theme');
-                localStorage.removeItem('kycStatus');
-                window.location.href = 'login.html';
-            });
+            const signOutBtn = document.getElementById('signOutBtn');
+            if (signOutBtn) {
+                signOutBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    localStorage.removeItem('signupEmail');
+                    localStorage.removeItem('userEmail');
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('theme');
+                    localStorage.removeItem('kycStatus');
+                    window.location.href = 'login.html';
+                });
+            }
 
+            updateHeaderKycBadge();
             loadUserData();
             loadLiveMarketRates();
         });
 
-       async function loadUserData() {
+        function updateHeaderKycBadge() {
+            const badgeEl = document.getElementById('headerKycBadge');
+            if (!badgeEl) return;
+
+            let kycStatus = (localStorage.getItem('kycStatus') || 'not_submitted').toLowerCase();
+            
+            badgeEl.className = 'nav-kyc-badge';
+            badgeEl.href = 'profile.html';
+
+            if (kycStatus === 'not_submitted' || kycStatus === 'unverified') {
+                badgeEl.classList.add('unverified');
+                badgeEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Unverified`;
+            } else if (kycStatus === 'pending' || kycStatus === 'under_review' || kycStatus === 'under review') {
+                badgeEl.classList.add('pending');
+                badgeEl.innerHTML = `<i class="fa-solid fa-clock"></i> Under Review`;
+            } else if (kycStatus === 'verified' || kycStatus === 'approved' || kycStatus === 'true') {
+                badgeEl.classList.add('approved');
+                badgeEl.innerHTML = `<i class="fa-solid fa-circle-check"></i> Verified`;
+            } else if (kycStatus === 'rejected') {
+                badgeEl.classList.add('rejected');
+                badgeEl.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> Rejected`;
+            } else {
+                badgeEl.classList.add('unverified');
+                badgeEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Unverified`;
+            }
+        }
+
+        async function loadUserData() {
             try {
                 const token = localStorage.getItem('token') || localStorage.getItem('authToken');
                 const headers = { 'Content-Type': 'application/json' };
@@ -740,7 +807,6 @@ if (!currentUserEmail) {
                     headers['Authorization'] = `Bearer ${token}`;
                 }
 
-                // ከሬንደር ወይም ከሎካል ሆስት ጋር በትክክል እንዲያወራ ዩአርኤሉን ማስተካከል
                 const API_BASE = window.location.hostname.includes('localhost') ? '' : 'https://tbr-exchange-backend.onrender.com';
                 const res = await fetch(`${API_BASE}/api/auth/me`, { headers });
                 
@@ -749,7 +815,6 @@ if (!currentUserEmail) {
                     if (data.success && data.user) {
                         const userObj = data.user;
                         
-                        // አሮጌ ኬሽ የተደረገ ኢሜይል እንዳይነበብ ከሰርቨር የመጣውን ትክክለኛ አዲስ ኢሜይል ብቻ መያዝ
                         const userEmail = userObj.email || '';
                         if (userEmail) {
                             localStorage.setItem('userEmail', userEmail);
@@ -757,9 +822,7 @@ if (!currentUserEmail) {
                         
                         const status = userObj.kycStatus || (userObj.isVerified ? 'verified' : 'unverified');
                         localStorage.setItem('kycStatus', status);
-                        if (typeof updateKycButtonUI === 'function') {
-                            updateKycButtonUI(status);
-                        }
+                        updateHeaderKycBadge();
 
                         let displayName = 'USER';
                         if (userObj.fullName) {
@@ -789,7 +852,7 @@ if (!currentUserEmail) {
                         }
 
                         if (userObj.balance !== undefined) {
-                            actualBalance = Number(userObj.balance).toFixed(2);
+                            let actualBalance = Number(userObj.balance).toFixed(2);
                             const balanceValEl = document.getElementById('balanceValue');
                             if (balanceValEl) {
                                 const isHidden = balanceValEl.innerText === '******';
@@ -800,16 +863,12 @@ if (!currentUserEmail) {
                         }
                     }
                 } else {
-                    // ቶከኑ ካለፈ ወይም ስህተት ከኖር ሙሉ መረጃውን አጽድቶ ወደ መግቢያው መውሰድ
                     localStorage.clear();
                     window.location.href = 'signin.html';
                 }
             } catch (e) {
                 console.error('Error loading user profile:', e);
-                const localStatus = localStorage.getItem('kycStatus') || 'unverified';
-                if (typeof updateKycButtonUI === 'function') {
-                    updateKycButtonUI(localStatus);
-                }
+                updateHeaderKycBadge();
             }
         }
 
@@ -827,36 +886,6 @@ if (!currentUserEmail) {
             } catch (e) {
                 console.error('Error fetching live rates:', e);
             }
-        }
-
-        function updateKycButtonUI(status) {
-            const btn = document.getElementById('kycStatusBtn');
-            const icon = document.getElementById('kycIcon');
-            const text = document.getElementById('kycBtnText');
-
-            if (!status || status === 'unverified' || status === 'Unverified') {
-                btn.style.background = 'rgba(239, 68, 68, 0.1)';
-                btn.style.color = '#ef4444';
-                btn.style.border = '1px solid rgba(239, 68, 68, 0.2)';
-                icon.className = 'fa-solid fa-triangle-exclamation';
-                text.innerText = 'Unverified';
-            } else if (status === 'pending' || status === 'Under Review' || status === 'under_review') {
-                btn.style.background = 'rgba(234, 179, 8, 0.1)';
-                btn.style.color = '#eab308';
-                btn.style.border = '1px solid rgba(234, 179, 8, 0.2)';
-                icon.className = 'fa-solid fa-clock';
-                text.innerText = 'Under Review';
-            } else if (status === 'verified' || status === 'Approved' || status === 'approved' || status === true) {
-                btn.style.background = 'rgba(16, 185, 129, 0.1)';
-                btn.style.color = '#10b981';
-                btn.style.border = '1px solid rgba(16, 185, 129, 0.2)';
-                icon.className = 'fa-solid fa-circle-check';
-                text.innerText = 'Verified';
-            }
-        }
-
-        function goToKycPage() {
-            window.location.href = 'kyc.html';
         }
     </script>
 </body>
