@@ -741,6 +741,26 @@ app.get('/api/user', verifyToken, async (req, res) => {
     }
 });
 
+app.get('/api/user/profile', verifyToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select('-password');
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        res.json({
+            success: true,
+            user: {
+                id: user._id,
+                email: user.email,
+                fullName: user.fullName,
+                kycStatus: user.kycStatus || 'unverified'
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // (ሌሎች የኮድ ክፍሎችህ እና ራውቶችህ እዚህ ይኖራሉ...)
 
 // አዲሱን ራውት ከታች ከሌሎች ራውቶች ጋር አያይዘው
