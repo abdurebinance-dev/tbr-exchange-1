@@ -286,53 +286,51 @@
         }
 
 async function loadKycData(status = 'pending') {
-    // ዩአይ ቡልቲን አክቲቭ ማሳያ
+    // የቁልፎች ቪዥዋል አክቲቭ ሪአክሽን
     document.querySelectorAll('#tab-kyc button.btn').forEach(b => {
         b.style.opacity = '0.5';
+        b.style.borderColor = 'transparent';
     });
     const activeBtn = document.getElementById(`btn-${status}-kyc`);
-    if (activeBtn) activeBtn.style.opacity = '1';
+    if (activeBtn) {
+        activeBtn.style.opacity = '1';
+        activeBtn.style.borderColor = 'currentColor';
+    }
 
     try {
-        const res = await fetch(`${API_BASE}/api/admin/kyc-requests`, { 
-            headers: { 'Authorization': 'Bearer ' + getToken() } 
-        });
+        // query parameter  లేకుండా ሙሉውን list እንጠይቃለን
+        const res = await fetch(`${API_BASE}/api/admin/kyc-requests`, { headers: { 'Authorization': 'Bearer ' + getToken() } });
         const json = await res.json();
         const tbody = document.getElementById('kycTableBody');
         
-        console.log("RAW KYC RESPONSE:", json);
-
         if (res.ok && json.success) {
             let rawList = json.data || json.requests || json.kycRequests || json.users || [];
             if (!Array.isArray(rawList) && Array.isArray(json)) {
                 rawList = json;
             }
 
-            // ማጣሪያው እንዳይደብቅህ (pending/approved/rejected ፊልተሩን ተለዋዋጭ እናደርጋለን)
+            // ትክክለኛ ማጣሪያ (status property ከሌለው ወደ 'pending' እንለውጠዋለን ለጊዜው እንዳይጠፋ)
             const dataList = rawList.filter(item => {
-                const itemStatus = (item.status || item.kycStatus || 'pending').toString().toLowerCase().trim();
+                const itemStatus = (item.status || item.kycStatus || 'pending').toLowerCase().trim();
                 return itemStatus === status.toLowerCase().trim();
             });
 
-            console.log(`Matched [${status}]:`, dataList);
+            console.log(`Filtered for [${status}]:`, dataList);
 
-            // ፊልተር አድርጎ ካጣ አጠቃላይ ዳታውን አሳይ (Debug support)
-            const displayList = dataList.length > 0 ? dataList : (status === 'pending' ? rawList : []);
-
-            if (displayList.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">No ${status} KYC requests found. (Total DB items: ${rawList.length})</td></tr>`;
+            if (dataList.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">No ${status} KYC requests found. (Total in DB: ${rawList.length})</td></tr>`;
                 return;
             }
 
             let html = '';
-            displayList.forEach(item => {
+            dataList.forEach(item => {
                 const userId = item.userId || item.email || item.userEmail || item._id || 'N/A';
                 const currentStatus = item.status || item.kycStatus || status;
                 
                 html += `<tr>
                     <td>User: ${userId}</td>
                     <td>
-                        <button onclick='openKycModal(${JSON.stringify(item).replace(/'/g, "&apos;")})' class="btn btn-sm" style="color: #f3ba2f; background: #181a20; border: 1px solid #f3ba2f; padding: 5px 12px; border-radius: 4px; cursor: pointer;">
+                        <button onclick='openKycModal(${JSON.stringify(item)})' class="btn btn-sm" style="color: #f3ba2f; background: #181a20; border: 1px solid #f3ba2f; padding: 5px 12px; border-radius: 4px; cursor: pointer;">
                             <i class="fas fa-eye"></i> View Documents & Selfie
                         </button>
                     </td>
@@ -345,11 +343,11 @@ async function loadKycData(status = 'pending') {
             });
             tbody.innerHTML = html;
         } else {
-            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Failed to load KYC requests from server.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Failed to load KYC requests.</td></tr>`;
         }
-    } catch (err) { 
+    } async (err) => { 
         console.error("KYC Load Error:", err); 
-        document.getElementById('kycTableBody').innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Error loading KYC data. Check console.</td></tr>`;
+        document.getElementById('kycTableBody').innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Error loading KYC data.</td></tr>`;
     }
 }
 
