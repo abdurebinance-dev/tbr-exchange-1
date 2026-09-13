@@ -697,19 +697,9 @@
             if (!currentUserEmail) {
                 window.location.href = 'signin.html';
                 return;
-           } else {
-        console.log("Logged in user:", currentUserEmail);
-    const userObj = window.currentUserData || { 
-        email: currentUserEmail || '', 
-        username: (currentUserEmail || '').split('@')[0], 
-        kycStatus: 'pending', 
-        fullName: '' 
-    };
-    const userObj = window.currentUserData || { email: currentUserEmail || '', username: (currentUserEmail || '').split('@')[0], kycStatus: 'pending', fullName: '' };
-    const displayName = (userObj.kycStatus === 'approved' && userObj.fullName) ? userObj.fullName : (userObj.username || (userObj.email || '').split('@')[0]);
-    const nameEl = document.getElementById('userNameDisplay');
-    if (nameEl) nameEl.innerText = displayName;
-    }
+            } else {
+                console.log("Logged in user:", currentUserEmail);
+            }
 
             const localEmail = localStorage.getItem('signupEmail') || localStorage.getItem('userEmail');
             if (localEmail) {
