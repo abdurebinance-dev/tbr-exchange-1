@@ -285,20 +285,23 @@
             } catch (err) { console.error('Error loading stats:', err); }
         }
 
- async function loadKycData(targetStatus = 'pending') {
-    // ዩአይ ቁልፎችን አስተካክል
+async function loadKycData(targetStatus = 'pending') {
     document.querySelectorAll('#tab-kyc button.btn').forEach(b => {
         if (b.id) b.style.opacity = '0.6';
     });
     const activeBtn = document.getElementById(`btn-${targetStatus}-kyc`);
     if (activeBtn) activeBtn.style.opacity = '1';
 
+    const tbody = document.getElementById('kycTableBody');
+    if (!tbody) return;
+
     try {
-        const res = await fetch(`${API_BASE}/api/admin/kyc-requests`, { headers: { 'Authorization': 'Bearer ' + getToken() } });
+        const res = await fetch(`${API_BASE}/api/admin/kyc-requests`, { 
+            headers: { 'Authorization': 'Bearer ' + getToken() } 
+        });
         const json = await res.json();
-        const tbody = dataListTableBody || document.getElementById('kycTableBody');
         
-        if (!tbody) return;
+        console.log("Response status:", res.status, "JSON:", json);
 
         if (res.ok) {
             let rawList = [];
@@ -308,18 +311,16 @@
             else if (Array.isArray(json.kycRequests)) rawList = json.kycRequests;
             else if (Array.isArray(json.users)) rawList = json.users;
             else if (json.kyc && Array.isArray(json.kyc)) rawList = json.kyc;
-            else {
+            else if (json && typeof json === 'object') {
                 const possibleKey = Object.keys(json).find(k => Array.isArray(json[k]));
                 if (possibleKey) rawList = json[possibleKey];
             }
 
-            // [ጥብቅ ማጣሪያ - Strict Filtering]
             const filteredList = rawList.filter(item => {
                 const s = String(item.status || item.kycStatus || '').toLowerCase().trim();
                 const target = targetStatus.toLowerCase().trim();
                 
                 if (target === 'pending') {
-                    // ፔንዲንግ ሲፈለግ status ባዶ/null የሆኑትን ወይም 'pending' የሚሉትን እንይዛለን
                     return s === '' || s === 'pending' || s === 'under_review' || s === 'submitted';
                 }
                 return s === target;
@@ -339,10 +340,13 @@
                 if (currentStatus === 'approved' || currentStatus === 'verified') badgeClass = 'badge-approved';
                 else if (currentStatus === 'rejected') badgeClass = 'badge-rejected';
 
+                // Safe JSON stringify for modal
+                const safeJsonStr = JSON.stringify(item).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
+
                 html += `<tr>
                     <td>User: ${userId}</td>
                     <td>
-                        <button onclick='openKycModal(${JSON.stringify(item).replace(/'/g, "&apos;")})' class="btn btn-sm" style="color: #f3ba2f; background: #181a20; border: 1px solid #f3ba2f; padding: 5px 12px; border-radius: 4px; cursor: pointer;">
+                        <button onclick='openKycModal(${safeJsonStr})' class="btn btn-sm" style="color: #f3ba2f; background: #181a20; border: 1px solid #f3ba2f; padding: 5px 12px; border-radius: 4px; cursor: pointer;">
                             <i class="fas fa-eye"></i> View Documents & Selfie
                         </button>
                     </td>
@@ -355,11 +359,11 @@
             });
             tbody.innerHTML = html;
         } else {
-            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Failed to load KYC requests.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Server returned error: ${res.status}</td></tr>`;
         }
     } catch (err) { 
         console.error("KYC Load Error:", err); 
-        document.getElementById('kycTableBody').innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Error loading KYC data.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Network/Parse error loading KYC data.</td></tr>`;
     }
 }
 
