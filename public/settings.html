@@ -327,6 +327,39 @@
             color: #000;
             font-weight: 600;
         }
+
+        /* Toast Notification Styles */
+        #toastNotification {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            background: #18181b;
+            color: #ffffff;
+            border: 1px solid var(--border-color);
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 2000;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: none;
+        }
+
+        #toastNotification.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        #toastNotification i {
+            color: var(--green-color);
+            font-size: 16px;
+        }
     </style>
 </head>
 <body>
@@ -378,7 +411,6 @@
                     <div class="info-title">KYC Status</div>
                     <div class="info-value" id="kyc-text">Identity Verification</div>
                 </div>
-                <!-- ID ቁጥር እዚህ kyc-badge ተብሎ ተስተካክሏል -->
                 <span id="kyc-badge" class="badge-unverified"><i class="fa-solid fa-clock"></i> Unverified</span>
             </div>
 
@@ -411,11 +443,16 @@
         </div>
     </div>
 
+    <!-- Toast Notification Element -->
+    <div id="toastNotification">
+        <i class="fa-solid fa-circle-check"></i>
+        <span>Account ID copied to clipboard!</span>
+    </div>
+
     <script>
         let currentField = "";
 
         document.addEventListener("DOMContentLoaded", async function() {
-            // 1. መጀመሪያ ከ localStorage ያሉትን መረጃዎች አስቀድሞ በመጫን "Loading..." እንዳይበራ ማድረግ
             let localName = localStorage.getItem("userName") || localStorage.getItem("name") || "BINANCEME73";
             let localEmail = localStorage.getItem("userEmail") || localStorage.getItem("email") || "binanceme73@gmail.com";
             let tbrId = localStorage.getItem("tbrExchangeId") || localStorage.getItem("tbrId") || localStorage.getItem("userId") || "TBR-476394";
@@ -423,7 +460,6 @@
             let localTraderHandle = localStorage.getItem("traderUsername") || "";
             let localKyc = String(localStorage.getItem("kycStatus") || localStorage.getItem("kycVerified") || "approved").toLowerCase();
 
-            // ወዲያውኑ በ UI ላይ መሙላት
             updateUI({
                 username: localName,
                 email: localEmail,
@@ -461,7 +497,6 @@
                     const traderHandle = userData.traderUsername || localTraderHandle;
                     const kycVal = userData.kycStatus || userData.kyc_status || (userData.kycVerified ? 'approved' : localKyc);
 
-                    // መረጃዎቹን በ localStorage ማስቀመጥ
                     localStorage.setItem("tbrExchangeId", tbrId);
                     localStorage.setItem("tbrId", tbrId);
                     localStorage.setItem("userId", tbrId);
@@ -503,7 +538,6 @@
                 document.getElementById("username-display").innerText = user.traderHandle;
             }
 
-            // የ KYC ባጅ ቀለም እና ጽሁፍ ማስተካከያ
             const kycBadge = document.getElementById('kyc-badge');
             if (kycBadge) {
                 let status = String(user.kycStatus || 'unverified').toLowerCase();
@@ -604,7 +638,14 @@
         function copyId() {
             let idText = document.getElementById("profile-id").innerText;
             navigator.clipboard.writeText(idText);
-            alert("Account ID copied to clipboard!");
+
+            // አዲሱ Toast notification ማሳያ
+            const toast = document.getElementById("toastNotification");
+            toast.classList.add("show");
+
+            setTimeout(() => {
+                toast.classList.remove("show");
+            }, 2500);
         }
     </script>
 </body>
