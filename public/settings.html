@@ -547,6 +547,18 @@
                 avatar: savedAvatar
             });
 
+            const activeBtn = document.querySelector('.tab-btn.active');
+        if (activeBtn) {
+            const target = activeBtn.getAttribute('data-tab');
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.style.display = 'none';
+            });
+            const targetSection = document.getElementById(target + '-section');
+            if (targetSection) {
+                targetSection.style.display = 'block';
+            }
+        }
+
             try {
                 const token = localStorage.getItem("token") || 
                             localStorage.getItem("authToken") || 
