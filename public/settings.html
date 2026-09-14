@@ -385,60 +385,95 @@
         </div>
 
         <div class="settings-tabs">
-    <button class="tab-btn active" data-tab="profile"><i class="fa-solid fa-user"></i> Profile</button>
-    <button class="tab-btn" data-tab="security"><i class="fa-solid fa-shield"></i> Security</button>
-    <button class="tab-btn" data-tab="payments"><i class="fa-solid fa-wallet"></i> Payments</button>
-    <button class="tab-btn" data-tab="merchant"><i class="fa-solid fa-gear"></i> Merchant</button>
-    <button class="tab-btn" data-tab="trades"><i class="fa-solid fa-right-left"></i> Trades</button>
-</div>
+            <button class="tab-btn active" data-tab="profile"><i class="fa-solid fa-user"></i> Profile</button>
+            <button class="tab-btn" data-tab="security"><i class="fa-solid fa-shield"></i> Security</button>
+            <button class="tab-btn" data-tab="payments"><i class="fa-solid fa-wallet"></i> Payments</button>
+            <button class="tab-btn" data-tab="merchant"><i class="fa-solid fa-gear"></i> Merchant</button>
+            <button class="tab-btn" data-tab="trades"><i class="fa-solid fa-right-left"></i> Trades</button>
+        </div>
 
-        <div class="profile-card">
-            <div class="profile-top">
-                <div class="avatar-box" id="avatar-initials" onclick="triggerImageUpload()" title="Click to change profile picture" style="cursor: pointer;">
-                    <div class="camera-badge"><i class="fa-solid fa-camera"></i></div>
-                </div>
-                <!-- Hidden file input for uploading profile picture -->
-                <input type="file" id="profileImageInput" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
+        <!-- 1. Profile Content -->
+        <div id="profile-section" class="content-section" style="display: block;">
+            <div class="profile-card">
+                <div class="profile-top">
+                    <div class="avatar-box" id="avatar-initials" onclick="triggerImageUpload()" title="Click to change profile picture" style="cursor: pointer;">
+                        <div class="camera-badge"><i class="fa-solid fa-camera"></i></div>
+                    </div>
+                    <!-- Hidden file input for uploading profile picture -->
+                    <input type="file" id="profileImageInput" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
 
-                <div class="user-info">
-                    <h3 id="profile-name">Loading... <i class="fa-solid fa-pen edit-icon" onclick="openModal('name')"></i></h3>
-                    <div class="id-container">
-                        <span>ID:</span> <span id="profile-id">Loading...</span> 
-                        <i class="fa-solid fa-copy" style="cursor:pointer;" title="Copy ID" onclick="copyId()"></i>
+                    <div class="user-info">
+                        <h3 id="profile-name">Loading... <i class="fa-solid fa-pen edit-icon" onclick="openModal('name')"></i></h3>
+                        <div class="id-container">
+                            <span>ID:</span> <span id="profile-id">Loading...</span> 
+                            <i class="fa-solid fa-copy" style="cursor:pointer;" title="Copy ID" onclick="copyId()"></i>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="info-row">
-                <div>
-                    <div class="info-title">Email</div>
-                    <div class="info-value" id="profile-email">Loading...</div>
+                <div class="info-row">
+                    <div>
+                        <div class="info-title">Email</div>
+                        <div class="info-value" id="profile-email">Loading...</div>
+                    </div>
+                    <span class="badge-verified"><i class="fa-solid fa-check"></i> Verified</span>
                 </div>
-                <span class="badge-verified"><i class="fa-solid fa-check"></i> Verified</span>
-            </div>
 
-            <div class="info-row">
-                <div>
-                    <div class="info-title">KYC Status</div>
-                    <div class="info-value" id="kyc-text">Identity Verification</div>
+                <div class="info-row">
+                    <div>
+                        <div class="info-title">KYC Status</div>
+                        <div class="info-value" id="kyc-text">Identity Verification</div>
+                    </div>
+                    <span id="kyc-badge" class="badge-unverified"><i class="fa-solid fa-clock"></i> Unverified</span>
                 </div>
-                <span id="kyc-badge" class="badge-unverified"><i class="fa-solid fa-clock"></i> Unverified</span>
-            </div>
 
-            <div class="info-row">
-                <div>
-                    <div class="info-title">Phone Number</div>
-                    <div class="info-value" id="phone-display">Not added</div>
+                <div class="info-row">
+                    <div>
+                        <div class="info-title">Phone Number</div>
+                        <div class="info-value" id="phone-display">Not added</div>
+                    </div>
+                    <span class="action-link" onclick="openModal('phone')"><i class="fa-solid fa-plus"></i> Add</span>
                 </div>
-                <span class="action-link" onclick="openModal('phone')"><i class="fa-solid fa-plus"></i> Add</span>
-            </div>
 
-            <div class="info-row">
-                <div>
-                    <div class="info-title">Trader Username</div>
-                    <div class="info-value" id="username-display">Not set — tap to choose your handle</div>
+                <div class="info-row">
+                    <div>
+                        <div class="info-title">Trader Username</div>
+                        <div class="info-value" id="username-display">Not set — tap to choose your handle</div>
+                    </div>
+                    <span class="action-link" onclick="openModal('username')"><i class="fa-solid fa-pen"></i> Edit</span>
                 </div>
-                <span class="action-link" onclick="openModal('username')"><i class="fa-solid fa-pen"></i> Edit</span>
+            </div>
+        </div>
+
+        <!-- 2. Security Content -->
+        <div id="security-section" class="content-section" style="display: none;">
+            <div class="profile-card">
+                <h3>Security Settings</h3>
+                <p style="color: var(--text-muted); font-size: 13px;">Manage your password, 2FA, and passkeys here.</p>
+            </div>
+        </div>
+
+        <!-- 3. Payments Content -->
+        <div id="payments-section" class="content-section" style="display: none;">
+            <div class="profile-card">
+                <h3>Payment Methods</h3>
+                <p style="color: var(--text-muted); font-size: 13px;">Manage your payment details here.</p>
+            </div>
+        </div>
+
+        <!-- 4. Merchant Content -->
+        <div id="merchant-section" class="content-section" style="display: none;">
+            <div class="profile-card">
+                <h3>Merchant Settings</h3>
+                <p style="color: var(--text-muted); font-size: 13px;">Manage your merchant profile and preferences here.</p>
+            </div>
+        </div>
+
+        <!-- 5. Trades Content -->
+        <div id="trades-section" class="content-section" style="display: none;">
+            <div class="profile-card">
+                <h3>Trade Preferences</h3>
+                <p style="color: var(--text-muted); font-size: 13px;">Manage your trading configurations and history settings here.</p>
             </div>
         </div>
     </div>
@@ -460,41 +495,6 @@
         <span id="toastMessage">Account ID copied to clipboard!</span>
     </div>
 
-    <!-- የ Navigation ፕላትፎርም ታቦች (Profile እና Security) -->
-<div class="tabs-container">
-    <a href="#" class="tab-item active" data-tab="profile">
-        <svg>...</svg> Profile
-    </a>
-    <a href="#" class="tab-item" data-tab="security">
-        <svg>...</svg> Security
-    </a>
-    <!-- ሌሎች ታቦች ካሉ... -->
-</div>
-
-<!-- 1. Profile Content -->
-<div id="profile-section" class="content-section" style="display: block;">
-    <!-- የፕሮፋይል ይዘቶችህ እዚህ ይኖራሉ -->
-</div>
-
-<!-- 2. Security Content -->
-<div id="security-section" class="content-section" style="display: none;">
-    <!-- የሴኪዩሪቲ ሳጥኖች (Password, 2FA, Passkeys) -->
-</div>
-
-<!-- 3. Payments Content -->
-<div id="payments-section" class="content-section" style="display: none;">
-    <!-- የክፍያ መረጃዎችህ እዚህ ይኖራሉ -->
-</div>
-
-<!-- 4. Merchant Content (የቀድሞው Account) -->
-<div id="merchant-section" class="content-section" style="display: none;">
-    <!-- የ Merchant መረጃዎችህ እዚህ ይኖራሉ -->
-</div>
-
-<!-- 5. Trades Content -->
-<div id="trades-section" class="content-section" style="display: none;">
-    <!-- የ Trades መረጃዎችህ እዚህ ይኖራሉ -->
-</div>
     <script>
         let currentField = "";
 
@@ -519,8 +519,8 @@
 
             try {
                 const token = localStorage.getItem("token") || 
-                              localStorage.getItem("authToken") || 
-                              localStorage.getItem("access_token");
+                            localStorage.getItem("authToken") || 
+                            localStorage.getItem("access_token");
                 
                 const response = await fetch(`https://tbr-exchange-backend.onrender.com/api/user/profile?t=${new Date().getTime()}`, {
                     method: "GET",
@@ -646,7 +646,6 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 const base64Image = e.target.result;
-                // ሁለቱንም ቁልፍ ቃላት እናስቀምጣለን (ለ profile.html እና ለ settings.html እንዲያነበው)
                 localStorage.setItem("userAvatar", base64Image);
                 localStorage.setItem("profilePicture", base64Image);
 
@@ -758,26 +757,25 @@
             }, 2500);
         }
 
-document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        // የሁሉም አዝራሮች active ክላስ እናጸዳለን
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
 
-        const target = btn.getAttribute('data-tab');
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
 
-        // የሁሉም ሴክሽኖች display ወደ none እንለውጣለን
-        document.querySelectorAll('.content-section').forEach(section => {
-            section.style.display = 'none';
+                const target = btn.getAttribute('data-tab');
+
+                document.querySelectorAll('.content-section').forEach(section => {
+                    section.style.display = 'none';
+                });
+
+                const targetSection = document.getElementById(target + '-section');
+                if (targetSection) {
+                    targetSection.style.display = 'block';
+                }
+            });
         });
-
-        // የተመረጠውን ብቻ እናሳያለን
-        const targetSection = document.getElementById(target + '-section');
-        if (targetSection) {
-            targetSection.style.display = 'block';
-        }
-    });
-});
     </script>
 </body>
 </html>
