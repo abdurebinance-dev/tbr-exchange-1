@@ -472,29 +472,35 @@ input:focus {
     border: 1px solid rgba(246, 70, 93, 0.5);
 }
 
-/* Site-wide Light Mode Styles */
+/* --- Absolute Force Light Mode Styling --- */
 body.light-mode {
-    background-color: #f4f5f7 !important;
-    color: #121212 !important;
+    background-color: #f8f9fa !important;
+    color: #212529 !important;
 }
 
 body.light-mode .navbar, 
 body.light-mode header,
 body.light-mode nav {
     background-color: #ffffff !important;
-    color: #121212 !important;
-    border-bottom: 1px solid #e0e0e0 !important;
-}
-
-body.light-mode .navbar a,
-body.light-mode .nav-links a {
-    color: #333333 !important;
+    color: #212529 !important;
+    border-bottom: 1px solid #dee2e6 !important;
 }
 
 body.light-mode div[class*="balance"],
 body.light-mode div[class*="card"],
-body.light-mode section {
+body.light-mode section,
+body.light-mode .box,
+body.light-mode div {
     background-color: #ffffff !important;
-    color: #121212 !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+    color: #212529 !important;
+}
+
+body.light-mode span, 
+body.light-mode p, 
+body.light-mode h1, 
+body.light-mode h2, 
+body.light-mode h3, 
+body.light-mode h4,
+body.light-mode a {
+    color: inherit;
 }
