@@ -472,13 +472,29 @@ input:focus {
     border: 1px solid rgba(246, 70, 93, 0.5);
 }
 
+/* Site-wide Light Mode Styles */
 body.light-mode {
     background-color: #f4f5f7 !important;
     color: #121212 !important;
 }
 
 body.light-mode .navbar, 
-body.light-mode header {
+body.light-mode header,
+body.light-mode nav {
     background-color: #ffffff !important;
-    border-bottom: 1px solid #ddd !important;
+    color: #121212 !important;
+    border-bottom: 1px solid #e0e0e0 !important;
+}
+
+body.light-mode .navbar a,
+body.light-mode .nav-links a {
+    color: #333333 !important;
+}
+
+body.light-mode div[class*="balance"],
+body.light-mode div[class*="card"],
+body.light-mode section {
+    background-color: #ffffff !important;
+    color: #121212 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
 }
