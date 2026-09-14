@@ -743,15 +743,16 @@
             document.getElementById("customModal").style.display = "none";
         }
 
-       async function saveModalData() {
+        async function saveModalData() {
             const val = document.getElementById("modalInput").value.trim();
             if (!val) return;
+
+            let finalVal = val;
 
             if (currentField === 'phone') {
                 document.getElementById("phone-display").innerText = val;
                 localStorage.setItem("userPhone", val);
             } else if (currentField === 'username') {
-                let finalVal = val;
                 if (!finalVal.startsWith('@')) {
                     finalVal = '@' + finalVal;
                 }
@@ -760,23 +761,13 @@
             } else if (currentField === 'name') {
                 localStorage.setItem("userName", val);
                 document.getElementById("profile-name").innerHTML = `${val} <i class="fa-solid fa-pen edit-icon" onclick="openModal('name')"></i>`;
-            } else if (currentField === 'passkey') {
-                localStorage.setItem("userPasskey", val);
-            }
-            
-            closeModal();
-        }
-                document.getElementById("username-display").innerText = val;
-                localStorage.setItem("traderUsername", val);
-            } else if(currentField === 'name') {
-                localStorage.setItem("userName", val);
-                document.getElementById("profile-name").innerHTML = `${val} <i class="fa-solid fa-pen edit-icon" onclick="openModal('name')"></i>`;
                 
                 const avatarBox = document.getElementById("avatar-initials");
-                if (!localStorage.getItem("userAvatar") && !localStorage.getItem("profilePicture")) {
+                if (avatarBox && !localStorage.getItem("userAvatar") && !localStorage.getItem("profilePicture")) {
                     avatarBox.innerHTML = `${val.substring(0,2).toUpperCase()} <div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
                 }
-            } else if(currentField === 'passkey') {
+            } else if (currentField === 'passkey') {
+                localStorage.setItem("userPasskey", val);
                 showToast("Passkey added successfully!");
                 closeModal();
                 return;
@@ -786,13 +777,15 @@
 
             try {
                 const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
+                const dataToSend = (currentField === 'username') ? finalVal : val;
+
                 await fetch("https://tbr-exchange-backend.onrender.com/api/user/update", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                         "Authorization": token ? `Bearer ${token}` : ""
                     },
-                    body: JSON.stringify({ field: currentField, value: val })
+                    body: JSON.stringify({ field: currentField, value: dataToSend })
                 });
             } catch (e) {
                 console.error("Failed to sync update with backend:", e);
@@ -800,7 +793,6 @@
 
             closeModal();
         }
-
         function copyId() {
             let idText = document.getElementById("profile-id").innerText;
             navigator.clipboard.writeText(idText);
