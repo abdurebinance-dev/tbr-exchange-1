@@ -812,11 +812,13 @@
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
 
+                // ሁሉንም ታቦች ከነቁበት እናወጣለን
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
 
                 const target = btn.getAttribute('data-tab');
 
+                // የትኛውን ሴክሽን ማሳየት እንዳለበት በግልጽ እንነግረዋለን
                 document.querySelectorAll('.content-section').forEach(section => {
                     section.style.display = 'none';
                 });
