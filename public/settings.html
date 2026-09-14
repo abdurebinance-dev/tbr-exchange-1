@@ -337,7 +337,9 @@
                 <h1>Account Settings</h1>
                 <p>Manage your profile, security credentials, and preferences.</p>
             </div>
-            <a href="index.html" class="dashboard-btn"><i class="fa-solid fa-house"></i> Dashboard</a>
+           <a href="dashboard.html" class="dashboard-btn">
+    <i class="fa-solid fa-house"></i> Dashboard
+</a>
         </div>
 
         <div class="settings-tabs">
@@ -499,14 +501,21 @@
                 document.getElementById("username-display").innerText = user.traderHandle;
             }
 
-            const kycBadge = document.getElementById("kyc-badge");
-            if(user.isVerified) {
-                kycBadge.className = "badge-verified";
-                kycBadge.innerHTML = `<i class="fa-solid fa-check"></i> Verified`;
-            } else {
-                kycBadge.className = "badge-unverified";
-                kycBadge.innerHTML = `<i class="fa-solid fa-clock"></i> Unverified`;
-            }
+          const kycBadge = document.getElementById('kycStatusBadge'); // ወይም የ KYC ባጅ የሚገኝበት ID
+
+if (kycStatus === 'verified' || kycStatus === 'approved') {
+    kycBadge.innerText = 'Verified';
+    kycBadge.style.backgroundColor = 'rgba(14, 203, 129, 0.15)';
+    kycBadge.style.color = '#0ecb81';
+} else if (kycStatus === 'pending' || kycStatus === 'under_review') {
+    kycBadge.innerText = 'Under Review';
+    kycBadge.style.backgroundColor = 'rgba(243, 186, 47, 0.15)';
+    kycBadge.style.color = '#f3ba2f';
+} else {
+    kycBadge.innerText = 'Unverified';
+    kycBadge.style.backgroundColor = 'rgba(246, 70, 93, 0.15)';
+    kycBadge.style.color = '#f6465d';
+}
         }
 
         function loadFromLocalStorageFallback() {
