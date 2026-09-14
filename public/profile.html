@@ -591,7 +591,7 @@
         }
 
        document.addEventListener("DOMContentLoaded", () => {
-    // 1. ስም፣ ኢሜል እና መታወቂያ
+    // 1. ስም እና ኢሜል/መታወቂያ
     const localName = localStorage.getItem("userName") || localStorage.getItem("fullName") || localStorage.getItem("name");
     const localEmail = localStorage.getItem("userEmail") || localStorage.getItem("email");
     const localId = localStorage.getItem("tbrId") || localStorage.getItem("tbrExchangeId");
@@ -615,7 +615,17 @@
         }
     }
 
-    // 3. ዋናውን የሰርቨር ዳታ መጫኛ ፋንክሽን እንጠራዋለን
+    // 3. የ KYC ሁኔታን አስቀድሞ መጫን (localStorage ውስጥ "approved" ወይም "verified" ከሆነ)
+    const localKyc = localStorage.getItem("kycStatus") || localStorage.getItem("kyc_status");
+    if (localKyc && (localKyc.toLowerCase() === "approved" || localKyc.toLowerCase() === "verified")) {
+        // የ KYC ካርዱን ወደ አፕሩቭድ መቀየር
+        const kycCard = document.querySelector(".identity-card"); // ወይም የካርዱ መለያ (ID)
+        const kycDetailsText = document.getElementById("kyc-status-text"); // በ Account Details ስር ያለው
+        
+        if (kycDetailsText) kycDetailsText.innerText = "Verified";
+    }
+
+    // 4. ዋናውን የሰርቨር ዳታ መጫኛ ፋንክሽን መጥራት
     if (typeof loadUserProfile === "function") {
         loadUserProfile();
     }
