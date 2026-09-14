@@ -385,15 +385,15 @@
         </div>
 
         <div class="settings-tabs">
-            <button class="tab-btn active" data-tab="profile"><i class="fa-solid fa-user"></i> Profile</button>
-            <button class="tab-btn" data-tab="security"><i class="fa-solid fa-shield"></i> Security</button>
+            <button class="tab-btn" data-tab="profile"><i class="fa-solid fa-user"></i> Profile</button>
+            <button class="tab-btn active" data-tab="security"><i class="fa-solid fa-shield"></i> Security</button>
             <button class="tab-btn" data-tab="payments"><i class="fa-solid fa-wallet"></i> Payments</button>
             <button class="tab-btn" data-tab="merchant"><i class="fa-solid fa-gear"></i> Merchant</button>
             <button class="tab-btn" data-tab="trades"><i class="fa-solid fa-right-left"></i> Trades</button>
         </div>
 
         <!-- 1. Profile Content -->
-        <div id="profile-section" class="content-section" style="display: block;">
+        <div id="profile-section" class="content-section" style="display: none;">
             <div class="profile-card">
                 <div class="profile-top">
                     <div class="avatar-box" id="avatar-initials" onclick="triggerImageUpload()" title="Click to change profile picture" style="cursor: pointer;">
@@ -446,10 +446,40 @@
         </div>
 
         <!-- 2. Security Content -->
-        <div id="security-section" class="content-section" style="display: none;">
+        <div id="security-section" class="content-section" style="display: block;">
             <div class="profile-card">
-                <h3>Security Settings</h3>
-                <p style="color: var(--text-muted); font-size: 13px;">Manage your password, 2FA, and passkeys here.</p>
+                <div class="info-row">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <i class="fa-solid fa-lock" style="font-size: 18px; color: var(--accent-color);"></i>
+                        <div>
+                            <div class="info-title">Password</div>
+                            <div class="info-value">Set — use email + password to sign in</div>
+                        </div>
+                    </div>
+                    <span class="badge-verified" style="background: rgba(14, 203, 129, 0.1); color: var(--green-color); border: 1px solid rgba(14, 203, 129, 0.2);">Active</span>
+                </div>
+
+                <div class="info-row">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <i class="fa-solid fa-shield-halved" style="font-size: 18px; color: var(--text-muted);"></i>
+                        <div>
+                            <div class="info-title">Two-Factor (TOTP)</div>
+                            <div class="info-value" id="totp-status-text">Disabled</div>
+                        </div>
+                    </div>
+                    <span class="badge-unverified" id="totp-badge" style="background: rgba(246, 70, 93, 0.1); color: var(--red-color); border: 1px solid rgba(246, 70, 93, 0.2);">Off</span>
+                </div>
+
+                <div class="info-row">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <i class="fa-solid fa-fingerprint" style="font-size: 18px; color: var(--text-muted);"></i>
+                        <div>
+                            <div class="info-title">Passkeys</div>
+                            <div class="info-value">Sign in with Face ID, Touch ID, or your device PIN</div>
+                        </div>
+                    </div>
+                    <span class="action-link" onclick="openModal('passkey')"><i class="fa-solid fa-plus"></i> Add passkey</span>
+                </div>
             </div>
         </div>
 
@@ -694,6 +724,9 @@
             } else if(field === 'name') {
                 title.innerText = "Edit Profile Name";
                 input.value = document.getElementById("profile-name").innerText.trim();
+            } else if(field === 'passkey') {
+                title.innerText = "Add Passkey";
+                input.placeholder = "Enter passkey name/device label...";
             }
             input.focus();
         }
@@ -720,6 +753,10 @@
                 if (!localStorage.getItem("userAvatar") && !localStorage.getItem("profilePicture")) {
                     avatarBox.innerHTML = `${val.substring(0,2).toUpperCase()} <div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
                 }
+            } else if(currentField === 'passkey') {
+                showToast("Passkey added successfully!");
+                closeModal();
+                return;
             }
             
             showToast("Profile updated successfully!");
