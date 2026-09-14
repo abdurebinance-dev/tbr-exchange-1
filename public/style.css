@@ -471,3 +471,15 @@ input:focus {
     color: #f6465d;
     border: 1px solid rgba(246, 70, 93, 0.5);
 }
+
+/* ለ Light Mode የሚሆን የከለር ውቅር */
+body.light-mode {
+    background-color: #f4f5f7 !important;
+    color: #121212 !important;
+}
+
+body.light-mode .navbar, 
+body.light-mode header {
+    background-color: #ffffff !important;
+    border-bottom: 1px solid #ddd !important;
+}
