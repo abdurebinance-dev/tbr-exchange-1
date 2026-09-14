@@ -413,7 +413,7 @@
             let kycStatus = String(localStorage.getItem('kycStatus') || 'not_submitted').toLowerCase();
             let rejectionReason = localStorage.getItem('kycRejectionReason') || 'Document check failed';
             let storedFullName = localStorage.getItem('fullName') || '';
-            let userId = localStorage.getItem('userUniqueId');
+            let userId = localStorage.getItem('tbrExchangeId') || localStorage.getItem('userUniqueId');
             
             if (!userId || userId === 'TBR------' || userId === 'TBR-000000' || String(userId).includes('Loading')) {
                 if (email) {
@@ -424,10 +424,10 @@
                     }
                     let uniqueNum = Math.abs(hash) % 900000 + 100000;
                     userId = 'TBR-' + uniqueNum;
-                    localStorage.setItem('userUniqueId', userId);
+                    localStorage.setItem('tbrExchangeId', userId);
                 } else {
                     userId = 'TBR-100000';
-                    localStorage.setItem('userUniqueId', userId);
+                   localStorage.setItem('tbrExchangeId', userId);
                 }
             }
 
@@ -464,18 +464,19 @@
                         memberSince = user.createdAt ? new Date(user.createdAt).getFullYear() : memberSince;
                         
                         if (user.userId) {
-                            userId = user.userId;
-                        } else if (user.numericId) {
-                            userId = 'TBR-' + String(user.numericId).padStart(6, '0');
-                        } else if (user._id) {
-                            userId = user.customId || ('TBR-' + String(user._id).slice(-6).toUpperCase());
-                        }
+    userId = user.userId;
+} else if (user.numericId) {
+    userId = 'TBR-' + String(user.numericId).padStart(6, '0');
+} else if (user._id) {
+    userId = user.customId || ('TBR-' + String(user._id).slice(-6).toUpperCase());
+}
 
-                        localStorage.setItem('userName', name);
-                        localStorage.setItem('userEmail', email);
-                        localStorage.setItem('kycStatus', kycStatus);
-                        localStorage.setItem('kycRejectionReason', rejectionReason);
-                        localStorage.setItem('userUniqueId', userId);
+localStorage.setItem('userName', name);
+localStorage.setItem('userEmail', email);
+localStorage.setItem('kycStatus', kycStatus);
+localStorage.setItem('kycRejectionReason', rejectionReason);
+localStorage.setItem('tbrExchangeId', userId); // ቋሚው ቁልፍ
+localStorage.setItem('userUniqueId', userId);
                         if (storedFullName) localStorage.setItem('fullName', storedFullName);
                     }
                 }
