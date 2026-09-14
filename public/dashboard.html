@@ -912,28 +912,37 @@ if (greetingEl) {
 document.addEventListener("DOMContentLoaded", function() {
         const themeBtn = document.getElementById("theme-toggle");
         
-        // ከዚህ በፊት የተመረጠውን ከለር ቼክ ማድረግ
+        // 1. ፔጅ ሲከፈት ሎካል ስቶሬጅ ላይ Light መሆኑ ከታወቀ ወዲያውኑ ከለሩን መቀየር
         if (localStorage.getItem("theme") === "light") {
-            document.body.classList.add("light-mode");
+            document.body.style.backgroundColor = "#f4f5f7";
+            document.body.style.color = "#121212";
             if (themeBtn) {
                 themeBtn.classList.remove("fa-moon");
                 themeBtn.classList.add("fa-sun");
+                themeBtn.style.color = "#f3ba2f";
             }
         }
 
+        // 2. አዝራሩ ሲጫን የሚፈጠር ክንውን
         if (themeBtn) {
             themeBtn.style.cursor = "pointer";
             themeBtn.addEventListener("click", function() {
-                document.body.classList.toggle("light-mode");
+                const currentBg = window.getComputedStyle(document.body).backgroundColor;
                 
-                if (document.body.classList.contains("light-mode")) {
-                    themeBtn.classList.remove("fa-moon");
-                    themeBtn.classList.add("fa-sun");
-                    localStorage.setItem("theme", "light");
-                } else {
+                // ነጭ ከሆነ ወደ ጥቁር መመለስ
+                if (currentBg === "rgb(244, 245, 247)" || document.body.style.backgroundColor === "rgb(244, 245, 247)" || document.body.style.backgroundColor === "#f4f5f7") {
+                    document.body.style.backgroundColor = "#080808";
+                    document.body.style.color = "#ffffff";
                     themeBtn.classList.remove("fa-sun");
                     themeBtn.classList.add("fa-moon");
                     localStorage.setItem("theme", "dark");
+                } else {
+                    // ጥቁር ከሆነ ወደ ነጭ መቀየር
+                    document.body.style.backgroundColor = "#f4f5f7";
+                    document.body.style.color = "#121212";
+                    themeBtn.classList.remove("fa-moon");
+                    themeBtn.classList.add("fa-sun");
+                    localStorage.setItem("theme", "light");
                 }
             });
         }
