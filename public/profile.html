@@ -590,6 +590,16 @@
             }
         }
 
+        document.addEventListener("DOMContentLoaded", () => {
+        const localName = localStorage.getItem("userName") || localStorage.getItem("fullName") || localStorage.getItem("name");
+        const localEmail = localStorage.getItem("userEmail") || localStorage.getItem("email");
+        const localId = localStorage.getItem("tbrId") || localStorage.getItem("tbrExchangeId");
+
+        if (localName) document.getElementById("profileName").innerText = localName;
+        if (localEmail) document.getElementById("profileEmail").innerText = localEmail;
+        if (localId) document.getElementById("userUniqueId").innerText = localId;
+    });
+
         window.addEventListener('DOMContentLoaded', loadUserProfile);
     </script>
 </body>
