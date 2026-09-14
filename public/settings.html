@@ -470,7 +470,7 @@
             let localPhone = localStorage.getItem("userPhone") || "";
             let localTraderHandle = localStorage.getItem("traderUsername") || "";
             let localKyc = String(localStorage.getItem("kycStatus") || localStorage.getItem("kycVerified") || "approved").toLowerCase();
-            let savedAvatar = localStorage.getItem("userAvatar") || "";
+            let savedAvatar = localStorage.getItem("userAvatar") || localStorage.getItem("profilePicture") || "";
 
             updateUI({
                 username: localName,
@@ -519,7 +519,10 @@
                     if (email) localStorage.setItem("userEmail", email);
                     if (phone) localStorage.setItem("userPhone", phone);
                     if (traderHandle) localStorage.setItem("traderUsername", traderHandle);
-                    if (avatar) localStorage.setItem("userAvatar", avatar);
+                    if (avatar) {
+                        localStorage.setItem("userAvatar", avatar);
+                        localStorage.setItem("profilePicture", avatar);
+                    }
 
                     updateUI({
                         username,
@@ -592,7 +595,7 @@
             const phone = localStorage.getItem("userPhone");
             const traderHandle = localStorage.getItem("traderUsername");
             const kycStatus = localStorage.getItem("kycStatus") || "approved";
-            const avatar = localStorage.getItem("userAvatar") || "";
+            const avatar = localStorage.getItem("userAvatar") || localStorage.getItem("profilePicture") || "";
 
             updateUI({ username, email, tbrId, phone, traderHandle, kycStatus, avatar });
         }
@@ -608,7 +611,9 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 const base64Image = e.target.result;
+                // ሁለቱንም ቁልፍ ቃላት እናስቀምጣለን (ለ profile.html እና ለ settings.html እንዲያነበው)
                 localStorage.setItem("userAvatar", base64Image);
+                localStorage.setItem("profilePicture", base64Image);
 
                 const avatarBox = document.getElementById("avatar-initials");
                 avatarBox.style.backgroundImage = `url('${base64Image}')`;
@@ -616,7 +621,6 @@
 
                 showToast("Profile picture updated successfully!");
 
-                // Backend ላይ መላክ ከፈለጉ (የራንደር ሰቨርዎ መቀበል የሚችል ከሆነ)
                 syncAvatarToBackend(base64Image);
             };
             reader.readAsDataURL(file);
@@ -679,7 +683,7 @@
                 document.getElementById("profile-name").innerHTML = `${val} <i class="fa-solid fa-pen edit-icon" onclick="openModal('name')"></i>`;
                 
                 const avatarBox = document.getElementById("avatar-initials");
-                if (!localStorage.getItem("userAvatar")) {
+                if (!localStorage.getItem("userAvatar") && !localStorage.getItem("profilePicture")) {
                     avatarBox.innerHTML = `${val.substring(0,2).toUpperCase()} <div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
                 }
             }
