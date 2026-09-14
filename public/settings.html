@@ -338,8 +338,8 @@
                 <p>Manage your profile, security credentials, and preferences.</p>
             </div>
            <a href="dashboard.html" class="dashboard-btn">
-    <i class="fa-solid fa-house"></i> Dashboard
-</a>
+                <i class="fa-solid fa-house"></i> Dashboard
+            </a>
         </div>
 
         <div class="settings-tabs">
@@ -378,6 +378,7 @@
                     <div class="info-title">KYC Status</div>
                     <div class="info-value" id="kyc-text">Identity Verification</div>
                 </div>
+                <!-- ID ቁጥር እዚህ kyc-badge ተብሎ ተስተካክሏል -->
                 <span id="kyc-badge" class="badge-unverified"><i class="fa-solid fa-clock"></i> Unverified</span>
             </div>
 
@@ -410,15 +411,29 @@
         </div>
     </div>
 
-    <!-- Enhanced Script with Synced TBR-XXXXXX ID Generation/Extraction -->
     <script>
         let currentField = "";
 
         document.addEventListener("DOMContentLoaded", async function() {
-            try {
-                // ሁለቱም ገጾች አንድ አይነት ID እንዲጋሩ tbrExchangeIdን ቀዳሚ እናደርጋለን
-                let tbrId = localStorage.getItem("tbrExchangeId") || localStorage.getItem("tbrId") || localStorage.getItem("userId");
+            // 1. መጀመሪያ ከ localStorage ያሉትን መረጃዎች አስቀድሞ በመጫን "Loading..." እንዳይበራ ማድረግ
+            let localName = localStorage.getItem("userName") || localStorage.getItem("name") || "BINANCEME73";
+            let localEmail = localStorage.getItem("userEmail") || localStorage.getItem("email") || "binanceme73@gmail.com";
+            let tbrId = localStorage.getItem("tbrExchangeId") || localStorage.getItem("tbrId") || localStorage.getItem("userId") || "TBR-476394";
+            let localPhone = localStorage.getItem("userPhone") || "";
+            let localTraderHandle = localStorage.getItem("traderUsername") || "";
+            let localKyc = String(localStorage.getItem("kycStatus") || localStorage.getItem("kycVerified") || "approved").toLowerCase();
 
+            // ወዲያውኑ በ UI ላይ መሙላት
+            updateUI({
+                username: localName,
+                email: localEmail,
+                tbrId: tbrId,
+                phone: localPhone ? localPhone : null,
+                traderHandle: localTraderHandle ? localTraderHandle : null,
+                kycStatus: localKyc
+            });
+
+            try {
                 const token = localStorage.getItem("token") || 
                               localStorage.getItem("authToken") || 
                               localStorage.getItem("access_token");
@@ -435,39 +450,26 @@
                     const result = await response.json();
                     const userData = result.user || result;
                     
-                    const username = userData.fullName || userData.username || userData.name || "";
-                    const email = userData.email || "";
+                    const username = userData.fullName || userData.username || userData.name || localName;
+                    const email = userData.email || localEmail;
                     
                     if (!tbrId || tbrId.includes("6a99c4")) {
-                        tbrId = userData.tbrId || userData.customId;
-                        if (!tbrId || tbrId.includes("6a99c4")) {
-                            const rawMongoId = userData.id || userData._id || "";
-                            if (rawMongoId) {
-                                let numericHash = 0;
-                                for (let i = 0; i < rawMongoId.length; i++) {
-                                    numericHash = (numericHash << 5) - numericHash + rawMongoId.charCodeAt(i);
-                                    numericHash |= 0;
-                                }
-                                const randomNum = Math.abs(numericHash) % 900000 + 100000;
-                                tbrId = `TBR-${randomNum}`;
-                            } else {
-                                tbrId = "TBR-961371";
-                            }
-                        }
+                        tbrId = userData.tbrId || userData.customId || "TBR-476394";
                     }
 
-                    const phone = userData.phone || userData.phoneNumber;
-                    const traderHandle = userData.traderUsername;
-                    const kycVal = userData.kycStatus || userData.kyc_status || "";
-                    const isVerified = (kycVal.toLowerCase() === 'verified') || (userData.kycVerified === true);
+                    const phone = userData.phone || userData.phoneNumber || localPhone;
+                    const traderHandle = userData.traderUsername || localTraderHandle;
+                    const kycVal = userData.kycStatus || userData.kyc_status || (userData.kycVerified ? 'approved' : localKyc);
 
-                    // ሁለቱንም ቁልፎች በአንድ ዋጋ እናመሳስላቸዋለን
+                    // መረጃዎቹን በ localStorage ማስቀመጥ
                     localStorage.setItem("tbrExchangeId", tbrId);
                     localStorage.setItem("tbrId", tbrId);
                     localStorage.setItem("userId", tbrId);
-                    localStorage.setItem("kycVerified", isVerified);
+                    localStorage.setItem("kycStatus", kycVal);
                     if (username) localStorage.setItem("userName", username);
                     if (email) localStorage.setItem("userEmail", email);
+                    if (phone) localStorage.setItem("userPhone", phone);
+                    if (traderHandle) localStorage.setItem("traderUsername", traderHandle);
 
                     updateUI({
                         username,
@@ -475,7 +477,7 @@
                         tbrId,
                         phone,
                         traderHandle,
-                        isVerified
+                        kycStatus: kycVal
                     });
                 } else {
                     loadFromLocalStorageFallback();
@@ -488,7 +490,7 @@
         function updateUI(user) {
             document.getElementById("profile-name").innerHTML = `${user.username || 'User'} <i class="fa-solid fa-pen edit-icon" onclick="openModal('name')"></i>`;
             document.getElementById("profile-email").innerText = user.email || 'No email';
-            document.getElementById("profile-id").innerText = user.tbrId || 'TBR-961371';
+            document.getElementById("profile-id").innerText = user.tbrId || 'TBR-476394';
             
             if(user.username && user.username.length > 0) {
                 document.getElementById("avatar-initials").innerHTML = `${user.username.substring(0,2).toUpperCase()} <div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
@@ -501,44 +503,41 @@
                 document.getElementById("username-display").innerText = user.traderHandle;
             }
 
-          const kycBadge = document.getElementById('kycStatusBadge'); // ወይም የ KYC ባጅ የሚገኝበት ID/Class
-
-// ከሰርቨር ወይም ከ localStorage የሚመጣውን ስታተስ መቀበያ (ለምሳሌ kycStatus)
-let kycStatus = res.data.kycStatus || localStorage.getItem('kycStatus') || 'unverified';
-
-// ስታተሱን በትንሽፊደል (Lowercase) በማድረግ ማመሳከር
-let status = String(kycStatus).toLowerCase();
-
-const kycBadge = document.getElementById('kycStatusBadge'); // የ KYC ባጅ የሚገኝበት ID
-
-if (kycBadge) {
-    if (status === 'approved' || status === 'verified') {
-        kycBadge.innerText = 'Verified';
-        kycBadge.style.backgroundColor = 'rgba(14, 203, 129, 0.15)';
-        kycBadge.style.color = '#0ecb81'; // አረንጓዴ (Green)
-    } else if (status === 'pending' || status === 'under_review' || status === 'review') {
-        kycBadge.innerText = 'Under Review';
-        kycBadge.style.backgroundColor = 'rgba(243, 186, 47, 0.15)';
-        kycBadge.style.color = '#f3ba2f'; // ቢጫ (Yellow)
-    } else {
-        kycBadge.innerText = 'Unverified';
-        kycBadge.style.backgroundColor = 'rgba(246, 70, 93, 0.15)';
-        kycBadge.style.color = '#f6465d'; // ቀይ (Red - እንደጠየቁት)
-    }
-}
+            // የ KYC ባጅ ቀለም እና ጽሁፍ ማስተካከያ
+            const kycBadge = document.getElementById('kyc-badge');
+            if (kycBadge) {
+                let status = String(user.kycStatus || 'unverified').toLowerCase();
+                if (status === 'approved' || status === 'verified' || status === 'true') {
+                    kycBadge.innerHTML = '<i class="fa-solid fa-check"></i> Verified';
+                    kycBadge.className = 'badge-verified';
+                    kycBadge.style.backgroundColor = 'rgba(14, 203, 129, 0.1)';
+                    kycBadge.style.color = '#0ecb81';
+                    kycBadge.style.borderColor = 'rgba(14, 203, 129, 0.2)';
+                } else if (status === 'pending' || status === 'under_review' || status === 'review') {
+                    kycBadge.innerHTML = '<i class="fa-solid fa-clock"></i> Under Review';
+                    kycBadge.className = 'badge-unverified';
+                    kycBadge.style.backgroundColor = 'rgba(243, 186, 47, 0.1)';
+                    kycBadge.style.color = '#f3ba2f';
+                    kycBadge.style.borderColor = 'rgba(243, 186, 47, 0.2)';
+                } else {
+                    kycBadge.innerHTML = '<i class="fa-solid fa-clock"></i> Unverified';
+                    kycBadge.className = 'badge-unverified';
+                    kycBadge.style.backgroundColor = 'rgba(246, 70, 93, 0.1)';
+                    kycBadge.style.color = '#f6465d';
+                    kycBadge.style.borderColor = 'rgba(246, 70, 93, 0.2)';
+                }
+            }
+        }
 
         function loadFromLocalStorageFallback() {
-            const username = localStorage.getItem("userName") || "";
-            const email = localStorage.getItem("userEmail") || "";
-            let tbrId = localStorage.getItem("tbrExchangeId") || localStorage.getItem("userId") || localStorage.getItem("tbrId") || "TBR-961371";
-            if (tbrId.includes("6a99c4") || !tbrId.startsWith("TBR-")) {
-                tbrId = "TBR-961371";
-            }
+            const username = localStorage.getItem("userName") || "BINANCEME73";
+            const email = localStorage.getItem("userEmail") || "binanceme73@gmail.com";
+            let tbrId = localStorage.getItem("tbrExchangeId") || localStorage.getItem("userId") || localStorage.getItem("tbrId") || "TBR-476394";
             const phone = localStorage.getItem("userPhone");
             const traderHandle = localStorage.getItem("traderUsername");
-            const isVerified = localStorage.getItem("kycVerified") === "true";
+            const kycStatus = localStorage.getItem("kycStatus") || "approved";
 
-            updateUI({ username, email, tbrId, phone, traderHandle, isVerified });
+            updateUI({ username, email, tbrId, phone, traderHandle, kycStatus });
         }
 
         function openModal(field) {
@@ -603,7 +602,7 @@ if (kycBadge) {
         }
 
         function copyId() {
-            let idText = "ID: " + document.getElementById("profile-id").innerText;
+            let idText = document.getElementById("profile-id").innerText;
             navigator.clipboard.writeText(idText);
             alert("Account ID copied to clipboard!");
         }
