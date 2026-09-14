@@ -74,16 +74,16 @@
             border-bottom: 2px solid var(--accent-color);
         }
 
-        /* Strong Click Scale Down Effect for ALL Buttons, Tabs & Links */
-        button, .action-link, .tab-btn, .camera-badge, i.fa-copy, i.fa-pen, .edit-icon {
+        /* Strong Click Scale Down Effect for ALL Interactive Elements */
+        button, .action-link, .tab-btn, .camera-badge, i.fa-copy, i.fa-pen, .edit-icon, .badge-verified {
             transition: transform 0.08s ease, opacity 0.08s ease;
         }
 
-        button:active, .action-link:active, .tab-btn:active, .camera-badge:active, .edit-icon:active, i.fa-copy:active {
+        button:active, .action-link:active, .tab-btn:active, .camera-badge:active, .edit-icon:active, i.fa-copy:active, .badge-verified:active {
             transform: scale(0.90) !important;
         }
 
-        /* Profile Card Section & Clean Alignment */
+        /* Profile Card Section & Alignment Fixes */
         .profile-card {
             background-color: var(--card-bg);
             border: 1px solid var(--border-color);
@@ -113,6 +113,7 @@
             font-size: 22px;
             font-weight: bold;
             color: #000;
+            flex-shrink: 0;
         }
 
         .avatar-box .camera-badge {
@@ -140,9 +141,16 @@
             gap: 10px;
         }
 
-        .user-info span {
+        .user-info .id-container {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
             color: var(--text-muted);
             font-size: 13px;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 3px 8px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
         }
 
         .edit-icon {
@@ -187,6 +195,7 @@
             display: inline-flex;
             align-items: center;
             gap: 5px;
+            border: 1px solid rgba(14, 203, 129, 0.2);
         }
 
         .action-link {
@@ -201,6 +210,85 @@
         .action-link:hover {
             text-decoration: underline;
         }
+
+        /* Custom Styled Modal for Inputs */
+        .custom-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            display: none;
+        }
+
+        .custom-modal {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            width: 380px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .custom-modal h3 {
+            margin-top: 0;
+            font-size: 18px;
+            color: var(--text-color);
+            margin-bottom: 15px;
+        }
+
+        .custom-modal input {
+            width: 100%;
+            padding: 12px;
+            background: #1a1a1a;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 15px;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        .custom-modal input:focus {
+            border-color: var(--accent-color);
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .modal-btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: transform 0.08s ease;
+        }
+
+        .modal-btn:active {
+            transform: scale(0.92);
+        }
+
+        .btn-cancel {
+            background: #222;
+            color: var(--text-muted);
+        }
+
+        .btn-confirm {
+            background: var(--accent-color);
+            color: #000;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -214,7 +302,7 @@
             <p>Manage your profile, security credentials, and preferences.</p>
         </div>
 
-        <!-- Navigation Tabs (Addresses & Notifications removed, Trades added) -->
+        <!-- Navigation Tabs -->
         <div class="settings-tabs">
             <button class="tab-btn active"><i class="fa-solid fa-user"></i> Profile</button>
             <button class="tab-btn" onclick="location.href='security.html'"><i class="fa-solid fa-shield-halved"></i> Security</button>
@@ -231,8 +319,11 @@
                     <div class="camera-badge"><i class="fa-solid fa-camera"></i></div>
                 </div>
                 <div class="user-info">
-                    <h3 id="profile-name">binanceme73 <i class="fa-solid fa-pen edit-icon" onclick="editName()"></i></h3>
-                    <span id="profile-id">TBR-961371 <i class="fa-solid fa-copy" style="cursor:pointer;" title="Copy ID" onclick="copyId()"></i></span>
+                    <h3 id="profile-name">binanceme73 <i class="fa-solid fa-pen edit-icon" onclick="openModal('name')"></i></h3>
+                    <div class="id-container">
+                        <span id="profile-id">TBR-961371</span> 
+                        <i class="fa-solid fa-copy" style="cursor:pointer;" title="Copy ID" onclick="copyId()"></i>
+                    </div>
                 </div>
             </div>
 
@@ -257,7 +348,7 @@
                     <div class="info-title">Phone Number</div>
                     <div class="info-value" id="phone-display">Not added</div>
                 </div>
-                <span class="action-link" onclick="addPhone()"><i class="fa-solid fa-plus"></i> Add</span>
+                <span class="action-link" onclick="openModal('phone')"><i class="fa-solid fa-plus"></i> Add</span>
             </div>
 
             <div class="info-row">
@@ -265,13 +356,27 @@
                     <div class="info-title">Trader Username</div>
                     <div class="info-value" id="username-display">Not set — tap to choose your handle</div>
                 </div>
-                <span class="action-link" onclick="editUsername()"><i class="fa-solid fa-pen"></i> Edit</span>
+                <span class="action-link" onclick="openModal('username')"><i class="fa-solid fa-pen"></i> Edit</span>
             </div>
         </div>
     </div>
 
-    <!-- Scripting for Dynamic Data & Click Effects -->
+    <!-- Custom Styled Modal Box -->
+    <div class="custom-modal-overlay" id="customModal">
+        <div class="custom-modal">
+            <h3 id="modalTitle">Update Info</h3>
+            <input type="text" id="modalInput" placeholder="Enter value...">
+            <div class="modal-buttons">
+                <button class="modal-btn btn-cancel" onclick="closeModal()">Cancel</button>
+                <button class="modal-btn btn-confirm" onclick="saveModalData()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripting for Dynamic Data, Click Effects & Custom Modal -->
     <script>
+        let currentField = "";
+
         document.addEventListener("DOMContentLoaded", function() {
             const savedName = localStorage.getItem("userName") || "binanceme73";
             const savedEmail = localStorage.getItem("userEmail") || "binanceme73@gmail.com";
@@ -279,9 +384,9 @@
             const savedPhone = localStorage.getItem("userPhone");
             const savedUsername = localStorage.getItem("traderUsername");
 
-            document.getElementById("profile-name").innerHTML = `${savedName} <i class="fa-solid fa-pen edit-icon" onclick="editName()"></i>`;
+            document.getElementById("profile-name").innerHTML = `${savedName} <i class="fa-solid fa-pen edit-icon" onclick="openModal('name')"></i>`;
             document.getElementById("profile-email").innerText = savedEmail;
-            document.getElementById("profile-id").innerHTML = `${savedId} <i class="fa-solid fa-copy" style="cursor:pointer;" title="Copy ID" onclick="copyId()"></i>`;
+            document.getElementById("profile-id").innerText = savedId;
             
             if(savedName.length > 0) {
                 document.getElementById("avatar-initials").innerHTML = `${savedName.substring(0,2).toUpperCase()} <div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
@@ -295,32 +400,54 @@
             }
         });
 
-        function addPhone() {
-            let phone = prompt("Enter your phone number:");
-            if(phone) {
-                document.getElementById("phone-display").innerText = phone;
-                localStorage.setItem("userPhone", phone);
+        function openModal(field) {
+            currentField = field;
+            const modal = document.getElementById("customModal");
+            const title = document.getElementById("modalTitle");
+            const input = document.getElementById("modalInput");
+            
+            modal.style.display = "flex";
+            input.value = "";
+
+            if(field === 'phone') {
+                title.innerText = "Add Phone Number";
+                input.placeholder = "e.g. +251911223344";
+            } else if(field === 'username') {
+                title.innerText = "Set Trader Username";
+                input.placeholder = "Enter handle...";
+            } else if(field === 'name') {
+                title.innerText = "Edit Profile Name";
+                input.value = localStorage.getItem("userName") || "binanceme73";
             }
+            input.focus();
         }
 
-        function editUsername() {
-            let uname = prompt("Enter your Trader Username:");
-            if(uname) {
-                document.getElementById("username-display").innerText = uname;
-                localStorage.setItem("traderUsername", uname);
-            }
+        function closeModal() {
+            document.getElementById("customModal").style.display = "none";
         }
 
-        function editName() {
-            let newName = prompt("Enter your name:", document.getElementById("profile-name").innerText);
-            if(newName) {
-                localStorage.setItem("userName", newName);
-                location.reload();
+        function saveModalData() {
+            const val = document.getElementById("modalInput").value.trim();
+            if(!val) return;
+
+            if(currentField === 'phone') {
+                document.getElementById("phone-display").innerText = val;
+                localStorage.setItem("userPhone", val);
+            } else if(currentField === 'username') {
+                document.getElementById("username-display").innerText = val;
+                localStorage.setItem("traderUsername", val);
+            } else if(currentField === 'name') {
+                localStorage.setItem("userName", val);
+                document.getElementById("profile-name").innerHTML = `${val} <i class="fa-solid fa-pen edit-icon" onclick="openModal('name')"></i>`;
+                if(val.length > 0) {
+                    document.getElementById("avatar-initials").innerHTML = `${val.substring(0,2).toUpperCase()} <div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
+                }
             }
+            closeModal();
         }
 
         function copyId() {
-            let idText = "TBR-961371";
+            let idText = document.getElementById("profile-id").innerText;
             navigator.clipboard.writeText(idText);
             alert("Account ID copied to clipboard!");
         }
