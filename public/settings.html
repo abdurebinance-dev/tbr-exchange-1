@@ -385,12 +385,12 @@
         </div>
 
         <div class="settings-tabs">
-            <button class="tab-btn active"><i class="fa-solid fa-user"></i> Profile</button>
-            <button class="tab-btn" onclick="location.href='security.html'"><i class="fa-solid fa-shield-halved"></i> Security</button>
-            <button class="tab-btn"><i class="fa-solid fa-wallet"></i> Payments</button>
-            <button class="tab-btn"><i class="fa-solid fa-gear"></i> Account</button>
-            <button class="tab-btn"><i class="fa-solid fa-right-left"></i> Trades</button>
-        </div>
+    <button class="tab-btn active" data-tab="profile"><i class="fa-solid fa-user"></i> Profile</button>
+    <button class="tab-btn" data-tab="security"><i class="fa-solid fa-shield"></i> Security</button>
+    <button class="tab-btn" data-tab="payments"><i class="fa-solid fa-wallet"></i> Payments</button>
+    <button class="tab-btn" data-tab="merchant"><i class="fa-solid fa-gear"></i> Merchant</button>
+    <button class="tab-btn" data-tab="trades"><i class="fa-solid fa-right-left"></i> Trades</button>
+</div>
 
         <div class="profile-card">
             <div class="profile-top">
@@ -471,53 +471,30 @@
     <!-- ሌሎች ታቦች ካሉ... -->
 </div>
 
-<!-- 1. የፕሮፋይል ይዘቶች (Profile Content) -->
-<div id="profile-section" class="content-section">
-    <!-- የነባሩ የፕሮፋይል መረጃዎችህ (Email, KYC, Phone, ወዘተ) እዚህ ውስጥ ይኖራሉ -->
+<!-- 1. Profile Content -->
+<div id="profile-section" class="content-section" style="display: block;">
+    <!-- የፕሮፋይል ይዘቶችህ እዚህ ይኖራሉ -->
 </div>
 
-<!-- 2. የሴኪዩሪቲ ይዘቶች (Security Content - በነባሪ ተደብቆ የሚቆይ) -->
+<!-- 2. Security Content -->
 <div id="security-section" class="content-section" style="display: none;">
-    <!-- Password ካርድ -->
-    <div class="settings-card">
-        <div class="setting-row">
-            <div class="setting-info">
-                <h3>Password</h3>
-                <p>Set — use email + password to sign in</p>
-            </div>
-            <span class="status-badge active" style="color: #22c55e; background: rgba(34, 197, 94, 0.1); padding: 4px 10px; border-radius: 20px; font-size: 12px;">Active</span>
-        </div>
-        
-        <!-- Two-Factor ካርድ -->
-        <div class="setting-row" style="margin-top: 15px; border-top: 1px solid #2d2d2d; padding-top: 15px;">
-            <div class="setting-info">
-                <h3>Two-Factor (TOTP)</h3>
-                <p>Disabled</p>
-            </div>
-            <span class="status-badge off" style="color: #9ca3af; background: rgba(156, 163, 175, 0.1); padding: 4px 10px; border-radius: 20px; font-size: 12px;">Off</span>
-        </div>
-
-        <!-- Passkeys ካርድ -->
-        <div class="setting-row" style="margin-top: 15px; border-top: 1px solid #2d2d2d; padding-top: 15px;">
-            <div class="setting-info">
-                <h3>Passkeys</h3>
-                <p>Sign in with Face ID, Touch ID, or your device PIN</p>
-            </div>
-            <span class="status-badge none" style="color: #9ca3af; background: rgba(156, 163, 175, 0.1); padding: 4px 10px; border-radius: 20px; font-size: 12px;">None</span>
-        </div>
-    </div>
-
-    <!-- የታችኛው Passkeys ተጨማሪ ሳጥን -->
-    <div class="settings-card" style="margin-top: 20px; background: #18181b; border: 1px solid #2d2d2d; border-radius: 12px; padding: 20px; display: flex; justify-content: space-between; align-items: center;">
-        <div class="setting-info">
-            <h3 style="color: #fff; margin-bottom: 5px;">Passkeys</h3>
-            <p style="color: #9ca3af; font-size: 14px; margin: 0;">Sign in with Face ID, Touch ID, or your device PIN</p>
-            <p style="color: #6b7280; font-size: 13px; margin-top: 10px;">No passkeys yet. Add one to enable passwordless sign-in.</p>
-        </div>
-        <button class="add-btn" style="background: #27272a; color: #fff; border: 1px solid #3f3f46; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 500;">+ Add passkey</button>
-    </div>
+    <!-- የሴኪዩሪቲ ሳጥኖች (Password, 2FA, Passkeys) -->
 </div>
 
+<!-- 3. Payments Content -->
+<div id="payments-section" class="content-section" style="display: none;">
+    <!-- የክፍያ መረጃዎችህ እዚህ ይኖራሉ -->
+</div>
+
+<!-- 4. Merchant Content (የቀድሞው Account) -->
+<div id="merchant-section" class="content-section" style="display: none;">
+    <!-- የ Merchant መረጃዎችህ እዚህ ይኖራሉ -->
+</div>
+
+<!-- 5. Trades Content -->
+<div id="trades-section" class="content-section" style="display: none;">
+    <!-- የ Trades መረጃዎችህ እዚህ ይኖራሉ -->
+</div>
     <script>
         let currentField = "";
 
@@ -781,23 +758,23 @@
             }, 2500);
         }
 
-document.querySelectorAll('.tab-item').forEach(tab => {
-    tab.addEventListener('click', (e) => {
-        e.preventDefault(); // የገጽ መጫን (reload) እንዳያደርግ ይከላከላል
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        // የሁሉም አዝራሮች active ክላስ እናጸዳለን
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
 
-        // የሁሉም ታቦች 'active' ክላስ እናጸዳለን
-        document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
+        const target = btn.getAttribute('data-tab');
 
-        const targetTab = tab.getAttribute('data-tab');
+        // የሁሉም ሴክሽኖች display ወደ none እንለውጣለን
+        document.querySelectorAll('.content-section').forEach(section => {
+            section.style.display = 'none';
+        });
 
-        // በክሊክ መሰረት የትኛው ክፍል መታየት እንዳለበት እንወስናለን
-        if (targetTab === 'security') {
-            document.getElementById('profile-section').style.display = 'none';
-            document.getElementById('security-section').style.display = 'block';
-        } else if (targetTab === 'profile') {
-            document.getElementById('profile-section').style.display = 'block';
-            document.getElementById('security-section').style.display = 'none';
+        // የተመረጠውን ብቻ እናሳያለን
+        const targetSection = document.getElementById(target + '-section');
+        if (targetSection) {
+            targetSection.style.display = 'block';
         }
     });
 });
