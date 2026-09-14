@@ -408,14 +408,14 @@
         </div>
     </div>
 
-    <!-- Enhanced Script with Proper TBR-XXXXXX ID Generation/Extraction -->
+    <!-- Enhanced Script with Synced TBR-XXXXXX ID Generation/Extraction -->
     <script>
         let currentField = "";
 
         document.addEventListener("DOMContentLoaded", async function() {
             try {
-                // 1. መጀመሪያ በ localStorage የተያዘው TBR ID ካለ በቀጥታ እንወስዳለን (ይህ ሁለቱንም ገጾች 100% ተመሳሳይ ያደርጋቸዋል)
-                let tbrId = localStorage.getItem("tbrId") || localStorage.getItem("userId");
+                // ሁለቱም ገጾች አንድ አይነት ID እንዲጋሩ tbrExchangeIdን ቀዳሚ እናደርጋለን
+                let tbrId = localStorage.getItem("tbrExchangeId") || localStorage.getItem("tbrId") || localStorage.getItem("userId");
 
                 const token = localStorage.getItem("token") || 
                               localStorage.getItem("authToken") || 
@@ -436,18 +436,21 @@
                     const username = userData.fullName || userData.username || userData.name || "";
                     const email = userData.email || "";
                     
-                    // 2. ከሰርቨር የሚመጣው tbrId ከኖር እንወስዳለን፣ ከሌለ ግን በ localStorage ያለውን እንጠቀማለን
                     if (!tbrId || tbrId.includes("6a99c4")) {
                         tbrId = userData.tbrId || userData.customId;
                         if (!tbrId || tbrId.includes("6a99c4")) {
                             const rawMongoId = userData.id || userData._id || "";
-                            let numericHash = 0;
-                            for (let i = 0; i < rawMongoId.length; i++) {
-                                numericHash = (numericHash << 5) - numericHash + rawMongoId.charCodeAt(i);
-                                numericHash |= 0;
+                            if (rawMongoId) {
+                                let numericHash = 0;
+                                for (let i = 0; i < rawMongoId.length; i++) {
+                                    numericHash = (numericHash << 5) - numericHash + rawMongoId.charCodeAt(i);
+                                    numericHash |= 0;
+                                }
+                                const randomNum = Math.abs(numericHash) % 900000 + 100000;
+                                tbrId = `TBR-${randomNum}`;
+                            } else {
+                                tbrId = "TBR-961371";
                             }
-                            const randomNum = Math.abs(numericHash) % 900000 + 100000;
-                            tbrId = `TBR-${randomNum}`;
                         }
                     }
 
@@ -456,7 +459,8 @@
                     const kycVal = userData.kycStatus || userData.kyc_status || "";
                     const isVerified = (kycVal.toLowerCase() === 'verified') || (userData.kycVerified === true);
 
-                    // 3. ቋሚ እንዲሆን በ localStorage እናስቀምጠዋለን
+                    // ሁለቱንም ቁልፎች በአንድ ዋጋ እናመሳስላቸዋለን
+                    localStorage.setItem("tbrExchangeId", tbrId);
                     localStorage.setItem("tbrId", tbrId);
                     localStorage.setItem("userId", tbrId);
                     localStorage.setItem("kycVerified", isVerified);
@@ -508,7 +512,7 @@
         function loadFromLocalStorageFallback() {
             const username = localStorage.getItem("userName") || "";
             const email = localStorage.getItem("userEmail") || "";
-            let tbrId = localStorage.getItem("userId") || localStorage.getItem("tbrId") || "TBR-961371";
+            let tbrId = localStorage.getItem("tbrExchangeId") || localStorage.getItem("userId") || localStorage.getItem("tbrId") || "TBR-961371";
             if (tbrId.includes("6a99c4") || !tbrId.startsWith("TBR-")) {
                 tbrId = "TBR-961371";
             }
