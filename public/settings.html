@@ -713,26 +713,26 @@
             const input = document.getElementById("modalInput");
             
             modal.style.display = "flex";
-            input.value = "";
 
             if(field === 'phone') {
+                input.value = "";
                 title.innerText = "Add Phone Number";
                 input.placeholder = "e.g. +251911223344";
             } else if(field === 'username') {
                 title.innerText = "Set Trader Username";
                 input.placeholder = "Enter handle...";
-                if (!input.value.startsWith('@')) {
-                    input.value = '@';
-                }
+                input.value = "@"; // 👈 ኢንፑቱ ሲከፈት በቀጥታ በራሱ '@' እንዲኖረው
+                
                 input.oninput = function() {
                     if (!input.value.startsWith('@')) {
                         input.value = '@' + input.value.replace(/@/g, '');
                     }
                 };
             } else if(field === 'name') {
-                title.innerText = "Edit Profile Name";
                 input.value = document.getElementById("profile-name").innerText.trim();
+                title.innerText = "Edit Profile Name";
             } else if(field === 'passkey') {
+                input.value = "";
                 title.innerText = "Add Passkey";
                 input.placeholder = "Enter passkey name/device label...";
             }
