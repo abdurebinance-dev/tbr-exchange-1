@@ -501,20 +501,28 @@
                 document.getElementById("username-display").innerText = user.traderHandle;
             }
 
-          const kycBadge = document.getElementById('kycStatusBadge'); // ወይም የ KYC ባጅ የሚገኝበት ID
+          const kycBadge = document.getElementById('kycStatusBadge'); // ወይም የ KYC ባጅ የሚገኝበት ID/Class
 
-if (kycStatus === 'verified' || kycStatus === 'approved') {
+// ስታተሱን በትክክል ለመለየት (lowercase በማድረግ)
+let status = String(kycStatus || '').toLowerCase();
+
+if (status === 'approved' || status === 'verified') {
     kycBadge.innerText = 'Verified';
     kycBadge.style.backgroundColor = 'rgba(14, 203, 129, 0.15)';
-    kycBadge.style.color = '#0ecb81';
-} else if (kycStatus === 'pending' || kycStatus === 'under_review') {
+    kycBadge.style.color = '#0ecb81'; // አረንጓዴ
+} else if (status === 'pending' || status === 'under_review') {
     kycBadge.innerText = 'Under Review';
     kycBadge.style.backgroundColor = 'rgba(243, 186, 47, 0.15)';
-    kycBadge.style.color = '#f3ba2f';
+    kycBadge.style.color = '#f3ba2f'; // ቢጫ
+} else if (status === 'rejected') {
+    kycBadge.innerText = 'Rejected';
+    kycBadge.style.backgroundColor = 'rgba(246, 70, 93, 0.15)';
+    kycBadge.style.color = '#f6465d'; // ቀይ
 } else {
+    // ላልተረጋገጠ ወይም Unverified ሲሆን ብቻ
     kycBadge.innerText = 'Unverified';
     kycBadge.style.backgroundColor = 'rgba(246, 70, 93, 0.15)';
-    kycBadge.style.color = '#f6465d';
+    kycBadge.style.color = '#f6465d'; // ቀይ (እንደጠየቁት)
 }
         }
 
