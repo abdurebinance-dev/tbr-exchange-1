@@ -111,6 +111,10 @@
             font-size: 28px;
             font-weight: bold;
             color: #000;
+            background-size: cover;
+            background-position: center;
+            overflow: hidden;
+            flex-shrink: 0;
         }
 
         .profile-details h2 {
@@ -427,7 +431,7 @@
                     localStorage.setItem('tbrExchangeId', userId);
                 } else {
                     userId = 'TBR-100000';
-                   localStorage.setItem('tbrExchangeId', userId);
+                    localStorage.setItem('tbrExchangeId', userId);
                 }
             }
 
@@ -464,20 +468,25 @@
                         memberSince = user.createdAt ? new Date(user.createdAt).getFullYear() : memberSince;
                         
                         if (user.userId) {
-    userId = user.userId;
-} else if (user.numericId) {
-    userId = 'TBR-' + String(user.numericId).padStart(6, '0');
-} else if (user._id) {
-    userId = user.customId || ('TBR-' + String(user._id).slice(-6).toUpperCase());
-}
+                            userId = user.userId;
+                        } else if (user.numericId) {
+                            userId = 'TBR-' + String(user.numericId).padStart(6, '0');
+                        } else if (user._id) {
+                            userId = user.customId || ('TBR-' + String(user._id).slice(-6).toUpperCase());
+                        }
 
-localStorage.setItem('userName', name);
-localStorage.setItem('userEmail', email);
-localStorage.setItem('kycStatus', kycStatus);
-localStorage.setItem('kycRejectionReason', rejectionReason);
-localStorage.setItem('tbrExchangeId', userId); // ቋሚው ቁልፍ
-localStorage.setItem('userUniqueId', userId);
+                        localStorage.setItem('userName', name);
+                        localStorage.setItem('userEmail', email);
+                        localStorage.setItem('kycStatus', kycStatus);
+                        localStorage.setItem('kycRejectionReason', rejectionReason);
+                        localStorage.setItem('tbrExchangeId', userId);
+                        localStorage.setItem('userUniqueId', userId);
                         if (storedFullName) localStorage.setItem('fullName', storedFullName);
+                        
+                        // አቫታር ካለ ከባክኤንድ አምጥቶ ማስቀመጥ ይቻላል
+                        if (user.avatar || user.profilePicture) {
+                            localStorage.setItem('userAvatar', user.avatar || user.profilePicture);
+                        }
                     }
                 }
             } catch (e) {
@@ -491,7 +500,18 @@ localStorage.setItem('userUniqueId', userId);
 
             document.getElementById('profileEmail').innerText = email;
             document.getElementById('userUniqueId').innerText = userId;
-            document.getElementById('avatarInitial').innerText = String(displayName).charAt(0).toUpperCase();
+            
+            // --- እዚህ ጋር የተቀመጠውን ፎቶ ከ localStorage ቼክ በማድረግ ፎቶውን ወይም የመጀመሪያ ፊደል ያስገባል ---
+            const avatarBox = document.getElementById('avatarInitial');
+            const savedAvatar = localStorage.getItem('userAvatar') || localStorage.getItem('profilePicture');
+            
+            if (savedAvatar) {
+                avatarBox.style.backgroundImage = `url('${savedAvatar}')`;
+                avatarBox.innerText = ""; // ፎቶ ሲኖር ፊደሉን ባዶ ያደርገዋል
+            } else {
+                avatarBox.style.backgroundImage = "none";
+                avatarBox.innerText = String(displayName).charAt(0).toUpperCase();
+            }
 
             document.getElementById('statTotalTrades').innerText = totalTrades;
             document.getElementById('statVolume').innerText = volume;
