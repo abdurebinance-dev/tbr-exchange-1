@@ -908,6 +908,37 @@ if (greetingEl) {
                 console.error('Error fetching live rates:', e);
             }
         }
+
+document.addEventListener("DOMContentLoaded", function() {
+        const themeBtn = document.getElementById("theme-toggle");
+        
+        // ከዚህ በፊት የተመረጠውን ከለር ቼክ ማድረግ
+        if (localStorage.getItem("theme") === "light") {
+            document.body.classList.add("light-mode");
+            if (themeBtn) {
+                themeBtn.classList.remove("fa-moon");
+                themeBtn.classList.add("fa-sun");
+            }
+        }
+
+        if (themeBtn) {
+            themeBtn.style.cursor = "pointer";
+            themeBtn.addEventListener("click", function() {
+                document.body.classList.toggle("light-mode");
+                
+                if (document.body.classList.contains("light-mode")) {
+                    themeBtn.classList.remove("fa-moon");
+                    themeBtn.classList.add("fa-sun");
+                    localStorage.setItem("theme", "light");
+                } else {
+                    themeBtn.classList.remove("fa-sun");
+                    themeBtn.classList.add("fa-moon");
+                    localStorage.setItem("theme", "dark");
+                }
+            });
+        }
+    });
+
     </script>
 </body>
 </html>
