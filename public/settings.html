@@ -66,12 +66,21 @@
             align-items: center;
             gap: 8px;
             white-space: nowrap;
-            transition: 0.3s;
+            transition: 0.2s ease;
         }
 
         .tab-btn:hover, .tab-btn.active {
             color: var(--accent-color);
             border-bottom: 2px solid var(--accent-color);
+        }
+
+        /* Click Scale Down Effect for Buttons & Links */
+        button, .action-link, .tab-btn, .camera-badge, i.fa-copy, i.fa-pen {
+            transition: transform 0.1s ease, opacity 0.1s ease;
+        }
+
+        button:active, .action-link:active, .tab-btn:active, .camera-badge:active {
+            transform: scale(0.95);
         }
 
         /* Profile Card Section */
@@ -192,6 +201,7 @@
             font-size: 14px;
             font-weight: 500;
             cursor: pointer;
+            display: inline-block;
         }
 
         .action-link:hover {
@@ -201,7 +211,7 @@
 </head>
 <body>
 
-    <!-- Navbar (Existing Layout) -->
+    <!-- Navbar Placeholder -->
     <div id="navbar-placeholder"></div>
 
     <div class="settings-container">
@@ -223,20 +233,20 @@
         <!-- Profile Content Box -->
         <div class="profile-card">
             <div class="profile-top">
-                <div class="avatar-box">
+                <div class="avatar-box" id="avatar-initials">
                     BA
                     <div class="camera-badge"><i class="fa-solid fa-camera"></i></div>
                 </div>
                 <div class="user-info">
-                    <h3>Binance Abdure <i class="fa-solid fa-pen edit-icon"></i></h3>
-                    <span>EBR-010378 <i class="fa-solid fa-copy" style="cursor:pointer;" title="Copy ID"></i></span>
+                    <h3 id="profile-name">Binance Abdure <i class="fa-solid fa-pen edit-icon" onclick="editName()"></i></h3>
+                    <span id="profile-id">TBR-961371 <i class="fa-solid fa-copy" style="cursor:pointer;" title="Copy ID" onclick="copyId()"></i></span>
                 </div>
             </div>
 
             <div class="info-row">
                 <div>
                     <div class="info-title">Email</div>
-                    <div class="info-value">abdurebinance@gmail.com</div>
+                    <div class="info-value" id="profile-email">binanceme73@gmail.com</div>
                 </div>
                 <span class="badge-verified"><i class="fa-solid fa-check"></i> Verified</span>
             </div>
@@ -247,8 +257,7 @@
                     <div class="info-value">Identity Verification</div>
                 </div>
                 <div>
-                    <span class="badge-unverified">Not Approved</span> &nbsp;
-                    <span class="action-link">Verify Now</span>
+                    <span class="badge-verified" id="kyc-badge"><i class="fa-solid fa-check"></i> Verified</span>
                 </div>
             </div>
 
@@ -263,20 +272,69 @@
             <div class="info-row">
                 <div>
                     <div class="info-title">Trader Username</div>
-                    <div class="info-value">Not set — tap to choose your handle</div>
+                    <div class="info-value" id="username-display">Not set — tap to choose your handle</div>
                 </div>
-                <span class="action-link"><i class="fa-solid fa-pen"></i> Edit</span>
+                <span class="action-link" onclick="editUsername()"><i class="fa-solid fa-pen"></i> Edit</span>
             </div>
         </div>
     </div>
 
-    <!-- Script to handle dynamic features -->
+    <!-- Scripting for Dynamic User Data & Click Effects -->
     <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // ከሌሎች ገጾች ወይም ሎካል ስቶሬጅ ትክክለኛውን መረጃ መጫን
+            const savedName = localStorage.getItem("userName") || "Binanceeme73";
+            const savedEmail = localStorage.getItem("userEmail") || "binanceme73@gmail.com";
+            const savedId = localStorage.getItem("userId") || "TBR-961371";
+            const savedPhone = localStorage.getItem("userPhone");
+            const savedUsername = localStorage.getItem("traderUsername");
+
+            // በገጹ ላይ ያሉትን ቦታዎች በትክክለኛው መረጃ መሙላት
+            document.getElementById("profile-name").innerHTML = `${savedName} <i class="fa-solid fa-pen edit-icon" onclick="editName()"></i>`;
+            document.getElementById("profile-email").innerText = savedEmail;
+            document.getElementById("profile-id").innerHTML = `${savedId} <i class="fa-solid fa-copy" style="cursor:pointer;" title="Copy ID" onclick="copyId()"></i>`;
+            
+            // የጀማሪ ፊደላትን ከአቫታር ጋር ማስተካከል (ဥፍ. B)
+            if(savedName.length > 0) {
+                document.getElementById("avatar-initials").innerHTML = `${savedName.substring(0,2).toUpperCase()} <div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
+            }
+
+            if(savedPhone) {
+                document.getElementById("phone-display").innerText = savedPhone;
+            }
+            if(savedUsername) {
+                document.getElementById("username-display").innerText = savedUsername;
+            }
+        });
+
         function addPhone() {
             let phone = prompt("Enter your phone number:");
             if(phone) {
                 document.getElementById("phone-display").innerText = phone;
+                localStorage.setItem("userPhone", phone);
             }
+        }
+
+        function editUsername() {
+            let uname = prompt("Enter your Trader Username:");
+            if(uname) {
+                document.getElementById("username-display").innerText = uname;
+                localStorage.setItem("traderUsername", uname);
+            }
+        }
+
+        function editName() {
+            let newName = prompt("Enter your name:", document.getElementById("profile-name").innerText);
+            if(newName) {
+                localStorage.setItem("userName", newName);
+                location.reload();
+            }
+        }
+
+        function copyId() {
+            let idText = "TBR-961371";
+            navigator.clipboard.writeText(idText);
+            alert("Account ID copied to clipboard!");
         }
     </script>
     <script src="script.js"></script>
