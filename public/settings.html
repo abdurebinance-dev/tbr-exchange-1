@@ -503,28 +503,29 @@
 
           const kycBadge = document.getElementById('kycStatusBadge'); // ወይም የ KYC ባጅ የሚገኝበት ID/Class
 
-// ስታተሱን በትክክል ለመለየት (lowercase በማድረግ)
-let status = String(kycStatus || '').toLowerCase();
+// ከሰርቨር ወይም ከ localStorage የሚመጣውን ስታተስ መቀበያ (ለምሳሌ kycStatus)
+let kycStatus = res.data.kycStatus || localStorage.getItem('kycStatus') || 'unverified';
 
-if (status === 'approved' || status === 'verified') {
-    kycBadge.innerText = 'Verified';
-    kycBadge.style.backgroundColor = 'rgba(14, 203, 129, 0.15)';
-    kycBadge.style.color = '#0ecb81'; // አረንጓዴ
-} else if (status === 'pending' || status === 'under_review') {
-    kycBadge.innerText = 'Under Review';
-    kycBadge.style.backgroundColor = 'rgba(243, 186, 47, 0.15)';
-    kycBadge.style.color = '#f3ba2f'; // ቢጫ
-} else if (status === 'rejected') {
-    kycBadge.innerText = 'Rejected';
-    kycBadge.style.backgroundColor = 'rgba(246, 70, 93, 0.15)';
-    kycBadge.style.color = '#f6465d'; // ቀይ
-} else {
-    // ላልተረጋገጠ ወይም Unverified ሲሆን ብቻ
-    kycBadge.innerText = 'Unverified';
-    kycBadge.style.backgroundColor = 'rgba(246, 70, 93, 0.15)';
-    kycBadge.style.color = '#f6465d'; // ቀይ (እንደጠየቁት)
+// ስታተሱን በትንሽፊደል (Lowercase) በማድረግ ማመሳከር
+let status = String(kycStatus).toLowerCase();
+
+const kycBadge = document.getElementById('kycStatusBadge'); // የ KYC ባጅ የሚገኝበት ID
+
+if (kycBadge) {
+    if (status === 'approved' || status === 'verified') {
+        kycBadge.innerText = 'Verified';
+        kycBadge.style.backgroundColor = 'rgba(14, 203, 129, 0.15)';
+        kycBadge.style.color = '#0ecb81'; // አረንጓዴ (Green)
+    } else if (status === 'pending' || status === 'under_review' || status === 'review') {
+        kycBadge.innerText = 'Under Review';
+        kycBadge.style.backgroundColor = 'rgba(243, 186, 47, 0.15)';
+        kycBadge.style.color = '#f3ba2f'; // ቢጫ (Yellow)
+    } else {
+        kycBadge.innerText = 'Unverified';
+        kycBadge.style.backgroundColor = 'rgba(246, 70, 93, 0.15)';
+        kycBadge.style.color = '#f6465d'; // ቀይ (Red - እንደጠየቁት)
+    }
 }
-        }
 
         function loadFromLocalStorageFallback() {
             const username = localStorage.getItem("userName") || "";
