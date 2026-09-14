@@ -350,13 +350,13 @@
         <div class="profile-card">
             <div class="profile-top">
                 <div class="avatar-box" id="avatar-initials">
-                    BI
+                    UI
                     <div class="camera-badge"><i class="fa-solid fa-camera"></i></div>
                 </div>
                 <div class="user-info">
-                    <h3 id="profile-name">BINANCEME73 <i class="fa-solid fa-pen edit-icon" onclick="openModal('name')"></i></h3>
+                    <h3 id="profile-name">Loading... <i class="fa-solid fa-pen edit-icon" onclick="openModal('name')"></i></h3>
                     <div class="id-container">
-                        <span id="profile-id">TBR-961371</span> 
+                        <span id="profile-id">Loading...</span> 
                         <i class="fa-solid fa-copy" style="cursor:pointer;" title="Copy ID" onclick="copyId()"></i>
                     </div>
                 </div>
@@ -365,7 +365,7 @@
             <div class="info-row">
                 <div>
                     <div class="info-title">Email</div>
-                    <div class="info-value" id="profile-email">binanceme73@gmail.com</div>
+                    <div class="info-value" id="profile-email">Loading...</div>
                 </div>
                 <span class="badge-verified"><i class="fa-solid fa-check"></i> Verified</span>
             </div>
@@ -375,7 +375,7 @@
                     <div class="info-title">KYC Status</div>
                     <div class="info-value" id="kyc-text">Identity Verification</div>
                 </div>
-                <span id="kyc-badge" class="badge-verified"><i class="fa-solid fa-check"></i> Verified</span>
+                <span id="kyc-badge" class="badge-unverified"><i class="fa-solid fa-clock"></i> Unverified</span>
             </div>
 
             <div class="info-row">
@@ -407,7 +407,7 @@
         </div>
     </div>
 
-    <!-- Backend API Integration with Fallback & Force-Verified Sync -->
+    <!-- Backend API Integration with Proper User-Specific State Handling -->
     <script>
         let currentField = "";
 
@@ -426,14 +426,20 @@
                 if (response.ok) {
                     const data = await response.json();
                     
-                    const username = data.username || data.name || "BINANCEME73";
-                    const email = data.email || "binanceme73@gmail.com";
-                    const tbrId = data.tbrId || data.id || data.userId || "TBR-961371";
+                    const username = data.username || data.name || "";
+                    const email = data.email || "";
+                    const tbrId = data.tbrId || data.id || data.userId || "";
                     const phone = data.phone || data.phoneNumber;
                     const traderHandle = data.traderUsername;
                     
-                    // Force KYC to be verified if the database returns true or defaults to active verification
-                    const isVerified = data.kycVerified === true || data.kycStatus === 'verified' || data.kyc_status === 'VERIFIED' || true;
+                    // The exact dynamic KYC status coming from backend database for this specific user
+                    const isVerified = data.kycVerified === true || data.kycStatus === 'verified' || data.kyc_status === 'VERIFIED';
+
+                    // Save fresh valid state to localStorage so fallback retains user-specific info next time
+                    localStorage.setItem("kycVerified", isVerified);
+                    if (tbrId) localStorage.setItem("userId", tbrId);
+                    if (username) localStorage.setItem("userName", username);
+                    if (email) localStorage.setItem("userEmail", email);
 
                     updateUI({
                         username,
@@ -453,9 +459,9 @@
         });
 
         function updateUI(user) {
-            document.getElementById("profile-name").innerHTML = `${user.username} <i class="fa-solid fa-pen edit-icon" onclick="openModal('name')"></i>`;
-            document.getElementById("profile-email").innerText = user.email;
-            document.getElementById("profile-id").innerText = user.tbrId;
+            document.getElementById("profile-name").innerHTML = `${user.username || 'User'} <i class="fa-solid fa-pen edit-icon" onclick="openModal('name')"></i>`;
+            document.getElementById("profile-email").innerText = user.email || 'No email';
+            document.getElementById("profile-id").innerText = user.tbrId || 'TBR-000000';
             
             if(user.username && user.username.length > 0) {
                 document.getElementById("avatar-initials").innerHTML = `${user.username.substring(0,2).toUpperCase()} <div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
@@ -468,21 +474,26 @@
                 document.getElementById("username-display").innerText = user.traderHandle;
             }
 
-            // Always force the Verified badge look matching profile.html
+            // Set exact dynamic KYC status per user
             const kycBadge = document.getElementById("kyc-badge");
-            kycBadge.className = "badge-verified";
-            kycBadge.innerHTML = `<i class="fa-solid fa-check"></i> Verified`;
+            if(user.isVerified) {
+                kycBadge.className = "badge-verified";
+                kycBadge.innerHTML = `<i class="fa-solid fa-check"></i> Verified`;
+            } else {
+                kycBadge.className = "badge-unverified";
+                kycBadge.innerHTML = `<i class="fa-solid fa-clock"></i> Unverified`;
+            }
         }
 
         function loadFromLocalStorageFallback() {
-            const username = localStorage.getItem("userName") || "BINANCEME73";
-            const email = localStorage.getItem("userEmail") || "binanceme73@gmail.com";
-            const tbrId = localStorage.getItem("userId") || localStorage.getItem("tbrId") || "TBR-961371";
+            const username = localStorage.getItem("userName") || "";
+            const email = localStorage.getItem("userEmail") || "";
+            const tbrId = localStorage.getItem("userId") || localStorage.getItem("tbrId") || "";
             const phone = localStorage.getItem("userPhone");
             const traderHandle = localStorage.getItem("traderUsername");
             
-            // Force true so it matches the verified status on the profile page
-            const isVerified = true; 
+            // Read the exact stored KYC state for this specific user from localStorage
+            const isVerified = localStorage.getItem("kycVerified") === "true";
 
             updateUI({ username, email, tbrId, phone, traderHandle, isVerified });
         }
