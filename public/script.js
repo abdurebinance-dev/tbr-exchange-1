@@ -63,31 +63,39 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 document.addEventListener("DOMContentLoaded", function() {
-    const themeToggleBtn = document.getElementById("theme-toggle");
+    const themeBtn = document.getElementById("theme-toggle");
     
-    // ከዚህ በፊት ተጠቃሚው የመረጠውን ከለር ከ LocalStorage ማምጣት
-    const currentTheme = localStorage.getItem("theme");
-    if (currentTheme === "light") {
-        document.body.classList.add("light-mode");
-        if (themeToggleBtn) {
-            themeToggleBtn.classList.remove("fa-moon");
-            themeToggleBtn.classList.add("fa-sun");
+    // 1. ፔጅ ሲከፈት ሎካል ስቶሬጅ ላይ Light መሆኑ ከታወቀ ወዲያውኑ ከለሩን መቀየር
+    if (localStorage.getItem("theme") === "light") {
+        document.body.style.backgroundColor = "#f4f5f7";
+        document.body.style.color = "#121212";
+        if (themeBtn) {
+            themeBtn.classList.remove("fa-moon");
+            themeBtn.classList.add("fa-sun");
+            themeBtn.style.color = "#f3ba2f";
         }
     }
 
-    if (themeToggleBtn) {
-        themeToggleBtn.addEventListener("click", function() {
-            // በ body ላይ light-mode የሚባል class መኖሩን ማረጋገጥ
-            document.body.classList.toggle("light-mode");
+    // 2. አዝራሩ በየትኛውም ፔጅ ላይ ቢጫን የሚፈጠር ክንውን
+    if (themeBtn) {
+        themeBtn.style.cursor = "pointer";
+        themeBtn.addEventListener("click", function() {
+            const currentBg = window.getComputedStyle(document.body).backgroundColor;
             
-            if (document.body.classList.contains("light-mode")) {
-                themeToggleBtn.classList.remove("fa-moon");
-                themeToggleBtn.classList.add("fa-sun");
-                localStorage.setItem("theme", "light");
-            } else {
-                themeToggleBtn.classList.remove("fa-sun");
-                themeToggleBtn.classList.add("fa-moon");
+            if (currentBg === "rgb(244, 245, 247)" || document.body.style.backgroundColor === "rgb(244, 245, 247)" || document.body.style.backgroundColor === "#f4f5f7") {
+                // ወደ ጥቁር መመለስ
+                document.body.style.backgroundColor = "#080808";
+                document.body.style.color = "#ffffff";
+                themeBtn.classList.remove("fa-sun");
+                themeBtn.classList.add("fa-moon");
                 localStorage.setItem("theme", "dark");
+            } else {
+                // ወደ ነጭ መቀየር
+                document.body.style.backgroundColor = "#f4f5f7";
+                document.body.style.color = "#121212";
+                themeBtn.classList.remove("fa-moon");
+                themeBtn.classList.add("fa-sun");
+                localStorage.setItem("theme", "light");
             }
         });
     }
