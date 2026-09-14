@@ -590,16 +590,36 @@
             }
         }
 
-        document.addEventListener("DOMContentLoaded", () => {
-        const localName = localStorage.getItem("userName") || localStorage.getItem("fullName") || localStorage.getItem("name");
-        const localEmail = localStorage.getItem("userEmail") || localStorage.getItem("email");
-        const localId = localStorage.getItem("tbrId") || localStorage.getItem("tbrExchangeId");
+       document.addEventListener("DOMContentLoaded", () => {
+    // 1. ስም፣ ኢሜል እና መታወቂያ
+    const localName = localStorage.getItem("userName") || localStorage.getItem("fullName") || localStorage.getItem("name");
+    const localEmail = localStorage.getItem("userEmail") || localStorage.getItem("email");
+    const localId = localStorage.getItem("tbrId") || localStorage.getItem("tbrExchangeId");
 
-        if (localName) document.getElementById("profileName").innerText = localName;
-        if (localEmail) document.getElementById("profileEmail").innerText = localEmail;
-        if (localId) document.getElementById("userUniqueId").innerText = localId;
-    });
+    if (localName) document.getElementById("profileName").innerText = localName;
+    if (localEmail) document.getElementById("profileEmail").innerText = localEmail;
+    if (localId) document.getElementById("userUniqueId").innerText = localId;
 
+    // 2. ፕሮፋይል ፒክቸር
+    const localAvatar = localStorage.getItem("userAvatar") || localStorage.getItem("profilePic");
+    if (localAvatar) {
+        const avatarEl = document.getElementById("avatarInitial");
+        if (avatarEl) {
+            if (localAvatar.startsWith("http") || localAvatar.startsWith("data:")) {
+                avatarEl.style.backgroundImage = `url(${localAvatar})`;
+                avatarEl.style.backgroundSize = "cover";
+                avatarEl.innerText = "";
+            } else {
+                avatarEl.innerText = localAvatar;
+            }
+        }
+    }
+
+    // 3. ዋናውን የሰርቨር ዳታ መጫኛ ፋንክሽን እንጠራዋለን
+    if (typeof loadUserProfile === "function") {
+        loadUserProfile();
+    }
+});
         window.addEventListener('DOMContentLoaded', loadUserProfile);
     </script>
 </body>
