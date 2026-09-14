@@ -129,34 +129,43 @@
 
         .avatar-box {
             position: relative;
-            width: 55px;
-            height: 55px;
+            width: 65px;
+            height: 65px;
             background: linear-gradient(135deg, #f3ba2f, #d4af37);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 18px;
+            font-size: 20px;
             font-weight: bold;
             color: #000;
             flex-shrink: 0;
+            overflow: hidden;
+            background-size: cover;
+            background-position: center;
         }
 
         .avatar-box .camera-badge {
             position: absolute;
             bottom: 0;
             right: 0;
-            background: #222;
+            background: rgba(0, 0, 0, 0.75);
             color: #fff;
-            width: 20px;
-            height: 20px;
+            width: 24px;
+            height: 24px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 9px;
+            font-size: 10px;
             border: 2px solid var(--card-bg);
             cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .camera-badge:hover {
+            background: var(--accent-color);
+            color: #000;
         }
 
         .user-info h3 {
@@ -385,10 +394,12 @@
 
         <div class="profile-card">
             <div class="profile-top">
-                <div class="avatar-box" id="avatar-initials">
-                    UI
+                <div class="avatar-box" id="avatar-initials" onclick="triggerImageUpload()" title="Click to change profile picture" style="cursor: pointer;">
                     <div class="camera-badge"><i class="fa-solid fa-camera"></i></div>
                 </div>
+                <!-- Hidden file input for uploading profile picture -->
+                <input type="file" id="profileImageInput" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
+
                 <div class="user-info">
                     <h3 id="profile-name">Loading... <i class="fa-solid fa-pen edit-icon" onclick="openModal('name')"></i></h3>
                     <div class="id-container">
@@ -446,7 +457,7 @@
     <!-- Toast Notification Element -->
     <div id="toastNotification">
         <i class="fa-solid fa-circle-check"></i>
-        <span>Account ID copied to clipboard!</span>
+        <span id="toastMessage">Account ID copied to clipboard!</span>
     </div>
 
     <script>
@@ -459,6 +470,7 @@
             let localPhone = localStorage.getItem("userPhone") || "";
             let localTraderHandle = localStorage.getItem("traderUsername") || "";
             let localKyc = String(localStorage.getItem("kycStatus") || localStorage.getItem("kycVerified") || "approved").toLowerCase();
+            let savedAvatar = localStorage.getItem("userAvatar") || "";
 
             updateUI({
                 username: localName,
@@ -466,7 +478,8 @@
                 tbrId: tbrId,
                 phone: localPhone ? localPhone : null,
                 traderHandle: localTraderHandle ? localTraderHandle : null,
-                kycStatus: localKyc
+                kycStatus: localKyc,
+                avatar: savedAvatar
             });
 
             try {
@@ -496,6 +509,7 @@
                     const phone = userData.phone || userData.phoneNumber || localPhone;
                     const traderHandle = userData.traderUsername || localTraderHandle;
                     const kycVal = userData.kycStatus || userData.kyc_status || (userData.kycVerified ? 'approved' : localKyc);
+                    const avatar = userData.avatar || userData.profilePicture || savedAvatar;
 
                     localStorage.setItem("tbrExchangeId", tbrId);
                     localStorage.setItem("tbrId", tbrId);
@@ -505,6 +519,7 @@
                     if (email) localStorage.setItem("userEmail", email);
                     if (phone) localStorage.setItem("userPhone", phone);
                     if (traderHandle) localStorage.setItem("traderUsername", traderHandle);
+                    if (avatar) localStorage.setItem("userAvatar", avatar);
 
                     updateUI({
                         username,
@@ -512,7 +527,8 @@
                         tbrId,
                         phone,
                         traderHandle,
-                        kycStatus: kycVal
+                        kycStatus: kycVal,
+                        avatar
                     });
                 } else {
                     loadFromLocalStorageFallback();
@@ -527,8 +543,14 @@
             document.getElementById("profile-email").innerText = user.email || 'No email';
             document.getElementById("profile-id").innerText = user.tbrId || 'TBR-476394';
             
-            if(user.username && user.username.length > 0) {
-                document.getElementById("avatar-initials").innerHTML = `${user.username.substring(0,2).toUpperCase()} <div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
+            const avatarBox = document.getElementById("avatar-initials");
+            if (user.avatar) {
+                avatarBox.style.backgroundImage = `url('${user.avatar}')`;
+                avatarBox.innerHTML = `<div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
+            } else {
+                avatarBox.style.backgroundImage = "none";
+                const initials = user.username ? user.username.substring(0,2).toUpperCase() : "UI";
+                avatarBox.innerHTML = `${initials} <div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
             }
 
             if(user.phone) {
@@ -570,8 +592,50 @@
             const phone = localStorage.getItem("userPhone");
             const traderHandle = localStorage.getItem("traderUsername");
             const kycStatus = localStorage.getItem("kycStatus") || "approved";
+            const avatar = localStorage.getItem("userAvatar") || "";
 
-            updateUI({ username, email, tbrId, phone, traderHandle, kycStatus });
+            updateUI({ username, email, tbrId, phone, traderHandle, kycStatus, avatar });
+        }
+
+        function triggerImageUpload() {
+            document.getElementById("profileImageInput").click();
+        }
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const base64Image = e.target.result;
+                localStorage.setItem("userAvatar", base64Image);
+
+                const avatarBox = document.getElementById("avatar-initials");
+                avatarBox.style.backgroundImage = `url('${base64Image}')`;
+                avatarBox.innerHTML = `<div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
+
+                showToast("Profile picture updated successfully!");
+
+                // Backend ላይ መላክ ከፈለጉ (የራንደር ሰቨርዎ መቀበል የሚችል ከሆነ)
+                syncAvatarToBackend(base64Image);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function syncAvatarToBackend(base64Image) {
+            try {
+                const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
+                await fetch("https://tbr-exchange-backend.onrender.com/api/user/update", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": token ? `Bearer ${token}` : ""
+                    },
+                    body: JSON.stringify({ field: "avatar", value: base64Image })
+                });
+            } catch (e) {
+                console.error("Failed to sync avatar with backend:", e);
+            }
         }
 
         function openModal(field) {
@@ -613,11 +677,15 @@
             } else if(currentField === 'name') {
                 localStorage.setItem("userName", val);
                 document.getElementById("profile-name").innerHTML = `${val} <i class="fa-solid fa-pen edit-icon" onclick="openModal('name')"></i>`;
-                if(val.length > 0) {
-                    document.getElementById("avatar-initials").innerHTML = `${val.substring(0,2).toUpperCase()} <div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
+                
+                const avatarBox = document.getElementById("avatar-initials");
+                if (!localStorage.getItem("userAvatar")) {
+                    avatarBox.innerHTML = `${val.substring(0,2).toUpperCase()} <div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
                 }
             }
             
+            showToast("Profile updated successfully!");
+
             try {
                 const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
                 await fetch("https://tbr-exchange-backend.onrender.com/api/user/update", {
@@ -638,9 +706,12 @@
         function copyId() {
             let idText = document.getElementById("profile-id").innerText;
             navigator.clipboard.writeText(idText);
+            showToast("Account ID copied to clipboard!");
+        }
 
-            // አዲሱ Toast notification ማሳያ
+        function showToast(message) {
             const toast = document.getElementById("toastNotification");
+            document.getElementById("toastMessage").innerText = message;
             toast.classList.add("show");
 
             setTimeout(() => {
