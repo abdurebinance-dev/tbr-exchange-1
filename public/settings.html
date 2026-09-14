@@ -743,24 +743,28 @@
             document.getElementById("customModal").style.display = "none";
         }
 
-        async function saveModalData() {
+       async function saveModalData() {
             const val = document.getElementById("modalInput").value.trim();
-            if(!val) return;
+            if (!val) return;
 
-            if(currentField === 'phone') {
+            if (currentField === 'phone') {
                 document.getElementById("phone-display").innerText = val;
                 localStorage.setItem("userPhone", val);
-           async function saveModalData() {
-            // ... (ከላይ ያሉት እንዳሉ ይቆዩ)
-
-            } else if(currentField === 'username') {
-                if (!val.startsWith('@')) {
-                    val = '@' + val;
+            } else if (currentField === 'username') {
+                let finalVal = val;
+                if (!finalVal.startsWith('@')) {
+                    finalVal = '@' + finalVal;
                 }
-                document.getElementById("username-display").innerText = val;
-                localStorage.setItem("traderUsername", val);
+                document.getElementById("username-display").innerText = finalVal;
+                localStorage.setItem("traderUsername", finalVal);
+            } else if (currentField === 'name') {
+                localStorage.setItem("userName", val);
+                document.getElementById("profile-name").innerHTML = `${val} <i class="fa-solid fa-pen edit-icon" onclick="openModal('name')"></i>`;
+            } else if (currentField === 'passkey') {
+                localStorage.setItem("userPasskey", val);
             }
-            // ... (የቀረቡት ኮዶች)
+            
+            closeModal();
         }
                 document.getElementById("username-display").innerText = val;
                 localStorage.setItem("traderUsername", val);
