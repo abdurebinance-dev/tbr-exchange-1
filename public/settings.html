@@ -721,6 +721,14 @@
             } else if(field === 'username') {
                 title.innerText = "Set Trader Username";
                 input.placeholder = "Enter handle...";
+                if (!input.value.startsWith('@')) {
+                    input.value = '@';
+                }
+                input.oninput = function() {
+                    if (!input.value.startsWith('@')) {
+                        input.value = '@' + input.value.replace(/@/g, '');
+                    }
+                };
             } else if(field === 'name') {
                 title.innerText = "Edit Profile Name";
                 input.value = document.getElementById("profile-name").innerText.trim();
@@ -743,9 +751,12 @@
                 document.getElementById("phone-display").innerText = val;
                 localStorage.setItem("userPhone", val);
             } else if(currentField === 'username') {
-                if (!val.startsWith('@')) {
-                    val = '@' + val;
+                title.innerText = "Set Trader Username";
+                input.placeholder = "Enter handle...";
+                if (!input.value.startsWith('@')) {
+                    input.value = '@';
                 }
+            }
                 document.getElementById("username-display").innerText = val;
                 localStorage.setItem("traderUsername", val);
             } else if(currentField === 'name') {
