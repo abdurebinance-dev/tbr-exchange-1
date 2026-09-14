@@ -407,18 +407,16 @@
         </div>
     </div>
 
-    <!-- Enhanced Script with Cache Busting & Multi-Token Support -->
+    <!-- Enhanced Script with Nested User Object Extraction -->
     <script>
         let currentField = "";
 
         document.addEventListener("DOMContentLoaded", async function() {
             try {
-                // Support multiple token keys used across different pages
                 const token = localStorage.getItem("token") || 
                               localStorage.getItem("authToken") || 
                               localStorage.getItem("access_token");
                 
-                // Add timestamp (?t=...) to prevent 304 browser caching issues
                 const response = await fetch(`https://tbr-exchange-backend.onrender.com/api/user/profile?t=${new Date().getTime()}`, {
                     method: "GET",
                     headers: {
@@ -428,17 +426,21 @@
                 });
 
                 if (response.ok) {
-                    const data = await response.json();
+                    const result = await response.json();
                     
-                    const username = data.username || data.name || data.fullName || "";
-                    const email = data.email || "";
-                    const tbrId = data.tbrId || data.id || data.userId || "";
-                    const phone = data.phone || data.phoneNumber;
-                    const traderHandle = data.traderUsername;
+                    // Safely extract from nested 'user' object returned by backend
+                    const userData = result.user || result;
                     
-                    const isVerified = data.kycVerified === true || data.kycStatus === 'verified' || data.kyc_status === 'VERIFIED';
+                    const username = userData.fullName || userData.username || userData.name || "";
+                    const email = userData.email || "";
+                    const tbrId = userData.id || userData.tbrId || userData.userId || "";
+                    const phone = userData.phone || userData.phoneNumber;
+                    const traderHandle = userData.traderUsername;
+                    
+                    const kycVal = userData.kycStatus || userData.kyc_status || "";
+                    const isVerified = (kycVal.toLowerCase() === 'verified') || (userData.kycVerified === true);
 
-                    // Save to localStorage so fallback retains correct user data next time
+                    // Save to localStorage
                     localStorage.setItem("kycVerified", isVerified);
                     if (tbrId) localStorage.setItem("userId", tbrId);
                     if (username) localStorage.setItem("userName", username);
