@@ -750,13 +750,18 @@
             if(currentField === 'phone') {
                 document.getElementById("phone-display").innerText = val;
                 localStorage.setItem("userPhone", val);
+           async function saveModalData() {
+            // ... (ከላይ ያሉት እንዳሉ ይቆዩ)
+
             } else if(currentField === 'username') {
-                title.innerText = "Set Trader Username";
-                input.placeholder = "Enter handle...";
-                if (!input.value.startsWith('@')) {
-                    input.value = '@';
+                if (!val.startsWith('@')) {
+                    val = '@' + val;
                 }
+                document.getElementById("username-display").innerText = val;
+                localStorage.setItem("traderUsername", val);
             }
+            // ... (የቀረቡት ኮዶች)
+        }
                 document.getElementById("username-display").innerText = val;
                 localStorage.setItem("traderUsername", val);
             } else if(currentField === 'name') {
