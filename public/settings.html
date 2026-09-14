@@ -414,6 +414,9 @@
 
         document.addEventListener("DOMContentLoaded", async function() {
             try {
+                // 1. መጀመሪያ በ localStorage የተያዘው TBR ID ካለ በቀጥታ እንወስዳለን (ይህ ሁለቱንም ገጾች 100% ተመሳሳይ ያደርጋቸዋል)
+                let tbrId = localStorage.getItem("tbrId") || localStorage.getItem("userId");
+
                 const token = localStorage.getItem("token") || 
                               localStorage.getItem("authToken") || 
                               localStorage.getItem("access_token");
@@ -433,12 +436,19 @@
                     const username = userData.fullName || userData.username || userData.name || "";
                     const email = userData.email || "";
                     
-                    // ከሰርቨር የሚመጣውን ትክክለኛ የ TBR ID ብቻ እንወስዳለን (Random ማመንጨት ቀርቷል)
-                    let tbrId = userData.tbrId || userData.customId || userData.id || userData._id || "";
-                    
-                    if (tbrId && !tbrId.startsWith("TBR-")) {
-                        // ቁጥር ብቻ ከሆነ ከፊት TBR- እንጨምራለን (ወይም ሰርቨሩ ሙሉውን ከላከው እንዳለ እንወስደዋለን)
-                        tbrId = `TBR-${tbrId}`;
+                    // 2. ከሰርቨር የሚመጣው tbrId ከኖር እንወስዳለን፣ ከሌለ ግን በ localStorage ያለውን እንጠቀማለን
+                    if (!tbrId) {
+                        tbrId = userData.tbrId || userData.customId;
+                        if (!tbrId) {
+                            const rawMongoId = userData.id || userData._id || "";
+                            let numericHash = 0;
+                            for (let i = 0; i < rawMongoId.length; i++) {
+                                numericHash = (numericHash << 5) - numericHash + rawMongoId.charCodeAt(i);
+                                numericHash |= 0;
+                            }
+                            const randomNum = Math.abs(numericHash) % 900000 + 100000;
+                            tbrId = `TBR-${randomNum}`;
+                        }
                     }
 
                     const phone = userData.phone || userData.phoneNumber;
@@ -446,8 +456,9 @@
                     const kycVal = userData.kycStatus || userData.kyc_status || "";
                     const isVerified = (kycVal.toLowerCase() === 'verified') || (userData.kycVerified === true);
 
-                    // ለሌሎች ገጾች እንዲመች በ localStorage እናስቀምጠዋለን
-                    if (tbrId) localStorage.setItem("tbrId", tbrId);
+                    // 3. ቋሚ እንዲሆን በ localStorage እናስቀምጠዋለን
+                    localStorage.setItem("tbrId", tbrId);
+                    localStorage.setItem("userId", tbrId);
                     localStorage.setItem("kycVerified", isVerified);
                     if (username) localStorage.setItem("userName", username);
                     if (email) localStorage.setItem("userEmail", email);
@@ -461,10 +472,10 @@
                         isVerified
                     });
                 } else {
-                    console.warn("Failed to load profile data");
+                    loadFromLocalStorageFallback();
                 }
             } catch (error) {
-                console.error("Error fetching profile:", error);
+                loadFromLocalStorageFallback();
             }
         });
 
