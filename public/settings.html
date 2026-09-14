@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TBR Exchange - Account Settings</title>
+    <!-- FontAwesome & Google Fonts -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        :root {
+            --bg-color: #080808;
+            --card-bg: #121212;
+            --text-color: #ffffff;
+            --text-muted: #888888;
+            --border-color: #222222;
+            --accent-color: #f3ba2f;
+            --green-color: #0ecb81;
+            --red-color: #f6465d;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        .settings-container {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .settings-header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .settings-header p {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-bottom: 25px;
+        }
+
+        /* Tabs Navigation */
+        .settings-tabs {
+            display: flex;
+            gap: 25px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 30px;
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 15px;
+            padding-bottom: 12px;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+            transition: 0.3s;
+        }
+
+        .tab-btn:hover, .tab-btn.active {
+            color: var(--accent-color);
+            border-bottom: 2px solid var(--accent-color);
+        }
+
+        /* Profile Card Section */
+        .profile-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        .profile-top {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .avatar-box {
+            position: relative;
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, #f3ba2f, #d4af37);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #000;
+        }
+
+        .avatar-box .camera-badge {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            background: #222;
+            color: #fff;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            border: 2px solid var(--card-bg);
+            cursor: pointer;
+        }
+
+        .user-info h3 {
+            margin: 0 0 5px 0;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-info span {
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        .edit-icon {
+            color: var(--accent-color);
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        /* Info Rows */
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-title {
+            font-size: 13px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .info-value {
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        .badge-verified {
+            color: var(--green-color);
+            background: rgba(14, 203, 129, 0.1);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-unverified {
+            color: var(--red-color);
+            background: rgba(246, 70, 93, 0.1);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .action-link {
+            color: var(--accent-color);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .action-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navbar (Existing Layout) -->
+    <div id="navbar-placeholder"></div>
+
+    <div class="settings-container">
+        <div class="settings-header">
+            <h1>Account Settings</h1>
+            <p>Manage your profile, security credentials, and preferences.</p>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="settings-tabs">
+            <button class="tab-btn active"><i class="fa-solid fa-user"></i> Profile</button>
+            <button class="tab-btn" onclick="location.href='security.html'"><i class="fa-solid fa-shield-halved"></i> Security</button>
+            <button class="tab-btn"><i class="fa-solid fa-wallet"></i> Payments</button>
+            <button class="tab-btn"><i class="fa-solid fa-location-dot"></i> Addresses</button>
+            <button class="tab-btn"><i class="fa-solid fa-gear"></i> Account</button>
+            <button class="tab-btn"><i class="fa-solid fa-bell"></i> Notifications</button>
+        </div>
+
+        <!-- Profile Content Box -->
+        <div class="profile-card">
+            <div class="profile-top">
+                <div class="avatar-box">
+                    BA
+                    <div class="camera-badge"><i class="fa-solid fa-camera"></i></div>
+                </div>
+                <div class="user-info">
+                    <h3>Binance Abdure <i class="fa-solid fa-pen edit-icon"></i></h3>
+                    <span>EBR-010378 <i class="fa-solid fa-copy" style="cursor:pointer;" title="Copy ID"></i></span>
+                </div>
+            </div>
+
+            <div class="info-row">
+                <div>
+                    <div class="info-title">Email</div>
+                    <div class="info-value">abdurebinance@gmail.com</div>
+                </div>
+                <span class="badge-verified"><i class="fa-solid fa-check"></i> Verified</span>
+            </div>
+
+            <div class="info-row">
+                <div>
+                    <div class="info-title">KYC Status</div>
+                    <div class="info-value">Identity Verification</div>
+                </div>
+                <div>
+                    <span class="badge-unverified">Not Approved</span> &nbsp;
+                    <span class="action-link">Verify Now</span>
+                </div>
+            </div>
+
+            <div class="info-row">
+                <div>
+                    <div class="info-title">Phone Number</div>
+                    <div class="info-value" id="phone-display">Not added</div>
+                </div>
+                <span class="action-link" onclick="addPhone()"><i class="fa-solid fa-plus"></i> Add</span>
+            </div>
+
+            <div class="info-row">
+                <div>
+                    <div class="info-title">Trader Username</div>
+                    <div class="info-value">Not set — tap to choose your handle</div>
+                </div>
+                <span class="action-link"><i class="fa-solid fa-pen"></i> Edit</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script to handle dynamic features -->
+    <script>
+        function addPhone() {
+            let phone = prompt("Enter your phone number:");
+            if(phone) {
+                document.getElementById("phone-display").innerText = phone;
+            }
+        }
+    </script>
+    <script src="script.js"></script>
+</body>
+</html>
