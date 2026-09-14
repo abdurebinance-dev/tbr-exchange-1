@@ -66,7 +66,7 @@
             align-items: center;
             gap: 8px;
             white-space: nowrap;
-            transition: 0.2s ease;
+            transition: all 0.1s ease;
         }
 
         .tab-btn:hover, .tab-btn.active {
@@ -74,21 +74,21 @@
             border-bottom: 2px solid var(--accent-color);
         }
 
-        /* Click Scale Down Effect for Buttons & Links */
-        button, .action-link, .tab-btn, .camera-badge, i.fa-copy, i.fa-pen {
-            transition: transform 0.1s ease, opacity 0.1s ease;
+        /* Strong Click Scale Down Effect for ALL Buttons, Tabs & Links */
+        button, .action-link, .tab-btn, .camera-badge, i.fa-copy, i.fa-pen, .edit-icon {
+            transition: transform 0.08s ease, opacity 0.08s ease;
         }
 
-        button:active, .action-link:active, .tab-btn:active, .camera-badge:active {
-            transform: scale(0.95);
+        button:active, .action-link:active, .tab-btn:active, .camera-badge:active, .edit-icon:active, i.fa-copy:active {
+            transform: scale(0.90) !important;
         }
 
-        /* Profile Card Section */
+        /* Profile Card Section & Clean Alignment */
         .profile-card {
             background-color: var(--card-bg);
             border: 1px solid var(--border-color);
             border-radius: 12px;
-            padding: 25px;
+            padding: 30px;
             margin-bottom: 20px;
         }
 
@@ -96,7 +96,7 @@
             display: flex;
             align-items: center;
             gap: 20px;
-            margin-bottom: 30px;
+            margin-bottom: 25px;
             padding-bottom: 20px;
             border-bottom: 1px solid var(--border-color);
         }
@@ -110,7 +110,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
+            font-size: 22px;
             font-weight: bold;
             color: #000;
         }
@@ -151,12 +151,12 @@
             font-size: 14px;
         }
 
-        /* Info Rows */
+        /* Info Rows - Perfectly aligned */
         .info-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 15px 0;
+            padding: 18px 0;
             border-bottom: 1px solid var(--border-color);
         }
 
@@ -165,11 +165,11 @@
         }
 
         .info-title {
-            font-size: 13px;
+            font-size: 12px;
             color: var(--text-muted);
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 3px;
+            margin-bottom: 4px;
         }
 
         .info-value {
@@ -180,19 +180,13 @@
         .badge-verified {
             color: var(--green-color);
             background: rgba(14, 203, 129, 0.1);
-            padding: 4px 10px;
-            border-radius: 4px;
+            padding: 5px 12px;
+            border-radius: 6px;
             font-size: 12px;
             font-weight: 600;
-        }
-
-        .badge-unverified {
-            color: var(--red-color);
-            background: rgba(246, 70, 93, 0.1);
-            padding: 4px 10px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
         }
 
         .action-link {
@@ -220,25 +214,24 @@
             <p>Manage your profile, security credentials, and preferences.</p>
         </div>
 
-        <!-- Navigation Tabs -->
+        <!-- Navigation Tabs (Addresses & Notifications removed, Trades added) -->
         <div class="settings-tabs">
             <button class="tab-btn active"><i class="fa-solid fa-user"></i> Profile</button>
             <button class="tab-btn" onclick="location.href='security.html'"><i class="fa-solid fa-shield-halved"></i> Security</button>
             <button class="tab-btn"><i class="fa-solid fa-wallet"></i> Payments</button>
-            <button class="tab-btn"><i class="fa-solid fa-location-dot"></i> Addresses</button>
             <button class="tab-btn"><i class="fa-solid fa-gear"></i> Account</button>
-            <button class="tab-btn"><i class="fa-solid fa-bell"></i> Notifications</button>
+            <button class="tab-btn"><i class="fa-solid fa-right-left"></i> Trades</button>
         </div>
 
         <!-- Profile Content Box -->
         <div class="profile-card">
             <div class="profile-top">
                 <div class="avatar-box" id="avatar-initials">
-                    BA
+                    BI
                     <div class="camera-badge"><i class="fa-solid fa-camera"></i></div>
                 </div>
                 <div class="user-info">
-                    <h3 id="profile-name">Binance Abdure <i class="fa-solid fa-pen edit-icon" onclick="editName()"></i></h3>
+                    <h3 id="profile-name">binanceme73 <i class="fa-solid fa-pen edit-icon" onclick="editName()"></i></h3>
                     <span id="profile-id">TBR-961371 <i class="fa-solid fa-copy" style="cursor:pointer;" title="Copy ID" onclick="copyId()"></i></span>
                 </div>
             </div>
@@ -256,9 +249,7 @@
                     <div class="info-title">KYC Status</div>
                     <div class="info-value">Identity Verification</div>
                 </div>
-                <div>
-                    <span class="badge-verified" id="kyc-badge"><i class="fa-solid fa-check"></i> Verified</span>
-                </div>
+                <span class="badge-verified"><i class="fa-solid fa-check"></i> Verified</span>
             </div>
 
             <div class="info-row">
@@ -279,22 +270,19 @@
         </div>
     </div>
 
-    <!-- Scripting for Dynamic User Data & Click Effects -->
+    <!-- Scripting for Dynamic Data & Click Effects -->
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            // ከሌሎች ገጾች ወይም ሎካል ስቶሬጅ ትክክለኛውን መረጃ መጫን
-            const savedName = localStorage.getItem("userName") || "Binanceeme73";
+            const savedName = localStorage.getItem("userName") || "binanceme73";
             const savedEmail = localStorage.getItem("userEmail") || "binanceme73@gmail.com";
             const savedId = localStorage.getItem("userId") || "TBR-961371";
             const savedPhone = localStorage.getItem("userPhone");
             const savedUsername = localStorage.getItem("traderUsername");
 
-            // በገጹ ላይ ያሉትን ቦታዎች በትክክለኛው መረጃ መሙላት
             document.getElementById("profile-name").innerHTML = `${savedName} <i class="fa-solid fa-pen edit-icon" onclick="editName()"></i>`;
             document.getElementById("profile-email").innerText = savedEmail;
             document.getElementById("profile-id").innerHTML = `${savedId} <i class="fa-solid fa-copy" style="cursor:pointer;" title="Copy ID" onclick="copyId()"></i>`;
             
-            // የጀማሪ ፊደላትን ከአቫታር ጋር ማስተካከል (ဥፍ. B)
             if(savedName.length > 0) {
                 document.getElementById("avatar-initials").innerHTML = `${savedName.substring(0,2).toUpperCase()} <div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
             }
