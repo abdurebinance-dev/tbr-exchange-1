@@ -437,9 +437,9 @@
                     const email = userData.email || "";
                     
                     // 2. ከሰርቨር የሚመጣው tbrId ከኖር እንወስዳለን፣ ከሌለ ግን በ localStorage ያለውን እንጠቀማለን
-                    if (!tbrId) {
+                    if (!tbrId || tbrId.includes("6a99c4")) {
                         tbrId = userData.tbrId || userData.customId;
-                        if (!tbrId) {
+                        if (!tbrId || tbrId.includes("6a99c4")) {
                             const rawMongoId = userData.id || userData._id || "";
                             let numericHash = 0;
                             for (let i = 0; i < rawMongoId.length; i++) {
@@ -509,8 +509,8 @@
             const username = localStorage.getItem("userName") || "";
             const email = localStorage.getItem("userEmail") || "";
             let tbrId = localStorage.getItem("userId") || localStorage.getItem("tbrId") || "TBR-961371";
-            if (!tbrId.startsWith("TBR-")) {
-                tbrId = `TBR-${tbrId}`;
+            if (tbrId.includes("6a99c4") || !tbrId.startsWith("TBR-")) {
+                tbrId = "TBR-961371";
             }
             const phone = localStorage.getItem("userPhone");
             const traderHandle = localStorage.getItem("traderUsername");
