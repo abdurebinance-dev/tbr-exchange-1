@@ -385,15 +385,15 @@
         </div>
 
         <div class="settings-tabs">
-            <button class="tab-btn active" data-tab="profile"><i class="fa-solid fa-user"></i> Profile</button>
-            <button class="tab-btn" data-tab="security"><i class="fa-solid fa-shield"></i> Security</button>
+            <button class="tab-btn" data-tab="profile"><i class="fa-solid fa-user"></i> Profile</button>
+            <button class="tab-btn active" data-tab="security"><i class="fa-solid fa-shield"></i> Security</button>
             <button class="tab-btn" data-tab="payments"><i class="fa-solid fa-wallet"></i> Payments</button>
             <button class="tab-btn" data-tab="merchant"><i class="fa-solid fa-gear"></i> Merchant</button>
             <button class="tab-btn" data-tab="trades"><i class="fa-solid fa-right-left"></i> Trades</button>
         </div>
 
         <!-- 1. Profile Content -->
-        <div id="profile-section" class="content-section" style="display: block;">
+        <div id="profile-section" class="content-section" style="display: none;">
             <div class="profile-card">
                 <div class="profile-top">
                     <div class="avatar-box" id="avatar-initials" onclick="triggerImageUpload()" title="Click to change profile picture" style="cursor: pointer;">
@@ -446,7 +446,7 @@
         </div>
 
         <!-- 2. Security Content -->
-        <div id="security-section" class="content-section" style="display: none;">
+        <div id="security-section" class="content-section" style="display: block;">
             <div class="profile-card">
                 <div class="info-row">
                     <div style="display: flex; align-items: center; gap: 12px;">
@@ -625,8 +625,7 @@
                 document.getElementById("phone-display").innerText = user.phone;
             }
             if(user.traderHandle) {
-                let formattedHandle = user.traderHandle.startsWith('@') ? user.traderHandle : '@' + user.traderHandle;
-                document.getElementById("username-display").innerText = formattedHandle;
+                document.getElementById("username-display").innerText = user.traderHandle;
             }
 
             const kycBadge = document.getElementById('kyc-badge');
@@ -657,7 +656,7 @@
         function loadFromLocalStorageFallback() {
             const username = localStorage.getItem("userName") || "BINANCEME73";
             const email = localStorage.getItem("userEmail") || "binanceme73@gmail.com";
-            let tbrId = localStorage.getItem("tbrExchangeId"] || localStorage.getItem("userId") || localStorage.getItem("tbrId") || "TBR-476394";
+            let tbrId = localStorage.getItem("tbrExchangeId") || localStorage.getItem("userId") || localStorage.getItem("tbrId") || "TBR-476394";
             const phone = localStorage.getItem("userPhone");
             const traderHandle = localStorage.getItem("traderUsername");
             const kycStatus = localStorage.getItem("kycStatus") || "approved";
@@ -721,7 +720,7 @@
                 input.placeholder = "e.g. +251911223344";
             } else if(field === 'username') {
                 title.innerText = "Set Trader Username";
-                input.placeholder = "Enter handle (e.g. abdu)...";
+                input.placeholder = "Enter handle...";
             } else if(field === 'name') {
                 title.innerText = "Edit Profile Name";
                 input.value = document.getElementById("profile-name").innerText.trim();
@@ -737,7 +736,7 @@
         }
 
         async function saveModalData() {
-            let val = document.getElementById("modalInput").value.trim();
+            const val = document.getElementById("modalInput").value.trim();
             if(!val) return;
 
             if(currentField === 'phone') {
