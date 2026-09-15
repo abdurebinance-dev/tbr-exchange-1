@@ -439,7 +439,7 @@
         document.addEventListener("DOMContentLoaded", () => {
             fetchUserBalance();
 
-            // 🔍 ዩአርኤሉን (URL Parameters) በማንበብ አውቶማቲክ አክቲቭ ከለር እንዲይዝ ማድረግ
+            // 🔍 ዩአርኤሉን (URL Parameters) በማንበብ አክቲቭ ከለር እንዲይዝ ማድረግ (ሞዳል በአውቶማቲክ አይከፈትም)
             const urlParams = new URLSearchParams(window.location.search);
             const action = urlParams.get('action');
 
@@ -447,7 +447,8 @@
                 const btnClass = action.toLowerCase() + '-btn';
                 const targetBtn = document.querySelector(`.${btnClass}`);
                 if (targetBtn) {
-                    handleAction(action.charAt(0).toUpperCase() + action.slice(1), targetBtn);
+                    document.querySelectorAll('.wallet-btn').forEach(b => b.classList.remove('active'));
+                    targetBtn.classList.add('active');
                 }
             }
         });
@@ -508,15 +509,16 @@
         }
 
         function handleAction(actionType, btnElement) {
-            // የነቁትን አዝራሮች ከለር ማጥፋት
+            // የነቁትን አዝራሮች ከለር መቀየር
             document.querySelectorAll('.wallet-btn').forEach(b => b.classList.remove('active'));
             if(btnElement) btnElement.classList.add('active');
 
+            // ኔትወርክ ካልተመረጠ ማሳሰቢያ ብቻ ይሰጣል፣ ሞዳሉን አውቶማቲክ አይከፍትም
             if (!chosenNetwork && actionType === 'Deposit') {
-                showToast("Please choose network first!");
-                openNetworkModal();
+                showToast("Please select a network first.");
                 return;
             }
+            
             showToast(`${actionType} feature is ready. Secure verification active.`);
         }
 
