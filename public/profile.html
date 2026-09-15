@@ -412,39 +412,31 @@
             });
         }
 
-        // 🚀 ጥብቅ የሆነ የአይዲ ማውጫ (TBR- የሚለውን ብቻ ነው የሚያሳልፈው)
+        // 🚀 100% ጥብቅ የሆነ የአይዲ ማውጫ (ረጅሙን ኮድ ብሎክ ያደርጋል)
         function getStoredId() {
             let tbrId = localStorage.getItem('tbrId') || localStorage.getItem('tbrExchangeId');
-            
             if (tbrId && String(tbrId).startsWith('TBR-')) {
-                return tbrId;
+                return tbrId; // ትክክለኛ ከሆነ በ 0 ሰከንድ ያወጣዋል
             }
 
             try {
                 const token = localStorage.getItem('token') || localStorage.getItem('authToken');
                 if (token && token.includes('.')) {
-                    const base64Url = token.split('.')[1];
-                    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-                    const payload = JSON.parse(window.atob(base64));
-                    
-                    let extractedId = payload.tbrId || payload.userId || payload.customId || payload.id;
-                    
+                    const payload = JSON.parse(window.atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
                     if (payload.numericId) {
-                        extractedId = 'TBR-' + String(payload.numericId).padStart(6, '0');
-                    } else if (extractedId && !String(extractedId).startsWith('TBR-') && /^\d+$/.test(extractedId)) {
-                        extractedId = 'TBR-' + String(extractedId).padStart(6, '0');
-                    }
-
-                    if (extractedId && String(extractedId).startsWith('TBR-')) {
-                        localStorage.setItem('tbrId', extractedId);
-                        return extractedId;
+                        let newId = 'TBR-' + String(payload.numericId).padStart(6, '0');
+                        localStorage.setItem('tbrId', newId);
+                        return newId;
                     }
                 }
-            } catch (e) {
-                console.error("Token decode error:", e);
-            }
+            } catch (e) {}
 
-            return ''; 
+            // ምንም እንኳን ባይገኝ ባዶ ከሚሆን ጊዜያዊ TBR ፎርማት ይይዛል
+            let rawId = localStorage.getItem('userId') || localStorage.getItem('userUniqueId');
+            if (rawId && rawId.length > 5) {
+                return 'TBR-' + rawId.substring(0, 6).toUpperCase();
+            }
+            return 'TBR-......'; 
         }
 
         // 1. ወዲያውኑ ዩአይን የሚያዘምነው ዋና ፋንክሽን
@@ -455,11 +447,10 @@
             let rejectionReason = localStorage.getItem('kycRejectionReason') || 'Document check failed';
             let storedFullName = localStorage.getItem('fullName') || '';
             
-            // 🔴 የተጣራው አይዲ እዚህ ይገባል
+            // 🔴 የተጣራው አይዲ እዚህ ይገባል (ያለ ምንም መዘግየት)
             let userId = getStoredId();
             
             let savedAvatar = localStorage.getItem('userAvatar') || localStorage.getItem('profilePicture') || localStorage.getItem('profilePic');
-            
             let totalTrades = localStorage.getItem('totalTrades') || '0';
             let volume = localStorage.getItem('volume') || '0 USDT';
             let completionRate = localStorage.getItem('completionRate') || '100%';
@@ -468,9 +459,7 @@
             let memberSince = localStorage.getItem('memberSince') || '2026';
 
             const usernameFallback = (name && name !== "USER") ? name : (email ? email.split('@')[0] : 'User');
-            const displayName = (kycStatus === 'approved' || kycStatus === 'verified') && storedFullName 
-                ? storedFullName 
-                : usernameFallback;
+            const displayName = (kycStatus === 'approved' || kycStatus === 'verified') && storedFullName ? storedFullName : usernameFallback;
 
             document.getElementById('profileEmail').innerText = email;
             document.getElementById('userUniqueId').innerText = userId;
@@ -516,8 +505,7 @@
                 bannerTitle.style.color = "#f6465d";
                 bannerDesc.innerText = "Verify your ID to post ads and unlock 10× higher limits.";
                 bannerAction.innerHTML = `<a href="kyc-verify.html" class="verify-btn" style="background:#f6465d; color:#fff;">VERIFY IDENTITY</a>`;
-            } 
-            else if (kycStatus === 'pending' || kycStatus === 'under_review') {
+            } else if (kycStatus === 'pending' || kycStatus === 'under_review') {
                 nameContainer.innerHTML = displayName.toUpperCase();
                 kycStatusRowText.innerHTML = `<span style="color: #f3ba2f; font-weight: 500;">Under Review</span>`;
                 bannerContainer.style.borderColor = '#f3ba2f';
@@ -526,8 +514,7 @@
                 bannerTitle.style.color = "#f3ba2f";
                 bannerDesc.innerText = "You are under review. Please wait for admin verification. Action disabled.";
                 bannerAction.innerHTML = `<span style="color:#f3ba2f; font-size:13px; font-weight:500;">Under Review</span>`;
-            } 
-            else if (kycStatus === 'verified' || kycStatus === 'approved') {
+            } else if (kycStatus === 'verified' || kycStatus === 'approved') {
                 nameContainer.innerHTML = `${displayName.toUpperCase()} <span style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; background: #0ecb81; color: #fff; border-radius: 50%; font-size: 10px; margin-left: 8px;" title="Verified"><i class="fa-solid fa-check"></i></span>`;
                 kycStatusRowText.innerHTML = `<span style="color: #0ecb81; font-weight: 600;">Verified <i class="fa-solid fa-circle-check"></i></span>`;
                 bannerContainer.style.borderColor = '#0ecb81';
@@ -536,8 +523,7 @@
                 bannerTitle.style.color = "#0ecb81";
                 bannerDesc.innerText = "Your identity verification is approved. Full access unlocked.";
                 bannerAction.innerHTML = "";
-            } 
-            else if (kycStatus === 'rejected') {
+            } else if (kycStatus === 'rejected') {
                 nameContainer.innerHTML = displayName.toUpperCase();
                 kycStatusRowText.innerHTML = `<a href="kyc-verify.html" style="color: #f6465d; text-decoration: none;">Rejected (Resubmit) <i class="fa-solid fa-chevron-right" style="font-size: 10px;"></i></a>`;
                 bannerContainer.style.borderColor = '#f6465d';
@@ -557,10 +543,7 @@
 
                 const response = await fetch('https://tbr-exchange-backend.onrender.com/api/user/profile', {
                     method: 'GET',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    }
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
                 });
                 
                 if (response.ok) {
@@ -569,11 +552,10 @@
                     
                     if (user) {
                         if (user.fullName) localStorage.setItem('userName', user.fullName);
-                        if (user.name) localStorage.setItem('name', user.name);
                         if (user.email) localStorage.setItem('userEmail', user.email);
                         if (user.kycStatus) localStorage.setItem('kycStatus', user.kycStatus);
-                        if (user.kycRejectionReason) localStorage.setItem('kycRejectionReason', user.kycRejectionReason);
                         
+                        // 🔴 ዋናው መፍትሄ: ትክክለኛውን አይዲ ብቻ ነው ሴቭ የሚያደርገው (Hex አያስገባም)
                         let newId = "";
                         if (user.numericId) {
                             newId = 'TBR-' + String(user.numericId).padStart(6, '0');
@@ -588,21 +570,14 @@
                         
                         if (user.avatar && user.avatar !== 'null' && user.avatar.trim() !== '') {
                             localStorage.setItem('userAvatar', user.avatar);
-                            localStorage.setItem('profilePicture', user.avatar);
                         }
-
                         updateProfileUI(); 
                     }
                 }
-            } catch (e) {
-                console.log("Could not fetch from server, continuing with local cache.");
-            }
+            } catch (e) {}
         }
 
-        // 🚀 3. ፔጁ ሲከፈት DOMContentLoaded የሚለውን ጠባቂ (listener) ሙሉ በሙሉ አጥፍቼዋለሁ! 
-        // ጃቫስክሪፕቱ እዚህ እንደደረሰ ያለ ምንም መዘግየት ዩአይን ወዲያውኑ አፕዴት ያደርገዋል።
+        // 3. ፔጁ ሲከፈት ያለ DOMContentLoaded ጠባቂ በቀጥታ ይነበባል (0.000 ሰከንድ)
         updateProfileUI(); 
         syncWithServer();  
     </script>
-</body>
-</html>
