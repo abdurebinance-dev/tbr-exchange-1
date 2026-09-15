@@ -472,7 +472,8 @@
                     <span class="badge-unverified" id="totp-badge" style="background: rgba(246, 70, 93, 0.1); color: var(--red-color); border: 1px solid rgba(246, 70, 93, 0.2);">Off</span>
                 </div>
 
-                <div class="info-row">
+                <!-- Passkey Header Row -->
+                <div class="info-row" style="border-bottom: none; padding-bottom: 5px;">
                     <div style="display: flex; align-items: center; gap: 12px;">
                         <i class="fa-solid fa-fingerprint" style="font-size: 18px; color: #28a745;"></i>
                         <div>
@@ -481,6 +482,12 @@
                         </div>
                     </div>
                     <span class="action-link" onclick="registerPasskey()"><i class="fa-solid fa-plus"></i> Add passkey</span>
+                </div>
+
+                <!-- Dynamic Passkeys List Container -->
+                <div id="passkeys-list-container" style="margin-top: 10px; border-top: 1px solid var(--border-color); padding-top: 10px;">
+                    <!-- በሰርቨር ያሉ Passkeys እዚህ በ JavaScript ይሞላሉ -->
+                    <div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 10px;">Loading passkeys...</div>
                 </div>
             </div>
         </div>
@@ -736,6 +743,109 @@
                         type: credential.type
                     })
                 });
+
+                // 🔐 ትክክለኛው የ WebAuthn Passkey ምዝገባ ሎጂክ
+        async function registerPasskey() {
+            try {
+                // ... (የነበረው የ ምዝገባ ኮድ እዚህ አለ) ...
+                if (verifyResult.success) {
+                    showToast("Passkey registered successfully! 🎉");
+                    loadUserPasskeys(); // <-- አዲስ የተመዘገበውን ወዲያውኑ እንዲያሳየው እዚህ ጋር መጠራት አለበት!
+                }
+            } catch (err) {
+                console.error('Passkey registration error:', err);
+            }
+        }
+
+        // ==========================================
+        // 📋 አዲሶቹ የ Passkey አስተዳደር (List, Rename, Delete) ኮዶች እዚህ ጋር ይለጠፋሉ:
+        // ==========================================
+
+        async function loadUserPasskeys() {
+            try {
+                const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+                const res = await fetch(`${API_BASE_URL}/api/passkey/list`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                const data = await res.json();
+                
+                const container = document.getElementById("passkeys-list-container");
+                if (!container) return;
+
+                if (data.success && data.passkeys.length > 0) {
+                    container.innerHTML = data.passkeys.map(pk => `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <div>
+                                <div style="font-size: 14px; font-weight: 500; color: #fff;">
+                                    <i class="fa-solid fa-key" style="color: var(--accent-color); margin-right: 6px;"></i> 
+                                    ${pk.deviceType || 'Synced passkey'}
+                                </div>
+                                <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+                                    Added ${new Date(pk.createdAt).toLocaleDateString()}
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 12px; font-size: 14px;">
+                                <i class="fa-solid fa-pen" style="cursor: pointer; color: var(--text-muted);" title="Rename" onclick="renamePasskey('${pk._id}', '${pk.deviceType || 'Synced passkey'}')"></i>
+                                <i class="fa-solid fa-trash" style="cursor: pointer; color: var(--red-color);" title="Delete" onclick="deletePasskey('${pk._id}')"></i>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = `<div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 10px;">No passkeys registered yet.</div>`;
+                }
+            } catch (e) {
+                console.error("Failed to load passkeys", e);
+            }
+        }
+
+        async function deletePasskey(id) {
+            if (!confirm("Are you sure you want to delete this passkey?")) return;
+            try {
+                const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+                const res = await fetch(`${API_BASE_URL}/api/passkey/${id}`, {
+                    method: 'DELETE',
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast("Passkey deleted successfully!");
+                    loadUserPasskeys();
+                } else {
+                    showToast(data.message || "Failed to delete passkey.");
+                }
+            } catch (e) {
+                showToast("Error deleting passkey.");
+            }
+        }
+
+        async function renamePasskey(id, currentName) {
+            const newName = prompt("Enter new passkey name:", currentName);
+            if (!newName) return;
+            try {
+                const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+                const res = await fetch(`${API_BASE_URL}/api/passkey/${id}`, {
+                    method: 'PUT',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        "Authorization": `Bearer ${token}` 
+                    },
+                    body: JSON.stringify({ name: newName })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast("Passkey renamed successfully!");
+                    loadUserPasskeys();
+                } else {
+                    showToast(data.message || "Failed to rename passkey.");
+                }
+            } catch (e) {
+                showToast("Error renaming passkey.");
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            loadUserPasskeys();
+        });
 
                 const verifyResult = await verificationResponse.json();
                 if (verifyResult.success) {

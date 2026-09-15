@@ -1186,6 +1186,48 @@ app.post('/api/passkey/register-verify', verifyToken, async (req, res) => {
     }
 });
 
+// --- Passkey Management Routes ---
+
+// 1. Get User's Registered Passkeys
+app.get('/api/passkey/list', verifyToken, async (req, res) => {
+    try {
+        const passkeys = await Passkey.find({ userId: req.user.id }).sort({ createdAt: -1 });
+        res.json({ success: true, passkeys });
+    } catch (error) {
+        console.error('List Passkeys Error:', error);
+        res.status(500).json({ success: false, message: 'Server error fetching passkeys.' });
+    }
+});
+
+// 2. Update/Rename Passkey
+app.put('/api/passkey/:id', verifyToken, async (req, res) => {
+    try {
+        const { name } = req.body;
+        const passkey = await Passkey.findOneAndUpdate(
+            { _id: req.params.id, userId: req.user.id },
+            { $set: { deviceType: name } },
+            { new: true }
+        );
+        if (!passkey) return res.status(404).json({ success: false, message: 'Passkey not found.' });
+        res.json({ success: true, message: 'Passkey updated successfully.', passkey });
+    } catch (error) {
+        console.error('Update Passkey Error:', error);
+        res.status(500).json({ success: false, message: 'Server error updating passkey.' });
+    }
+});
+
+// 3. Delete Passkey
+app.delete('/api/passkey/:id', verifyToken, async (req, res) => {
+    try {
+        const passkey = await Passkey.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
+        if (!passkey) return res.status(404).json({ success: false, message: 'Passkey not found.' });
+        res.json({ success: true, message: 'Passkey deleted successfully.' });
+    } catch (error) {
+        console.error('Delete Passkey Error:', error);
+        res.status(500).json({ success: false, message: 'Server error deleting passkey.' });
+    }
+});
+
 // Server Listen (ይህ መጨረሻው ላይ አንድ ጊዜ ብቻ መጥራት አለበት)
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
