@@ -394,6 +394,29 @@
             }
         });
 
+        // የጋራ ዳታ አውጥቶ (Pre-fetch አድርጎ) ወደ ዳሽቦርድ የሚልክ ፈንክሽን
+        async function preFetchAndRedirect(token, redirectUrl) {
+            try {
+                const res = await fetch(`${API_URL}/api/auth/me`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success && data.user) {
+                        if (data.user.fullName) localStorage.setItem('userName', data.user.fullName);
+                        localStorage.setItem('kycStatus', data.user.kycStatus || 'unverified');
+                        if (data.user.avatar) {
+                            localStorage.setItem('userAvatar', data.user.avatar);
+                            localStorage.setItem('profilePicture', data.user.avatar);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("Prefetch failed", e);
+            }
+            window.location.href = redirectUrl || 'dashboard.html';
+        }
+
         // Form Submit
         document.getElementById('verifyLoginOtpForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -406,6 +429,10 @@
                 return;
             }
 
+            const verifyBtn = document.getElementById('verifyBtn');
+            verifyBtn.disabled = true;
+            verifyBtn.innerText = 'Verifying...';
+
             try {
                 const response = await fetch(`${API_URL}/api/verify-login-otp`, {
                     method: 'POST',
@@ -417,28 +444,30 @@
 
                 if (response.ok && data.success) {
                     messageDiv.style.color = '#51cf66';
-                    messageDiv.innerText = 'Verification successful! Redirecting...';
+                    messageDiv.innerText = 'Verification successful! Loading dashboard...';
                     
                     // Token ማከማቻ (localStorage)
                     if (data.token) {
                         localStorage.setItem('token', data.token);
+                        localStorage.setItem('authToken', data.token);
                     }
-                    if (data.user) {
-                        localStorage.setItem('userName', data.user.fullName || data.user.name || '');
-                        localStorage.setItem('userEmail', data.user.email || email);
-                    }
+                    localStorage.setItem('userEmail', email);
 
+                    // የማያስፈልጉትን ማጽዳት
                     localStorage.removeItem('verifyEmail');
                     localStorage.removeItem('loginEmail');
                     
-                    setTimeout(() => {
-                        window.location.href = data.redirectUrl || 'dashboard.html';
-                    }, 1200);
+                    // አዲሱን ዳታ Pre-fetch አድርጎ ዳሽቦርድ ላይ መላክ
+                    await preFetchAndRedirect(data.token, data.redirectUrl);
                 } else {
+                    verifyBtn.disabled = false;
+                    verifyBtn.innerText = 'Verify & Sign In';
                     messageDiv.style.color = '#ff6b6b';
                     messageDiv.innerText = data.message || 'Invalid verification code.';
                 }
             } catch (err) {
+                verifyBtn.disabled = false;
+                verifyBtn.innerText = 'Verify & Sign In';
                 console.error('Error:', err);
                 messageDiv.style.color = '#ff6b6b';
                 messageDiv.innerText = 'Error connecting to server!';
