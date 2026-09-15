@@ -762,6 +762,45 @@ app.get('/api/user/profile', verifyToken, async (req, res) => {
     }
 });
 
+// --- Update User Profile / Avatar Route ---
+app.post('/api/user/update', verifyToken, async (req, res) => {
+    try {
+        const { field, value } = req.body;
+        if (!field || value === undefined) {
+            return res.status(400).json({ success: false, message: 'Field and value are required.' });
+        }
+
+        const updateData = {};
+        if (field === 'avatar') {
+            updateData.avatar = value;
+            updateData.userAvatar = value;
+            updateData.profilePicture = value;
+        } else {
+            updateData[field] = value;
+        }
+
+        const user = await User.findByIdAndUpdate(
+            req.user.id,
+            { $set: updateData },
+            { new: true, select: '-password' }
+        );
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
+
+        res.json({
+            success: true,
+            message: 'Profile updated successfully',
+            avatar: user.avatar || user.userAvatar || value,
+            user
+        });
+    } catch (error) {
+        console.error('Update User Error:', error);
+        res.status(500).json({ success: false, message: 'Server error updating user profile.' });
+    }
+});
+
 app.get('/api/auth/me', verifyToken, async (req, res) => {
     try {
         const user = await User.findById(req.user.id).select('-password');
