@@ -526,203 +526,176 @@
     </div>
 
     <script>
-        let currentField = "";
+       let currentField = "";
 
-        document.addEventListener("DOMContentLoaded", async function() {
-            let localName = localStorage.getItem("userName") || localStorage.getItem("name") || "BINANCEME73";
-            let localEmail = localStorage.getItem("userEmail") || localStorage.getItem("email") || "binanceme73@gmail.com";
-            let tbrId = localStorage.getItem("tbrExchangeId") || localStorage.getItem("tbrId") || localStorage.getItem("userId") || "TBR-476394";
-            let localPhone = localStorage.getItem("userPhone") || "";
-            let localTraderHandle = localStorage.getItem("traderUsername") || "";
-            let localKyc = String(localStorage.getItem("kycStatus") || localStorage.getItem("kycVerified") || "approved").toLowerCase();
-            let savedAvatar = localStorage.getItem("userAvatar") || localStorage.getItem("profilePicture") || "";
+document.addEventListener("DOMContentLoaded", async function() {
+    // 1. መጀመሪያ ከሎካል ስቶሬጅ ያለውን ዴታ በመጫን ዩአይን በፍጥነት ማሳየት
+    loadFromLocalStorageFallback();
 
-            updateUI({
-                username: localName,
-                email: localEmail,
-                tbrId: tbrId,
-                phone: localPhone ? localPhone : null,
-                traderHandle: localTraderHandle ? localTraderHandle : null,
-                kycStatus: localKyc,
-                avatar: savedAvatar
-            });
-
-            try {
-        const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
-        if (token) {
-            const res = await fetch("https://tbr-exchange-backend.onrender.com/api/user", {
-                headers: { "Authorization": `Bearer ${token}` }
-            });
-            const data = await res.json();
-            if (data.success && data.user && data.user.avatar) {
-                const serverAvatar = data.user.avatar;
-                localStorage.setItem("userAvatar", serverAvatar);
-                const avatarBox = document.getElementById("avatar-initials");
-                if (avatarBox) {
-                    avatarBox.style.backgroundImage = `url('${serverAvatar}')`;
-                    avatarBox.innerHTML = `<div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
-                }
-            }
-        }
-    } catch (err) {
-        console.error("Error loading avatar from server:", err);
-    }
-
-    // Ensure avatar persists visually over UI re-render
-    const persistentAvatar = localStorage.getItem("userAvatar") || localStorage.getItem("profilePicture");
-    if (persistentAvatar) {
-        const avatarBox = document.getElementById("avatar-initials");
-        if (avatarBox) {
-            avatarBox.style.backgroundImage = `url('${persistentAvatar}')`;
-            avatarBox.innerHTML = `<div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
-        }
-    }
-
-            const activeBtn = document.querySelector('.tab-btn.active');
-        if (activeBtn) {
-            const target = activeBtn.getAttribute('data-tab');
-            document.querySelectorAll('.content-section').forEach(section => {
-                section.style.display = 'none';
-            });
-            const targetSection = document.getElementById(target + '-section');
-            if (targetSection) {
-                targetSection.style.display = 'block';
-            }
+    // 2. ከሰቨር ትክክለኛውን መረጃ በአንድ አስተማማኝ (Single) ጥያቄ ማምጣት
+    try {
+        const token = localStorage.getItem("token") || 
+                      localStorage.getItem("authToken") || 
+                      localStorage.getItem("access_token");
+        
+        if (!token) {
+            console.warn("No authentication token found.");
+            return;
         }
 
-            try {
-                const token = localStorage.getItem("token") || 
-                            localStorage.getItem("authToken") || 
-                            localStorage.getItem("access_token");
-                
-                const response = await fetch(`https://tbr-exchange-backend.onrender.com/api/user/profile?t=${new Date().getTime()}`, {
-                    method: "GET",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": token ? `Bearer ${token}` : ""
-                    }
-                });
-
-                if (response.ok) {
-                    const result = await response.json();
-                    const userData = result.user || result;
-                    
-                    const username = userData.fullName || userData.username || userData.name || localName;
-                    const email = userData.email || localEmail;
-                    
-                    if (!tbrId || tbrId.includes("6a99c4")) {
-                        tbrId = userData.tbrId || userData.customId || "TBR-476394";
-                    }
-
-                    const phone = userData.phone || userData.phoneNumber || localPhone;
-                    const traderHandle = userData.traderUsername || localTraderHandle;
-                    const kycVal = userData.kycStatus || userData.kyc_status || (userData.kycVerified ? 'approved' : localKyc);
-                    const avatar = userData.avatar || userData.profilePicture || savedAvatar;
-
-                    localStorage.setItem("tbrExchangeId", tbrId);
-                    localStorage.setItem("tbrId", tbrId);
-                    localStorage.setItem("userId", tbrId);
-                    localStorage.setItem("kycStatus", kycVal);
-                    if (username) localStorage.setItem("userName", username);
-                    if (email) localStorage.setItem("userEmail", email);
-                    if (phone) localStorage.setItem("userPhone", phone);
-                    if (traderHandle) localStorage.setItem("traderUsername", traderHandle);
-                    if (avatar) {
-                        localStorage.setItem("userAvatar", avatar);
-                        localStorage.setItem("profilePicture", avatar);
-                    }
-
-                    updateUI({
-                        username,
-                        email,
-                        tbrId,
-                        phone,
-                        traderHandle,
-                        kycStatus: kycVal,
-                        avatar
-                    });
-
-const savedAv = localStorage.getItem("userAvatar") || localStorage.getItem("profilePicture");
-    if (savedAv) {
-        const avatarBox = document.getElementById("avatar-initials");
-        if (avatarBox) {
-            avatarBox.style.backgroundImage = `url('${savedAv}')`;
-            avatarBox.innerHTML = `<div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
-        }
-    }
-
-                } else {
-                    loadFromLocalStorageFallback();
-                }
-            } catch (error) {
-                loadFromLocalStorageFallback();
+        const response = await fetch(`https://tbr-exchange-backend.onrender.com/api/user/profile?t=${new Date().getTime()}`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
             }
         });
 
-        function updateUI(user) {
-            document.getElementById("profile-name").innerHTML = `${user.username || 'User'} <i class="fa-solid fa-pen edit-icon" onclick="openModal('name')"></i>`;
-            document.getElementById("profile-email").innerText = user.email || 'No email';
-            document.getElementById("profile-id").innerText = user.tbrId || 'TBR-476394';
+        if (response.ok) {
+            const result = await response.json();
+            const userData = result.user || result;
             
-            const avatarBox = document.getElementById("avatar-initials");
-            if (user.avatar) {
-                avatarBox.style.backgroundImage = `url('${user.avatar}')`;
-                avatarBox.innerHTML = `<div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
-            } else {
-                avatarBox.style.backgroundImage = "none";
-                const initials = user.username ? user.username.substring(0,2).toUpperCase() : "UI";
-                avatarBox.innerHTML = `${initials} <div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
+            const username = userData.fullName || userData.username || userData.name || localStorage.getItem("userName");
+            const email = userData.email || localStorage.getItem("userEmail");
+            
+            // የ TbrID አያያዝ
+            let tbrId = userData.tbrId || userData.customId || localStorage.getItem("tbrId") || "TBR-476394";
+            
+            const phone = userData.phone || userData.phoneNumber || localStorage.getItem("userPhone") || "";
+            const traderHandle = userData.traderUsername || localStorage.getItem("traderUsername") || "";
+            const kycVal = userData.kycStatus || userData.kyc_status || (userData.kycVerified ? 'approved' : 'approved');
+
+            // **አቫታር ከሰቨር ሲመጣ ኑል (null) ሆኖ ሎካል ያለውን እንዳይሽር ማድረግ**
+            let serverAvatar = userData.avatar || userData.profilePicture;
+            let localAvatar = localStorage.getItem("userAvatar") || localStorage.getItem("profilePicture") || "";
+            let finalAvatar = localAvatar;
+
+            if (serverAvatar && serverAvatar !== 'null' && serverAvatar !== 'undefined' && serverAvatar.trim() !== "") {
+                finalAvatar = serverAvatar;
             }
 
-            if(user.phone) {
-                document.getElementById("phone-display").innerText = user.phone;
-            }
-            if(user.traderHandle) {
-                document.getElementById("username-display").innerText = user.traderHandle;
+            // 3. ሎካል ስቶሬጅ ማዘመን
+            localStorage.setItem("tbrExchangeId", tbrId);
+            localStorage.setItem("tbrId", tbrId);
+            localStorage.setItem("userId", tbrId);
+            localStorage.setItem("kycStatus", kycVal);
+            if (username) localStorage.setItem("userName", username);
+            if (email) localStorage.setItem("userEmail", email);
+            if (phone) localStorage.setItem("userPhone", phone);
+            if (traderHandle) localStorage.setItem("traderUsername", traderHandle);
+            if (finalAvatar) {
+                localStorage.setItem("userAvatar", finalAvatar);
+                localStorage.setItem("profilePicture", finalAvatar);
             }
 
-            const kycBadge = document.getElementById('kyc-badge');
-            if (kycBadge) {
-                let status = String(user.kycStatus || 'unverified').toLowerCase();
-                if (status === 'approved' || status === 'verified' || status === 'true') {
-                    kycBadge.innerHTML = '<i class="fa-solid fa-check"></i> Verified';
-                    kycBadge.className = 'badge-verified';
-                    kycBadge.style.backgroundColor = 'rgba(14, 203, 129, 0.1)';
-                    kycBadge.style.color = '#0ecb81';
-                    kycBadge.style.borderColor = 'rgba(14, 203, 129, 0.2)';
-                } else if (status === 'pending' || status === 'under_review' || status === 'review') {
-                    kycBadge.innerHTML = '<i class="fa-solid fa-clock"></i> Under Review';
-                    kycBadge.className = 'badge-unverified';
-                    kycBadge.style.backgroundColor = 'rgba(243, 186, 47, 0.1)';
-                    kycBadge.style.color = '#f3ba2f';
-                    kycBadge.style.borderColor = 'rgba(243, 186, 47, 0.2)';
-                } else {
-                    kycBadge.innerHTML = '<i class="fa-solid fa-clock"></i> Unverified';
-                    kycBadge.className = 'badge-unverified';
-                    kycBadge.style.backgroundColor = 'rgba(246, 70, 93, 0.1)';
-                    kycBadge.style.color = '#f6465d';
-                    kycBadge.style.borderColor = 'rgba(246, 70, 93, 0.2)';
-                }
-            }
+            // 4. ዩአይን ማደስ
+            updateUI({
+                username,
+                email,
+                tbrId,
+                phone,
+                traderHandle,
+                kycStatus: kycVal,
+                avatar: finalAvatar
+            });
+        } else {
+            console.warn("Server profile fetch failed, using local storage fallback.");
         }
+    } catch (error) {
+        console.error("Network error during profile sync:", error);
+    }
 
-        function loadFromLocalStorageFallback() {
-            const username = localStorage.getItem("userName") || "BINANCEME73";
-            const email = localStorage.getItem("userEmail") || "binanceme73@gmail.com";
-            let tbrId = localStorage.getItem("tbrExchangeId") || localStorage.getItem("userId") || localStorage.getItem("tbrId") || "TBR-476394";
-            const phone = localStorage.getItem("userPhone");
-            const traderHandle = localStorage.getItem("traderUsername");
-            const kycStatus = localStorage.getItem("kycStatus") || "approved";
-            const avatar = localStorage.getItem("userAvatar") || localStorage.getItem("profilePicture") || "";
-
-            updateUI({ username, email, tbrId, phone, traderHandle, kycStatus, avatar });
+    // የ ታብ (Tab) ማሳያ ሎጂክ
+    const activeBtn = document.querySelector('.tab-btn.active');
+    if (activeBtn) {
+        const target = activeBtn.getAttribute('data-tab');
+        document.querySelectorAll('.content-section').forEach(section => {
+            section.style.display = 'none';
+        });
+        const targetSection = document.getElementById(target + '-section');
+        if (targetSection) {
+            targetSection.style.display = 'block';
         }
+    }
+});
 
-        function triggerImageUpload() {
-            document.getElementById("profileImageInput").click();
+function updateUI(user) {
+    const nameEl = document.getElementById("profile-name");
+    if (nameEl) {
+        nameEl.innerHTML = `${user.username || 'User'} <i class="fa-solid fa-pen edit-icon" onclick="openModal('name')"></i>`;
+    }
+    
+    const emailEl = document.getElementById("profile-email");
+    if (emailEl) emailEl.innerText = user.email || 'No email';
+    
+    const idEl = document.getElementById("profile-id");
+    if (idEl) idEl.innerText = user.tbrId || 'TBR-476394';
+    
+    // አቫታር እና ካሜራ ባጅ አያያዝ
+    const avatarBox = document.getElementById("avatar-initials");
+    if (avatarBox) {
+        if (user.avatar && user.avatar.trim() !== "") {
+            avatarBox.style.backgroundImage = `url('${user.avatar}')`;
+            avatarBox.innerHTML = `<div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
+        } else {
+            avatarBox.style.backgroundImage = "none";
+            const initials = user.username ? user.username.substring(0,2).toUpperCase() : "UI";
+            avatarBox.innerHTML = `${initials} <div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
         }
+    }
 
-        function handleImageUpload(event) {
+    if(user.phone) {
+        const phoneDisplay = document.getElementById("phone-display");
+        if (phoneDisplay) phoneDisplay.innerText = user.phone;
+    }
+    if(user.traderHandle) {
+        const usernameDisplay = document.getElementById("username-display");
+        if (usernameDisplay) usernameDisplay.innerText = user.traderHandle;
+    }
+
+    const kycBadge = document.getElementById('kyc-badge');
+    if (kycBadge) {
+        let status = String(user.kycStatus || 'approved').toLowerCase();
+        if (status === 'approved' || status === 'verified' || status === 'true') {
+            kycBadge.innerHTML = '<i class="fa-solid fa-check"></i> Verified';
+            kycBadge.className = 'badge-verified';
+            kycBadge.style.backgroundColor = 'rgba(14, 203, 129, 0.1)';
+            kycBadge.style.color = '#0ecb81';
+            kycBadge.style.borderColor = 'rgba(14, 203, 129, 0.2)';
+        } else if (status === 'pending' || status === 'under_review' || status === 'review') {
+            kycBadge.innerHTML = '<i class="fa-solid fa-clock"></i> Under Review';
+            kycBadge.className = 'badge-unverified';
+            kycBadge.style.backgroundColor = 'rgba(243, 186, 47, 0.1)';
+            kycBadge.style.color = '#f3ba2f';
+            kycBadge.style.borderColor = 'rgba(243, 186, 47, 0.2)';
+        } else {
+            kycBadge.innerHTML = '<i class="fa-solid fa-clock"></i> Unverified';
+            kycBadge.className = 'badge-unverified';
+            kycBadge.style.backgroundColor = 'rgba(246, 70, 93, 0.1)';
+            kycBadge.style.color = '#f6465d';
+            kycBadge.style.borderColor = 'rgba(246, 70, 93, 0.2)';
+        }
+    }
+}
+
+function loadFromLocalStorageFallback() {
+    const username = localStorage.getItem("userName") || localStorage.getItem("name") || "User";
+    const email = localStorage.getItem("userEmail") || localStorage.getItem("email") || "";
+    let tbrId = localStorage.getItem("tbrExchangeId") || localStorage.getItem("userId") || localStorage.getItem("tbrId") || "TBR-476394";
+    const phone = localStorage.getItem("userPhone") || "";
+    const traderHandle = localStorage.getItem("traderUsername") || "";
+    const kycStatus = localStorage.getItem("kycStatus") || "approved";
+    const avatar = localStorage.getItem("userAvatar") || localStorage.getItem("profilePicture") || "";
+
+    updateUI({ username, email, tbrId, phone, traderHandle, kycStatus, avatar });
+}
+
+function triggerImageUpload() {
+    const fileInput = document.getElementById("profileImageInput");
+    if (fileInput) fileInput.click();
+}
+
+function handleImageUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
 
@@ -730,7 +703,7 @@ const savedAv = localStorage.getItem("userAvatar") || localStorage.getItem("prof
     reader.onload = function(e) {
         const base64Image = e.target.result;
         
-        // 1. UI ወዲያውኑ አሳይ
+        // 1. UI ወዲያውኑ ማሳየት
         const avatarBox = document.getElementById("avatar-initials");
         if (avatarBox) {
             avatarBox.style.backgroundImage = `url('${base64Image}')`;
@@ -739,11 +712,11 @@ const savedAv = localStorage.getItem("userAvatar") || localStorage.getItem("prof
 
         showToast("Profile picture updated successfully!");
 
-        // 2. ሎካል ስቶሬጅ
+        // 2. ሎካል ስቶሬጅ ማስቀመጥ
         localStorage.setItem("userAvatar", base64Image);
         localStorage.setItem("profilePicture", base64Image);
 
-        // 3. ወደ ሰርቨር sync አድርግ
+        // 3. ወደ ሰርቨር ማመሳሰል (Sync)
         syncAvatarToBackend(base64Image);
     };
     reader.readAsDataURL(file);
@@ -752,7 +725,6 @@ const savedAv = localStorage.getItem("userAvatar") || localStorage.getItem("prof
 async function syncAvatarToBackend(base64Image) {
     try {
         const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
-        console.log("Sending avatar sync request...");
 
         const response = await fetch("https://tbr-exchange-backend.onrender.com/api/user/update", {
             method: "POST",
@@ -764,14 +736,10 @@ async function syncAvatarToBackend(base64Image) {
         });
 
         const data = await response.json();
-        console.log("Backend response:", response.status, data);
 
-        if (!response.ok) {
-            console.error("Server sync failed:", data.message || response.statusText);
-        } else {
-            console.log("Synced to server successfully!");
-            if (data.avatar || data.userAvatar || data.url) {
-                const finalUrl = data.avatar || data.userAvatar || data.url;
+        if (response.ok) {
+            const finalUrl = data.avatar || data.userAvatar || data.url;
+            if (finalUrl) {
                 localStorage.setItem("userAvatar", finalUrl);
                 localStorage.setItem("profilePicture", finalUrl);
             }
@@ -781,98 +749,107 @@ async function syncAvatarToBackend(base64Image) {
     }
 }
 
-        function openModal(field) {
-            currentField = field;
-            const modal = document.getElementById("customModal");
-            const title = document.getElementById("modalTitle");
-            const input = document.getElementById("modalInput");
-            
-            modal.style.display = "flex";
+function openModal(field) {
+    currentField = field;
+    const modal = document.getElementById("customModal");
+    const title = document.getElementById("modalTitle");
+    const input = document.getElementById("modalInput");
+    
+    if (!modal || !input) return;
+    modal.style.display = "flex";
 
-            if(field === 'phone') {
-                input.value = "";
-                title.innerText = "Add Phone Number";
-                input.placeholder = "e.g. +251911223344";
-            } else if(field === 'username') {
-                title.innerText = "Set Trader Username";
-                input.placeholder = "Enter handle...";
-                input.value = "@"; // 👈 ኢንፑቱ ሲከፈት በቀጥታ በራሱ '@' እንዲኖረው
-                
-                input.oninput = function() {
-                    if (!input.value.startsWith('@')) {
-                        input.value = '@' + input.value.replace(/@/g, '');
-                    }
-                };
-            } else if(field === 'name') {
-                input.value = document.getElementById("profile-name").innerText.trim();
-                title.innerText = "Edit Profile Name";
-            } else if(field === 'passkey') {
-                input.value = "";
-                title.innerText = "Add Passkey";
-                input.placeholder = "Enter passkey name/device label...";
+    if(field === 'phone') {
+        input.value = "";
+        title.innerText = "Add Phone Number";
+        input.placeholder = "e.g. +251911223344";
+    } else if(field === 'username') {
+        title.innerText = "Set Trader Username";
+        input.placeholder = "Enter handle...";
+        input.value = "@";
+        
+        input.oninput = function() {
+            if (!input.value.startsWith('@')) {
+                input.value = '@' + input.value.replace(/@/g, '');
             }
-            input.focus();
+        };
+    } else if(field === 'name') {
+        const profileName = document.getElementById("profile-name");
+        input.value = profileName ? profileName.innerText.trim() : "";
+        title.innerText = "Edit Profile Name";
+    } else if(field === 'passkey') {
+        input.value = "";
+        title.innerText = "Add Passkey";
+        input.placeholder = "Enter passkey name/device label...";
+    }
+    input.focus();
+}
+
+function closeModal() {
+    const modal = document.getElementById("customModal");
+    if (modal) modal.style.display = "none";
+}
+
+async function saveModalData() {
+    const modalInput = document.getElementById("modalInput");
+    if (!modalInput) return;
+    
+    const val = modalInput.value.trim();
+    if (!val) return;
+
+    let finalVal = val;
+
+    if (currentField === 'phone') {
+        const phoneDisplay = document.getElementById("phone-display");
+        if (phoneDisplay) phoneDisplay.innerText = val;
+        localStorage.setItem("userPhone", val);
+    } else if (currentField === 'username') {
+        if (!finalVal.startsWith('@')) {
+            finalVal = '@' + finalVal;
         }
-
-        function closeModal() {
-            document.getElementById("customModal").style.display = "none";
+        const usernameDisplay = document.getElementById("username-display");
+        if (usernameDisplay) usernameDisplay.innerText = finalVal;
+        localStorage.setItem("traderUsername", finalVal);
+    } else if (currentField === 'name') {
+        localStorage.setItem("userName", val);
+        const profileName = document.getElementById("profile-name");
+        if (profileName) {
+            profileName.innerHTML = `${val} <i class="fa-solid fa-pen edit-icon" onclick="openModal('name')"></i>`;
         }
+    } else if (currentField === 'passkey') {
+        localStorage.setItem("userPasskey", val);
+        showToast("Passkey added successfully!");
+        closeModal();
+        return;
+    }
+    
+    showToast("Profile updated successfully!");
 
-        async function saveModalData() {
-            const val = document.getElementById("modalInput").value.trim();
-            if (!val) return;
+    try {
+        const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
+        const dataToSend = (currentField === 'username') ? finalVal : val;
 
-            let finalVal = val;
+        await fetch("https://tbr-exchange-backend.onrender.com/api/user/update", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": token ? `Bearer ${token}` : ""
+            },
+            body: JSON.stringify({ field: currentField, value: dataToSend })
+        });
+    } catch (e) {
+        console.error("Failed to sync update with backend:", e);
+    }
 
-            if (currentField === 'phone') {
-                document.getElementById("phone-display").innerText = val;
-                localStorage.setItem("userPhone", val);
-            } else if (currentField === 'username') {
-                if (!finalVal.startsWith('@')) {
-                    finalVal = '@' + finalVal;
-                }
-                document.getElementById("username-display").innerText = finalVal;
-                localStorage.setItem("traderUsername", finalVal);
-            } else if (currentField === 'name') {
-                localStorage.setItem("userName", val);
-                document.getElementById("profile-name").innerHTML = `${val} <i class="fa-solid fa-pen edit-icon" onclick="openModal('name')"></i>`;
-                
-                const avatarBox = document.getElementById("avatar-initials");
-                if (avatarBox && !localStorage.getItem("userAvatar") && !localStorage.getItem("profilePicture")) {
-                    avatarBox.innerHTML = `${val.substring(0,2).toUpperCase()} <div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
-                }
-            } else if (currentField === 'passkey') {
-                localStorage.setItem("userPasskey", val);
-                showToast("Passkey added successfully!");
-                closeModal();
-                return;
-            }
-            
-            showToast("Profile updated successfully!");
+    closeModal();
+}
 
-            try {
-                const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
-                const dataToSend = (currentField === 'username') ? finalVal : val;
-
-                await fetch("https://tbr-exchange-backend.onrender.com/api/user/update", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": token ? `Bearer ${token}` : ""
-                    },
-                    body: JSON.stringify({ field: currentField, value: dataToSend })
-                });
-            } catch (e) {
-                console.error("Failed to sync update with backend:", e);
-            }
-
-            closeModal();
-        }
-        function copyId() {
-            let idText = document.getElementById("profile-id").innerText;
-            navigator.clipboard.writeText(idText);
-            showToast("Account ID copied to clipboard!");
-        }
+function copyId() {
+    const profileId = document.getElementById("profile-id");
+    if (profileId) {
+        navigator.clipboard.writeText(profileId.innerText);
+        showToast("Account ID copied to clipboard!");
+    }
+}
 
         function showToast(message) {
             const toast = document.getElementById("toastNotification");
