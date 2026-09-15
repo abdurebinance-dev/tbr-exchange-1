@@ -123,12 +123,14 @@
             margin-bottom: 4px;
             display: flex;
             align-items: center;
+            min-height: 24px;
         }
 
         .profile-details p {
             color: #848e9c;
             font-size: 14px;
             margin-bottom: 8px;
+            min-height: 20px;
         }
 
         .user-id-badge {
@@ -218,12 +220,14 @@
         .kyc-banner-left h4 {
             margin: 0 0 5px 0;
             font-size: 16px;
+            min-height: 19px;
         }
 
         .kyc-banner-left p {
             color: #848e9c;
             margin: 0;
             font-size: 13px;
+            min-height: 16px;
         }
 
         .verify-btn {
@@ -324,10 +328,10 @@
             <div class="profile-user-info">
                 <div class="profile-avatar" id="avatarInitial" style="background-color: rgba(212, 175, 55, 0.25); border: 2px solid rgba(212, 175, 55, 0.5);"></div>
                 <div class="profile-details">
-                    <h2 id="profileName">Loading...</h2>
-                    <p id="profileEmail">Loading...</p>
+                    <h2 id="profileName"></h2>
+                    <p id="profileEmail"></p>
                     <div class="user-id-badge">
-                        ID: <span id="userUniqueId">Loading...</span>
+                        ID: <span id="userUniqueId"></span>
                         <span class="copy-btn" onclick="copyUserId()" title="Copy ID">
                             <i class="fa-regular fa-copy"></i> <span id="copyText">Copy</span>
                         </span>
@@ -360,8 +364,8 @@
         <!-- KYC Verification Banner -->
         <div id="kycBannerContainer" class="kyc-banner">
             <div class="kyc-banner-left">
-                <h4 id="kycBannerTitle">Loading...</h4>
-                <p id="kycBannerDesc">Please wait...</p>
+                <h4 id="kycBannerTitle"></h4>
+                <p id="kycBannerDesc"></p>
             </div>
             <div id="kycBannerAction">
                 <!-- Action button loads here -->
@@ -374,9 +378,7 @@
             
             <div class="detail-row">
                 <span class="detail-label">KYC Verification</span>
-                <span class="detail-value" id="kycStatusRowText">
-                    Loading...
-                </span>
+                <span class="detail-value" id="kycStatusRowText"></span>
             </div>
             
             <div class="detail-row">
@@ -396,7 +398,7 @@
     <script>
         function copyUserId() {
             const userIdText = document.getElementById('userUniqueId').innerText;
-            if (userIdText.includes('Loading') || userIdText.includes('TBR-000000') || userIdText.includes('TBR------')) return;
+            if (!userIdText || userIdText.includes('Loading') || userIdText.includes('TBR-000000') || userIdText.includes('TBR------')) return;
             
             navigator.clipboard.writeText(userIdText).then(() => {
                 const copyTextSpan = document.getElementById('copyText');
@@ -411,16 +413,16 @@
             });
         }
 
-        // 1. ወዲያውኑ ዩአይን የሚያዘምነው ዋና ፋንክሽን
+        // 1. ወዲያውኑ ዩአይን የሚያዘምነው ዋና ፋንክሽን (Loading የሚለውን አስቀርተነዋል)
         function updateProfileUI() {
             let name = localStorage.getItem('userName') || localStorage.getItem('fullName') || localStorage.getItem('name') || "USER";
-            let email = localStorage.getItem('userEmail') || localStorage.getItem('email') || "user@example.com";
+            let email = localStorage.getItem('userEmail') || localStorage.getItem('email') || "";
             let kycStatus = String(localStorage.getItem('kycStatus') || 'not_submitted').toLowerCase();
             let rejectionReason = localStorage.getItem('kycRejectionReason') || 'Document check failed';
             let storedFullName = localStorage.getItem('fullName') || '';
             
-            // 🔴 እዚህ ጋር የነበረውን "TBR-476394" ወደ "Loading..." ቀይረነዋል
-            let userId = localStorage.getItem('tbrExchangeId') || localStorage.getItem('userUniqueId') || localStorage.getItem('tbrId') || 'Loading...';
+            // 🔴 ሎዲንግ ሳይል ትክክለኛውን አይዲ ከሚሞሪ ያወጣል
+            let userId = localStorage.getItem('tbrExchangeId') || localStorage.getItem('userUniqueId') || localStorage.getItem('tbrId') || '';
             
             let savedAvatar = localStorage.getItem('userAvatar') || localStorage.getItem('profilePicture') || localStorage.getItem('profilePic');
             
