@@ -131,8 +131,22 @@
             transition: all 0.15s ease;
         }
 
-        /* አዝራሮቹ ሲጫኑ (Active/Focus) ደማቅ ቢጫ እንዲሆኑ */
-        .wallet-btn:hover, .wallet-btn:focus, .wallet-btn.active {
+        /* Deposit ሲጫን አረንጓዴ */
+        .wallet-btn.deposit-btn.active {
+            background: var(--green-color);
+            color: #000;
+            border-color: var(--green-color);
+        }
+
+        /* Withdraw ሲጫን ቀይ */
+        .wallet-btn.withdraw-btn.active {
+            background: var(--red-color);
+            color: #fff;
+            border-color: var(--red-color);
+        }
+
+        /* Transfer ሲጫን ቢጫ/ወርቃማ */
+        .wallet-btn.transfer-btn.active {
             background: var(--accent-color);
             color: #000;
             border-color: var(--accent-color);
@@ -142,7 +156,7 @@
             transform: scale(0.96);
         }
 
-        /* Network Selection Card (እንደ 3ተኛው ማስተካከያ) */
+        /* Network Selection Card */
         .network-card {
             background-color: var(--card-bg);
             border: 1px solid var(--border-color);
@@ -171,7 +185,7 @@
 
         .network-display-text {
             font-size: 14px;
-            color: #fff; /* ነጭ እና ግልጽ ጽሁፍ */
+            color: var(--text-muted); /* ደብዛዛ (Faded) እንዲሆን ተደርጓል */
             font-weight: 500;
         }
 
@@ -344,22 +358,22 @@
                 <i class="fa-solid fa-eye" id="toggleBalanceIcon" onclick="toggleBalanceVisibility()" title="Hide/Show Balance"></i>
             </div>
             <div class="balance-amount">
-                <span id="wallet-balance">0.00</span> <span id="wallet-currency">USDT</span>
+                <span id="wallet-balance">0.00</span> <span>USDT</span>
             </div>
             <div class="wallet-actions">
-                <button class="wallet-btn" onclick="handleAction('Deposit')">
+                <button class="wallet-btn deposit-btn" onclick="handleAction('Deposit', this)">
                     <i class="fa-solid fa-arrow-down"></i> Deposit
                 </button>
-                <button class="wallet-btn" onclick="handleAction('Withdraw')">
+                <button class="wallet-btn withdraw-btn" onclick="handleAction('Withdraw', this)">
                     <i class="fa-solid fa-arrow-up"></i> Withdraw
                 </button>
-                <button class="wallet-btn" onclick="handleAction('Transfer')">
+                <button class="wallet-btn transfer-btn" onclick="handleAction('Transfer', this)">
                     <i class="fa-solid fa-right-left"></i> Transfer
                 </button>
             </div>
         </div>
 
-        <!-- Network Selection Card (እንደ 3ተኛው ጥያቄ) -->
+        <!-- Network Selection Card -->
         <div class="network-card" onclick="openNetworkModal()">
             <div class="network-info">
                 <label>Network</label>
@@ -474,12 +488,18 @@
 
         function selectNetwork(networkName) {
             chosenNetwork = networkName;
-            document.getElementById("selectedNetworkText").innerText = networkName;
+            const textEl = document.getElementById("selectedNetworkText");
+            textEl.innerText = networkName;
+            textEl.style.color = "#fff"; // ኔትወርክ ሲመረጥ ጽሁፉ ነጭ እና ግልጽ ይሆናል
             closeNetworkModal();
             showToast(`Network selected: ${networkName}`);
         }
 
-        function handleAction(actionType) {
+        function handleAction(actionType, btnElement) {
+            // የነቁትን አዝራሮች ከለር መቀየር
+            document.querySelectorAll('.wallet-btn').forEach(b => b.classList.remove('active'));
+            if(btnElement) btnElement.classList.add('active');
+
             if (!chosenNetwork && actionType === 'Deposit') {
                 showToast("Please choose network first!");
                 openNetworkModal();
