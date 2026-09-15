@@ -338,7 +338,6 @@
             }
         };
 
-        // የጋራ ዳታ አውጥቶ (Pre-fetch አድርጎ) ወደ ዳሽቦርድ የሚልክ ፈንክሽን
         async function preFetchAndRedirect(token, redirectUrl) {
             try {
                 const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
@@ -361,29 +360,66 @@
             window.location.href = redirectUrl || 'dashboard.html';
         }
 
+        // --- ትክክለኛው የ WebAuthn Passkey Login ሎጂክ ---
         document.getElementById('passkeyBtn').addEventListener('click', async () => {
             try {
-                showError("Passkey", "Connecting to biometric / passkey device...");
-                const response = await fetch(`${API_BASE_URL}/api/passkey-signin`, {
+                showError("Passkey", "Requesting biometric authentication...");
+                
+                const res = await fetch(`${API_BASE_URL}/api/passkey/login-options`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({})
                 });
-                const data = await response.json();
-                if (data.success) {
-                    if (data.token) {
-                        localStorage.setItem('authToken', data.token);
-                        localStorage.setItem('token', data.token);
-                        await preFetchAndRedirect(data.token, data.redirectUrl);
-                    } else {
-                        window.location.href = data.redirectUrl || 'dashboard.html';
-                    }
-                } else {
-                    showError("Passkey Failed", data.message || "Passkey sign-in failed.");
+                const optionsData = await res.json();
+                
+                if (!optionsData.success) {
+                    showError("Passkey Failed", optionsData.message || "No passkey found for this device.");
+                    return;
                 }
+
+                const publicKeyCredentialRequestOptions = {
+                    challenge: Uint8Array.from(atob(optionsData.options.challenge), c => c.charCodeAt(0)),
+                    timeout: 60000,
+                    userVerification: "preferred",
+                    rpId: window.location.hostname
+                };
+
+                const assertion = await navigator.credentials.get({
+                    publicKey: publicKeyCredentialRequestOptions
+                });
+
+                const authResponse = await fetch(`${API_BASE_URL}/api/passkey/login-verify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: assertion.id,
+                        rawId: btoa(String.fromCharCode(...new Uint8Array(assertion.rawId))),
+                        response: {
+                            clientDataJSON: btoa(String.fromCharCode(...new Uint8Array(assertion.response.clientDataJSON))),
+                            authenticatorData: btoa(String.fromCharCode(...new Uint8Array(assertion.response.authenticatorData))),
+                            signature: btoa(String.fromCharCode(...new Uint8Array(assertion.response.signature))),
+                            userHandle: assertion.response.userHandle ? btoa(String.fromCharCode(...new Uint8Array(assertion.response.userHandle))) : null
+                        },
+                        type: assertion.type
+                    })
+                });
+
+                const verifyData = await authResponse.json();
+
+                if (verifyData.success && verifyData.token) {
+                    localStorage.setItem('authToken', verifyData.token);
+                    localStorage.setItem('token', verifyData.token);
+                    if (verifyData.user && verifyData.user.email) {
+                        localStorage.setItem('userEmail', verifyData.user.email);
+                    }
+                    await preFetchAndRedirect(verifyData.token, verifyData.redirectUrl);
+                } else {
+                    showError("Passkey Failed", verifyData.message || "Passkey verification failed.");
+                }
+
             } catch (err) {
-                console.error('Passkey error:', err);
-                showError("Passkey Error", "Passkey authentication is not supported or cancelled.");
+                console.error('Passkey login error:', err);
+                showError("Passkey Cancelled", "Passkey authentication was cancelled or not supported.");
             }
         });
 
@@ -465,7 +501,6 @@
             hideError();
         }
 
-        // --- የተስተካከለው የ Google Sign-in ሎጂክ ---
         async function handleGoogleResponse(response) {
             try {
                 localStorage.clear(); 
@@ -489,7 +524,6 @@
                         localStorage.setItem('userEmail', data.email);
                     }
 
-                    // መጀመሪያ ዳታውን አውጥቶ (Pre-fetch) ሴቭ ካደረገ በኋላ ነው ወደ ዳሽቦርድ የሚልከው!
                     await preFetchAndRedirect(data.token, data.redirectUrl);
                 } else {
                     showErrorToast(data.message || 'Google authentication failed.');
