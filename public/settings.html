@@ -682,31 +682,39 @@
         }
 
         function handleImageUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
+    const file = event.target.files[0];
+    if (!file) return;
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const base64Image = e.target.result;
-                localStorage.setItem("userAvatar", base64Image);
-                localStorage.setItem("profilePicture", base64Image);
-
-                const avatarBox = document.getElementById("avatar-initials");
-                avatarBox.style.backgroundImage = `url('${base64Image}')`;
-                avatarBox.innerHTML = `<div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
-
-                showToast("Profile picture updated successfully!");
-
-                syncAvatarToBackend(base64Image);
-            };
-            reader.readAsDataURL(file);
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const base64Image = e.target.result;
+        
+        // 1. UI ወዲያውኑ አሳይ
+        const avatarBox = document.getElementById("avatar-initials");
+        if (avatarBox) {
+            avatarBox.style.backgroundImage = `url('${base64Image}')`;
+            avatarBox.innerHTML = `<div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
         }
 
-        async function syncAvatarToBackend(base64Image) {
+        showToast("Profile picture updated successfully!");
+
+        // 2. ሎካል ስቶሬጅ
+        localStorage.setItem("userAvatar", base64Image);
+        localStorage.setItem("profilePicture", base64Image);
+
+        // 3. ወደ ሰርቨር sync አድርግ
+        syncAvatarToBackend(base64Image);
+    };
+    reader.readAsDataURL(file);
+}
+
+async function syncAvatarToBackend(base64Image) {
     try {
         const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
+        console.log("Sending avatar sync request...");
+
         const response = await fetch("https://tbr-exchange-backend.onrender.com/api/user/update", {
-            method: "POST", // ሰርቨሩ PUT ከጠየቀ 'PUT' አድርገው
+            method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 "Authorization": token ? `Bearer ${token}` : ""
@@ -715,12 +723,12 @@
         });
 
         const data = await response.json();
-        console.log("Server response for avatar sync:", response.status, data);
+        console.log("Backend response:", response.status, data);
 
         if (!response.ok) {
-            console.error("Failed to sync avatar:", data.message || response.statusText);
+            console.error("Server sync failed:", data.message || response.statusText);
         } else {
-            // ሰርቨሩ አዲስ ዩአርኤል ከመለሰ update አድርግ
+            console.log("Synced to server successfully!");
             if (data.avatar || data.userAvatar || data.url) {
                 const finalUrl = data.avatar || data.userAvatar || data.url;
                 localStorage.setItem("userAvatar", finalUrl);
@@ -728,7 +736,7 @@
             }
         }
     } catch (error) {
-        console.error("Network error syncing avatar:", error);
+        console.error("Network error during avatar sync:", error);
     }
 }
 
