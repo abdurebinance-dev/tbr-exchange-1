@@ -1125,6 +1125,67 @@ app.post('/api/passkey/login-verify', async (req, res) => {
     }
 });
 
+// --- Passkey Registration Routes (ለ Settings ፔጅ - Add Passkey) ---
+
+// 1. Register Options Route
+app.post('/api/passkey/register-options', verifyToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+        const challenge = crypto.randomBytes(32).toString('base64');
+        
+        res.json({
+            success: true,
+            options: {
+                challenge: challenge,
+                rp: { name: "TBR Exchange", id: req.hostname || 'tbr-exchange-backend.onrender.com' },
+                user: {
+                    id: Buffer.from(user._id.toString()).toString('base64'),
+                    name: user.email,
+                    displayName: user.fullName || user.email
+                },
+                pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
+                timeout: 60000,
+                attestation: "direct",
+                authenticatorSelection: {
+                    userVerification: "preferred",
+                    residentKey: "preferred"
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Register Options Error:', error);
+        res.status(500).json({ success: false, message: 'Server error generating registration options.' });
+    }
+});
+
+// 2. Register Verify Route
+app.post('/api/passkey/register-verify', verifyToken, async (req, res) => {
+    try {
+        const { id, rawId } = req.body;
+        const userId = req.user.id;
+
+        const existingPasskey = await Passkey.findOne({ credentialId: id });
+        if (existingPasskey) {
+            return res.status(400).json({ success: false, message: 'Passkey already registered on this device.' });
+        }
+
+        const newPasskey = new Passkey({
+            userId: userId,
+            credentialId: id,
+            credentialPublicKey: rawId,
+            counter: 0
+        });
+
+        await newPasskey.save();
+        res.json({ success: true, message: 'Passkey registered successfully.' });
+    } catch (error) {
+        console.error('Register Verify Error:', error);
+        res.status(500).json({ success: false, message: 'Server error verifying passkey registration.' });
+    }
+});
+
 // Server Listen (ይህ መጨረሻው ላይ አንድ ጊዜ ብቻ መጥራት አለበት)
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
