@@ -131,21 +131,18 @@
             transition: all 0.15s ease;
         }
 
-        /* Deposit ሲጫን አረንጓዴ */
         .wallet-btn.deposit-btn.active {
             background: var(--green-color);
             color: #000;
             border-color: var(--green-color);
         }
 
-        /* Withdraw ሲጫን ቀይ */
         .wallet-btn.withdraw-btn.active {
             background: var(--red-color);
             color: #fff;
             border-color: var(--red-color);
         }
 
-        /* Transfer ሲጫን ቢጫ/ወርቃማ */
         .wallet-btn.transfer-btn.active {
             background: var(--accent-color);
             color: #000;
@@ -185,7 +182,7 @@
 
         .network-display-text {
             font-size: 14px;
-            color: var(--text-muted); /* ደብዛዛ (Faded) እንዲሆን ተደርጓል */
+            color: var(--text-muted); 
             font-weight: 500;
         }
 
@@ -202,7 +199,7 @@
             font-size: 14px;
         }
 
-        /* Network Selection Modal Overlay */
+        /* Modal Overlay */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -217,54 +214,112 @@
             display: none;
         }
 
-        .modal-content {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
+        /* 🚀 አዲሱ የኔትወርክ ምርጫ (Network Modal) ዲዛይን 🚀 */
+        .modal-content.network-modal {
+            background-color: #0b0e11;
+            border: 1px solid #2b313a;
             border-radius: 14px;
-            width: 400px;
-            padding: 25px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+            width: 550px;
+            padding: 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
         }
 
-        .modal-header {
+        .modal-header-styled {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
-            font-size: 16px;
-            font-weight: 600;
+            padding: 20px 25px;
+            border-bottom: 1px solid #2b313a;
         }
 
-        .modal-header i {
-            cursor: pointer;
-            color: var(--text-muted);
-        }
-
-        .network-option-item {
-            background: #18181b;
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .network-option-item:hover {
-            border-color: var(--accent-color);
-            background: #1f1f23;
-        }
-
-        .network-option-item h4 {
-            margin: 0 0 4px 0;
-            font-size: 14px;
+        .modal-header-styled h3 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 700;
             color: #fff;
         }
 
-        .network-option-item p {
-            margin: 0;
-            font-size: 12px;
-            color: var(--text-muted);
+        .modal-header-styled i {
+            cursor: pointer;
+            color: var(--green-color);
+            font-size: 24px;
+            transition: transform 0.2s;
+        }
+        
+        .modal-header-styled i:hover {
+            transform: scale(1.1);
+        }
+
+        .network-options-container {
+            padding: 20px 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .network-item {
+            background-color: #181a20;
+            border: 1px solid #2b313a;
+            border-radius: 12px;
+            padding: 18px;
+            display: flex;
+            gap: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .network-item:hover {
+            border-color: var(--accent-color);
+            background-color: #1f222a;
+        }
+
+        .net-icon-wrapper {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .net-icon-wrapper.bsc-icon {
+            background-color: #000;
+            border: 1px solid #333;
+        }
+
+        .net-icon-wrapper.trx-icon {
+            background-color: var(--red-color);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 800;
+            border: 1px solid #ff6b81;
+        }
+
+        .net-title-row {
+            display: flex;
+            align-items: baseline;
+            margin-bottom: 8px;
+        }
+
+        .net-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .net-subtitle {
+            font-size: 13px;
+            color: #848e9c;
+            margin-left: 8px;
+        }
+
+        .net-details {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            font-size: 13px;
+            color: #848e9c;
         }
 
         /* Recent Activity Section */
@@ -399,24 +454,55 @@
         </div>
     </div>
 
-    <!-- Network Selection Modal -->
+    <!-- 🚀 Network Selection Modal (አዲሱ ዲዛይን) -->
     <div class="modal-overlay" id="networkModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <span>Select Network</span>
-                <i class="fa-solid fa-xmark" onclick="closeNetworkModal()"></i>
+        <div class="modal-content network-modal">
+            <div class="modal-header-styled">
+                <h3>Choose Network</h3>
+                <!-- X ምልክት ከፎቶው ጋር ተመሳሳይ ሆኖ አረንጓዴ ክብ የተደረገበት -->
+                <i class="fa-regular fa-circle-xmark" onclick="closeNetworkModal()"></i>
             </div>
-            <div class="network-option-item" onclick="selectNetwork('BNB Smart Chain (BEP20)')">
-                <h4>BNB Smart Chain (BEP20)</h4>
-                <p>Fast and low fees</p>
-            </div>
-            <div class="network-option-item" onclick="selectNetwork('TRON (TRC20)')">
-                <h4>TRON (TRC20)</h4>
-                <p>Popular USDT network</p>
-            </div>
-            <div class="network-option-item" onclick="selectNetwork('Base Network')">
-                <h4>Base Network</h4>
-                <p>Ethereum L2 network</p>
+            
+            <div class="network-options-container">
+                
+                <!-- BSC Option -->
+                <div class="network-item" onclick="selectNetwork('BSC', 'BNB Smart Chain (BEP-20)')">
+                    <div class="net-icon-wrapper bsc-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                            <path fill="#F3BA2F" d="M12 0l7.364 7.364-2.717 2.716-4.647-4.646-4.647 4.646-2.717-2.716L12 0zm7.364 16.636l-7.364 7.364-7.364-7.364 2.717-2.716 4.647 4.646 4.647-4.646 2.717 2.716zm2.717-4.636L24 14.716l-2.719 2.717-2.717-2.717 2.717-2.716zM0 12l2.719-2.716 2.717 2.716-2.717 2.717L0 12zm12 2.716l4.647-4.646 2.717 2.716-7.364 7.364-7.364-7.364 2.717-2.716L12 14.716z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="net-title-row">
+                            <span class="net-title">BSC</span>
+                            <span class="net-subtitle">BNB Smart Chain (BEP-20)</span>
+                        </div>
+                        <div class="net-details">
+                            <span>1 block confirmation</span>
+                            <span>Min. deposit > 0.01 USDT</span>
+                            <span>Est. arrival ~1 min</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TRON Option -->
+                <div class="network-item" onclick="selectNetwork('TRX', 'TRON (TRC-20)')">
+                    <div class="net-icon-wrapper trx-icon">
+                        TRX
+                    </div>
+                    <div>
+                        <div class="net-title-row">
+                            <span class="net-title">TRX</span>
+                            <span class="net-subtitle">TRON (TRC-20)</span>
+                        </div>
+                        <div class="net-details">
+                            <span>1 block confirmation</span>
+                            <span>Min. deposit > 0.01 USDT</span>
+                            <span>Est. arrival ~1 min</span>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -439,7 +525,7 @@
         document.addEventListener("DOMContentLoaded", () => {
             fetchUserBalance();
 
-            // 🔍 ዩአርኤሉን (URL Parameters) በማንበብ አክቲቭ ከለር እንዲይዝ ማድረግ (ሞዳል በአውቶማቲክ አይከፈትም)
+            // 🔍 ዩአርኤሉን (URL Parameters) በማንበብ አክቲቭ ከለር እንዲይዝ ማድረግ
             const urlParams = new URLSearchParams(window.location.search);
             const action = urlParams.get('action');
 
@@ -499,13 +585,16 @@
             document.getElementById("networkModal").style.display = "none";
         }
 
-        function selectNetwork(networkName) {
-            chosenNetwork = networkName;
+        // 🚀 አዲሱ የኔትወርክ መምረጫ ስክሪፕት (ስሙ እና ሙሉ ስሙ እንዲወጣ)
+        function selectNetwork(shortName, longName) {
+            chosenNetwork = shortName;
             const textEl = document.getElementById("selectedNetworkText");
-            textEl.innerText = networkName;
-            textEl.style.color = "#fff"; // ኔትወርክ ሲመረጥ ጽሁፉ ነጭ እና ግልጽ ይሆናል
+            
+            // የተመረጠው ኔትወርክ እንደ ፎቶው አምሮ እንዲወጣ ተደርጓል
+            textEl.innerHTML = `<span style="color: #fff; font-weight: 700; margin-right: 6px;">${shortName}</span> <span style="font-size: 13px; color: #848e9c;">${longName}</span>`;
+            
             closeNetworkModal();
-            showToast(`Network selected: ${networkName}`);
+            showToast(`${shortName} Network selected!`);
         }
 
         function handleAction(actionType, btnElement) {
@@ -513,7 +602,7 @@
             document.querySelectorAll('.wallet-btn').forEach(b => b.classList.remove('active'));
             if(btnElement) btnElement.classList.add('active');
 
-            // ኔትወርክ ካልተመረጠ ማሳሰቢያ ብቻ ይሰጣል፣ ሞዳሉን አውቶማቲክ አይከፍትም
+            // ኔትወርክ ካልተመረጠ ማሳሰቢያ ይሰጣል
             if (!chosenNetwork && actionType === 'Deposit') {
                 showToast("Please select a network first.");
                 return;
