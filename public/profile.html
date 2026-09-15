@@ -394,10 +394,10 @@
 
     </div>
 
-    <script>
+   <script>
         function copyUserId() {
             const userIdText = document.getElementById('userUniqueId').innerText;
-            if (!userIdText || userIdText.includes('Loading') || userIdText.includes('TBR-000000') || userIdText.includes('TBR------')) return;
+            if (!userIdText || userIdText.includes('Loading') || userIdText.includes('TBR-000000') || !userIdText.startsWith('TBR-')) return;
             
             navigator.clipboard.writeText(userIdText).then(() => {
                 const copyTextSpan = document.getElementById('copyText');
@@ -412,48 +412,34 @@
             });
         }
 
-        // 🚀 አዲሱ የ 0 ሰከንድ መፍትሄ: ቶከን ውስጥ አይዲውን ፈልፍሎ ያወጣል!
+        // 🚀 ጥብቅ የሆነ የአይዲ ማውጫ (TBR- የሚለውን ብቻ ነው የሚያሳልፈው፣ ረጅሙን ፊደል ይተወዋል)
         function getStoredId() {
-            // 1. መጀመሪያ ሚሞሪ (Local Storage) ላይ ካለ ያወጣል
-            let id = localStorage.getItem('tbrId') || 
-                   localStorage.getItem('tbrExchangeId') || 
-                   localStorage.getItem('userId') || 
-                   localStorage.getItem('userUniqueId');
-                   
-            if (id && id.trim() !== '') return id;
+            let tbrId = localStorage.getItem('tbrId') || localStorage.getItem('tbrExchangeId');
+            
+            // አይዲው TBR- ብሎ የሚጀምር ከሆነ ብቻ ያወጣዋል
+            if (tbrId && String(tbrId).startsWith('TBR-')) {
+                return tbrId;
+            }
 
-            // 2. ሚሞሪ ላይ ከሌለ (ለምሳሌ ሎግ-ኢን አድርገህ ገና አሁን ከገባህ) ቶከኑን ይሰብራል
+            // ካልሆነ ቶከኑን ይሰብራል
             try {
                 const token = localStorage.getItem('token') || localStorage.getItem('authToken');
                 if (token && token.includes('.')) {
                     const base64Url = token.split('.')[1];
                     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-                    const payload = JSON.parse(window.atob(base64)); // ቶከኑን መፍታት
+                    const payload = JSON.parse(window.atob(base64));
                     
                     if (payload.numericId) {
-                        id = 'TBR-' + String(payload.numericId).padStart(6, '0');
-                    } else if (payload.tbrId) {
-                        id = payload.tbrId;
-                    } else if (payload.userId) {
-                        id = payload.userId;
-                    } else if (payload.id) {
-                        id = payload.id;
-                    }
-
-                    if (id) {
-                        // ቁጥር ብቻ ከሆነ 'TBR-' ይጨምርለታል
-                        if (!String(id).startsWith('TBR-') && /^\d+$/.test(id)) {
-                            id = 'TBR-' + String(id).padStart(6, '0');
-                        }
-                        localStorage.setItem('tbrId', id); // ለሚቀጥለው ጊዜ ሴቭ ያደርገዋል
-                        return id;
+                        let newId = 'TBR-' + String(payload.numericId).padStart(6, '0');
+                        localStorage.setItem('tbrId', newId);
+                        return newId;
                     }
                 }
             } catch (e) {
-                console.error("Failed to decode token for ID:", e);
+                console.error("Token decode error:", e);
             }
 
-            return ''; // ምንም ከሌለ ብቻ ባዶ ይሆናል
+            return ''; // ረጅሙን ፊደል ከማምጣት ምንም ባያመጣ ይመረጣል
         }
 
         // 1. ወዲያውኑ ዩአይን የሚያዘምነው ዋና ፋንክሽን
@@ -464,7 +450,7 @@
             let rejectionReason = localStorage.getItem('kycRejectionReason') || 'Document check failed';
             let storedFullName = localStorage.getItem('fullName') || '';
             
-            // 🔴 ይህ ፋንክሽን አሁን በ0 ሰከንድ ትክክለኛውን አይዲ ይዞ ይመጣል
+            // 🔴 የተጣራው አይዲ እዚህ ይገባል (ረጅሙ ፊደል ፈጽሞ አይመጣም)
             let userId = getStoredId();
             
             let savedAvatar = localStorage.getItem('userAvatar') || localStorage.getItem('profilePicture') || localStorage.getItem('profilePic');
@@ -481,7 +467,6 @@
                 ? storedFullName 
                 : usernameFallback;
 
-            // Update basic text elements
             document.getElementById('profileEmail').innerText = email;
             document.getElementById('userUniqueId').innerText = userId;
             document.getElementById('statTotalTrades').innerText = totalTrades;
@@ -490,7 +475,6 @@
             document.getElementById('statReputation').innerText = reputation;
             document.getElementById('memberSince').innerText = memberSince;
 
-            // Update 2FA
             const twoFactorEl = document.getElementById('twoFactorStatus');
             if (is2FA) {
                 twoFactorEl.innerText = 'Enabled';
@@ -500,7 +484,6 @@
                 twoFactorEl.style.color = '#f6465d';
             }
 
-            // Update Avatar
             const avatarBox = document.getElementById('avatarInitial');
             if (savedAvatar && savedAvatar !== 'null' && savedAvatar !== 'undefined' && savedAvatar.trim() !== "") {
                 avatarBox.style.backgroundImage = `url('${savedAvatar}')`;
@@ -512,7 +495,6 @@
                 avatarBox.innerText = String(displayName).charAt(0).toUpperCase();
             }
 
-            // Update KYC and Name
             const nameContainer = document.getElementById('profileName');
             const kycStatusRowText = document.getElementById('kycStatusRowText');
             const bannerTitle = document.getElementById('kycBannerTitle');
@@ -587,12 +569,15 @@
                         if (user.kycStatus) localStorage.setItem('kycStatus', user.kycStatus);
                         if (user.kycRejectionReason) localStorage.setItem('kycRejectionReason', user.kycRejectionReason);
                         
-                        let newId = user.tbrId || user.userId || user.customId || user.id || user._id || "";
-                        if (user.numericId && (!newId.startsWith('TBR-'))) {
+                        // 🔴 ከሰርቨር ትክክለኛውን አይዲ አውጥቶ ሴቭ ያደርጋል
+                        let newId = "";
+                        if (user.numericId) {
                             newId = 'TBR-' + String(user.numericId).padStart(6, '0');
+                        } else if (user.tbrId && String(user.tbrId).startsWith('TBR-')) {
+                            newId = user.tbrId;
                         }
 
-                        if (newId && newId !== "") {
+                        if (newId !== "") {
                             localStorage.setItem('tbrId', newId);
                             localStorage.setItem('tbrExchangeId', newId);
                         }
@@ -602,19 +587,17 @@
                             localStorage.setItem('profilePicture', user.avatar);
                         }
 
-                        updateProfileUI(); // UI በድጋሚ ያድሳል
+                        updateProfileUI(); 
                     }
                 }
             } catch (e) {
-                console.log("Could not fetch from server, continuing with local cache.", e);
+                console.log("Could not fetch from server, continuing with local cache.");
             }
         }
 
-        // 3. ፔጁ ሲከፈት ሁለቱን ፋንክሽኖች በቅደም ተከተል ያስነሳል
+        // 3. ፔጁ ሲከፈት
         document.addEventListener("DOMContentLoaded", () => {
-            updateProfileUI(); // አሁኑኑ ዩአይ ያሳያል (ከቶከን ፈትቶ)
-            syncWithServer();  // በጀርባ ከሰርቨር ያዘምናል
+            updateProfileUI(); 
+            syncWithServer();  
         });
     </script>
-</body>
-</html>
