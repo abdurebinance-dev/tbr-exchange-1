@@ -509,8 +509,9 @@
             </div>
         </div>
         <div class="nav-right">
-            <a href="profile.html" id="headerKycBadge" class="nav-kyc-badge unverified">
-                <i class="fa-solid fa-triangle-exclamation"></i> Unverified
+            <!-- ይሄ ባጅ መጀመሪያ Syncing የሚል ያሳያል -->
+            <a href="profile.html" id="headerKycBadge" class="nav-kyc-badge" style="background: transparent; border: none; color: #888;">
+                <i class="fa-solid fa-circle-notch fa-spin"></i> Syncing...
             </a>
 
             <i id="theme-toggle" class="fa-solid fa-moon" style="color: #d4af37; cursor: pointer;" title="Toggle Theme"></i>
@@ -698,14 +699,17 @@
         // 1. ወዲያውኑ ዩአይን የሚያዘምነው ዋና ፋንክሽን (0 ሰከንድ Load)
         function updateDashboardUI() {
             const userEmail = localStorage.getItem('userEmail');
-            if (!userEmail) {
-                window.location.href = 'signin.html';
+            if (!userEmail) return; // Wait for background sync to get email if missing
+
+            const kycStatus = localStorage.getItem('kycStatus');
+            let storedName = localStorage.getItem('userName') || localStorage.getItem('fullName') || localStorage.getItem('name');
+            
+            // አዲስ ሎግ-ኢን መሆኑን ቼክ ማድረጊያ፡ ዳታ ከሌለ ዝም ብለህ ጠብቅ (Syncing... የሚለውን እንዳለ ይተወዋል)
+            if (!kycStatus) {
                 return;
             }
 
-            const kycStatus = (localStorage.getItem('kycStatus') || 'not_submitted').toLowerCase();
-            let storedName = localStorage.getItem('userName') || localStorage.getItem('fullName') || localStorage.getItem('name') || '';
-            
+            const safeKyc = kycStatus.toLowerCase();
             let rawName = storedName || userEmail.split('@')[0];
             const fullNameUpper = rawName.toUpperCase();
             const firstName = rawName.trim().split(' ')[0].toUpperCase();
@@ -732,16 +736,18 @@
             const badgeEl = document.getElementById('headerKycBadge');
             if (badgeEl) {
                 badgeEl.className = 'nav-kyc-badge';
-                if (kycStatus === 'not_submitted' || kycStatus === 'unverified') {
+                badgeEl.style = ""; // የ "Syncing" ስታይልን ያጠፋዋል
+                
+                if (safeKyc === 'not_submitted' || safeKyc === 'unverified') {
                     badgeEl.classList.add('unverified');
                     badgeEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Unverified`;
-                } else if (kycStatus === 'pending' || kycStatus === 'under_review') {
+                } else if (safeKyc === 'pending' || safeKyc === 'under_review') {
                     badgeEl.classList.add('pending');
                     badgeEl.innerHTML = `<i class="fa-solid fa-clock"></i> Under Review`;
-                } else if (kycStatus === 'verified' || kycStatus === 'approved' || kycStatus === 'true') {
+                } else if (safeKyc === 'verified' || safeKyc === 'approved' || safeKyc === 'true') {
                     badgeEl.classList.add('approved');
                     badgeEl.innerHTML = `<i class="fa-solid fa-circle-check"></i> Verified`;
-                } else if (kycStatus === 'rejected') {
+                } else if (safeKyc === 'rejected') {
                     badgeEl.classList.add('rejected');
                     badgeEl.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> Rejected`;
                 } else {
@@ -755,7 +761,10 @@
         async function syncWithServer() {
             try {
                 const token = localStorage.getItem('token') || localStorage.getItem('authToken');
-                if (!token) return;
+                if (!token) {
+                    window.location.href = 'signin.html';
+                    return;
+                }
                 
                 const API_BASE = window.location.hostname.includes('localhost') ? '' : 'https://tbr-exchange-backend.onrender.com';
                 const res = await fetch(`${API_BASE}/api/auth/me`, { 
@@ -773,7 +782,8 @@
                         if (userObj.fullName || userObj.name) {
                             localStorage.setItem('userName', userObj.fullName || userObj.name);
                         }
-                        if (userObj.kycStatus) localStorage.setItem('kycStatus', userObj.kycStatus);
+                        
+                        localStorage.setItem('kycStatus', userObj.kycStatus || 'unverified');
                         
                         if (userObj.balance !== undefined) {
                             actualBalance = Number(userObj.balance).toFixed(2);
