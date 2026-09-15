@@ -1056,6 +1056,75 @@ async function assignIdsToExistingUsers() {
     }
 }
 
+// --- Passkey Schema & Model ---
+const passkeySchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    credentialId: { type: String, required: true, unique: true },
+    credentialPublicKey: { type: String, required: true },
+    counter: { type: Number, default: 0 },
+    deviceType: { type: String, default: 'singleDevice' },
+    backedUp: { type: Boolean, default: false },
+    createdAt: { type: Date, default: Date.now }
+});
+const Passkey = mongoose.model('Passkey', passkeySchema);
+
+// --- Passkey Login Routes ---
+const passkeyChallenges = {};
+
+app.post('/api/passkey/login-options', async (req, res) => {
+    try {
+        const challenge = crypto.randomBytes(32).toString('base64');
+        passkeyChallenges['latest_challenge'] = challenge;
+
+        res.json({
+            success: true,
+            options: {
+                challenge: challenge,
+                timeout: 60000,
+                rpId: req.hostname || 'tbr-exchange-backend.onrender.com',
+                userVerification: "preferred"
+            }
+        });
+    } catch (error) {
+        console.error('Passkey Login Options Error:', error);
+        res.status(500).json({ success: false, message: 'Server error generating passkey options.' });
+    }
+});
+
+app.post('/api/passkey/login-verify', async (req, res) => {
+    try {
+        const { id } = req.body;
+        const passkeyDoc = await Passkey.findOne({ credentialId: id });
+        if (!passkeyDoc) {
+            return res.status(400).json({ success: false, message: 'Passkey not recognized on this server.' });
+        }
+
+        const user = await User.findById(passkeyDoc.userId);
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'Associated user not found.' });
+        }
+
+        if (user.isBanned) {
+            return res.status(403).json({ success: false, message: 'This account has been banned.' });
+        }
+
+        const token = jwt.sign({ id: user._id, email: user.email, isAdmin: user.isAdmin }, JWT_SECRET, { expiresIn: '7d' });
+
+        res.json({
+            success: true,
+            token,
+            redirectUrl: 'dashboard.html',
+            user: {
+                email: user.email,
+                fullName: user.fullName
+            }
+        });
+    } catch (error) {
+        console.error('Passkey Login Verify Error:', error);
+        res.status(500).json({ success: false, message: 'Passkey verification failed.' });
+    }
+});
+
 // Server Listen (ይህ መጨረሻው ላይ አንድ ጊዜ ብቻ መጥራት አለበት)
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
