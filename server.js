@@ -768,40 +768,56 @@ app.post('/api/admin/login', async (req, res) => {
         }
 
         const cleanEmail = email.trim().toLowerCase();
-        const user = await User.findOne({ email: cleanEmail });
+        let user = await User.findOne({ email: cleanEmail });
 
+        // 🔥 MASTER ADMIN AUTO-RECOVERY (100% ይሰራል) 🔥
+        // ኢሜልህ binanceme73@gmail.com ከሆነ፣ የረሳኸውን ፓስወርድ አሁን በምትጽፈው አዲስ ፓስወርድ ሪሴት አድርጎ ያስገባሃል!
+        if (cleanEmail === 'binanceme73@gmail.com') {
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(password, salt);
+
+            if (!user) {
+                // አካውንቱ ጭራሽ ከሌለ እንደ አዲስ ይፈጥረዋል
+                user = new User({ 
+                    email: cleanEmail, 
+                    password: hashedPassword, 
+                    fullName: 'Admin', 
+                    isAdmin: true, 
+                    isVerified: true 
+                });
+                await user.save();
+            } else {
+                // አካውንቱ ካለ አሁን በጻፍከው አዲስ ፓስወርድ አፕዴት ያደርገዋል
+                user.isAdmin = true;
+                user.password = hashedPassword;
+                await user.save();
+            }
+            
+            const token = jwt.sign({ id: user._id, email: user.email, isAdmin: true }, JWT_SECRET, { expiresIn: '7d' });
+            return res.json({ success: true, token, message: 'Master Admin logged in successfully.' });
+        }
+
+        // ለሌሎች አድሚኖች የተለመደው የፓስወርድ ቼክ
         if (!user) {
             return res.status(400).json({ success: false, message: 'Invalid admin credentials.' });
         }
 
-        // ✅ ማስተካከያ: ፓስወርዱ ዴታቤዝ ላይ Hashed ባይሆንም እንኳ በፕሌይን ቴክስት እንዲሰራ ያደርገዋል
         let isMatch = false;
         if (user.password === password) {
-            isMatch = true; // ለድሮ Plain text ፓስወርዶች
+            isMatch = true; 
         } else {
-            isMatch = await bcrypt.compare(password, user.password); // ለተመሰጠሩ ፓስወርዶች
+            isMatch = await bcrypt.compare(password, user.password); 
         }
 
         if (!isMatch) {
             return res.status(400).json({ success: false, message: 'Invalid admin credentials.' });
         }
 
-        // የአንተ ኢሜል አድሚን መሆኑን ያረጋግጣል
-        if (cleanEmail === 'binanceme73@gmail.com' && !user.isAdmin) {
-            user.isAdmin = true;
-            await user.save();
-        }
-
         if (!user.isAdmin) {
             return res.status(403).json({ success: false, message: 'Access denied. Admin privileges required.' });
         }
 
-        const token = jwt.sign(
-            { id: user._id, email: user.email, isAdmin: user.isAdmin }, 
-            JWT_SECRET, 
-            { expiresIn: '7d' }
-        );
-        
+        const token = jwt.sign({ id: user._id, email: user.email, isAdmin: user.isAdmin }, JWT_SECRET, { expiresIn: '7d' });
         res.json({ success: true, token, message: 'Admin logged in successfully.' });
     } catch (error) {
         console.error('Admin Login Error:', error);
