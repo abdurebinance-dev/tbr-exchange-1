@@ -438,6 +438,18 @@
 
         document.addEventListener("DOMContentLoaded", () => {
             fetchUserBalance();
+
+            // 🔍 ዩአርኤሉን (URL Parameters) በማንበብ አውቶማቲክ አክቲቭ ከለር እንዲይዝ ማድረግ
+            const urlParams = new URLSearchParams(window.location.search);
+            const action = urlParams.get('action');
+
+            if (action) {
+                const btnClass = action.toLowerCase() + '-btn';
+                const targetBtn = document.querySelector(`.${btnClass}`);
+                if (targetBtn) {
+                    handleAction(action.charAt(0).toUpperCase() + action.slice(1), targetBtn);
+                }
+            }
         });
 
         async function fetchUserBalance() {
@@ -496,7 +508,7 @@
         }
 
         function handleAction(actionType, btnElement) {
-            // የነቁትን አዝራሮች ከለር መቀየር
+            // የነቁትን አዝራሮች ከለር ማጥፋት
             document.querySelectorAll('.wallet-btn').forEach(b => b.classList.remove('active'));
             if(btnElement) btnElement.classList.add('active');
 
