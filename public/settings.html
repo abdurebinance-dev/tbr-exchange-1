@@ -547,6 +547,37 @@
                 avatar: savedAvatar
             });
 
+            try {
+        const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
+        if (token) {
+            const res = await fetch("https://tbr-exchange-backend.onrender.com/api/user", {
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (data.success && data.user && data.user.avatar) {
+                const serverAvatar = data.user.avatar;
+                localStorage.setItem("userAvatar", serverAvatar);
+                const avatarBox = document.getElementById("avatar-initials");
+                if (avatarBox) {
+                    avatarBox.style.backgroundImage = `url('${serverAvatar}')`;
+                    avatarBox.innerHTML = `<div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
+                }
+            }
+        }
+    } catch (err) {
+        console.error("Error loading avatar from server:", err);
+    }
+
+    // Ensure avatar persists visually over UI re-render
+    const persistentAvatar = localStorage.getItem("userAvatar") || localStorage.getItem("profilePicture");
+    if (persistentAvatar) {
+        const avatarBox = document.getElementById("avatar-initials");
+        if (avatarBox) {
+            avatarBox.style.backgroundImage = `url('${persistentAvatar}')`;
+            avatarBox.innerHTML = `<div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
+        }
+    }
+
             const activeBtn = document.querySelector('.tab-btn.active');
         if (activeBtn) {
             const target = activeBtn.getAttribute('data-tab');
@@ -610,6 +641,16 @@
                         kycStatus: kycVal,
                         avatar
                     });
+
+const savedAv = localStorage.getItem("userAvatar") || localStorage.getItem("profilePicture");
+    if (savedAv) {
+        const avatarBox = document.getElementById("avatar-initials");
+        if (avatarBox) {
+            avatarBox.style.backgroundImage = `url('${savedAv}')`;
+            avatarBox.innerHTML = `<div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
+        }
+    }
+
                 } else {
                     loadFromLocalStorageFallback();
                 }

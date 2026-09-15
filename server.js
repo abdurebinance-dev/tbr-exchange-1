@@ -721,7 +721,6 @@ app.get('/api/user', verifyToken, async (req, res) => {
         const user = await User.findById(req.user.id);
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-        // ስሙ ሁልጊዜ ከኢሜል ፕሪፊክስ እንዲወጣ ይደረጋል (ለምሳሌ binanceme73)
         const forcedName = user.email ? user.email.split('@')[0] : 'User';
 
         res.json({
@@ -729,7 +728,8 @@ app.get('/api/user', verifyToken, async (req, res) => {
             user: {
                 id: user._id,
                 email: user.email,
-                fullName: forcedName, // <--- ስሙ ተገድዶ ከኢሜል ወጣ
+                fullName: forcedName,
+                avatar: user.avatar || user.userAvatar || '', // <--- እዚህ ጨምር
                 isAdmin: user.isAdmin,
                 kycStatus: user.kycStatus,
                 isBanned: user.isBanned,
