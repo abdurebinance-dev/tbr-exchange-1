@@ -412,13 +412,48 @@
             });
         }
 
-        // 🔴 ሚሞሪ ውስጥ ካሉት ሁሉንም ID Keys ፈልጎ ያወጣል (ልክ እንደ ዳሽቦርድ ወዲያው እንዲመጣ)
+        // 🚀 አዲሱ የ 0 ሰከንድ መፍትሄ: ቶከን ውስጥ አይዲውን ፈልፍሎ ያወጣል!
         function getStoredId() {
-            return localStorage.getItem('tbrId') || 
+            // 1. መጀመሪያ ሚሞሪ (Local Storage) ላይ ካለ ያወጣል
+            let id = localStorage.getItem('tbrId') || 
                    localStorage.getItem('tbrExchangeId') || 
                    localStorage.getItem('userId') || 
-                   localStorage.getItem('userUniqueId') || 
-                   '';
+                   localStorage.getItem('userUniqueId');
+                   
+            if (id && id.trim() !== '') return id;
+
+            // 2. ሚሞሪ ላይ ከሌለ (ለምሳሌ ሎግ-ኢን አድርገህ ገና አሁን ከገባህ) ቶከኑን ይሰብራል
+            try {
+                const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+                if (token && token.includes('.')) {
+                    const base64Url = token.split('.')[1];
+                    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                    const payload = JSON.parse(window.atob(base64)); // ቶከኑን መፍታት
+                    
+                    if (payload.numericId) {
+                        id = 'TBR-' + String(payload.numericId).padStart(6, '0');
+                    } else if (payload.tbrId) {
+                        id = payload.tbrId;
+                    } else if (payload.userId) {
+                        id = payload.userId;
+                    } else if (payload.id) {
+                        id = payload.id;
+                    }
+
+                    if (id) {
+                        // ቁጥር ብቻ ከሆነ 'TBR-' ይጨምርለታል
+                        if (!String(id).startsWith('TBR-') && /^\d+$/.test(id)) {
+                            id = 'TBR-' + String(id).padStart(6, '0');
+                        }
+                        localStorage.setItem('tbrId', id); // ለሚቀጥለው ጊዜ ሴቭ ያደርገዋል
+                        return id;
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to decode token for ID:", e);
+            }
+
+            return ''; // ምንም ከሌለ ብቻ ባዶ ይሆናል
         }
 
         // 1. ወዲያውኑ ዩአይን የሚያዘምነው ዋና ፋንክሽን
@@ -429,7 +464,7 @@
             let rejectionReason = localStorage.getItem('kycRejectionReason') || 'Document check failed';
             let storedFullName = localStorage.getItem('fullName') || '';
             
-            // 🔴 ትክክለኛውን አይዲ ብቻ ነው የሚያመጣው
+            // 🔴 ይህ ፋንክሽን አሁን በ0 ሰከንድ ትክክለኛውን አይዲ ይዞ ይመጣል
             let userId = getStoredId();
             
             let savedAvatar = localStorage.getItem('userAvatar') || localStorage.getItem('profilePicture') || localStorage.getItem('profilePic');
@@ -552,7 +587,6 @@
                         if (user.kycStatus) localStorage.setItem('kycStatus', user.kycStatus);
                         if (user.kycRejectionReason) localStorage.setItem('kycRejectionReason', user.kycRejectionReason);
                         
-                        // 🔴 ከሰርቨር የሚመጣውን ትክክለኛ አይዲ ሴቭ እናደርጋለን (ሴቲንግ ውስጥ ሳትገባ እንዲያገኘው)
                         let newId = user.tbrId || user.userId || user.customId || user.id || user._id || "";
                         if (user.numericId && (!newId.startsWith('TBR-'))) {
                             newId = 'TBR-' + String(user.numericId).padStart(6, '0');
@@ -568,8 +602,7 @@
                             localStorage.setItem('profilePicture', user.avatar);
                         }
 
-                        // አዲሱን ዳታ ተጠቅሞ ዩአይን በድጋሚ ያድሳል
-                        updateProfileUI();
+                        updateProfileUI(); // UI በድጋሚ ያድሳል
                     }
                 }
             } catch (e) {
@@ -579,7 +612,7 @@
 
         // 3. ፔጁ ሲከፈት ሁለቱን ፋንክሽኖች በቅደም ተከተል ያስነሳል
         document.addEventListener("DOMContentLoaded", () => {
-            updateProfileUI(); // አሁኑኑ ዩአይ ያሳያል
+            updateProfileUI(); // አሁኑኑ ዩአይ ያሳያል (ከቶከን ፈትቶ)
             syncWithServer();  // በጀርባ ከሰርቨር ያዘምናል
         });
     </script>
