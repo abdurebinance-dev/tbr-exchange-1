@@ -660,28 +660,46 @@ const savedAv = localStorage.getItem("userAvatar") || localStorage.getItem("prof
         });
 
         function updateUI(user) {
-            document.getElementById("profile-name").innerHTML = `${user.username || 'User'} <i class="fa-solid fa-pen edit-icon" onclick="openModal('name')"></i>`;
-            document.getElementById("profile-email").innerText = user.email || 'No email';
-            document.getElementById("profile-id").innerText = user.tbrId || 'TBR-476394';
-            
-            const avatarBox = document.getElementById("avatar-initials");
-            if (user.avatar) {
-                avatarBox.style.backgroundImage = `url('${user.avatar}')`;
-                avatarBox.innerHTML = `<div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
-            } else {
-                avatarBox.style.backgroundImage = "none";
-                const initials = user.username ? user.username.substring(0,2).toUpperCase() : "UI";
-                avatarBox.innerHTML = `${initials} <div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
-            }
+    // 1. ዲልተቶችን ማደስ
+    if (document.getElementById("profile-name")) {
+        document.getElementById("profile-name").innerHTML = `${user.username || 'User'} <i class="fa-solid fa-pen edit-icon" onclick="openModal('profile')"></i>`;
+    }
+    if (document.getElementById("profile-email")) {
+        document.getElementById("profile-email").innerText = user.email || 'No email';
+    }
+    if (document.getElementById("profile-id")) {
+        document.getElementById("profile-id").innerText = user.tbrId || 'TBR-476394';
+    }
 
-            if(user.phone) {
-                document.getElementById("phone-display").innerText = user.phone;
-            }
-            if(user.traderHandle) {
-                document.getElementById("username-display").innerText = user.traderHandle;
-            }
+    // 2. አቫታር ቼክ (ከ user.avatar ወይም fallback ሎካል ስቶሬጅ)
+    const avatarBox = document.getElementById("avatar-initials");
+    const activeAvatar = user.avatar || localStorage.getItem("userAvatar");
+    
+    if (avatarBox) {
+        if (activeAvatar) {
+            avatarBox.style.backgroundImage = `url('${activeAvatar}')`;
+            avatarBox.style.backgroundSize = 'cover';
+            avatarBox.style.backgroundPosition = 'center';
+            avatarBox.innerHTML = `<div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
+            localStorage.setItem("userAvatar", activeAvatar); // LocalStorage ማስቀመጥ
+        } else {
+            avatarBox.style.backgroundImage = "none";
+            const initials = user.username ? user.username.substring(0, 2).toUpperCase() : "UI";
+            avatarBox.innerHTML = `${initials} <div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
+        }
+    }
 
-            const kycBadge = document.getElementById('kyc-badge');
+    if (document.getElementById("phone-display")) {
+        document.getElementById("phone-display").innerText = user.phone || '';
+    }
+
+    if (document.getElementById("username-display")) {
+        document.getElementById("username-display").innerText = user.traderHandle || '';
+    }
+
+    const kycBadge = document.getElementById('kyc-badge');
+    if (kycBadge) {
+        let status = String(user.kycStatus || 'unverified').toLowerCase();
             if (kycBadge) {
                 let status = String(user.kycStatus || 'unverified').toLowerCase();
                 if (status === 'approved' || status === 'verified' || status === 'true') {
