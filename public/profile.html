@@ -394,10 +394,10 @@
 
     </div>
 
-   <script>
+    <script>
         function copyUserId() {
             const userIdText = document.getElementById('userUniqueId').innerText;
-            if (!userIdText || userIdText.includes('Loading') || userIdText.includes('TBR-000000') || !userIdText.startsWith('TBR-')) return;
+            if (!userIdText || userIdText.includes('Loading') || !userIdText.startsWith('TBR-')) return;
             
             navigator.clipboard.writeText(userIdText).then(() => {
                 const copyTextSpan = document.getElementById('copyText');
@@ -412,16 +412,14 @@
             });
         }
 
-        // 🚀 ጥብቅ የሆነ የአይዲ ማውጫ (TBR- የሚለውን ብቻ ነው የሚያሳልፈው፣ ረጅሙን ፊደል ይተወዋል)
+        // 🚀 ጥብቅ የሆነ የአይዲ ማውጫ (TBR- የሚለውን ብቻ ነው የሚያሳልፈው)
         function getStoredId() {
             let tbrId = localStorage.getItem('tbrId') || localStorage.getItem('tbrExchangeId');
             
-            // አይዲው TBR- ብሎ የሚጀምር ከሆነ ብቻ ያወጣዋል
             if (tbrId && String(tbrId).startsWith('TBR-')) {
                 return tbrId;
             }
 
-            // ካልሆነ ቶከኑን ይሰብራል
             try {
                 const token = localStorage.getItem('token') || localStorage.getItem('authToken');
                 if (token && token.includes('.')) {
@@ -429,17 +427,24 @@
                     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
                     const payload = JSON.parse(window.atob(base64));
                     
+                    let extractedId = payload.tbrId || payload.userId || payload.customId || payload.id;
+                    
                     if (payload.numericId) {
-                        let newId = 'TBR-' + String(payload.numericId).padStart(6, '0');
-                        localStorage.setItem('tbrId', newId);
-                        return newId;
+                        extractedId = 'TBR-' + String(payload.numericId).padStart(6, '0');
+                    } else if (extractedId && !String(extractedId).startsWith('TBR-') && /^\d+$/.test(extractedId)) {
+                        extractedId = 'TBR-' + String(extractedId).padStart(6, '0');
+                    }
+
+                    if (extractedId && String(extractedId).startsWith('TBR-')) {
+                        localStorage.setItem('tbrId', extractedId);
+                        return extractedId;
                     }
                 }
             } catch (e) {
                 console.error("Token decode error:", e);
             }
 
-            return ''; // ረጅሙን ፊደል ከማምጣት ምንም ባያመጣ ይመረጣል
+            return ''; 
         }
 
         // 1. ወዲያውኑ ዩአይን የሚያዘምነው ዋና ፋንክሽን
@@ -450,7 +455,7 @@
             let rejectionReason = localStorage.getItem('kycRejectionReason') || 'Document check failed';
             let storedFullName = localStorage.getItem('fullName') || '';
             
-            // 🔴 የተጣራው አይዲ እዚህ ይገባል (ረጅሙ ፊደል ፈጽሞ አይመጣም)
+            // 🔴 የተጣራው አይዲ እዚህ ይገባል
             let userId = getStoredId();
             
             let savedAvatar = localStorage.getItem('userAvatar') || localStorage.getItem('profilePicture') || localStorage.getItem('profilePic');
@@ -569,7 +574,6 @@
                         if (user.kycStatus) localStorage.setItem('kycStatus', user.kycStatus);
                         if (user.kycRejectionReason) localStorage.setItem('kycRejectionReason', user.kycRejectionReason);
                         
-                        // 🔴 ከሰርቨር ትክክለኛውን አይዲ አውጥቶ ሴቭ ያደርጋል
                         let newId = "";
                         if (user.numericId) {
                             newId = 'TBR-' + String(user.numericId).padStart(6, '0');
@@ -595,9 +599,10 @@
             }
         }
 
-        // 3. ፔጁ ሲከፈት
-        document.addEventListener("DOMContentLoaded", () => {
-            updateProfileUI(); 
-            syncWithServer();  
-        });
+        // 🚀 3. ፔጁ ሲከፈት DOMContentLoaded የሚለውን ጠባቂ (listener) ሙሉ በሙሉ አጥፍቼዋለሁ! 
+        // ጃቫስክሪፕቱ እዚህ እንደደረሰ ያለ ምንም መዘግየት ዩአይን ወዲያውኑ አፕዴት ያደርገዋል።
+        updateProfileUI(); 
+        syncWithServer();  
     </script>
+</body>
+</html>
