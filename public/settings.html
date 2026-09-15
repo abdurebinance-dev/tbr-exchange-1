@@ -752,29 +752,43 @@
             if (!modal || !input) return;
             modal.style.display = "flex";
 
+            // ዋናው መፍትሄ፡ የድሮውን የ @ ህግ ፔጁ ሲከፈት ማጥፋት (Clear existing events)
+            input.oninput = null; 
+
             if(field === 'phone') {
-                input.value = "";
-                title.innerText = "Add Phone Number";
+                const phoneDisplay = document.getElementById("phone-display");
+                let existingPhone = (phoneDisplay && phoneDisplay.innerText !== 'Not added') ? phoneDisplay.innerText : "";
+                // በስህተት የገባ @ ካለ ያጠፋዋል
+                input.value = existingPhone.replace(/@/g, ''); 
+                title.innerText = "Add/Edit Phone Number";
                 input.placeholder = "e.g. +251911223344";
+                
             } else if(field === 'username') {
                 title.innerText = "Set Trader Username";
                 input.placeholder = "Enter handle...";
-                input.value = "@";
+                const usernameDisplay = document.getElementById("username-display");
+                let existingHandle = (usernameDisplay && usernameDisplay.innerText !== 'Not set — tap to choose your handle') ? usernameDisplay.innerText : "@";
+                if (!existingHandle.startsWith('@')) existingHandle = '@' + existingHandle;
+                input.value = existingHandle;
                 
+                // ለ Username ብቻ የ @ ህግ ይሰራል
                 input.oninput = function() {
                     if (!input.value.startsWith('@')) {
                         input.value = '@' + input.value.replace(/@/g, '');
                     }
                 };
+                
             } else if(field === 'name') {
                 const profileName = document.getElementById("profile-name");
                 input.value = profileName ? profileName.innerText.trim() : "";
                 title.innerText = "Edit Profile Name";
+                
             } else if(field === 'passkey') {
                 input.value = "";
                 title.innerText = "Add Passkey";
                 input.placeholder = "Enter passkey name/device label...";
             }
+            
             input.focus();
         }
 
