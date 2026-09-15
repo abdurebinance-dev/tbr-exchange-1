@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TBR Exchange - Wallet</title>
+    <!-- FontAwesome & Google Fonts -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        :root {
+            --bg-color: #080808;
+            --card-bg: #121212;
+            --text-color: #ffffff;
+            --text-muted: #888888;
+            --border-color: #222222;
+            --accent-color: #f3ba2f;
+            --green-color: #0ecb81;
+            --red-color: #f6465d;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        .wallet-container {
+            max-width: 1100px;
+            margin: 20px auto;
+            padding: 0 15px;
+        }
+
+        /* Top Bar / Nav simulation if needed, or link back to dashboard */
+        .wallet-top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .dashboard-btn {
+            background: #1a1a1a;
+            color: var(--accent-color);
+            border: 1px solid var(--border-color);
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+            transition: all 0.08s ease;
+        }
+
+        .dashboard-btn:hover {
+            background: var(--accent-color);
+            color: #000;
+        }
+
+        /* Balance Card */
+        .balance-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+
+        .balance-title {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .balance-amount {
+            font-size: 36px;
+            font-weight: 700;
+            color: #fff;
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .balance-amount span {
+            font-size: 18px;
+            color: var(--accent-color);
+            font-weight: 500;
+        }
+
+        .wallet-actions {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .wallet-btn {
+            background: #1a1a1a;
+            color: #fff;
+            border: 1px solid var(--border-color);
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .wallet-btn.primary {
+            background: var(--accent-color);
+            color: #000;
+            border-color: var(--accent-color);
+        }
+
+        .wallet-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        /* Recent Activity Section */
+        .activity-section {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px 25px;
+        }
+
+        .section-header {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .activity-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .activity-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(243, 186, 47, 0.1);
+            color: var(--accent-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .activity-details h4 {
+            margin: 0 0 3px 0;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .activity-details p {
+            margin: 0;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .activity-amount {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .activity-amount.positive {
+            color: var(--green-color);
+        }
+
+        .activity-amount.negative {
+            color: var(--text-color);
+        }
+
+        /* Toast Notification Styles */
+        #toastNotification {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            background: #18181b;
+            color: #ffffff;
+            border: 1px solid var(--border-color);
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 2000;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: none;
+        }
+
+        #toastNotification.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        #toastNotification i {
+            color: var(--green-color);
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="wallet-container">
+        <!-- Top Bar -->
+        <div class="wallet-top-bar">
+            <div class="settings-header">
+                <h1 style="font-size: 20px; font-weight: 600; margin: 0;">My Wallet</h1>
+                <p style="color: var(--text-muted); font-size: 13px; margin: 0;">Manage your crypto assets, deposit, and withdraw securely.</p>
+            </div>
+            <a href="dashboard.html" class="dashboard-btn">
+                <i class="fa-solid fa-house"></i> Dashboard
+            </a>
+        </div>
+
+        <!-- Balance Card -->
+        <div class="balance-card">
+            <div class="balance-title">Total Balance</div>
+            <div class="balance-amount">
+                <span id="wallet-balance">0.00</span> <span>USDT</span>
+            </div>
+            <div class="wallet-actions">
+                <button class="wallet-btn primary" onclick="handleAction('Deposit')">
+                    <i class="fa-solid fa-arrow-down"></i> Deposit
+                </button>
+                <button class="wallet-btn" onclick="handleAction('Withdraw')">
+                    <i class="fa-solid fa-arrow-up"></i> Withdraw
+                </button>
+                <button class="wallet-btn" onclick="handleAction('Transfer')">
+                    <i class="fa-solid fa-right-left"></i> Transfer
+                </button>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="activity-section">
+            <div class="section-header">
+                <span>Recent Activity</span>
+                <span style="font-size: 12px; color: var(--accent-color); cursor: pointer;" onclick="showToast('History loaded.')">View all</span>
+            </div>
+            <div id="activity-list">
+                <div class="activity-item">
+                    <div class="activity-info">
+                        <div class="activity-icon"><i class="fa-solid fa-wallet"></i></div>
+                        <div class="activity-details">
+                            <h4>Account Initialized</h4>
+                            <p>TBR Exchange Secure Wallet</p>
+                        </div>
+                    </div>
+                    <div class="activity-amount positive">0.00 USDT</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toastNotification">
+        <i class="fa-solid fa-circle-check"></i>
+        <span id="toastMessage">Action completed successfully!</span>
+    </div>
+
+    <script>
+        const API_BASE_URL = window.location.hostname.includes('localhost') 
+            ? '' 
+            : 'https://tbr-exchange-backend.onrender.com';
+
+        document.addEventListener("DOMContentLoaded", () => {
+            fetchUserBalance();
+        });
+
+        async function fetchUserBalance() {
+            try {
+                const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+                if (!token) return;
+
+                const res = await fetch(`${API_BASE_URL}/api/user/profile`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    const user = data.user || data;
+                    if (user.balance !== undefined) {
+                        document.getElementById("wallet-balance").innerText = Number(user.balance).toFixed(2);
+                    }
+                }
+            } catch (e) {
+                console.error("Error fetching balance:", e);
+            }
+        }
+
+        function handleAction(actionType) {
+            showToast(`${actionType} feature is ready. Secure verification active.`);
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById("toastNotification");
+            if (!toast) return;
+            const msgEl = document.getElementById("toastMessage");
+            if (msgEl) msgEl.innerText = message;
+            toast.classList.add("show");
+
+            setTimeout(() => {
+                toast.classList.remove("show");
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
