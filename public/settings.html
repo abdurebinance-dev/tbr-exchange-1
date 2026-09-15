@@ -529,7 +529,7 @@
        let currentField = "";
 
 document.addEventListener("DOMContentLoaded", async function() {
-    // 1. መጀመሪያ ከሎካል ስቶሬጅ ያለውን ዴታ በመጫን ዩአይን በፍጥነት ማሳየት
+    // 1. መጀመሪያ ከሎካል ስቶሬጅ ያለውን ዴታ በመጫን ዩአይን በፍጥነት ማሳየት (Flash እንዳይኖር)
     loadFromLocalStorageFallback();
 
     // 2. ከሰቨር ትክክለኛውን መረጃ በአንድ አስተማማኝ (Single) ጥያቄ ማምጣት
@@ -555,11 +555,12 @@ document.addEventListener("DOMContentLoaded", async function() {
             const result = await response.json();
             const userData = result.user || result;
             
-            const username = userData.fullName || userData.username || userData.name || localStorage.getItem("userName");
-            const email = userData.email || localStorage.getItem("userEmail");
+            // የሰቨር መረጃዎችን መውሰድ (ከሌለ ከሎካል ስቶሬጅ እንወስዳለን)
+            const username = userData.fullName || userData.username || userData.name || localStorage.getItem("userName") || localStorage.getItem("name") || "User";
+            const email = userData.email || localStorage.getItem("userEmail") || localStorage.getItem("email") || "";
             
             // የ TbrID አያያዝ
-            let tbrId = userData.tbrId || userData.customId || localStorage.getItem("tbrId") || "TBR-476394";
+            let tbrId = userData.tbrId || userData.customId || localStorage.getItem("tbrId") || localStorage.getItem("tbrExchangeId") || "TBR-476394";
             
             const phone = userData.phone || userData.phoneNumber || localStorage.getItem("userPhone") || "";
             const traderHandle = userData.traderUsername || localStorage.getItem("traderUsername") || "";
@@ -579,8 +580,14 @@ document.addEventListener("DOMContentLoaded", async function() {
             localStorage.setItem("tbrId", tbrId);
             localStorage.setItem("userId", tbrId);
             localStorage.setItem("kycStatus", kycVal);
-            if (username) localStorage.setItem("userName", username);
-            if (email) localStorage.setItem("userEmail", email);
+            if (username) {
+                localStorage.setItem("userName", username);
+                localStorage.setItem("name", username);
+            }
+            if (email) {
+                localStorage.setItem("userEmail", email);
+                localStorage.setItem("email", email);
+            }
             if (phone) localStorage.setItem("userPhone", phone);
             if (traderHandle) localStorage.setItem("traderUsername", traderHandle);
             if (finalAvatar) {
@@ -588,13 +595,13 @@ document.addEventListener("DOMContentLoaded", async function() {
                 localStorage.setItem("profilePicture", finalAvatar);
             }
 
-            // 4. ዩአይን ማደስ
+            // 4. ዩአይን ሙሉ በሙሉ በአዲስ መረጃ ማደስ
             updateUI({
-                username,
-                email,
-                tbrId,
-                phone,
-                traderHandle,
+                username: username,
+                email: email,
+                tbrId: tbrId,
+                phone: phone,
+                traderHandle: traderHandle,
                 kycStatus: kycVal,
                 avatar: finalAvatar
             });
@@ -634,8 +641,10 @@ function updateUI(user) {
     // አቫታር እና ካሜራ ባጅ አያያዝ
     const avatarBox = document.getElementById("avatar-initials");
     if (avatarBox) {
-        if (user.avatar && user.avatar.trim() !== "") {
+        if (user.avatar && user.avatar.trim() !== "" && user.avatar !== 'null' && user.avatar !== 'undefined') {
             avatarBox.style.backgroundImage = `url('${user.avatar}')`;
+            avatarBox.style.backgroundSize = "cover";
+            avatarBox.style.backgroundPosition = "center";
             avatarBox.innerHTML = `<div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
         } else {
             avatarBox.style.backgroundImage = "none";
@@ -644,13 +653,14 @@ function updateUI(user) {
         }
     }
 
-    if(user.phone) {
-        const phoneDisplay = document.getElementById("phone-display");
-        if (phoneDisplay) phoneDisplay.innerText = user.phone;
+    const phoneDisplay = document.getElementById("phone-display");
+    if (phoneDisplay) {
+        phoneDisplay.innerText = user.phone || 'Not added';
     }
-    if(user.traderHandle) {
-        const usernameDisplay = document.getElementById("username-display");
-        if (usernameDisplay) usernameDisplay.innerText = user.traderHandle;
+
+    const usernameDisplay = document.getElementById("username-display");
+    if (usernameDisplay) {
+        usernameDisplay.innerText = user.traderHandle || 'Not set — tap to choose your handle';
     }
 
     const kycBadge = document.getElementById('kyc-badge');
@@ -707,6 +717,8 @@ function handleImageUpload(event) {
         const avatarBox = document.getElementById("avatar-initials");
         if (avatarBox) {
             avatarBox.style.backgroundImage = `url('${base64Image}')`;
+            avatarBox.style.backgroundSize = "cover";
+            avatarBox.style.backgroundPosition = "center";
             avatarBox.innerHTML = `<div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
         }
 
@@ -725,6 +737,7 @@ function handleImageUpload(event) {
 async function syncAvatarToBackend(base64Image) {
     try {
         const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
+        console.log("Syncing avatar to backend...");
 
         const response = await fetch("https://tbr-exchange-backend.onrender.com/api/user/update", {
             method: "POST",
@@ -736,13 +749,15 @@ async function syncAvatarToBackend(base64Image) {
         });
 
         const data = await response.json();
+        console.log("Backend avatar response status:", response.status);
 
         if (response.ok) {
-            const finalUrl = data.avatar || data.userAvatar || data.url;
-            if (finalUrl) {
-                localStorage.setItem("userAvatar", finalUrl);
-                localStorage.setItem("profilePicture", finalUrl);
-            }
+            const confirmedUrl = data.avatar || data.userAvatar || data.url || base64Image;
+            localStorage.setItem("userAvatar", confirmedUrl);
+            localStorage.setItem("profilePicture", confirmedUrl);
+            console.log("Avatar successfully saved to backend & local!");
+        } else {
+            console.error("Server rejected avatar update:", data.message || response.statusText);
         }
     } catch (error) {
         console.error("Network error during avatar sync:", error);
@@ -811,6 +826,7 @@ async function saveModalData() {
         localStorage.setItem("traderUsername", finalVal);
     } else if (currentField === 'name') {
         localStorage.setItem("userName", val);
+        localStorage.setItem("name", val);
         const profileName = document.getElementById("profile-name");
         if (profileName) {
             profileName.innerHTML = `${val} <i class="fa-solid fa-pen edit-icon" onclick="openModal('name')"></i>`;
@@ -851,37 +867,37 @@ function copyId() {
     }
 }
 
-        function showToast(message) {
-            const toast = document.getElementById("toastNotification");
-            document.getElementById("toastMessage").innerText = message;
-            toast.classList.add("show");
+function showToast(message) {
+    const toast = document.getElementById("toastNotification");
+    if (!toast) return;
+    const msgEl = document.getElementById("toastMessage");
+    if (msgEl) msgEl.innerText = message;
+    toast.classList.add("show");
 
-            setTimeout(() => {
-                toast.classList.remove("show");
-            }, 2500);
-        }
+    setTimeout(() => {
+        toast.classList.remove("show");
+    }, 2500);
+}
 
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        e.preventDefault();
 
-                // ሁሉንም ታቦች ከነቁበት እናወጣለን
-                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
 
-                const target = btn.getAttribute('data-tab');
+        const target = btn.getAttribute('data-tab');
 
-                // የትኛውን ሴክሽን ማሳየት እንዳለበት በግልጽ እንነግረዋለን
-                document.querySelectorAll('.content-section').forEach(section => {
-                    section.style.display = 'none';
-                });
-
-                const targetSection = document.getElementById(target + '-section');
-                if (targetSection) {
-                    targetSection.style.display = 'block';
-                }
-            });
+        document.querySelectorAll('.content-section').forEach(section => {
+            section.style.display = 'none';
         });
+
+        const targetSection = document.getElementById(target + '-section');
+        if (targetSection) {
+            targetSection.style.display = 'block';
+        }
+    });
+});
     </script>
 </body>
 </html>
