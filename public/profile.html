@@ -413,16 +413,6 @@
             });
         }
 
-        // 🔴 ባዶ እንዳይሆን ጊዜያዊ አይዲ የሚፈጥር ፈንክሽን
-        function getOrGenerateLocalId() {
-            let id = localStorage.getItem('tbrExchangeId') || localStorage.getItem('userUniqueId') || localStorage.getItem('tbrId');
-            if (!id || id.trim() === "") {
-                id = 'TBR-' + Math.floor(100000 + Math.random() * 900000); // ጊዜያዊ አይዲ ይፈጥራል
-                localStorage.setItem('tbrId', id);
-            }
-            return id;
-        }
-
         // 1. ወዲያውኑ ዩአይን የሚያዘምነው ዋና ፋንክሽን
         function updateProfileUI() {
             let name = localStorage.getItem('userName') || localStorage.getItem('fullName') || localStorage.getItem('name') || "USER";
@@ -431,8 +421,8 @@
             let rejectionReason = localStorage.getItem('kycRejectionReason') || 'Document check failed';
             let storedFullName = localStorage.getItem('fullName') || '';
             
-            // 🔴 አይዲውን በአስተማማኝ ሁኔታ ያመጣል
-            let userId = getOrGenerateLocalId();
+            // 🔴 የራንደም ኮዱ ሙሉ በሙሉ ጠፍቷል! ትክክለኛውን አይዲ ብቻ ነው የሚያነበው
+            let userId = localStorage.getItem('tbrId') || localStorage.getItem('tbrExchangeId') || localStorage.getItem('userUniqueId') || '';
             
             let savedAvatar = localStorage.getItem('userAvatar') || localStorage.getItem('profilePicture') || localStorage.getItem('profilePic');
             
@@ -554,7 +544,7 @@
                         if (user.kycStatus) localStorage.setItem('kycStatus', user.kycStatus);
                         if (user.kycRejectionReason) localStorage.setItem('kycRejectionReason', user.kycRejectionReason);
                         
-                        // 🔴 የአይዲ (ID) ማዘመኛ
+                        // የአይዲ (ID) ማዘመኛ - ትክክለኛውን ብቻ ያነባል
                         if (user.userId && user.userId !== "") {
                             localStorage.setItem('tbrExchangeId', user.userId);
                             localStorage.setItem('tbrId', user.userId);
@@ -584,7 +574,7 @@
 
         // 3. ፔጁ ሲከፈት ሁለቱን ፋንክሽኖች በቅደም ተከተል ያስነሳል
         document.addEventListener("DOMContentLoaded", () => {
-            updateProfileUI(); // አሁኑኑ ዩአይ ያሳያል (ባዶ አይሆንም)
+            updateProfileUI(); // አሁኑኑ ዩአይ ያሳያል
             syncWithServer();  // በጀርባ ከሰርቨር ያዘምናል
         });
     </script>

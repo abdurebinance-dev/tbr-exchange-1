@@ -539,16 +539,6 @@
 
         let currentField = "";
 
-        // 🔴 ባዶ እንዳይሆን ጊዜያዊ አይዲ የሚፈጥር ፈንክሽን
-        function getOrGenerateLocalId() {
-            let id = localStorage.getItem('tbrExchangeId') || localStorage.getItem('userUniqueId') || localStorage.getItem('tbrId');
-            if (!id || id.trim() === "") {
-                id = 'TBR-' + Math.floor(100000 + Math.random() * 900000);
-                localStorage.setItem('tbrId', id);
-            }
-            return id;
-        }
-
         document.addEventListener("DOMContentLoaded", async function() {
             // 🔴 ፔጁ እንደተከፈተ ሎካል ስቶሬጁን አውጥቶ ይለጥፋል
             loadFromLocalStorageFallback();
@@ -576,8 +566,8 @@
                     const username = userData.fullName || userData.username || userData.name || localStorage.getItem("userName") || "User";
                     const email = userData.email || localStorage.getItem("userEmail") || "";
                     
-                    // 🔴 ከሰርቨር ትክክለኛው አይዲ ሲመጣ ይተካል
-                    let tbrId = userData.tbrId || userData.userId || userData.customId || getOrGenerateLocalId();
+                    // 🔴 ከሰርቨር ትክክለኛው አይዲ ሲመጣ ይተካል (ራንደም የለም)
+                    let tbrId = userData.tbrId || userData.userId || userData.customId || localStorage.getItem("tbrId") || localStorage.getItem("tbrExchangeId") || "";
                     
                     if (userData.numericId && !tbrId.startsWith('TBR-')) {
                         tbrId = 'TBR-' + String(userData.numericId).padStart(6, '0');
@@ -630,10 +620,9 @@
             const emailEl = document.getElementById("profile-email");
             if (emailEl) emailEl.innerText = user.email || '';
             
-            // 🔴 ያለ ባዶ ቦታ አይዲውን ይለጥፋል
             const idEl = document.getElementById("profile-id");
             if (idEl) {
-                idEl.innerText = user.tbrId || getOrGenerateLocalId();
+                idEl.innerText = user.tbrId || localStorage.getItem("tbrId") || localStorage.getItem("tbrExchangeId") || '';
             }
             
             const avatarBox = document.getElementById("avatar-initials");
@@ -673,8 +662,8 @@
             const username = localStorage.getItem("userName") || localStorage.getItem("fullName") || "User";
             const email = localStorage.getItem("userEmail") || "";
             
-            // 🔴 ፔጁ ገና ሲከፈት ባዶ እንዳይሆን
-            let tbrId = getOrGenerateLocalId();
+            // 🔴 የራንደም ኮዱ ጠፍቷል። ሚሞሪ ላይ ያለውን ብቻ ያወጣል
+            let tbrId = localStorage.getItem("tbrId") || localStorage.getItem("tbrExchangeId") || "";
             
             const phone = localStorage.getItem("userPhone") || "";
             const traderHandle = localStorage.getItem("traderUsername") || "";
