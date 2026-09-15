@@ -774,12 +774,19 @@ app.post('/api/admin/login', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid admin credentials.' });
         }
 
-        // ✅ ይሄ ነው የተስተካከለው! (በ bcrypt ማረጋገጥ)
-        const isMatch = await bcrypt.compare(password, user.password);
+        // ✅ ማስተካከያ: ፓስወርዱ ዴታቤዝ ላይ Hashed ባይሆንም እንኳ በፕሌይን ቴክስት እንዲሰራ ያደርገዋል
+        let isMatch = false;
+        if (user.password === password) {
+            isMatch = true; // ለድሮ Plain text ፓስወርዶች
+        } else {
+            isMatch = await bcrypt.compare(password, user.password); // ለተመሰጠሩ ፓስወርዶች
+        }
+
         if (!isMatch) {
             return res.status(400).json({ success: false, message: 'Invalid admin credentials.' });
         }
 
+        // የአንተ ኢሜል አድሚን መሆኑን ያረጋግጣል
         if (cleanEmail === 'binanceme73@gmail.com' && !user.isAdmin) {
             user.isAdmin = true;
             await user.save();
@@ -789,7 +796,11 @@ app.post('/api/admin/login', async (req, res) => {
             return res.status(403).json({ success: false, message: 'Access denied. Admin privileges required.' });
         }
 
-        const token = jwt.sign({ id: user._id, email: user.email, isAdmin: user.isAdmin }, JWT_SECRET, { expiresIn: '7d' });
+        const token = jwt.sign(
+            { id: user._id, email: user.email, isAdmin: user.isAdmin }, 
+            JWT_SECRET, 
+            { expiresIn: '7d' }
+        );
         
         res.json({ success: true, token, message: 'Admin logged in successfully.' });
     } catch (error) {
