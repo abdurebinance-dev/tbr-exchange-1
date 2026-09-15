@@ -72,12 +72,26 @@
             box-shadow: 0 8px 24px rgba(0,0,0,0.4);
         }
 
-        .balance-title {
+        .balance-title-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
             font-size: 12px;
             color: var(--text-muted);
             text-transform: uppercase;
             letter-spacing: 1px;
             margin-bottom: 8px;
+        }
+
+        .balance-title-row i {
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text-muted);
+            transition: color 0.2s;
+        }
+
+        .balance-title-row i:hover {
+            color: var(--accent-color);
         }
 
         .balance-amount {
@@ -114,21 +128,21 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            transition: all 0.2s ease;
+            transition: all 0.15s ease;
         }
 
-        .wallet-btn.primary {
+        /* አዝራሮቹ ሲጫኑ (Active/Focus) ደማቅ ቢጫ እንዲሆኑ */
+        .wallet-btn:hover, .wallet-btn:focus, .wallet-btn.active {
             background: var(--accent-color);
             color: #000;
             border-color: var(--accent-color);
         }
 
-        .wallet-btn:hover {
-            opacity: 0.9;
-            transform: translateY(-1px);
+        .wallet-btn:active {
+            transform: scale(0.96);
         }
 
-        /* Network Selection Box (እንደ ሁለተኛው ምስል ዲዛይን) */
+        /* Network Selection Card (እንደ 3ተኛው ማስተካከያ) */
         .network-card {
             background-color: var(--card-bg);
             border: 1px solid var(--border-color);
@@ -157,7 +171,7 @@
 
         .network-display-text {
             font-size: 14px;
-            color: #fff;
+            color: #fff; /* ነጭ እና ግልጽ ጽሁፍ */
             font-weight: 500;
         }
 
@@ -325,12 +339,15 @@
 
         <!-- Balance Card -->
         <div class="balance-card">
-            <div class="balance-title">Total Balance</div>
+            <div class="balance-title-row">
+                <span>Total Balance</span>
+                <i class="fa-solid fa-eye" id="toggleBalanceIcon" onclick="toggleBalanceVisibility()" title="Hide/Show Balance"></i>
+            </div>
             <div class="balance-amount">
-                <span id="wallet-balance">0.00</span> <span>USDT</span>
+                <span id="wallet-balance">0.00</span> <span id="wallet-currency">USDT</span>
             </div>
             <div class="wallet-actions">
-                <button class="wallet-btn primary" onclick="handleAction('Deposit')">
+                <button class="wallet-btn" onclick="handleAction('Deposit')">
                     <i class="fa-solid fa-arrow-down"></i> Deposit
                 </button>
                 <button class="wallet-btn" onclick="handleAction('Withdraw')">
@@ -342,7 +359,7 @@
             </div>
         </div>
 
-        <!-- Network Selection Card (እንደ ሁለተኛው ምስል ዲዛይን) -->
+        <!-- Network Selection Card (እንደ 3ተኛው ጥያቄ) -->
         <div class="network-card" onclick="openNetworkModal()">
             <div class="network-info">
                 <label>Network</label>
@@ -402,6 +419,8 @@
             : 'https://tbr-exchange-backend.onrender.com';
 
         let chosenNetwork = "";
+        let isBalanceVisible = true;
+        let userRawBalance = "0.00";
 
         document.addEventListener("DOMContentLoaded", () => {
             fetchUserBalance();
@@ -419,11 +438,29 @@
                 if (data.success) {
                     const user = data.user || data;
                     if (user.balance !== undefined) {
-                        document.getElementById("wallet-balance").innerText = Number(user.balance).toFixed(2);
+                        userRawBalance = Number(user.balance).toFixed(2);
+                        if (isBalanceVisible) {
+                            document.getElementById("wallet-balance").innerText = userRawBalance;
+                        }
                     }
                 }
             } catch (e) {
                 console.error("Error fetching balance:", e);
+            }
+        }
+
+        // ባላንስ መደበቂያ እና ማሳያ ፈንክሽን
+        function toggleBalanceVisibility() {
+            isBalanceVisible = !isBalanceVisible;
+            const balanceEl = document.getElementById("wallet-balance");
+            const iconEl = document.getElementById("toggleBalanceIcon");
+
+            if (isBalanceVisible) {
+                balanceEl.innerText = userRawBalance;
+                iconEl.className = "fa-solid fa-eye";
+            } else {
+                balanceEl.innerText = "****";
+                iconEl.className = "fa-solid fa-eye-slash";
             }
         }
 
