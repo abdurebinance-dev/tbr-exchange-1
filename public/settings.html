@@ -372,7 +372,6 @@
             color: var(--green-color);
             font-size: 16px;
         }
-        
     </style>
 </head>
 <body>
@@ -396,14 +395,13 @@
             <button class="tab-btn" data-tab="trades"><i class="fa-solid fa-right-left"></i> Trades</button>
         </div>
 
-        <!-- 1. Profile Content (Fixed: display block by default) -->
+        <!-- 1. Profile Content -->
         <div id="profile-section" class="content-section" style="display: block;">
             <div class="profile-card">
                 <div class="profile-top">
                     <div class="avatar-box" id="avatar-initials" onclick="triggerImageUpload()">
                         UI <div class="camera-badge"><i class="fa-solid fa-camera"></i></div>
                     </div>
-                    <!-- Hidden file input for uploading profile picture -->
                     <input type="file" id="profileImageInput" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
 
                     <div class="user-info">
@@ -482,7 +480,7 @@
                             <div class="info-value">Sign in with Face ID, Touch ID, or your device PIN</div>
                         </div>
                     </div>
-                    <span class="action-link" onclick="openModal('passkey')"><i class="fa-solid fa-plus"></i> Add passkey</span>
+                    <span class="action-link" onclick="registerPasskey()"><i class="fa-solid fa-plus"></i> Add passkey</span>
                 </div>
             </div>
         </div>
@@ -530,24 +528,23 @@
     </div>
 
     <script>
+        const API_BASE_URL = window.location.hostname.includes('localhost') 
+            ? '' 
+            : 'https://tbr-exchange-backend.onrender.com';
+
         let currentField = "";
 
         document.addEventListener("DOMContentLoaded", async function() {
-            // 1. መጀመሪያ ከሎካል ስቶሬጅ ያለውን ዴታ በመጫን ዩአይን በፍጥነት ማሳየት (Flash እንዳይኖር)
             loadFromLocalStorageFallback();
 
-            // 2. ከሰቨር ትክክለኛውን መረጃ በአንድ አስተማማኝ (Single) ጥያቄ ማምጣት
             try {
                 const token = localStorage.getItem("token") || 
-                              localStorage.getItem("authToken") || 
-                              localStorage.getItem("access_token");
+                            localStorage.getItem("authToken") || 
+                            localStorage.getItem("access_token");
                 
-                if (!token) {
-                    console.warn("No authentication token found.");
-                    return;
-                }
+                if (!token) return;
 
-                const response = await fetch(`https://tbr-exchange-backend.onrender.com/api/user/profile?t=${new Date().getTime()}`, {
+                const response = await fetch(`${API_BASE_URL}/api/user/profile?t=${new Date().getTime()}`, {
                     method: "GET",
                     headers: {
                         "Content-Type": "application/json",
@@ -559,41 +556,28 @@
                     const result = await response.json();
                     const userData = result.user || result;
                     
-                    const username = userData.fullName || userData.username || userData.name || localStorage.getItem("userName") || localStorage.getItem("name") || "User";
-                    const email = userData.email || localStorage.getItem("userEmail") || localStorage.getItem("email") || "";
-                    
-                    let tbrId = userData.tbrId || userData.customId || localStorage.getItem("tbrId") || localStorage.getItem("tbrExchangeId") || "TBR-476394";
-                    
-                    const phone = userData.phone || userData.phoneNumber || localStorage.getItem("userPhone") || "";
-                    const traderHandle = userData.traderUsername || localStorage.getItem("traderUsername") || "";
-                    const kycVal = userData.kycStatus || userData.kyc_status || (userData.kycVerified ? 'approved' : 'approved');
+                    const username = userData.fullName || userData.username || userData.name || localStorage.getItem("userName") || "User";
+                    const email = userData.email || localStorage.getItem("userEmail") || "";
+                    let tbrId = userData.tbrId || userData.customId || localStorage.getItem("tbrId") || "TBR-476394";
+                    const phone = userData.phone || userData.phoneNumber || "";
+                    const traderHandle = userData.traderUsername || "";
+                    const kycVal = userData.kycStatus || 'approved';
 
                     let serverAvatar = userData.avatar || userData.profilePicture;
-                    let localAvatar = localStorage.getItem("userAvatar") || localStorage.getItem("profilePicture") || "";
+                    let localAvatar = localStorage.getItem("userAvatar") || "";
                     let finalAvatar = localAvatar;
 
                     if (serverAvatar && serverAvatar !== 'null' && serverAvatar !== 'undefined' && serverAvatar.trim() !== "") {
                         finalAvatar = serverAvatar;
                     }
 
-                    localStorage.setItem("tbrExchangeId", tbrId);
                     localStorage.setItem("tbrId", tbrId);
-                    localStorage.setItem("userId", tbrId);
                     localStorage.setItem("kycStatus", kycVal);
-                    if (username) {
-                        localStorage.setItem("userName", username);
-                        localStorage.setItem("name", username);
-                    }
-                    if (email) {
-                        localStorage.setItem("userEmail", email);
-                        localStorage.setItem("email", email);
-                    }
+                    if (username) localStorage.setItem("userName", username);
+                    if (email) localStorage.setItem("userEmail", email);
                     if (phone) localStorage.setItem("userPhone", phone);
                     if (traderHandle) localStorage.setItem("traderUsername", traderHandle);
-                    if (finalAvatar) {
-                        localStorage.setItem("userAvatar", finalAvatar);
-                        localStorage.setItem("profilePicture", finalAvatar);
-                    }
+                    if (finalAvatar) localStorage.setItem("userAvatar", finalAvatar);
 
                     updateUI({
                         username: username,
@@ -604,8 +588,6 @@
                         kycStatus: kycVal,
                         avatar: finalAvatar
                     });
-                } else {
-                    console.warn("Server profile fetch failed, using local storage fallback.");
                 }
             } catch (error) {
                 console.error("Network error during profile sync:", error);
@@ -639,14 +621,10 @@
             }
 
             const phoneDisplay = document.getElementById("phone-display");
-            if (phoneDisplay) {
-                phoneDisplay.innerText = user.phone || 'Not added';
-            }
+            if (phoneDisplay) phoneDisplay.innerText = user.phone || 'Not added';
 
             const usernameDisplay = document.getElementById("username-display");
-            if (usernameDisplay) {
-                usernameDisplay.innerText = user.traderHandle || 'Not set — tap to choose your handle';
-            }
+            if (usernameDisplay) usernameDisplay.innerText = user.traderHandle || 'Not set — tap to choose your handle';
 
             const kycBadge = document.getElementById('kyc-badge');
             if (kycBadge) {
@@ -654,33 +632,21 @@
                 if (status === 'approved' || status === 'verified' || status === 'true') {
                     kycBadge.innerHTML = '<i class="fa-solid fa-check"></i> Verified';
                     kycBadge.className = 'badge-verified';
-                    kycBadge.style.backgroundColor = 'rgba(14, 203, 129, 0.1)';
-                    kycBadge.style.color = '#0ecb81';
-                    kycBadge.style.borderColor = 'rgba(14, 203, 129, 0.2)';
-                } else if (status === 'pending' || status === 'under_review' || status === 'review') {
-                    kycBadge.innerHTML = '<i class="fa-solid fa-clock"></i> Under Review';
-                    kycBadge.className = 'badge-unverified';
-                    kycBadge.style.backgroundColor = 'rgba(243, 186, 47, 0.1)';
-                    kycBadge.style.color = '#f3ba2f';
-                    kycBadge.style.borderColor = 'rgba(243, 186, 47, 0.2)';
                 } else {
                     kycBadge.innerHTML = '<i class="fa-solid fa-clock"></i> Unverified';
                     kycBadge.className = 'badge-unverified';
-                    kycBadge.style.backgroundColor = 'rgba(246, 70, 93, 0.1)';
-                    kycBadge.style.color = '#f6465d';
-                    kycBadge.style.borderColor = 'rgba(246, 70, 93, 0.2)';
                 }
             }
         }
 
         function loadFromLocalStorageFallback() {
-            const username = localStorage.getItem("userName") || localStorage.getItem("name") || "User";
-            const email = localStorage.getItem("userEmail") || localStorage.getItem("email") || "";
-            let tbrId = localStorage.getItem("tbrExchangeId") || localStorage.getItem("userId") || localStorage.getItem("tbrId") || "TBR-476394";
+            const username = localStorage.getItem("userName") || "User";
+            const email = localStorage.getItem("userEmail") || "";
+            let tbrId = localStorage.getItem("tbrId") || "TBR-476394";
             const phone = localStorage.getItem("userPhone") || "";
             const traderHandle = localStorage.getItem("traderUsername") || "";
             const kycStatus = localStorage.getItem("kycStatus") || "approved";
-            const avatar = localStorage.getItem("userAvatar") || localStorage.getItem("profilePicture") || "";
+            const avatar = localStorage.getItem("userAvatar") || "";
 
             updateUI({ username, email, tbrId, phone, traderHandle, kycStatus, avatar });
         }
@@ -697,7 +663,6 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 const base64Image = e.target.result;
-                
                 const avatarBox = document.getElementById("avatar-initials");
                 if (avatarBox) {
                     avatarBox.style.backgroundImage = `url('${base64Image}')`;
@@ -707,10 +672,7 @@
                 }
 
                 showToast("Profile picture updated successfully!");
-
                 localStorage.setItem("userAvatar", base64Image);
-                localStorage.setItem("profilePicture", base64Image);
-
                 syncAvatarToBackend(base64Image);
             };
             reader.readAsDataURL(file);
@@ -718,10 +680,8 @@
 
         async function syncAvatarToBackend(base64Image) {
             try {
-                const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
-                console.log("Syncing avatar to backend...");
-
-                const response = await fetch("https://tbr-exchange-backend.onrender.com/api/user/update", {
+                const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+                await fetch(`${API_BASE_URL}/api/user/update`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -729,20 +689,64 @@
                     },
                     body: JSON.stringify({ field: "avatar", value: base64Image })
                 });
-
-                const data = await response.json();
-                console.log("Backend avatar response status:", response.status);
-
-                if (response.ok) {
-                    const confirmedUrl = data.avatar || data.userAvatar || data.url || base64Image;
-                    localStorage.setItem("userAvatar", confirmedUrl);
-                    localStorage.setItem("profilePicture", confirmedUrl);
-                    console.log("Avatar successfully saved to backend & local!");
-                } else {
-                    console.error("Server rejected avatar update:", data.message || response.statusText);
-                }
             } catch (error) {
                 console.error("Network error during avatar sync:", error);
+            }
+        }
+
+        // 🔐 ትክክለኛው የ WebAuthn Passkey ምዝገባ ሎጂክ
+        async function registerPasskey() {
+            try {
+                showToast("Requesting device biometric setup...");
+                const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+                
+                const res = await fetch(`${API_BASE_URL}/api/passkey/register-options`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                const data = await res.json();
+                
+                if (!data.success) {
+                    showToast(data.message || "Failed to start passkey registration.");
+                    return;
+                }
+
+                const options = data.options;
+                options.challenge = Uint8Array.from(atob(options.challenge), c => c.charCodeAt(0));
+                options.user.id = Uint8Array.from(atob(options.user.id), c => c.charCodeAt(0));
+
+                const credential = await navigator.credentials.create({ publicKey: options });
+
+                const verificationResponse = await fetch(`${API_BASE_URL}/api/passkey/register-verify`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        id: credential.id,
+                        rawId: btoa(String.fromCharCode(...new Uint8Array(credential.rawId))),
+                        response: {
+                            clientDataJSON: btoa(String.fromCharCode(...new Uint8Array(credential.response.clientDataJSON))),
+                            attestationObject: btoa(String.fromCharCode(...new Uint8Array(credential.response.attestationObject)))
+                        },
+                        type: credential.type
+                    })
+                });
+
+                const verifyResult = await verificationResponse.json();
+                if (verifyResult.success) {
+                    showToast("Passkey registered successfully! 🎉");
+                } else {
+                    showToast(verifyResult.message || "Passkey registration failed.");
+                }
+
+            } catch (err) {
+                console.error('Passkey registration error:', err);
+                showToast("Passkey registration cancelled or not supported.");
             }
         }
 
@@ -754,18 +758,14 @@
             
             if (!modal || !input) return;
             modal.style.display = "flex";
-
-            // ዋናው መፍትሄ፡ የድሮውን የ @ ህግ ፔጁ ሲከፈት ማጥፋት (Clear existing events)
             input.oninput = null; 
 
             if(field === 'phone') {
                 const phoneDisplay = document.getElementById("phone-display");
                 let existingPhone = (phoneDisplay && phoneDisplay.innerText !== 'Not added') ? phoneDisplay.innerText : "";
-                // በስህተት የገባ @ ካለ ያጠፋዋል
                 input.value = existingPhone.replace(/@/g, ''); 
                 title.innerText = "Add/Edit Phone Number";
                 input.placeholder = "e.g. +251911223344";
-                
             } else if(field === 'username') {
                 title.innerText = "Set Trader Username";
                 input.placeholder = "Enter handle...";
@@ -774,24 +774,16 @@
                 if (!existingHandle.startsWith('@')) existingHandle = '@' + existingHandle;
                 input.value = existingHandle;
                 
-                // ለ Username ብቻ የ @ ህግ ይሰራል
                 input.oninput = function() {
                     if (!input.value.startsWith('@')) {
                         input.value = '@' + input.value.replace(/@/g, '');
                     }
                 };
-                
             } else if(field === 'name') {
                 const profileName = document.getElementById("profile-name");
                 input.value = profileName ? profileName.innerText.trim() : "";
                 title.innerText = "Edit Profile Name";
-                
-            } else if(field === 'passkey') {
-                input.value = "";
-                title.innerText = "Add Passkey";
-                input.placeholder = "Enter passkey name/device label...";
             }
-            
             input.focus();
         }
 
@@ -814,33 +806,25 @@
                 if (phoneDisplay) phoneDisplay.innerText = val;
                 localStorage.setItem("userPhone", val);
             } else if (currentField === 'username') {
-                if (!finalVal.startsWith('@')) {
-                    finalVal = '@' + finalVal;
-                }
+                if (!finalVal.startsWith('@')) finalVal = '@' + finalVal;
                 const usernameDisplay = document.getElementById("username-display");
                 if (usernameDisplay) usernameDisplay.innerText = finalVal;
                 localStorage.setItem("traderUsername", finalVal);
             } else if (currentField === 'name') {
                 localStorage.setItem("userName", val);
-                localStorage.setItem("name", val);
                 const profileName = document.getElementById("profile-name");
                 if (profileName) {
                     profileName.innerHTML = `${val} <i class="fa-solid fa-pen edit-icon" onclick="openModal('name')"></i>`;
                 }
-            } else if (currentField === 'passkey') {
-                localStorage.setItem("userPasskey", val);
-                showToast("Passkey added successfully!");
-                closeModal();
-                return;
             }
             
             showToast("Profile updated successfully!");
 
             try {
-                const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
+                const token = localStorage.getItem("token") || localStorage.getItem("authToken");
                 const dataToSend = (currentField === 'username') ? finalVal : val;
 
-                await fetch("https://tbr-exchange-backend.onrender.com/api/user/update", {
+                await fetch(`${API_BASE_URL}/api/user/update`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -878,20 +862,16 @@
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
-
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
 
                 const target = btn.getAttribute('data-tab');
-
                 document.querySelectorAll('.content-section').forEach(section => {
                     section.style.display = 'none';
                 });
 
                 const targetSection = document.getElementById(target + '-section');
-                if (targetSection) {
-                    targetSection.style.display = 'block';
-                }
+                if (targetSection) targetSection.style.display = 'block';
             });
         });
     </script>
