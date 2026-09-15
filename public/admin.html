@@ -109,7 +109,7 @@
             <button class="nav-tab" onclick="switchTab('users', event)"><i class="fa-solid fa-users"></i> 5. User Control & Ban</button>
         </div>
 
-        <!-- TAB 1: OVERVIEW (Stats grid moved inside here only!) -->
+        <!-- TAB 1: OVERVIEW -->
         <div id="tab-overview" class="tab-content active">
             <div class="stats-grid">
                 <div class="stat-card">
@@ -217,45 +217,23 @@
 
     <script>
         const API_BASE = 'https://tbr-exchange-backend.onrender.com';
-const getToken = () => localStorage.getItem('adminToken');
-let currentKycList = [];
+        const getToken = () => localStorage.getItem('adminToken');
+        let currentKycList = [];
 
-async function loadAdminData() {
-    const tbody = document.getElementById('kycTableBody');
-    if (tbody) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #848e9c; padding: 20px;">Loading KYC data...</td></tr>`;
-    }
-    try {
-        const res = await fetch(`${API_BASE}/api/admin/kycs`, {
-            headers: { 'Authorization': `Bearer ${getToken()}` }
+        window.addEventListener('DOMContentLoaded', () => {
+            if (getToken()) {
+                document.getElementById('loginOverlay').style.display = 'none';
+                document.getElementById('mainDashboard').style.display = 'block';
+                
+                // ቀላል ዳታዎችን መጀመሪያ እናምጣ
+                fetchStats();
+                fetchEscrowDisputes();
+                fetchUsersList();
+                
+                // ከባድ የሆነውን የ KYC ዳታ መጨረሻ ላይ እናምጣ
+                loadKycData('pending');
+            }
         });
-        if (!res.ok) throw new Error('Failed to fetch');
-        const data = await res.json();
-        currentKycList = Array.isArray(data) ? data : (data.kycs || []);
-        
-        if (currentKycList.length === 0 && tbody) {
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #848e9c; padding: 20px;">No pending KYC submissions</td></tr>`;
-            return;
-        }
-        if (typeof renderKycs === 'function' && tbody) {
-            renderKycs(tbody, currentKycList);
-        }
-    } catch (error) {
-        console.error("KYC load error:", error);
-        if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #f6465d; padding: 20px;">Error loading data. Check console.</td></tr>`;
-        }
-    }
-}
-
-window.addEventListener('DOMContentLoaded', () => {
-    if (getToken()) {
-        document.getElementById('loginOverlay').style.display = 'none';
-        document.getElementById('mainDashboard').style.display = 'block';
-        loadAdminData();
-    }
-});
-
 
         async function adminLogin() {
             const email = document.getElementById('loginEmail').value;
@@ -273,7 +251,11 @@ window.addEventListener('DOMContentLoaded', () => {
                     localStorage.setItem('adminToken', data.token);
                     document.getElementById('loginOverlay').style.display = 'none';
                     document.getElementById('mainDashboard').style.display = 'block';
-                    loadAdminData();
+                    
+                    fetchStats();
+                    fetchEscrowDisputes();
+                    fetchUsersList();
+                    loadKycData('pending');
                 } else {
                     errEl.innerText = data.message || 'Login failed.';
                 }
@@ -294,13 +276,6 @@ window.addEventListener('DOMContentLoaded', () => {
             event.currentTarget.classList.add('active');
         }
 
-        async function loadAdminData() {
-            fetchStats();
-            loadKycData('pending');
-            fetchEscrowDisputes();
-            fetchUsersList();
-        }
-
         async function fetchStats() {
             try {
                 const res = await fetch(`${API_BASE}/api/admin/stats`, { headers: { 'Authorization': 'Bearer ' + getToken() } });
@@ -314,6 +289,7 @@ window.addEventListener('DOMContentLoaded', () => {
             } catch (err) { console.error('Error loading stats:', err); }
         }
 
+        // ✅ ይሄ ነው የ KYC ሎዲንግን የሚያፈጥነው ማስተካከያ (Optimization)
         async function loadKycData(targetStatus = 'pending') {
             document.querySelectorAll('#tab-kyc button.btn').forEach(b => {
                 if (b.id) b.style.opacity = '0.6';
@@ -324,8 +300,12 @@ window.addEventListener('DOMContentLoaded', () => {
             const tbody = document.getElementById('kycTableBody');
             if (!tbody) return;
 
+            // ጽሁፉን ግልጽ ለማድረግ
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#f3ba2f; padding: 25px;"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading ${targetStatus.toUpperCase()} KYC Data... (Fetching photos)</td></tr>`;
+
             try {
-                const res = await fetch(`${API_BASE}/api/admin/kyc-requests`, { 
+                // ሰርቨሩ ሁሉንም ከመላክ ይልቅ የተጠየቀውን status ብቻ ገድቦ እንዲልክ አድርገነዋል
+                const res = await fetch(`${API_BASE}/api/admin/kyc-requests?status=${targetStatus}&limit=20`, { 
                     headers: { 'Authorization': 'Bearer ' + getToken() } 
                 });
                 const json = await res.json();
@@ -334,44 +314,18 @@ window.addEventListener('DOMContentLoaded', () => {
                 if (Array.isArray(json)) rawList = json;
                 else if (Array.isArray(json.data)) rawList = json.data;
                 else if (Array.isArray(json.requests)) rawList = json.requests;
-                else if (json.data && Array.isArray(json.data.docs)) rawList = json.data.docs;
-                else if (json && typeof json === 'object') {
-                    const foundKey = Object.keys(json).find(k => Array.isArray(json[k]));
-                    if (foundKey) rawList = json[foundKey];
-                }
 
                 if (rawList.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:orange;">DB/API returned 0 items total. Collection empty?</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding: 20px;">No ${targetStatus} KYC submissions found.</td></tr>`;
                     currentKycList = [];
                     return;
                 }
 
-                const statusesFound = rawList.map(i => i.status || i.kycStatus || 'UNDEFINED');
-
-                const filteredList = rawList.filter(item => {
-                    const s = String(item.status || item.kycStatus || '').toLowerCase().trim();
-                    const target = targetStatus.toLowerCase().trim();
-                    if (target === 'pending') {
-                        return s === '' || s === 'pending' || s === 'under_review' || s === 'submitted' || !item.status;
-                    }
-                    return s === target;
-                });
-
-                if (filteredList.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#ffcc00; padding:15px;">
-                        No strict match for '${targetStatus}'. DB has statuses: [${[...new Set(statusesFound)].join(', ')}]. <br>
-                        <button onclick="renderKycs(document.getElementById('kycTableBody'), window.lastRawKycList)" style="margin-top:10px; background:#f3ba2f; color:#000; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">Show All ${rawList.length} Items Anyway</button>
-                    </td></tr>`;
-                    window.lastRawKycList = rawList;
-                    currentKycList = [];
-                    return;
-                }
-
-                currentKycList = filteredList;
-                renderKycs(tbody, filteredList);
+                currentKycList = rawList;
+                renderKycs(tbody, rawList);
             } catch (err) { 
                 console.error("KYC Load Error:", err); 
-                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:red;">Error: ${err.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--red);">Error loading data. Check connection.</td></tr>`;
             }
         }
 
@@ -396,42 +350,42 @@ window.addEventListener('DOMContentLoaded', () => {
         }
 
         function renderKycs(tbody, list) {
-    let html = '';
-    list.forEach(item => {
-        const userEmail = item.email || item.userEmail || item.userId || item._id || 'N/A';
-        const userName = item.fullName || item.name || '';
-        const currentStatus = String(item.status || item.kycStatus || 'pending').toLowerCase();
-        const isResolved = currentStatus === 'approved' || currentStatus === 'verified' || currentStatus === 'rejected';
-        
-        let badgeClass = 'badge-pending';
-        if (currentStatus === 'approved' || currentStatus === 'verified') badgeClass = 'badge-approved';
-        else if (currentStatus === 'rejected') badgeClass = 'badge-rejected';
+            let html = '';
+            list.forEach(item => {
+                const userEmail = item.email || item.userEmail || item.userId || item._id || 'N/A';
+                const userName = item.fullName || item.name || '';
+                const currentStatus = String(item.status || item.kycStatus || 'pending').toLowerCase();
+                const isResolved = currentStatus === 'approved' || currentStatus === 'verified' || currentStatus === 'rejected';
+                
+                let badgeClass = 'badge-pending';
+                if (currentStatus === 'approved' || currentStatus === 'verified') badgeClass = 'badge-approved';
+                else if (currentStatus === 'rejected') badgeClass = 'badge-rejected';
 
-        const safeJsonStr = JSON.stringify(item).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
+                const safeJsonStr = JSON.stringify(item).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
 
-        html += `<tr>
-            <td>
-                <strong>${userEmail}</strong>
-                ${userName ? `<br><small style="color: var(--text-muted); font-size: 11px;">${userName}</small>` : ''}
-                <br><small style="color:gray;">db status: [${currentStatus}]</small>
-            </td>
-            <td>
-                <button onclick='openKycModal(${safeJsonStr})' class="btn btn-sm" style="color: #f3ba2f; background: #181a20; border: 1px solid #f3ba2f; padding: 5px 12px; border-radius: 4px; cursor: pointer;">
-                    <i class="fas fa-eye"></i> View Docs
-                </button>
-            </td>
-            <td><span class="${badgeClass}">${currentStatus}</span></td>
-            <td>
-                ${isResolved 
-                    ? `<span style="color: var(--text-muted); font-weight: 600; font-size: 12px;">Completed</span>` 
-                    : `<button class="btn btn-approve" onclick="performKycAction('${item._id || item.id}', 'approved')">Approve</button>
-                       <button class="btn btn-reject" onclick="performKycAction('${item._id || item.id}', 'rejected')">Reject</button>`
-                }
-            </td>
-        </tr>`;
-    });
-    tbody.innerHTML = html;
-}
+                html += `<tr>
+                    <td>
+                        <strong>${userEmail}</strong>
+                        ${userName ? `<br><small style="color: var(--text-muted); font-size: 11px;">${userName}</small>` : ''}
+                        <br><small style="color:gray;">db status: [${currentStatus}]</small>
+                    </td>
+                    <td>
+                        <button onclick='openKycModal(${safeJsonStr})' class="btn btn-sm" style="color: #f3ba2f; background: #181a20; border: 1px solid #f3ba2f; padding: 5px 12px; border-radius: 4px; cursor: pointer;">
+                            <i class="fas fa-eye"></i> View Docs
+                        </button>
+                    </td>
+                    <td><span class="${badgeClass}">${currentStatus}</span></td>
+                    <td>
+                        ${isResolved 
+                            ? `<span style="color: var(--text-muted); font-weight: 600; font-size: 12px;">Completed</span>` 
+                            : `<button class="btn btn-approve" onclick="performKycAction('${item._id || item.id}', 'approved')">Approve</button>
+                               <button class="btn btn-reject" onclick="performKycAction('${item._id || item.id}', 'rejected')">Reject</button>`
+                        }
+                    </td>
+                </tr>`;
+            });
+            tbody.innerHTML = html;
+        }
 
         async function fetchEscrowDisputes() {
             try {
@@ -457,7 +411,6 @@ window.addEventListener('DOMContentLoaded', () => {
                     tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No active disputes or escrow trades found.</td></tr>`;
                 }
             } catch (err) {
-                console.error('Error loading escrow disputes:', err);
                 document.getElementById('escrowTableBody').innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No active disputes or escrow trades found.</td></tr>`;
             }
         }
@@ -483,48 +436,48 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-   function openKycModal(kycItem) {
-    let modal = document.getElementById('kycModal');
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'kycModal';
-        modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 9999;";
-        modal.innerHTML = `
-            <div style="background: #1e2329; padding: 20px; border-radius: 12px; max-width: 720px; width: 95%; color: #fff; text-align: center; position: relative; border: 1px solid #30363d; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
-                <span onclick="document.getElementById('kycModal').style.display='none'" style="position: absolute; top: 12px; right: 18px; font-size: 26px; color: #848e9c; cursor: pointer; font-weight: bold; line-height: 1;">&times;</span>
-                <h3 id="modalUserEmail" style="margin-bottom: 15px; margin-right: 25px; color: #f3ba2f; font-size: 15px; word-break: break-all; text-align: left;"></h3>
-                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 18px;">
-                    <div>
-                        <p style="margin-bottom: 4px; font-size: 12px; color: #848e9c; font-weight: bold;">Front ID</p>
-                        <img id="modalFrontImg" src="" style="width: 210px; height: 135px; object-fit: contain; background: #0b0e11; border-radius: 6px; border: 1px solid #474d57; cursor: pointer;" onclick="window.open(this.src)" title="Click to zoom">
+        function openKycModal(kycItem) {
+            let modal = document.getElementById('kycModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'kycModal';
+                modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 9999;";
+                modal.innerHTML = `
+                    <div style="background: #1e2329; padding: 20px; border-radius: 12px; max-width: 720px; width: 95%; color: #fff; text-align: center; position: relative; border: 1px solid #30363d; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+                        <span onclick="document.getElementById('kycModal').style.display='none'" style="position: absolute; top: 12px; right: 18px; font-size: 26px; color: #848e9c; cursor: pointer; font-weight: bold; line-height: 1;">&times;</span>
+                        <h3 id="modalUserEmail" style="margin-bottom: 15px; margin-right: 25px; color: #f3ba2f; font-size: 15px; word-break: break-all; text-align: left;"></h3>
+                        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 18px;">
+                            <div>
+                                <p style="margin-bottom: 4px; font-size: 12px; color: #848e9c; font-weight: bold;">Front ID</p>
+                                <img id="modalFrontImg" src="" style="width: 210px; height: 135px; object-fit: contain; background: #0b0e11; border-radius: 6px; border: 1px solid #474d57; cursor: pointer;" onclick="window.open(this.src)" title="Click to zoom">
+                            </div>
+                            <div>
+                                <p style="margin-bottom: 4px; font-size: 12px; color: #848e9c; font-weight: bold;">Back ID</p>
+                                <img id="modalBackImg" src="" style="width: 210px; height: 135px; object-fit: contain; background: #0b0e11; border-radius: 6px; border: 1px solid #474d57; cursor: pointer;" onclick="window.open(this.src)" title="Click to zoom">
+                            </div>
+                            <div>
+                                <p style="margin-bottom: 4px; font-size: 12px; color: #f3ba2f; font-weight: bold;">Selfie / User Photo</p>
+                                <img id="modalSelfieImg" src="" style="width: 210px; height: 135px; object-fit: contain; background: #0b0e11; border-radius: 6px; border: 2px solid #f3ba2f; cursor: pointer;" onclick="window.open(this.src)" title="Click to zoom">
+                            </div>
+                        </div>
+                        <button onclick="document.getElementById('kycModal').style.display='none'" style="background: #f3ba2f; color: #000; border: none; padding: 8px 24px; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 13px;">Close Panel</button>
                     </div>
-                    <div>
-                        <p style="margin-bottom: 4px; font-size: 12px; color: #848e9c; font-weight: bold;">Back ID</p>
-                        <img id="modalBackImg" src="" style="width: 210px; height: 135px; object-fit: contain; background: #0b0e11; border-radius: 6px; border: 1px solid #474d57; cursor: pointer;" onclick="window.open(this.src)" title="Click to zoom">
-                    </div>
-                    <div>
-                        <p style="margin-bottom: 4px; font-size: 12px; color: #f3ba2f; font-weight: bold;">Selfie / User Photo</p>
-                        <img id="modalSelfieImg" src="" style="width: 210px; height: 135px; object-fit: contain; background: #0b0e11; border-radius: 6px; border: 2px solid #f3ba2f; cursor: pointer;" onclick="window.open(this.src)" title="Click to zoom">
-                    </div>
-                </div>
-                <button onclick="document.getElementById('kycModal').style.display='none'" style="background: #f3ba2f; color: #000; border: none; padding: 8px 24px; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 13px;">Close Panel</button>
-            </div>
-        `;
-        document.body.appendChild(modal);
-    }
-    
-    document.getElementById('modalUserEmail').innerText = `KYC: ${kycItem.email || kycItem.userEmail || kycItem.userId || 'N/A'}`;
-    
-    const front = kycItem.frontImage || kycItem.frontId || kycItem.kycFront || kycItem.front || kycItem.idFront || kycItem.front_image || kycItem.documentFront || '';
-    const back = kycItem.backImage || kycItem.backId || kycItem.kycBack || kycItem.back || kycItem.idBack || kycItem.back_image || kycItem.documentBack || '';
-    const selfie = kycItem.selfieImage || kycItem.selfie || kycItem.userPhoto || kycItem.kycSelfie || kycItem.photo || kycItem.user_photo || kycItem.selfie_image || '';
+                `;
+                document.body.appendChild(modal);
+            }
+            
+            document.getElementById('modalUserEmail').innerText = `KYC: ${kycItem.email || kycItem.userEmail || kycItem.userId || 'N/A'}`;
+            
+            const front = kycItem.frontImage || kycItem.frontId || kycItem.kycFront || kycItem.front || kycItem.idFront || kycItem.front_image || kycItem.documentFront || '';
+            const back = kycItem.backImage || kycItem.backId || kycItem.kycBack || kycItem.back || kycItem.idBack || kycItem.back_image || kycItem.documentBack || '';
+            const selfie = kycItem.selfieImage || kycItem.selfie || kycItem.userPhoto || kycItem.kycSelfie || kycItem.photo || kycItem.user_photo || kycItem.selfie_image || '';
 
-    document.getElementById('modalFrontImg').src = front;
-    document.getElementById('modalBackImg').src = back;
-    document.getElementById('modalSelfieImg').src = selfie;
-    
-    modal.style.display = 'flex';
-}
+            document.getElementById('modalFrontImg').src = front;
+            document.getElementById('modalBackImg').src = back;
+            document.getElementById('modalSelfieImg').src = selfie;
+            
+            modal.style.display = 'flex';
+        }
 
         async function performKycAction(kycId, status) {
             let rejectionReason = status === 'rejected' ? prompt('Reason for rejection:', 'Invalid documents') : '';
@@ -537,7 +490,8 @@ window.addEventListener('DOMContentLoaded', () => {
             const json = await res.json();
             if (res.ok && json.success) { 
                 alert(json.message); 
-                loadAdminData(); 
+                loadKycData('pending'); 
+                fetchStats();
             } else {
                 alert(json.message || 'Action failed.');
             }
@@ -582,7 +536,10 @@ window.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({ userId, action })
             });
             const json = await res.json();
-            if (res.ok && json.success) { alert(json.message); loadAdminData(); }
+            if (res.ok && json.success) { 
+                alert(json.message); 
+                fetchUsersList(); 
+            }
         }
 
         async function saveRates() {
