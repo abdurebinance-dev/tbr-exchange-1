@@ -37,6 +37,7 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization', 'token', 'x-auth-token']
 }));
 
+// ትላልቅ ፎቶዎችን ለመቀበል ሊሚቱ 50MB ሆኗል
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
@@ -44,7 +45,7 @@ const publicPath = path.join(process.cwd(), 'public');
 app.use(express.static(publicPath));
 app.use('/uploads', express.static('uploads'));
 
-// User Schema & Model (የተስተካከለ - fullName ከኢሜል እንዲወጣ)
+// User Schema & Model (የተስተካከለ - avatar እና traderUsername ተጨምረዋል)
 const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true, index: true, lowercase: true, trim: true },
     phone: { type: String, index: true }, 
@@ -55,6 +56,10 @@ const userSchema = new mongoose.Schema({
             return this.email ? this.email.split('@')[0] : 'User'; 
         } 
     },
+    avatar: { type: String, default: '' }, // ✅ ይህ ነው የጎደለው የነበረው!
+    traderUsername: { type: String, default: '' }, // ✅ ትሬደር ዩዘርኔምም አልነበረም
+    userId: { type: String }, // ለ TBR-000001
+    numericId: { type: Number },
     verificationCode: String,
     verificationCodeExpire: Date,
     isVerified: { type: Boolean, default: false },
@@ -75,21 +80,21 @@ const userSchema = new mongoose.Schema({
     resetTokenExpire: Date,
     loginAttempts: { type: Number, default: 0 },
     lockUntil: { type: Date }
-});
+}, { timestamps: true });
 
 const User = mongoose.model('User', userSchema);
 
-// MongoDB Connection & Data Migration (FORCE all user fullnames to match email prefix)
+// MongoDB Connection (አንድ ጊዜ ብቻ የተጻፈ እና የተስተካከለ)
 mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/tbr_exchange')
 .then(async () => {
     console.log('MongoDB Database Connected Successfully!');
     
+    // የድሮ ዩዘሮች ስም እና መታወቂያ (ID) ማስተካከያ
     try {
         const users = await User.find({});
         for (let user of users) {
             if (user.email) {
                 const emailPrefix = user.email.split('@')[0];
-                // የእርስዎን ጨምሮ የሁሉም ዩዘሮች ስም ከኢሜል ፕሪፊክስ ጋር እንዲመሳሰል ይገደዳል
                 if (user.fullName !== emailPrefix) {
                     user.fullName = emailPrefix;
                     await user.save();
@@ -97,20 +102,12 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/tbr_exchang
             }
         }
         console.log('All users fullnames updated successfully based on their email prefix!');
+        await assignIdsToExistingUsers(); // ዩዘር አይዲ የሚሰጠው ፋንክሽን እዚሁ ይጠራል
     } catch (migrationErr) {
         console.error('Migration Error:', migrationErr);
     }
 })
-.catch(err => console.log('MongoDB Connection Error:', err));
-
-mongoose.connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-}).then(() => {
-    console.log("Connected to MongoDB successfully");
-    assignIdsToExistingUsers();
-
-}).catch(err => console.error("MongoDB connection error:", err));
+.catch(err => console.error('MongoDB Connection Error:', err));
 
 // KYC Schema & Model
 const kycSchema = new mongoose.Schema({
@@ -122,7 +119,7 @@ const kycSchema = new mongoose.Schema({
     address: { type: String },
     docType: { type: String, default: 'national_id' },
     frontImage: { type: String, required: true }, 
-    backImage: { type: String },                     
+    backImage: { type: String },                    
     selfieImage: { type: String, required: true }, 
     status: { type: String, default: 'pending' }, 
     rejectionReason: { type: String, default: '' },
@@ -545,10 +542,6 @@ app.post('/api/google-auth', async (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
-
 // 8. Forgot Password Route
 app.post('/api/forgot-password', async (req, res) => {
     try {
@@ -628,7 +621,6 @@ app.post('/api/reset-password', async (req, res) => {
     }
 });
 
-// ምሳሌ በ Node.js / Express
 app.get('/me', verifyToken, async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
@@ -642,78 +634,14 @@ app.get('/me', verifyToken, async (req, res) => {
                 email: user.email,
                 balance: user.balance,
                 kycStatus: user.kycStatus,
-                userId: user.userId // እዚህ ጋር ይጨመራል
+                userId: user.userId,
+                avatar: user.avatar // ✅ አቫታር እዚህም ይመለሳል
             }
         });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
 });
-
-function loadKycData(status = 'pending') {
-    fetch(`https://tbr-exchange-backend.onrender.com/api/admin/kyc?status=${status}`, {
-        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('adminToken') }
-    })
-    .then(res => res.json())
-    .then(data => {
-        // ዳታው ሁሉንም የሚመጣ ከሆነ በ JavaScript ማጣራት ይቻላል:
-        const filteredData = data.filter(item => item.status === status);
-        
-        renderKycTable(filteredData, status);
-    })
-    .catch(err => console.error('Error:', err));
-}
-
-// የሚፈልጉትን ስተሰት (status) እየቀየሩ ዳታ የሚጠራ ፈንክሽን
-function loadKycData(status) {
-    // የአዝራሮቹን active status መቀየር (CSS ለማስተካከል)
-    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-    document.getElementById(`btn-${status}-kyc`).classList.add('active');
-
-    // ከ Backend ዳታውን መጥራት (የእርስዎን API ፖይንት በኮዱ መሰረት ያስተካክሉት)
-    fetch(`https://tbr-exchange-backend.onrender.com/api/admin/kyc?status=${status}`, {
-        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('adminToken') }
-    })
-    .then(res => res.json())
-    .then(data => {
-        renderKycTable(data, status);
-    })
-    .catch(err => console.error('Error loading KYC data:', err));
-}
-
-// ታብሉን የሚሞላው እና እንደ status-ው Actions ዎችን (Approve/Reject አዝራሮችን) የሚያስተካክለው ፈንክሽን
-function renderKycTable(kycList, currentStatus) {
-    const tableBody = document.getElementById('kycTableBody'); // የታብሉ tbody ID
-    tableBody.innerHTML = '';
-
-    if (!kycList || kycList.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 20px;">ምንም ${currentStatus} የሆነ KYC አልተገኘም</td></tr>`;
-        return;
-    }
-
-    kycList.forEach(item => {
-        // Pending ከሆነ Approve/Reject አዝራሮች ይታያሉ፤ Approved ወይም Rejected ከሆኑ ግን እንደ ስተሰቱ status-ው ብቻ ይታያል
-        let actionButtons = '';
-        if (currentStatus === 'pending') {
-            actionButtons = `
-                <button onclick="updateKycStatus('${item.userId}', 'approved')" class="approve-btn">Approve</button>
-                <button onclick="updateKycStatus('${item.userId}', 'rejected')" class="reject-btn">Reject</button>
-            `;
-        } else {
-            actionButtons = `<span class="status-badge ${currentStatus}">${currentStatus.toUpperCase()}</span>`;
-        }
-
-        const row = `
-            <tr>
-                <td>User ID: ${item.userId}</td>
-                <td><button onclick="viewDocuments('${item.userId}')" class="view-doc-btn">🔍 View Documents & Selfie</button></td>
-                <td><span class="status-${item.status}">${item.status}</span></td>
-                <td>${actionButtons}</td>
-            </tr>
-        `;
-        tableBody.innerHTML += row;
-    });
-}
 
 // Get Current User Profile API Route
 app.get('/api/user', verifyToken, async (req, res) => {
@@ -729,11 +657,13 @@ app.get('/api/user', verifyToken, async (req, res) => {
                 id: user._id,
                 email: user.email,
                 fullName: forcedName,
-                avatar: user.avatar || user.userAvatar || '', // <--- እዚህ ጨምር
+                avatar: user.avatar || '', // ✅ አቫታር በትክክል ይላካል
                 isAdmin: user.isAdmin,
                 kycStatus: user.kycStatus,
                 isBanned: user.isBanned,
-                createdAt: user.createdAt
+                createdAt: user.createdAt,
+                traderUsername: user.traderUsername || '',
+                phone: user.phone || ''
             }
         });
     } catch (err) {
@@ -741,7 +671,7 @@ app.get('/api/user', verifyToken, async (req, res) => {
     }
 });
 
-// --- User Profile & Auth Routes ---
+// --- User Profile Get Route ---
 app.get('/api/user/profile', verifyToken, async (req, res) => {
     try {
         const user = await User.findById(req.user.id).select('-password');
@@ -754,6 +684,10 @@ app.get('/api/user/profile', verifyToken, async (req, res) => {
                 id: user._id,
                 email: user.email,
                 fullName: user.fullName,
+                avatar: user.avatar || '', // ✅ አቫታር
+                traderUsername: user.traderUsername || '',
+                phone: user.phone || '',
+                tbrId: user.userId || '',
                 kycStatus: user.kycStatus || 'unverified'
             }
         });
@@ -762,7 +696,7 @@ app.get('/api/user/profile', verifyToken, async (req, res) => {
     }
 });
 
-// --- Update User Profile / Avatar Route ---
+// --- Update User Profile / Avatar Route (የተስተካከለው ክፍል!) ---
 app.post('/api/user/update', verifyToken, async (req, res) => {
     try {
         const { field, value } = req.body;
@@ -772,9 +706,13 @@ app.post('/api/user/update', verifyToken, async (req, res) => {
 
         const updateData = {};
         if (field === 'avatar') {
-            updateData.avatar = value;
-            updateData.userAvatar = value;
-            updateData.profilePicture = value;
+            updateData.avatar = value; // ✅ አሁን ዴታቤዝ ውስጥ ይገባል
+        } else if (field === 'phone') {
+            updateData.phone = value;
+        } else if (field === 'username' || field === 'traderUsername') {
+            updateData.traderUsername = value;
+        } else if (field === 'name') {
+            updateData.fullName = value;
         } else {
             updateData[field] = value;
         }
@@ -792,7 +730,7 @@ app.post('/api/user/update', verifyToken, async (req, res) => {
         res.json({
             success: true,
             message: 'Profile updated successfully',
-            avatar: user.avatar || user.userAvatar || value,
+            avatar: user.avatar,
             user
         });
     } catch (error) {
@@ -812,6 +750,7 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
             user: {
                 fullName: user.fullName || user.name,
                 email: user.email,
+                avatar: user.avatar || '',
                 kycStatus: user.kycStatus
             }
         });
@@ -889,7 +828,7 @@ app.get('/api/admin/escrow-disputes', verifyAdmin, async (req, res) => {
     }
 });
 
-// 2. KYC Requests API (Updated to include fullName properly)
+// 2. KYC Requests API
 app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
     try {
         const page = Math.max(1, parseInt(req.query.page, 10) || 1);
@@ -919,7 +858,7 @@ app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
             _id: kyc._id,
             userId: kyc.userId || kyc.email || 'N/A',
             email: kyc.email || '',
-            fullName: kyc.fullName || 'User', // ሙሉ ስም ከ KYC ዶክመንት
+            fullName: kyc.fullName || 'User',
             frontImage: formatImage(kyc.frontImage),
             backImage: formatImage(kyc.backImage),
             selfieImage: formatImage(kyc.selfieImage),
@@ -983,14 +922,12 @@ app.post('/api/kyc/submit', async (req, res) => {
             status: 'pending'
         };
 
-        // Upsert in KYC collection
         await KYC.findOneAndUpdate(
             { email: user.email },
             kycDataPayload,
             { upsert: true, new: true, setDefaultsOnInsert: true }
         );
 
-        // Update User doc
         user.kycStatus = 'pending';
         user.kycData = kycDataPayload;
         if (fullName) user.fullName = fullName;
@@ -1003,7 +940,7 @@ app.post('/api/kyc/submit', async (req, res) => {
     }
 });
 
-// --- Admin KYC Action Route (Single unified) ---
+// --- Admin KYC Action Route ---
 app.post('/api/admin/kyc-action', verifyAdmin, async (req, res) => {
     try {
         const { kycId, status } = req.body; 
@@ -1090,8 +1027,7 @@ async function assignIdsToExistingUsers() {
     }
 }
 
-// Server Listen
+// Server Listen (ይህ መጨረሻው ላይ አንድ ጊዜ ብቻ መጥራት አለበት)
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
-    assignIdsToExistingUsers();
 });
