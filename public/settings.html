@@ -539,8 +539,18 @@
 
         let currentField = "";
 
-        // ፔጁ ሲከፈት ወዲያውኑ ሎካል ዳታውን ያመጣል (0 ሰከንድ ላይ)
+        // 🔴 ባዶ እንዳይሆን ጊዜያዊ አይዲ የሚፈጥር ፈንክሽን
+        function getOrGenerateLocalId() {
+            let id = localStorage.getItem('tbrExchangeId') || localStorage.getItem('userUniqueId') || localStorage.getItem('tbrId');
+            if (!id || id.trim() === "") {
+                id = 'TBR-' + Math.floor(100000 + Math.random() * 900000);
+                localStorage.setItem('tbrId', id);
+            }
+            return id;
+        }
+
         document.addEventListener("DOMContentLoaded", async function() {
+            // 🔴 ፔጁ እንደተከፈተ ሎካል ስቶሬጁን አውጥቶ ይለጥፋል
             loadFromLocalStorageFallback();
             loadUserPasskeys();
 
@@ -566,8 +576,8 @@
                     const username = userData.fullName || userData.username || userData.name || localStorage.getItem("userName") || "User";
                     const email = userData.email || localStorage.getItem("userEmail") || "";
                     
-                    // 🔴 "Loading..." የሚለው ጠፍቶ ትክክለኛው አይዲ ቶሎ እንዲገባ ተደርጓል
-                    let tbrId = userData.tbrId || userData.userId || userData.customId || localStorage.getItem("tbrId") || localStorage.getItem("tbrExchangeId") || "";
+                    // 🔴 ከሰርቨር ትክክለኛው አይዲ ሲመጣ ይተካል
+                    let tbrId = userData.tbrId || userData.userId || userData.customId || getOrGenerateLocalId();
                     
                     if (userData.numericId && !tbrId.startsWith('TBR-')) {
                         tbrId = 'TBR-' + String(userData.numericId).padStart(6, '0');
@@ -620,10 +630,10 @@
             const emailEl = document.getElementById("profile-email");
             if (emailEl) emailEl.innerText = user.email || '';
             
-            // 🔴 ያለ ሎዲንግ አይዲውን ይለጥፋል
+            // 🔴 ያለ ባዶ ቦታ አይዲውን ይለጥፋል
             const idEl = document.getElementById("profile-id");
             if (idEl) {
-                idEl.innerText = user.tbrId || localStorage.getItem("tbrId") || localStorage.getItem("tbrExchangeId") || '';
+                idEl.innerText = user.tbrId || getOrGenerateLocalId();
             }
             
             const avatarBox = document.getElementById("avatar-initials");
@@ -663,8 +673,8 @@
             const username = localStorage.getItem("userName") || localStorage.getItem("fullName") || "User";
             const email = localStorage.getItem("userEmail") || "";
             
-            // 🔴 ፔጁ ገና ሲከፈት ወዲያውኑ ትክክለኛውን አይዲ ይዞ እንዲነሳ አድርገነዋል
-            let tbrId = localStorage.getItem("tbrId") || localStorage.getItem("tbrExchangeId") || "";
+            // 🔴 ፔጁ ገና ሲከፈት ባዶ እንዳይሆን
+            let tbrId = getOrGenerateLocalId();
             
             const phone = localStorage.getItem("userPhone") || "";
             const traderHandle = localStorage.getItem("traderUsername") || "";
