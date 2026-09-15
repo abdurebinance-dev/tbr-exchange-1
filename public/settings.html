@@ -564,7 +564,10 @@
                     
                     const username = userData.fullName || userData.username || userData.name || localStorage.getItem("userName") || "User";
                     const email = userData.email || localStorage.getItem("userEmail") || "";
-                    let tbrId = userData.tbrId || userData.customId || localStorage.getItem("tbrId") || "TBR-476394";
+                    
+                    // 🔴 "TBR-476394" ወደ "Loading..." ተቀይሯል
+                    let tbrId = userData.tbrId || userData.customId || localStorage.getItem("tbrId") || "Loading...";
+                    
                     const phone = userData.phone || userData.phoneNumber || "";
                     const traderHandle = userData.traderUsername || "";
                     const kycVal = userData.kycStatus || 'approved';
@@ -577,7 +580,7 @@
                         finalAvatar = serverAvatar;
                     }
 
-                    localStorage.setItem("tbrId", tbrId);
+                    if (tbrId !== "Loading...") localStorage.setItem("tbrId", tbrId);
                     localStorage.setItem("kycStatus", kycVal);
                     if (username) localStorage.setItem("userName", username);
                     if (email) localStorage.setItem("userEmail", email);
@@ -609,8 +612,9 @@
             const emailEl = document.getElementById("profile-email");
             if (emailEl) emailEl.innerText = user.email || 'No email';
             
+            // 🔴 "TBR-476394" ወደ "Loading..." ተቀይሯል
             const idEl = document.getElementById("profile-id");
-            if (idEl) idEl.innerText = user.tbrId || 'TBR-476394';
+            if (idEl) idEl.innerText = user.tbrId || 'Loading...';
             
             const avatarBox = document.getElementById("avatar-initials");
             if (avatarBox) {
@@ -648,7 +652,10 @@
         function loadFromLocalStorageFallback() {
             const username = localStorage.getItem("userName") || "User";
             const email = localStorage.getItem("userEmail") || "";
-            let tbrId = localStorage.getItem("tbrId") || "TBR-476394";
+            
+            // 🔴 "TBR-476394" ወደ "Loading..." ተቀይሯል
+            let tbrId = localStorage.getItem("tbrId") || "Loading...";
+            
             const phone = localStorage.getItem("userPhone") || "";
             const traderHandle = localStorage.getItem("traderUsername") || "";
             const kycStatus = localStorage.getItem("kycStatus") || "approved";
