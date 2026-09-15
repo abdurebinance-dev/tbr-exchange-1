@@ -214,7 +214,7 @@
             display: none;
         }
 
-        /* 🚀 አዲሱ የኔትወርክ ምርጫ (Network Modal) ዲዛይን 🚀 */
+        /* 🚀 Network Modal ዲዛይን ከትክክለኛው ሎጎ ጋር */
         .modal-content.network-modal {
             background-color: #0b0e11;
             border: 1px solid #2b313a;
@@ -273,27 +273,16 @@
             background-color: #1f222a;
         }
 
+        /* 🚀 ትክክለኞቹ የሎጎ ኬዞች */
         .net-icon-wrapper {
-            width: 34px;
-            height: 34px;
+            width: 38px;
+            height: 38px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
-        }
-
-        .net-icon-wrapper.bsc-icon {
-            background-color: #000;
-            border: 1px solid #333;
-        }
-
-        .net-icon-wrapper.trx-icon {
-            background-color: var(--red-color);
-            color: #fff;
-            font-size: 11px;
-            font-weight: 800;
-            border: 1px solid #ff6b81;
+            overflow: hidden;
         }
 
         .net-title-row {
@@ -454,22 +443,23 @@
         </div>
     </div>
 
-    <!-- 🚀 Network Selection Modal (አዲሱ ዲዛይን) -->
+    <!-- 🚀 Network Selection Modal -->
     <div class="modal-overlay" id="networkModal">
         <div class="modal-content network-modal">
             <div class="modal-header-styled">
                 <h3>Choose Network</h3>
-                <!-- X ምልክት ከፎቶው ጋር ተመሳሳይ ሆኖ አረንጓዴ ክብ የተደረገበት -->
                 <i class="fa-regular fa-circle-xmark" onclick="closeNetworkModal()"></i>
             </div>
             
             <div class="network-options-container">
                 
-                <!-- BSC Option -->
+                <!-- BSC Option (እንደ ላክኸው ፎቶ ቢጫ የዙሪያ ከለር እና የባይናንስ ኪዩብ ሎጎ) -->
                 <div class="network-item" onclick="selectNetwork('BSC', 'BNB Smart Chain (BEP-20)')">
-                    <div class="net-icon-wrapper bsc-icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
-                            <path fill="#F3BA2F" d="M12 0l7.364 7.364-2.717 2.716-4.647-4.646-4.647 4.646-2.717-2.716L12 0zm7.364 16.636l-7.364 7.364-7.364-7.364 2.717-2.716 4.647 4.646 4.647-4.646 2.717 2.716zm2.717-4.636L24 14.716l-2.719 2.717-2.717-2.717 2.717-2.716zM0 12l2.719-2.716 2.717 2.716-2.717 2.717L0 12zm12 2.716l4.647-4.646 2.717 2.716-7.364 7.364-7.364-7.364 2.717-2.716L12 14.716z"/>
+                    <div class="net-icon-wrapper">
+                        <!-- ትክክለኛው የባይናንስ ኪዩብ ሎጎ (በቢጫ ክብ ውስጥ) -->
+                        <svg viewBox="0 0 100 100" width="38" height="38">
+                            <circle cx="50" cy="50" r="50" fill="#F3BA2F"/>
+                            <path fill="#FFFFFF" d="M50 25L30 36.5v23L50 71l20-11.5v-23L50 25zm0 8.5l13.5 7.8v15.4L50 63.5 36.5 56.7V41.3L50 33.5zm-8.5 15.6l8.5 4.9 8.5-4.9-8.5-4.9-8.5 4.9z"/>
                         </svg>
                     </div>
                     <div>
@@ -485,10 +475,14 @@
                     </div>
                 </div>
 
-                <!-- TRON Option -->
+                <!-- TRON Option (እንደ ላክኸው ፎቶ አረንጓዴ የዙሪያ ከለር እና የቲተር/ትሮን T ሎጎ) -->
                 <div class="network-item" onclick="selectNetwork('TRX', 'TRON (TRC-20)')">
-                    <div class="net-icon-wrapper trx-icon">
-                        TRX
+                    <div class="net-icon-wrapper">
+                        <!-- ትክክለኛው የ USDT/TRON ሎጎ (באረንጓዴ ክብ ውስጥ ነጭ T) -->
+                        <svg viewBox="0 0 100 100" width="38" height="38">
+                            <circle cx="50" cy="50" r="50" fill="#26A69A"/>
+                            <path fill="#FFFFFF" d="M57.3 46V30H72V23H28v7h14.7v16c-11.4.5-20 3-20 6s8.6 5.5 20 6v21h10.6V58c11.4-.5 20-3 20-6s-8.6-5.5-20-6z"/>
+                        </svg>
                     </div>
                     <div>
                         <div class="net-title-row">
@@ -525,7 +519,6 @@
         document.addEventListener("DOMContentLoaded", () => {
             fetchUserBalance();
 
-            // 🔍 ዩአርኤሉን (URL Parameters) በማንበብ አክቲቭ ከለር እንዲይዝ ማድረግ
             const urlParams = new URLSearchParams(window.location.search);
             const action = urlParams.get('action');
 
@@ -562,7 +555,6 @@
             }
         }
 
-        // ባላንስ መደበቂያ እና ማሳያ ፈንክሽን
         function toggleBalanceVisibility() {
             isBalanceVisible = !isBalanceVisible;
             const balanceEl = document.getElementById("wallet-balance");
@@ -585,12 +577,9 @@
             document.getElementById("networkModal").style.display = "none";
         }
 
-        // 🚀 አዲሱ የኔትወርክ መምረጫ ስክሪፕት (ስሙ እና ሙሉ ስሙ እንዲወጣ)
         function selectNetwork(shortName, longName) {
             chosenNetwork = shortName;
             const textEl = document.getElementById("selectedNetworkText");
-            
-            // የተመረጠው ኔትወርክ እንደ ፎቶው አምሮ እንዲወጣ ተደርጓል
             textEl.innerHTML = `<span style="color: #fff; font-weight: 700; margin-right: 6px;">${shortName}</span> <span style="font-size: 13px; color: #848e9c;">${longName}</span>`;
             
             closeNetworkModal();
@@ -598,11 +587,9 @@
         }
 
         function handleAction(actionType, btnElement) {
-            // የነቁትን አዝራሮች ከለር መቀየር
             document.querySelectorAll('.wallet-btn').forEach(b => b.classList.remove('active'));
             if(btnElement) btnElement.classList.add('active');
 
-            // ኔትወርክ ካልተመረጠ ማሳሰቢያ ይሰጣል
             if (!chosenNetwork && actionType === 'Deposit') {
                 showToast("Please select a network first.");
                 return;
