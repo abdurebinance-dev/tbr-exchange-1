@@ -394,7 +394,6 @@
 
     </div>
 
-    <!-- Script to Load Profile and Manage IDs & KYC States -->
     <script>
         function copyUserId() {
             const userIdText = document.getElementById('userUniqueId').innerText;
@@ -413,6 +412,15 @@
             });
         }
 
+        // 🔴 ሚሞሪ ውስጥ ካሉት ሁሉንም ID Keys ፈልጎ ያወጣል (ልክ እንደ ዳሽቦርድ ወዲያው እንዲመጣ)
+        function getStoredId() {
+            return localStorage.getItem('tbrId') || 
+                   localStorage.getItem('tbrExchangeId') || 
+                   localStorage.getItem('userId') || 
+                   localStorage.getItem('userUniqueId') || 
+                   '';
+        }
+
         // 1. ወዲያውኑ ዩአይን የሚያዘምነው ዋና ፋንክሽን
         function updateProfileUI() {
             let name = localStorage.getItem('userName') || localStorage.getItem('fullName') || localStorage.getItem('name') || "USER";
@@ -421,8 +429,8 @@
             let rejectionReason = localStorage.getItem('kycRejectionReason') || 'Document check failed';
             let storedFullName = localStorage.getItem('fullName') || '';
             
-            // 🔴 የራንደም ኮዱ ሙሉ በሙሉ ጠፍቷል! ትክክለኛውን አይዲ ብቻ ነው የሚያነበው
-            let userId = localStorage.getItem('tbrId') || localStorage.getItem('tbrExchangeId') || localStorage.getItem('userUniqueId') || '';
+            // 🔴 ትክክለኛውን አይዲ ብቻ ነው የሚያመጣው
+            let userId = getStoredId();
             
             let savedAvatar = localStorage.getItem('userAvatar') || localStorage.getItem('profilePicture') || localStorage.getItem('profilePic');
             
@@ -544,20 +552,17 @@
                         if (user.kycStatus) localStorage.setItem('kycStatus', user.kycStatus);
                         if (user.kycRejectionReason) localStorage.setItem('kycRejectionReason', user.kycRejectionReason);
                         
-                        // የአይዲ (ID) ማዘመኛ - ትክክለኛውን ብቻ ያነባል
-                        if (user.userId && user.userId !== "") {
-                            localStorage.setItem('tbrExchangeId', user.userId);
-                            localStorage.setItem('tbrId', user.userId);
-                        } else if (user.numericId) {
-                            const newId = 'TBR-' + String(user.numericId).padStart(6, '0');
-                            localStorage.setItem('tbrExchangeId', newId);
+                        // 🔴 ከሰርቨር የሚመጣውን ትክክለኛ አይዲ ሴቭ እናደርጋለን (ሴቲንግ ውስጥ ሳትገባ እንዲያገኘው)
+                        let newId = user.tbrId || user.userId || user.customId || user.id || user._id || "";
+                        if (user.numericId && (!newId.startsWith('TBR-'))) {
+                            newId = 'TBR-' + String(user.numericId).padStart(6, '0');
+                        }
+
+                        if (newId && newId !== "") {
                             localStorage.setItem('tbrId', newId);
-                        } else if (user.customId && user.customId !== "") {
-                            localStorage.setItem('tbrExchangeId', user.customId);
-                            localStorage.setItem('tbrId', user.customId);
+                            localStorage.setItem('tbrExchangeId', newId);
                         }
                         
-                        // የአቫታር ማዘመኛ
                         if (user.avatar && user.avatar !== 'null' && user.avatar.trim() !== '') {
                             localStorage.setItem('userAvatar', user.avatar);
                             localStorage.setItem('profilePicture', user.avatar);
@@ -578,3 +583,5 @@
             syncWithServer();  // በጀርባ ከሰርቨር ያዘምናል
         });
     </script>
+</body>
+</html>

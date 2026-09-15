@@ -405,9 +405,9 @@
                     <input type="file" id="profileImageInput" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
 
                     <div class="user-info">
-                        <h3 id="profile-name">Loading... <i class="fa-solid fa-pen edit-icon" onclick="openModal('name')"></i></h3>
+                        <h3 id="profile-name"> <i class="fa-solid fa-pen edit-icon" onclick="openModal('name')"></i></h3>
                         <div class="id-container">
-                            <span>ID:</span> <span id="profile-id">Loading...</span> 
+                            <span>ID:</span> <span id="profile-id"></span> 
                             <i class="fa-solid fa-copy" style="cursor:pointer;" title="Copy ID" onclick="copyId()"></i>
                         </div>
                     </div>
@@ -416,7 +416,7 @@
                 <div class="info-row">
                     <div>
                         <div class="info-title">Email</div>
-                        <div class="info-value" id="profile-email">Loading...</div>
+                        <div class="info-value" id="profile-email"></div>
                     </div>
                     <span class="badge-verified"><i class="fa-solid fa-check"></i> Verified</span>
                 </div>
@@ -539,6 +539,15 @@
 
         let currentField = "";
 
+        // 🔴 ሚሞሪ ውስጥ ካሉት ሁሉንም ID Keys ፈልጎ ያወጣል
+        function getStoredId() {
+            return localStorage.getItem('tbrId') || 
+                   localStorage.getItem('tbrExchangeId') || 
+                   localStorage.getItem('userId') || 
+                   localStorage.getItem('userUniqueId') || 
+                   '';
+        }
+
         document.addEventListener("DOMContentLoaded", async function() {
             // 🔴 ፔጁ እንደተከፈተ ሎካል ስቶሬጁን አውጥቶ ይለጥፋል
             loadFromLocalStorageFallback();
@@ -567,10 +576,9 @@
                     const email = userData.email || localStorage.getItem("userEmail") || "";
                     
                     // 🔴 ከሰርቨር ትክክለኛው አይዲ ሲመጣ ይተካል (ራንደም የለም)
-                    let tbrId = userData.tbrId || userData.userId || userData.customId || localStorage.getItem("tbrId") || localStorage.getItem("tbrExchangeId") || "";
-                    
-                    if (userData.numericId && !tbrId.startsWith('TBR-')) {
-                        tbrId = 'TBR-' + String(userData.numericId).padStart(6, '0');
+                    let newId = userData.tbrId || userData.userId || userData.customId || userData.id || userData._id || "";
+                    if (userData.numericId && (!newId.startsWith('TBR-'))) {
+                        newId = 'TBR-' + String(userData.numericId).padStart(6, '0');
                     }
 
                     const phone = userData.phone || userData.phoneNumber || "";
@@ -585,9 +593,9 @@
                         finalAvatar = serverAvatar;
                     }
 
-                    if (tbrId) {
-                        localStorage.setItem("tbrId", tbrId);
-                        localStorage.setItem("tbrExchangeId", tbrId);
+                    if (newId && newId !== "") {
+                        localStorage.setItem("tbrId", newId);
+                        localStorage.setItem("tbrExchangeId", newId);
                     }
                     localStorage.setItem("kycStatus", kycVal);
                     if (username) localStorage.setItem("userName", username);
@@ -599,7 +607,7 @@
                     updateUI({
                         username: username,
                         email: email,
-                        tbrId: tbrId,
+                        tbrId: newId,
                         phone: phone,
                         traderHandle: traderHandle,
                         kycStatus: kycVal,
@@ -622,7 +630,7 @@
             
             const idEl = document.getElementById("profile-id");
             if (idEl) {
-                idEl.innerText = user.tbrId || localStorage.getItem("tbrId") || localStorage.getItem("tbrExchangeId") || '';
+                idEl.innerText = user.tbrId || getStoredId();
             }
             
             const avatarBox = document.getElementById("avatar-initials");
@@ -663,7 +671,7 @@
             const email = localStorage.getItem("userEmail") || "";
             
             // 🔴 የራንደም ኮዱ ጠፍቷል። ሚሞሪ ላይ ያለውን ብቻ ያወጣል
-            let tbrId = localStorage.getItem("tbrId") || localStorage.getItem("tbrExchangeId") || "";
+            let tbrId = getStoredId();
             
             const phone = localStorage.getItem("userPhone") || "";
             const traderHandle = localStorage.getItem("traderUsername") || "";
@@ -985,3 +993,5 @@
             });
         });
     </script>
+</body>
+</html>
