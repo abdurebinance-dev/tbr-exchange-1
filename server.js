@@ -774,7 +774,9 @@ app.post('/api/admin/login', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid admin credentials.' });
         }
 
-        if (password !== user.password) {
+        // ✅ ይሄ ነው የተስተካከለው! (በ bcrypt ማረጋገጥ)
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
             return res.status(400).json({ success: false, message: 'Invalid admin credentials.' });
         }
 
