@@ -27,39 +27,60 @@
             padding: 0;
         }
 
-        .wallet-container {
-            max-width: 1100px;
-            margin: 20px auto;
-            padding: 0 15px;
-        }
-
-        /* Top Bar / Nav simulation if needed, or link back to dashboard */
-        .wallet-top-bar {
+        /* Navbar Styling to match Dashboard */
+        .navbar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            background-color: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 25px;
         }
 
-        .dashboard-btn {
-            background: #1a1a1a;
+        .nav-left, .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: bold;
             color: var(--accent-color);
-            border: 1px solid var(--border-color);
-            padding: 6px 14px;
-            border-radius: 6px;
-            font-size: 13px;
+            text-decoration: none;
+            letter-spacing: 1px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 15px;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
             font-weight: 500;
-            cursor: pointer;
-            display: inline-flex;
+            padding: 6px 12px;
+            border-radius: 6px;
+            display: flex;
             align-items: center;
             gap: 6px;
-            text-decoration: none;
-            transition: all 0.08s ease;
+            transition: all 0.2s ease;
         }
 
-        .dashboard-btn:hover {
-            background: var(--accent-color);
-            color: #000;
+        .nav-links a:hover, .nav-links a.active {
+            color: var(--accent-color);
+            background: rgba(243, 186, 47, 0.08);
+        }
+
+        .wallet-container {
+            max-width: 1100px;
+            margin: 25px auto;
+            padding: 0 15px;
         }
 
         /* Balance Card */
@@ -198,10 +219,6 @@
             color: var(--green-color);
         }
 
-        .activity-amount.negative {
-            color: var(--text-color);
-        }
-
         /* Toast Notification Styles */
         #toastNotification {
             position: fixed;
@@ -238,18 +255,27 @@
 </head>
 <body>
 
-    <div class="wallet-container">
-        <!-- Top Bar -->
-        <div class="wallet-top-bar">
-            <div class="settings-header">
-                <h1 style="font-size: 20px; font-weight: 600; margin: 0;">My Wallet</h1>
-                <p style="color: var(--text-muted); font-size: 13px; margin: 0;">Manage your crypto assets, deposit, and withdraw securely.</p>
-            </div>
-            <a href="dashboard.html" class="dashboard-btn">
-                <i class="fa-solid fa-house"></i> Dashboard
-            </a>
+    <!-- Unified Navbar -->
+    <nav class="navbar">
+        <div class="nav-left">
+            <a href="dashboard.html" class="logo">TBR</a>
+            <ul class="nav-links">
+                <li><a href="dashboard.html"><i class="fa-solid fa-house"></i> Dashboard</a></li>
+                <li><a href="market.html"><i class="fa-solid fa-chart-line"></i> Market</a></li>
+                <li><a href="my-ads.html"><i class="fa-solid fa-bullhorn"></i> My Ads</a></li>
+                <li><a href="trades.html"><i class="fa-solid fa-right-left"></i> Trades</a></li>
+                <li><a href="wallet.html" class="active"><i class="fa-solid fa-wallet"></i> Wallet</a></li>
+            </ul>
         </div>
+        <div class="nav-right">
+            <span style="color: var(--green-color); font-size: 13px; background: rgba(14,203,129,0.1); padding: 4px 10px; border-radius: 6px;">
+                <i class="fa-solid fa-check"></i> Verified
+            </span>
+            <a href="settings.html" style="color: var(--text-muted); font-size: 16px; text-decoration: none;"><i class="fa-solid fa-gear"></i></a>
+        </div>
+    </nav>
 
+    <div class="wallet-container">
         <!-- Balance Card -->
         <div class="balance-card">
             <div class="balance-title">Total Balance</div>
