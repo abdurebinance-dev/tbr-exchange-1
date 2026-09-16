@@ -115,10 +115,11 @@
             flex-wrap: wrap;
         }
 
+        /* 🚀 ፈዛዛ የ Button ዲዛይን (Inactive State) */
         .wallet-btn {
-            background: #1a1a1a;
-            color: #fff;
-            border: 1px solid var(--border-color);
+            background: rgba(26, 26, 26, 0.4); /* ፈዛዛ ባክግራውንድ */
+            color: #848e9c; /* ፈዛዛ ጽሁፍ */
+            border: 1px solid #2b313a;
             padding: 10px 24px;
             border-radius: 8px;
             font-size: 14px;
@@ -127,9 +128,15 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            transition: all 0.15s ease;
+            transition: all 0.2s ease;
         }
 
+        .wallet-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+        }
+
+        /* 🚀 ሲነኩ የሚኖራቸው ደማቅ ከለር (Active States) */
         .wallet-btn.deposit-btn.active {
             background: var(--green-color);
             color: #000;
@@ -137,9 +144,9 @@
         }
 
         .wallet-btn.withdraw-btn.active {
-            background: #1a1a1a;
+            background: var(--red-color);
             color: #fff;
-            border-color: #fff;
+            border-color: var(--red-color);
         }
 
         .wallet-btn.transfer-btn.active {
@@ -326,15 +333,17 @@
             color: #fff;
         }
 
+        /* 🚀 የ X ምልክት ከለር ወደ ነጭ ተቀይሯል */
         .modal-header-styled i {
             cursor: pointer;
-            color: #0ecb81;
+            color: #ffffff; 
             font-size: 22px;
             transition: transform 0.2s;
         }
         
         .modal-header-styled i:hover {
             transform: scale(1.1);
+            color: var(--red-color); /* ሲነካ ቀይ እንዲሆን ከፈለግክ */
         }
 
         .network-options-container {
@@ -359,14 +368,13 @@
             border-color: #f3ba2f; 
         }
 
-        /* 🚀 አዲሱ የ Disabled ኔትወርክ እና Coming Soon ዲዛይን */
         .network-item.disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
 
         .network-item.disabled:hover {
-            border-color: #2b313a; /* ከተዘጋ ሆቨር ከለሩን ያጠፋዋል */
+            border-color: #2b313a; 
         }
 
         .coming-soon-badge {
@@ -379,8 +387,8 @@
             border-radius: 6px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-left: auto; /* ወደ ቀኝ ጥግ ይገፋዋል */
-            align-self: center; /* መሃል ላይ ያደርገዋል */
+            margin-left: auto;
+            align-self: center;
         }
 
         .net-icon-wrapper {
@@ -612,7 +620,7 @@
         <div class="modal-content network-modal">
             <div class="modal-header-styled">
                 <h3>Choose Network</h3>
-                <i class="fa-regular fa-circle-xmark" onclick="closeNetworkModal()"></i>
+                <i class="fa-solid fa-xmark" onclick="closeNetworkModal()"></i>
             </div>
             
             <div class="network-options-container">
@@ -635,8 +643,7 @@
                     </div>
                 </div>
 
-                <!-- 🚀 TRON Option (DISABLED & COMING SOON) -->
-                <!-- onclick ሲነካ ፎርም አያመጣም፣ የ Coming soon ሜሴጅ ብቻ ያወጣል -->
+                <!-- TRON Option -->
                 <div class="network-item disabled" id="trx-option" onclick="showToast('TRON (TRC-20) Network is Coming Soon!')">
                     <div class="net-icon-wrapper">
                         <img src="trx.png.jfif" alt="TRX Logo">
@@ -652,7 +659,7 @@
                             <span>Est. arrival ~1 min</span>
                         </div>
                     </div>
-                    <!-- 🚀 Coming Soon Badge -->
+                    <!-- Coming Soon Badge -->
                     <div class="coming-soon-badge">Coming Soon</div>
                 </div>
 
