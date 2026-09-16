@@ -655,21 +655,40 @@ app.get('/api/check-deposits/:walletAddress', verifyToken, async (req, res) => {
     const userWalletAddress = req.params.walletAddress;
 
     try {
-        // Etherscan API V2 Endpoint ለ BSC (chainid=56) Token Transfers
-        const url = `https://api.etherscan.io/v2/api?chainid=56&module=account&action=tokentx&contractaddress=${USDT_CONTRACT_ADDRESS}&address=${userWalletAddress}&page=1&offset=10&sort=desc&apikey=${BSCSCAN_API_KEY}`;
+        // ✅ የ Etherscan ሊንክን ወደ ትክክለኛው የ BscScan ሊንክ ቀይረነዋል
+        const url = `https://api.bscscan.com/api?module=account&action=tokentx&contractaddress=${USDT_CONTRACT_ADDRESS}&address=${userWalletAddress}&page=1&offset=10&sort=desc&apikey=${BSCSCAN_API_KEY}`;
 
         const response = await axios.get(url);
         const data = response.data;
 
         if (data.status === '1' && data.result && data.result.length > 0) {
-            const transactions = data.result.map(tx => ({
-                txHash: tx.hash,
-                from: tx.from,
-                to: tx.to,
-                value: tx.value / Math.pow(10, parseInt(tx.tokenDecimal || '18')),
-                timeStamp: tx.timeStamp,
-                tokenSymbol: tx.tokenSymbol
-            }));
+            let totalDeposited = 0;
+
+            const transactions = data.result.map(tx => {
+                const txValue = tx.value / Math.pow(10, parseInt(tx.tokenDecimal || '18'));
+                
+                // ገንዘቡ ወደ ዩዘሩ አድራሻ የገባ (Incoming) መሆኑን እናረጋግጣለን
+                if (tx.to.toLowerCase() === userWalletAddress.toLowerCase()) {
+                    totalDeposited += txValue;
+                }
+                
+                return {
+                    txHash: tx.hash,
+                    from: tx.from,
+                    to: tx.to,
+                    value: txValue,
+                    timeStamp: tx.timeStamp,
+                    tokenSymbol: tx.tokenSymbol
+                };
+            });
+
+            // ✅ ባላንሱ ሪፍሬሽ ሲደረግ እንዳይጠፋ ዳታቤዝ ላይ እናስቀምጠዋለን (Save to DB)
+            if (totalDeposited > 0) {
+                await User.findOneAndUpdate(
+                    { bscAddress: userWalletAddress },
+                    { $set: { balance: totalDeposited } }
+                );
+            }
 
             return res.json({ success: true, transactions });
         } else {
@@ -1331,7 +1350,6 @@ app.put('/api/passkey/:id', verifyToken, async (req, res) => {
     }
 });
 
-// ✅ እዚህ ጋር ነው 'await' የተጨመረው 👇
 app.delete('/api/passkey/:id', verifyToken, async (req, res) => {
     try {
         const passkey = await Passkey.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
