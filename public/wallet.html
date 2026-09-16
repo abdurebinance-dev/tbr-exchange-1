@@ -6,6 +6,8 @@
     <title>TBR Exchange - Wallet</title>
     <!-- FontAwesome & Google Fonts -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 🚀 QR Code Library 🚀 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link rel="stylesheet" href="style.css">
     <style>
         :root {
@@ -115,10 +117,10 @@
             flex-wrap: wrap;
         }
 
-        /* 🚀 ፈዛዛ የ Button ዲዛይን (Inactive State) */
+        /* 🚀 ፈዛዛ የ Button ዲዛይን */
         .wallet-btn {
-            background: rgba(26, 26, 26, 0.4); /* ፈዛዛ ባክግራውንድ */
-            color: #848e9c; /* ፈዛዛ ጽሁፍ */
+            background: rgba(26, 26, 26, 0.4); 
+            color: #848e9c; 
             border: 1px solid #2b313a;
             padding: 10px 24px;
             border-radius: 8px;
@@ -136,7 +138,7 @@
             color: #fff;
         }
 
-        /* 🚀 ሲነኩ የሚኖራቸው ደማቅ ከለር (Active States) */
+        /* 🚀 ደማቅ የ Button ዲዛይን */
         .wallet-btn.deposit-btn.active {
             background: var(--green-color);
             color: #000;
@@ -295,6 +297,18 @@
             margin-bottom: 20px;
         }
 
+        /* 🚀 QR Code Container Styles 🚀 */
+        .qr-code-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 15px auto;
+            background: #ffffff; /* የ QR ኮድ ጀርባ ሁልጊዜ ነጭ መሆን አለበት */
+            padding: 15px;
+            border-radius: 10px;
+            width: fit-content;
+        }
+
         /* Network Modal */
         .modal-overlay {
             position: fixed;
@@ -333,7 +347,6 @@
             color: #fff;
         }
 
-        /* 🚀 የ X ምልክት ከለር ወደ ነጭ ተቀይሯል */
         .modal-header-styled i {
             cursor: pointer;
             color: #ffffff; 
@@ -343,7 +356,7 @@
         
         .modal-header-styled i:hover {
             transform: scale(1.1);
-            color: var(--red-color); /* ሲነካ ቀይ እንዲሆን ከፈለግክ */
+            color: var(--red-color); 
         }
 
         .network-options-container {
@@ -561,13 +574,20 @@
         <!-- 1. DEPOSIT SECTION -->
         <div id="deposit-section" class="tab-section" style="display: none;">
             <div class="deposit-address-container" id="deposit-address-box" style="display: none;">
+                
                 <div class="form-group">
                     <label>Deposit Address</label>
                     <div style="display: flex; gap: 10px;">
-                        <input type="text" class="form-control" value="..." readonly id="dep-address">
+                        <input type="text" class="form-control" value="Generating Address..." readonly id="dep-address">
                         <button class="copy-btn" onclick="copyAddress()" title="Copy Address"><i class="fa-regular fa-copy"></i></button>
                     </div>
                 </div>
+                
+                <!-- 🚀 QR Code Display Area 🚀 -->
+                <div id="qrcode-wrapper" class="qr-code-wrapper" style="display: none;">
+                    <div id="qrcode"></div>
+                </div>
+
                 <p style="font-size: 12px; color: var(--text-muted); text-align: center; margin: 10px 0 0 0;"><i class="fa-solid fa-circle-exclamation" style="color: var(--accent-color);"></i> Send only USDT to this address.</p>
             </div>
         </div>
@@ -681,9 +701,10 @@
         let chosenNetwork = "";
         let isBalanceVisible = true;
         let userRawBalance = "0.00";
+        let userBscAddress = "Generating Address..."; // 🚀 ከዳታቤዝ የሚመጣው አድራሻ
 
         document.addEventListener("DOMContentLoaded", () => {
-            fetchUserBalance();
+            fetchUserProfile(); // 🚀 ፔጁ ሲከፈት መረጃውን ያመጣል
 
             const urlParams = new URLSearchParams(window.location.search);
             const action = urlParams.get('action');
@@ -697,7 +718,8 @@
             }
         });
 
-        async function fetchUserBalance() {
+        // 🚀 ከዳታቤዝ አድራሻውን እና ባላንሱን የሚያመጣው ፋንክሽን
+        async function fetchUserProfile() {
             try {
                 const token = localStorage.getItem("token") || localStorage.getItem("authToken");
                 if (!token) return;
@@ -706,17 +728,26 @@
                     headers: { "Authorization": `Bearer ${token}` }
                 });
                 const data = await res.json();
+                
                 if (data.success) {
                     const user = data.user || data;
+                    
                     if (user.balance !== undefined) {
                         userRawBalance = Number(user.balance).toFixed(2);
                         if (isBalanceVisible) {
                             document.getElementById("wallet-balance").innerText = userRawBalance;
                         }
                     }
+                    
+                    // ትክክለኛውን የ BSC አድራሻ መቀበያ
+                    if (user.bscAddress) {
+                        userBscAddress = user.bscAddress;
+                    } else {
+                        userBscAddress = "No address found. Contact Admin.";
+                    }
                 }
             } catch (e) {
-                console.error("Error fetching balance:", e);
+                console.error("Error fetching user profile:", e);
             }
         }
 
@@ -742,6 +773,7 @@
             document.getElementById("networkModal").style.display = "none";
         }
 
+        // 🚀 ኔትወርክ ሲመረጥ የሚሰራው 🚀
         function selectNetwork(shortName, longName, elementId) {
             chosenNetwork = shortName;
             
@@ -759,10 +791,36 @@
             document.getElementById('withdraw-form-box').style.display = 'block';
 
             const addressInput = document.getElementById('dep-address');
-            if(shortName === 'BSC') addressInput.value = "0x892af0... (Your BSC Address)";
+            
+            if(shortName === 'BSC') {
+                addressInput.value = userBscAddress; // ✅ ትክክለኛው አድራሻ ይገባል
+                generateQRCode(userBscAddress);      // ✅ የ QR ኮዱ ይፈጠራል
+            }
 
             closeNetworkModal();
             showToast(`${shortName} Network selected!`);
+        }
+
+        // 🚀 QR Code መፍጠሪያ ፋንክሽን 🚀
+        function generateQRCode(address) {
+            const qrWrapper = document.getElementById("qrcode-wrapper");
+            const qrContainer = document.getElementById("qrcode");
+            
+            qrContainer.innerHTML = ""; // የድሮውን ያጠፋዋል
+            
+            if (address && address !== "Generating Address..." && address !== "No address found. Contact Admin.") {
+                qrWrapper.style.display = "flex"; // ቦታውን ያሳየዋል
+                new QRCode(qrContainer, {
+                    text: address,
+                    width: 160,
+                    height: 160,
+                    colorDark : "#000000",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.H
+                });
+            } else {
+                qrWrapper.style.display = "none"; // አድራሻ ከሌለ ይደብቀዋል
+            }
         }
 
         function copyAddress() {
