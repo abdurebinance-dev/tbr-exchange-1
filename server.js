@@ -51,7 +51,7 @@ const publicPath = path.join(process.cwd(), 'public');
 app.use(express.static(publicPath));
 app.use('/uploads', express.static('uploads'));
 
-// User Schema & Model (የተስተካከለ - avatar እና traderUsername ተጨምረዋል)
+// User Schema & Model
 const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true, index: true, lowercase: true, trim: true },
     phone: { type: String, index: true }, 
@@ -1331,9 +1331,10 @@ app.put('/api/passkey/:id', verifyToken, async (req, res) => {
     }
 });
 
+// ✅ እዚህ ጋር ነው 'await' የተጨመረው 👇
 app.delete('/api/passkey/:id', verifyToken, async (req, res) => {
     try {
-        const passkey = Passkey.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
+        const passkey = await Passkey.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
         if (!passkey) return res.status(404).json({ success: false, message: 'Passkey not found.' });
         res.json({ success: true, message: 'Passkey deleted successfully.' });
     } catch (error) {
