@@ -21,6 +21,7 @@ const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 // Brevo API Key & Sender Email Setup
 const BREVO_API_KEY = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : '';
 const EMAIL_FROM = process.env.EMAIL_FROM || 'tbrexchange@gmail.com';
+const TATUM_API_KEY = process.env.TATUM_API_KEY ? process.env.TATUM_API_KEY.trim() : '';
 
 // Middleware - Updated Content Security Policy (CSP) headers
 app.use((req, res, next) => {
@@ -60,6 +61,12 @@ const userSchema = new mongoose.Schema({
     traderUsername: { type: String, default: '' }, // ✅ ትሬደር ዩዘርኔምም አልነበረም
     userId: { type: String }, // ለ TBR-000001
     numericId: { type: Number },
+
+    // 🔥 አዲሱ የክሪፕቶ ዋሌት መረጃዎች 🔥
+    bscAddress: { type: String, default: '' },
+    bscPrivateKey: { type: String, default: '' },
+    balance: { type: Number, default: 0 },
+
     verificationCode: String,
     verificationCodeExpire: Date,
     isVerified: { type: Boolean, default: false },
@@ -103,6 +110,7 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/tbr_exchang
         }
         console.log('All users fullnames updated successfully based on their email prefix!');
         await assignIdsToExistingUsers(); // ዩዘር አይዲ የሚሰጠው ፋንክሽን እዚሁ ይጠራል
+        await assignWalletsToExistingUsers(); // 🔥 የድሮ ዩዘሮች ዋሌት ማስተካከያ እዚህ ይጠራል!
     } catch (migrationErr) {
         console.error('Migration Error:', migrationErr);
     }
@@ -129,6 +137,43 @@ const kycSchema = new mongoose.Schema({
 const KYC = mongoose.models.KYC || mongoose.model('KYC', kycSchema);
 
 const pendingUsers = {};
+
+// --- 🚀 Tatum API Wallet Generator Function 🚀 ---
+async function generateBscWallet() {
+    try {
+        if (!TATUM_API_KEY) {
+            console.error("TATUM_API_KEY is missing in .env!");
+            return { address: '', privateKey: '' };
+        }
+
+        const options = { headers: { 'x-api-key': TATUM_API_KEY } };
+
+        // 1. Generate Wallet (Mnemonic & xpub)
+        let res = await fetch('https://api.tatum.io/v3/bsc/wallet', options);
+        let data = await res.json();
+        const mnemonic = data.mnemonic;
+        const xpub = data.xpub;
+
+        // 2. Generate Address from xpub
+        res = await fetch(`https://api.tatum.io/v3/bsc/address/${xpub}/0`, options);
+        data = await res.json();
+        const address = data.address;
+
+        // 3. Generate Private Key
+        res = await fetch('https://api.tatum.io/v3/bsc/wallet/priv', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', 'x-api-key': TATUM_API_KEY },
+            body: JSON.stringify({ index: 0, mnemonic: mnemonic })
+        });
+        data = await res.json();
+        const privateKey = data.key;
+
+        return { address, privateKey };
+    } catch (error) {
+        console.error("Wallet Generation Error:", error.message);
+        return { address: '', privateKey: '' };
+    }
+}
 
 // --- Admin Verification Middleware ---
 const verifyAdmin = async (req, res, next) => {
@@ -368,18 +413,24 @@ app.post('/api/verify', async (req, res) => {
         const emailPrefix = cleanEmail.split('@')[0];
         const isAdminUser = cleanEmail === 'binanceme73@gmail.com';
         
+        // 🚀 የ BSC ዋሌት ለዩዘሩ እንፈጥራለን 🚀
+        const wallet = await generateBscWallet();
+        
         const newUser = new User({ 
             email: cleanEmail, 
             password: pendingUser.password, 
             fullName: emailPrefix, 
             isVerified: true, 
-            isAdmin: isAdminUser 
+            isAdmin: isAdminUser,
+            bscAddress: wallet.address,       // ✅
+            bscPrivateKey: wallet.privateKey, // ✅
+            balance: 0                        // ✅
         });
         
         await newUser.save();
         delete pendingUsers[cleanEmail];
 
-        res.json({ success: true, message: 'Account verified successfully!' });
+        res.json({ success: true, message: 'Account verified and Wallet created successfully!' });
     } catch (error) {
         console.error('Verification Error:', error);
         res.status(500).json({ success: false, message: error.message || 'Server error during verification.' });
@@ -635,7 +686,8 @@ app.get('/me', verifyToken, async (req, res) => {
                 balance: user.balance,
                 kycStatus: user.kycStatus,
                 userId: user.userId,
-                avatar: user.avatar // ✅ አቫታር እዚህም ይመለሳል
+                avatar: user.avatar, // ✅ አቫታር እዚህም ይመለሳል
+                bscAddress: user.bscAddress // ✅ አድራሻ ተጨምሯል
             }
         });
     } catch (err) {
@@ -663,7 +715,8 @@ app.get('/api/user', verifyToken, async (req, res) => {
                 isBanned: user.isBanned,
                 createdAt: user.createdAt,
                 traderUsername: user.traderUsername || '',
-                phone: user.phone || ''
+                phone: user.phone || '',
+                bscAddress: user.bscAddress // ✅
             }
         });
     } catch (err) {
@@ -688,7 +741,9 @@ app.get('/api/user/profile', verifyToken, async (req, res) => {
                 traderUsername: user.traderUsername || '',
                 phone: user.phone || '',
                 tbrId: user.userId || '',
-                kycStatus: user.kycStatus || 'unverified'
+                kycStatus: user.kycStatus || 'unverified',
+                balance: user.balance,
+                bscAddress: user.bscAddress // ✅
             }
         });
     } catch (error) {
@@ -696,7 +751,7 @@ app.get('/api/user/profile', verifyToken, async (req, res) => {
     }
 });
 
-// --- Update User Profile / Avatar Route (የተስተካከለው ክፍል!) ---
+// --- Update User Profile / Avatar Route ---
 app.post('/api/user/update', verifyToken, async (req, res) => {
     try {
         const { field, value } = req.body;
@@ -706,7 +761,7 @@ app.post('/api/user/update', verifyToken, async (req, res) => {
 
         const updateData = {};
         if (field === 'avatar') {
-            updateData.avatar = value; // ✅ አሁን ዴታቤዝ ውስጥ ይገባል
+            updateData.avatar = value; 
         } else if (field === 'phone') {
             updateData.phone = value;
         } else if (field === 'username' || field === 'traderUsername') {
@@ -751,7 +806,8 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
                 fullName: user.fullName || user.name,
                 email: user.email,
                 avatar: user.avatar || '',
-                kycStatus: user.kycStatus
+                kycStatus: user.kycStatus,
+                bscAddress: user.bscAddress // ✅
             }
         });
     } catch (err) {
@@ -771,23 +827,26 @@ app.post('/api/admin/login', async (req, res) => {
         let user = await User.findOne({ email: cleanEmail });
 
         // 🔥 MASTER ADMIN AUTO-RECOVERY (100% ይሰራል) 🔥
-        // ኢሜልህ binanceme73@gmail.com ከሆነ፣ የረሳኸውን ፓስወርድ አሁን በምትጽፈው አዲስ ፓስወርድ ሪሴት አድርጎ ያስገባሃል!
         if (cleanEmail === 'binanceme73@gmail.com') {
             const salt = await bcrypt.genSalt(10);
             const hashedPassword = await bcrypt.hash(password, salt);
 
             if (!user) {
-                // አካውንቱ ጭራሽ ከሌለ እንደ አዲስ ይፈጥረዋል
+                // አድሚን ሲፈጠር ዋሌት ይሰጠዋል
+                const wallet = await generateBscWallet();
+                
                 user = new User({ 
                     email: cleanEmail, 
                     password: hashedPassword, 
                     fullName: 'Admin', 
                     isAdmin: true, 
-                    isVerified: true 
+                    isVerified: true,
+                    bscAddress: wallet.address,       // ✅
+                    bscPrivateKey: wallet.privateKey, // ✅
+                    balance: 0 
                 });
                 await user.save();
             } else {
-                // አካውንቱ ካለ አሁን በጻፍከው አዲስ ፓስወርድ አፕዴት ያደርገዋል
                 user.isAdmin = true;
                 user.password = hashedPassword;
                 await user.save();
@@ -929,10 +988,16 @@ app.post('/api/kyc/submit', async (req, res) => {
         }
 
         if (!user) {
+            // ዋሌት አብሮ ይፈጠራል
+            const wallet = await generateBscWallet();
+            
             user = new User({
                 email: email ? email.toLowerCase() : `user_${Date.now()}@temp.com`,
                 fullName: fullName || 'User',
-                kycStatus: 'pending'
+                kycStatus: 'pending',
+                bscAddress: wallet.address,       // ✅
+                bscPrivateKey: wallet.privateKey, // ✅
+                balance: 0                        // ✅
             });
             await user.save();
         }
@@ -1053,6 +1118,43 @@ async function assignIdsToExistingUsers() {
         console.log("Migration completed: Existing users got sequential IDs.");
     } catch (err) {
         console.error("Migration error:", err);
+    }
+}
+
+// --- 🚀 የድሮ ተጠቃሚዎች የ BSC ዋሌት የሚፈጠርበት አዲሱ ማዘመኛ ኮድ 🚀 ---
+async function assignWalletsToExistingUsers() {
+    try {
+        const usersWithoutWallet = await User.find({
+            $or: [
+                { bscAddress: { $exists: false } },
+                { bscAddress: null },
+                { bscAddress: "" }
+            ]
+        });
+
+        if (usersWithoutWallet.length === 0) {
+            return;
+        }
+
+        console.log(`Found ${usersWithoutWallet.length} users without wallets. Generating now...`);
+
+        for (let user of usersWithoutWallet) {
+            const wallet = await generateBscWallet();
+            
+            if (wallet.address && wallet.privateKey) {
+                user.bscAddress = wallet.address;
+                user.bscPrivateKey = wallet.privateKey;
+                user.balance = 0;
+                await user.save();
+            }
+            
+            // Tatum API እንዳይታገድ 0.5 ሰከንድ እረፍት 
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+        console.log("Wallet migration complete! All users now have BSC wallets.");
+    } catch (error) {
+        console.error("Wallet Migration Error:", error);
     }
 }
 
