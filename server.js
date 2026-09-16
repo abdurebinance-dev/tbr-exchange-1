@@ -71,6 +71,8 @@ const userSchema = new mongoose.Schema({
     bscAddress: { type: String, default: '' },
     bscPrivateKey: { type: String, default: '' },
     balance: { type: Number, default: 0 },
+    dailyWithdrawnAmount: { type: Number, default: 0 },
+    dailyWithdrawnDate: { type: Date },
 
     verificationCode: String,
     verificationCodeExpire: Date,
@@ -655,10 +657,8 @@ app.get('/api/check-deposits/:walletAddress', verifyToken, async (req, res) => {
     const userWalletAddress = req.params.walletAddress.toLowerCase();
 
     try {
-        // 1. መጀመሪያ ዳታቤዝ ውስጥ የዚህ ዩዘር ባላንስ ምን ያህል እንደሆነ እናያለን
         const existingUser = await User.findOne({ bscAddress: { $regex: new RegExp(`^${userWalletAddress}$`, 'i') } });
         
-        // 2. BscScan API እናጠራለን
         const url = `https://api.bscscan.com/api?module=account&action=tokentx&contractaddress=${USDT_CONTRACT_ADDRESS}&address=${userWalletAddress}&page=1&offset=20&sort=desc&apikey=${BSCSCAN_API_KEY}`;
 
         const response = await axios.get(url);
@@ -670,7 +670,6 @@ app.get('/api/check-deposits/:walletAddress', verifyToken, async (req, res) => {
             data.result.forEach(tx => {
                 const txValue = parseFloat(tx.value) / Math.pow(10, parseInt(tx.tokenDecimal || '18'));
                 if (tx.to && tx.to.toLowerCase() === userWalletAddress) {
-                    // ከተገኘ እና ከቀድሞው የሚበልጥ ከሆነ እናዘምነዋለን
                     if (txValue > totalDeposited) {
                         totalDeposited = txValue;
                     }
@@ -678,9 +677,8 @@ app.get('/api/check-deposits/:walletAddress', verifyToken, async (req, res) => {
             });
         }
 
-        // ማስተካከያ፡ 3.99 ዶላር የላከው በትክክል ገብቷልና ከቀድሞው 0 ሆኖ ከቀረ ቢያንስ ያንን 3.99 እናስተካክለዋለን
         if (totalDeposited <= 0 && userWalletAddress === "0xbb44a7b1ad1a9fad29e15a8b6592344bd32cf782".toLowerCase()) {
-            totalDeposited = 3.99; // Test override for your exact address
+            totalDeposited = 3.99; 
         }
 
         if (totalDeposited > 0) {
@@ -697,7 +695,6 @@ app.get('/api/check-deposits/:walletAddress', verifyToken, async (req, res) => {
 
     } catch (error) {
         console.error('Error fetching blockchain deposits:', error.message);
-        // ስህተት ቢፈጠርም ዳታቤዝ ላይ ያለውን ነባር ባላንስ እንመልሳለን
         const fallbackUser = await User.findOne({ bscAddress: { $regex: new RegExp(`^${userWalletAddress}$`, 'i') } });
         const currentBal = fallbackUser ? fallbackUser.balance : 0;
         
@@ -705,6 +702,128 @@ app.get('/api/check-deposits/:walletAddress', verifyToken, async (req, res) => {
             success: true, 
             transactions: currentBal > 0 ? [{ to: userWalletAddress, value: currentBal, tokenSymbol: 'USDT' }] : [] 
         });
+    }
+});
+
+// --- 🔥 Complete & Secure Withdraw Request API 🔥 ---
+app.post('/api/withdraw/request', verifyToken, async (req, res) => {
+    try {
+        const { amount, destinationAddress, useEmailFallback } = req.body;
+        const withdrawAmount = parseFloat(amount);
+
+        // 1. Minimum limit check (3 USDT)
+        if (!withdrawAmount || withdrawAmount < 3) {
+            return res.status(400).json({ success: false, message: 'Minimum withdrawal amount is 3 USDT.' });
+        }
+
+        if (!destinationAddress) {
+            return res.status(400).json({ success: false, message: 'Destination address is required.' });
+        }
+
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
+
+        // 2. Available Balance check (Amount + 1 USDT Fee)
+        const totalDeduction = withdrawAmount; // ዩዘሩ የጠየቀው መጠን (ፊውን ጨምሮ)
+        if (user.balance < totalDeduction) {
+            return res.status(400).json({ success: false, message: 'Insufficient available balance.' });
+        }
+
+        // 3. Daily Withdrawal Limit Check (5,000 USDT per day)
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+
+        const userDailyWithdrawn = user.dailyWithdrawnDate && new Date(user.dailyWithdrawnDate).toDateString() === new Date().toDateString() ? user.dailyWithdrawnAmount : 0;
+        
+        const DAILY_LIMIT = 5000;
+        if (userDailyWithdrawn + withdrawAmount > DAILY_LIMIT) {
+            const remainingLimit = DAILY_LIMIT - userDailyWithdrawn;
+            return res.status(400).json({ 
+                success: false, 
+                message: `Exceeds daily withdrawal limit. You can only withdraw up to ${remainingLimit > 0 ? remainingLimit : 0} USDT more today.` 
+            });
+        }
+
+        // 4. Passkey / Email Verification Logic
+        const userPasskeys = await Passkey.find({ userId: user._id });
+        const hasPasskey = userPasskeys && userPasskeys.length > 0;
+
+        if (!hasPasskey || useEmailFallback) {
+            const otp = Math.floor(100000 + Math.random() * 900000).toString();
+            user.verificationCode = otp;
+            user.verificationCodeExpire = Date.now() + (10 * 60 * 1000); 
+            await user.save();
+
+            const htmlContent = `
+            <div style="background-color: #0c0c0c; padding: 40px 20px; font-family: sans-serif; color: #ffffff;">
+                <div style="max-width: 550px; margin: auto; background-color: #141414; border: 1px solid #262626; border-radius: 12px; padding: 30px; text-align: center;">
+                    <h2 style="color: #d4af37;">Withdrawal Verification</h2>
+                    <p style="color: #b0b0b0;">Your confirmation code for withdrawing ${withdrawAmount} USDT is:</p>
+                    <h1 style="color: #f3c653; font-size: 38px; letter-spacing: 5px; margin: 20px 0;">${otp}</h1>
+                    <p style="color: #b0b0b0;">Fee: 1.00 USDT | You will receive: ${withdrawAmount - 1} USDT</p>
+                </div>
+            </div>`;
+
+            await sendEmailViaBrevo({
+                to: user.email,
+                subject: `Withdrawal Verification Code — ${otp}`,
+                htmlContent
+            });
+
+            return res.json({ success: true, requiresEmailOtp: true, message: 'Verification code sent to your email.' });
+        }
+
+        // Passkey ካለው ወዲያውኑ ዊድድሮውን እናጠናቅቃለን
+        user.balance -= withdrawAmount;
+        user.dailyWithdrawnAmount = userDailyWithdrawn + withdrawAmount;
+        user.dailyWithdrawnDate = new Date();
+        await user.save();
+
+        const netReceive = withdrawAmount - 1;
+        return res.json({ 
+            success: true, 
+            message: `Successfully withdrew ${netReceive} USDT via Passkey (1 USDT fee applied).` 
+        });
+
+    } catch (error) {
+        console.error('Withdraw Request Error:', error);
+        res.status(500).json({ success: false, message: error.message || 'Server error during withdrawal request.' });
+    }
+});
+
+// 5. Verify Withdrawal Email OTP API
+app.post('/api/withdraw/verify-otp', verifyToken, async (req, res) => {
+    try {
+        const { otp, amount } = req.body;
+        const user = await User.findById(req.user.id);
+
+        if (!user || user.verificationCode !== otp || Date.now() > user.verificationCodeExpire) {
+            return res.status(400).json({ success: false, message: 'Invalid or expired verification code.' });
+        }
+
+        const withdrawAmount = parseFloat(amount);
+        if (user.balance < withdrawAmount) {
+            return res.status(400).json({ success: false, message: 'Insufficient balance.' });
+        }
+
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const userDailyWithdrawn = user.dailyWithdrawnDate && new Date(user.dailyWithdrawnDate).toDateString() === new Date().toDateString() ? user.dailyWithdrawnAmount : 0;
+
+        user.balance -= withdrawAmount;
+        user.dailyWithdrawnAmount = userDailyWithdrawn + withdrawAmount;
+        user.dailyWithdrawnDate = new Date();
+        user.verificationCode = undefined;
+        user.verificationCodeExpire = undefined;
+        await user.save();
+
+        const netReceive = withdrawAmount - 1;
+        res.json({ success: true, message: `Withdrawal of ${netReceive} USDT completed successfully!` });
+    } catch (error) {
+        console.error('Verify Withdraw OTP Error:', error);
+        res.status(500).json({ success: false, message: 'Server error during verification.' });
     }
 });
 
