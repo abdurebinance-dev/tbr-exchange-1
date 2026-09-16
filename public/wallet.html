@@ -246,6 +246,20 @@
             border-color: var(--accent-color);
         }
 
+        /* 🚀 New Error Styles 🚀 */
+        .form-control.input-error {
+            border-color: var(--red-color) !important;
+        }
+        
+        .error-message-box {
+            color: var(--red-color);
+            font-size: 13px;
+            margin-top: 8px;
+            display: none;
+            align-items: center;
+            gap: 6px;
+        }
+
         .copy-btn {
             background: #1a1a1a;
             border: 1px solid var(--border-color);
@@ -276,11 +290,18 @@
             cursor: pointer;
             margin-top: 5px;
             margin-bottom: 20px;
-            transition: background 0.2s;
+            transition: all 0.2s;
         }
 
-        .action-submit-btn:hover {
+        .action-submit-btn:hover:not(.btn-disabled) {
             background: #e0ac2b;
+        }
+
+        /* 🚀 Disabled Button Style 🚀 */
+        .btn-disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            pointer-events: none;
         }
 
         .deposit-address-container {
@@ -578,23 +599,27 @@
             </div>
         </div>
 
-        <!-- 2. WITHDRAW SECTION (Binance Style - Cleaned) -->
+        <!-- 2. WITHDRAW SECTION (Binance Style - Advanced Validation) -->
         <div id="withdraw-section" class="tab-section" style="display: none;">
             <div id="withdraw-form-box" style="display: none;">
                 
                 <div class="form-group">
                     <label>Withdrawal Address</label>
-                    <input type="text" class="form-control" id="withdraw-address" placeholder="Enter Destination USDT Address">
+                    <input type="text" class="form-control" id="withdraw-address" placeholder="Enter Destination USDT Address" oninput="validateWithdrawForm()">
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" style="margin-bottom: 25px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                         <label style="margin: 0;">Amount</label>
                         <span style="font-size: 12px; color: var(--text-muted);">Available: <strong id="withdraw-available-bal" style="color: #fff;">0.00</strong> USDT</span>
                     </div>
                     <div style="position: relative;">
-                        <input type="number" class="form-control" id="withdraw-amount" placeholder="Min. 3.00 USDT" oninput="calculateWithdrawFee()" style="padding-right: 65px;">
+                        <input type="number" class="form-control" id="withdraw-amount" placeholder="Min. 3.00 USDT" oninput="validateWithdrawForm()" style="padding-right: 65px;">
                         <button onclick="setMaxWithdrawAmount()" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: #222; border: 1px solid var(--border-color); color: var(--accent-color); padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer;">MAX</button>
+                    </div>
+                    <!-- 🚀 Error Message Container 🚀 -->
+                    <div id="withdraw-error-msg" class="error-message-box">
+                        <i class="fa-solid fa-triangle-exclamation"></i> <span id="error-text">Minimum is 3.00 USDT</span>
                     </div>
                 </div>
 
@@ -621,7 +646,8 @@
                     </div>
                 </div>
 
-                <button class="action-submit-btn" onclick="submitWithdrawalRequest()">Submit Withdrawal</button>
+                <!-- 🚀 Submit Button starts disabled 🚀 -->
+                <button class="action-submit-btn btn-disabled" id="withdraw-submit-btn" disabled onclick="submitWithdrawalRequest()">Submit Withdrawal</button>
             </div>
         </div>
 
@@ -818,32 +844,77 @@
             }
         }
 
-        function calculateWithdrawFee() {
-            const val = parseFloat(document.getElementById('withdraw-amount').value) || 0;
+        // 🚀 አዲሱ የ Amount እና Address ማረጋገጫ (Validation Logic) 🚀
+        function validateWithdrawForm() {
+            const amountInput = document.getElementById('withdraw-amount');
+            const addressInput = document.getElementById('withdraw-address');
+            const errorContainer = document.getElementById('withdraw-error-msg');
+            const errorText = document.getElementById('error-text');
+            const submitBtn = document.getElementById('withdraw-submit-btn');
+
+            const val = parseFloat(amountInput.value) || 0;
+            const maxVal = parseFloat(userRawBalance) || 0;
+            const address = addressInput.value.trim();
+
+            let isValid = true;
+
+            // 1. የገንዘብ መጠን ማረጋገጫ (Amount Validation)
+            if (amountInput.value !== "") {
+                if (val < 3) {
+                    errorText.innerText = "Minimum is 3.00 USDT";
+                    errorContainer.style.display = "flex";
+                    amountInput.classList.add('input-error');
+                    isValid = false;
+                } else if (val > maxVal) {
+                    errorText.innerText = `Exceeds available balance (${maxVal.toFixed(2)} USDT)`;
+                    errorContainer.style.display = "flex";
+                    amountInput.classList.add('input-error');
+                    isValid = false;
+                } else {
+                    errorContainer.style.display = "none";
+                    amountInput.classList.remove('input-error');
+                }
+            } else {
+                errorContainer.style.display = "none";
+                amountInput.classList.remove('input-error');
+                isValid = false;
+            }
+
+            // 2. አድራሻ ማረጋገጫ (Address Validation)
+            if (address === "") {
+                isValid = false;
+            }
+
+            // የ ፊ ስሌት ማሳየት (Fee Calculation)
             const netEl = document.getElementById('withdraw-net-receive');
-            if (val > 1) {
+            if (val >= 1) {
                 netEl.innerText = (val - 1).toFixed(2) + " USDT";
             } else {
                 netEl.innerText = "0.00 USDT";
+            }
+
+            // 3. ቁልፉን ማብራት / ማጥፋት (Button State)
+            if (isValid) {
+                submitBtn.classList.remove('btn-disabled');
+                submitBtn.disabled = false;
+            } else {
+                submitBtn.classList.add('btn-disabled');
+                submitBtn.disabled = true;
             }
         }
 
         function setMaxWithdrawAmount() {
             const maxVal = parseFloat(userRawBalance) || 0;
             document.getElementById('withdraw-amount').value = maxVal > 0 ? maxVal : 0;
-            calculateWithdrawFee();
+            validateWithdrawForm(); // ቫሊዴሽኑን ይጠራል
         }
 
         async function submitWithdrawalRequest() {
             const address = document.getElementById('withdraw-address').value.trim();
             const amount = document.getElementById('withdraw-amount').value;
 
-            if (!address) {
-                showToast("Please enter destination address!");
-                return;
-            }
-            if (!amount || parseFloat(amount) < 3) {
-                showToast("Minimum withdrawal is 3.00 USDT!");
+            // ይህ ደህንነት ለማጠናከር ነው (Double check)
+            if (!address || parseFloat(amount) < 3 || parseFloat(amount) > parseFloat(userRawBalance)) {
                 return;
             }
 
@@ -851,7 +922,7 @@
             const token = localStorage.getItem('token') || localStorage.getItem('authToken');
 
             try {
-                // 🚀 Submit ሲደረግ በራስሰር በጀርባ ኢሜል ወይም ፓስኪ ይመረጣል 
+                // Submit ሲደረግ በራስሰር በጀርባ ኢሜል ወይም ፓስኪ ይመረጣል 
                 const res = await fetch(`${API_BASE_URL}/api/withdraw/request`, {
                     method: 'POST',
                     headers: {
@@ -871,7 +942,7 @@
                         fetchUserProfile();
                         document.getElementById('withdraw-amount').value = "";
                         document.getElementById('withdraw-address').value = "";
-                        calculateWithdrawFee();
+                        validateWithdrawForm(); // Reset button
                     }
                 } else {
                     showToast(data.message || "Withdrawal failed.");
@@ -908,7 +979,7 @@
                     document.getElementById('otpCodeInput').value = "";
                     document.getElementById('withdraw-amount').value = "";
                     document.getElementById('withdraw-address').value = "";
-                    calculateWithdrawFee();
+                    validateWithdrawForm(); // Reset button
                 } else {
                     showToast(data.message || "Verification failed.");
                 }
@@ -969,6 +1040,7 @@
 
             closeNetworkModal();
             showToast(`${shortName} Network selected!`);
+            validateWithdrawForm(); // ኔትወርክ ሲመረጥ ቁልፉን ቼክ ያደርጋል
         }
 
         function generateQRCode(address) {
@@ -1025,6 +1097,7 @@
             } else if (actionType === 'Withdraw') {
                 document.getElementById('withdraw-section').style.display = 'block';
                 networkContainer.style.display = 'block';
+                validateWithdrawForm(); // ዊድድሮው ታብ ሲከፈት ቁልፉን ይፈትሻል
             } else if (actionType === 'Transfer') {
                 document.getElementById('transfer-section').style.display = 'block';
                 networkContainer.style.display = 'none';
