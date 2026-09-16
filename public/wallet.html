@@ -71,17 +71,24 @@
             border-radius: 12px;
             padding: 25px 30px;
             margin-bottom: 20px;
+            position: relative;
         }
 
         .balance-title-row {
             display: flex;
             align-items: center;
-            gap: 8px;
+            justify-content: space-between; /* Adjusted to make space for the button */
             font-size: 12px;
             color: var(--text-muted);
             text-transform: uppercase;
             letter-spacing: 1px;
             margin-bottom: 8px;
+        }
+
+        .balance-title-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .balance-title-row i {
@@ -95,6 +102,25 @@
             color: var(--accent-color);
         }
 
+        /* Refresh/Check Deposit Button Style */
+        .check-deposit-btn {
+            background: rgba(212, 175, 55, 0.15);
+            color: #d4af37;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: 0.3s;
+        }
+        .check-deposit-btn:hover {
+            background: rgba(212, 175, 55, 0.3);
+        }
+
         .balance-amount {
             font-size: 36px;
             font-weight: 700;
@@ -105,7 +131,7 @@
             margin-bottom: 20px;
         }
 
-        .balance-amount span {
+        .balance-amount span.currency {
             font-size: 18px;
             color: var(--accent-color);
             font-weight: 500;
@@ -539,11 +565,18 @@
         <!-- Balance Card -->
         <div class="balance-card">
             <div class="balance-title-row">
-                <span>Total Balance</span>
-                <i class="fa-solid fa-eye" id="toggleBalanceIcon" onclick="toggleBalanceVisibility()" title="Hide/Show Balance"></i>
+                <div class="balance-title-left">
+                    <span>Total Balance</span>
+                    <i class="fa-solid fa-eye" id="toggleBalanceIcon" onclick="toggleBalanceVisibility()" title="Hide/Show Balance"></i>
+                </div>
+                <!-- ✅ አዲሱ አውቶማቲክ ዲፖዚት ማረጋገጫ በተን -->
+                <button class="check-deposit-btn" onclick="checkMyDeposit()" id="refreshBtnWallet">
+                    <i class="fa-solid fa-rotate-right"></i> Check Deposit
+                </button>
             </div>
             <div class="balance-amount">
-                <span id="wallet-balance">0.00</span> <span>USDT</span>
+                <!-- ✅ id="user-balance" እዚህ ተጨመረ -->
+                <span id="user-balance">0.00</span> <span class="currency">USDT</span>
             </div>
             <div class="wallet-actions">
                 <button class="wallet-btn deposit-btn" onclick="handleAction('Deposit', this)">
@@ -694,14 +727,12 @@
     </div>
 
     <script>
-        const API_BASE_URL = window.location.hostname.includes('localhost') 
-            ? '' 
-            : 'https://tbr-exchange-backend.onrender.com';
+        const API_BASE_URL = 'https://tbr-exchange-backend.onrender.com'; // ✅ አዲሱ አፒአይ ሊንክ
 
         let chosenNetwork = "";
         let isBalanceVisible = true;
         let userRawBalance = "0.00";
-        let userBscAddress = ""; // 🚀 የሰውየውን አድራሻ ለመያዝ
+        let userBscAddress = ""; 
 
         document.addEventListener("DOMContentLoaded", () => {
             fetchUserProfile(); // 🚀 ፔጁ ሲከፈት መረጃውን ከሰርቨር ያመጣል
@@ -718,7 +749,7 @@
             }
         });
 
-        // 🚀 ከሰርቨር ዩዘሩን ፕሮፋይል እና ዋሌት አድራሻ የሚያመጣው ዋናው ፋንክشن
+        // 🚀 ከሰርቨር ዩዘሩን ፕሮፋይል እና ዋሌት አድራሻ የሚያመጣው ዋናው ፋንክሽን
         async function fetchUserProfile() {
             try {
                 const token = localStorage.getItem("token") || localStorage.getItem("authToken");
@@ -738,11 +769,10 @@
                     if (user.balance !== undefined) {
                         userRawBalance = Number(user.balance).toFixed(2);
                         if (isBalanceVisible) {
-                            document.getElementById("wallet-balance").innerText = userRawBalance;
+                            document.getElementById("user-balance").innerText = userRawBalance; // ✅ እዚህ ጋር ተቀይሯል
                         }
                     }
                     
-                    // ትክክለኛውን የ BSC አድራሻ ከዳታቤዝ እንቀበላለን
                     if (user.bscAddress) {
                         userBscAddress = user.bscAddress;
                         console.log("BSC Address loaded successfully:", userBscAddress);
@@ -756,9 +786,64 @@
             }
         }
 
+        // ✅ 3. አዲሱ አውቶማቲክ ዲፖዚት ማረጋገጫ ጃቫስክሪፕት ኮድ (Blockchain Watcher)
+        async function checkMyDeposit() {
+            const btn = document.getElementById('refreshBtnWallet');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Checking...`;
+            btn.disabled = true;
+
+            try {
+                const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+                if (!token) {
+                    showToast("Please log in first!");
+                    return;
+                }
+
+                if (!userBscAddress || userBscAddress.startsWith("Error") || userBscAddress.startsWith("No address")) {
+                    showToast("Could not find your deposit address. Try refreshing the page.");
+                    return;
+                }
+
+                let currentBalance = parseFloat(userRawBalance) || 0;
+
+                // BscScanን ቼክ እናደርጋለን
+                const depositRes = await fetch(`${API_BASE_URL}/api/check-deposits/${userBscAddress}`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const depositData = await depositRes.json();
+
+                if (depositData.success && depositData.transactions.length > 0) {
+                    let totalDeposited = 0;
+                    
+                    depositData.transactions.forEach(tx => {
+                        if (tx.to.toLowerCase() === userBscAddress.toLowerCase()) {
+                            totalDeposited += parseFloat(tx.value);
+                        }
+                    });
+
+                    currentBalance += totalDeposited;
+                    userRawBalance = currentBalance.toFixed(2);
+                    
+                    if(isBalanceVisible) document.getElementById('user-balance').innerText = userRawBalance;
+                    
+                    showToast(`✅ Successfully found deposits totaling ${totalDeposited.toFixed(2)} USDT!`);
+                } else {
+                    showToast("No new deposits found. Please wait a minute and try again.");
+                }
+            } catch (error) {
+                console.error('Error fetching balance:', error);
+                showToast("Network error occurred while checking deposit.");
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
         function toggleBalanceVisibility() {
             isBalanceVisible = !isBalanceVisible;
-            const balanceEl = document.getElementById("wallet-balance");
+            const balanceEl = document.getElementById("user-balance"); // ✅ እዚህ ጋር ተቀይሯል
             const iconEl = document.getElementById("toggleBalanceIcon");
 
             if (isBalanceVisible) {
