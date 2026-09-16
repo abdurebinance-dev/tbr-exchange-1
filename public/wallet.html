@@ -359,6 +359,30 @@
             border-color: #f3ba2f; 
         }
 
+        /* 🚀 አዲሱ የ Disabled ኔትወርክ እና Coming Soon ዲዛይን */
+        .network-item.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .network-item.disabled:hover {
+            border-color: #2b313a; /* ከተዘጋ ሆቨር ከለሩን ያጠፋዋል */
+        }
+
+        .coming-soon-badge {
+            background: rgba(243, 186, 47, 0.15);
+            color: var(--accent-color);
+            border: 1px solid rgba(243, 186, 47, 0.3);
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-left: auto; /* ወደ ቀኝ ጥግ ይገፋዋል */
+            align-self: center; /* መሃል ላይ ያደርገዋል */
+        }
+
         .net-icon-wrapper {
             width: 38px;
             height: 38px;
@@ -513,7 +537,7 @@
             </div>
         </div>
 
-        <!-- 🚀 ኔትወርክ መምረጫ (ለ Deposit እና Withdraw ብቻ ይታያል) -->
+        <!-- ኔትወርክ መምረጫ -->
         <div id="network-container">
             <div class="network-card" onclick="openNetworkModal()">
                 <div class="network-info">
@@ -526,9 +550,8 @@
             </div>
         </div>
 
-        <!-- 🚀 1. DEPOSIT SECTION -->
+        <!-- 1. DEPOSIT SECTION -->
         <div id="deposit-section" class="tab-section" style="display: none;">
-            <!-- ኔትወርክ ከተመረጠ በኋላ ብቻ ነው ይሄ የሚታየው -->
             <div class="deposit-address-container" id="deposit-address-box" style="display: none;">
                 <div class="form-group">
                     <label>Deposit Address</label>
@@ -541,9 +564,8 @@
             </div>
         </div>
 
-        <!-- 🚀 2. WITHDRAW SECTION -->
+        <!-- 2. WITHDRAW SECTION -->
         <div id="withdraw-section" class="tab-section" style="display: none;">
-            <!-- ኔትወርክ ከተመረጠ በኋላ ብቻ ነው ይሄ የሚታየው -->
             <div id="withdraw-form-box" style="display: none;">
                 <div class="form-group">
                     <label>Withdrawal Address</label>
@@ -557,7 +579,7 @@
             </div>
         </div>
 
-        <!-- 🚀 3. TRANSFER SECTION -->
+        <!-- 3. TRANSFER SECTION -->
         <div id="transfer-section" class="tab-section" style="display: none;">
             <div class="form-group">
                 <label>Recipient Email or TBR User ID</label>
@@ -570,7 +592,7 @@
             <button class="action-submit-btn" onclick="showToast('Transfer completed instantly!')">Confirm Transfer</button>
         </div>
 
-        <!-- Recent Activity / Transaction History -->
+        <!-- Recent Activity -->
         <div class="activity-section">
             <div class="section-header">
                 <span>Recent Activity</span>
@@ -613,8 +635,9 @@
                     </div>
                 </div>
 
-                <!-- TRON Option -->
-                <div class="network-item" id="trx-option" onclick="selectNetwork('TRX', 'TRON (TRC-20)', 'trx-option')">
+                <!-- 🚀 TRON Option (DISABLED & COMING SOON) -->
+                <!-- onclick ሲነካ ፎርም አያመጣም፣ የ Coming soon ሜሴጅ ብቻ ያወጣል -->
+                <div class="network-item disabled" id="trx-option" onclick="showToast('TRON (TRC-20) Network is Coming Soon!')">
                     <div class="net-icon-wrapper">
                         <img src="trx.png.jfif" alt="TRX Logo">
                     </div>
@@ -629,6 +652,8 @@
                             <span>Est. arrival ~1 min</span>
                         </div>
                     </div>
+                    <!-- 🚀 Coming Soon Badge -->
+                    <div class="coming-soon-badge">Coming Soon</div>
                 </div>
 
             </div>
@@ -714,21 +739,20 @@
             chosenNetwork = shortName;
             
             document.querySelectorAll('.network-item').forEach(item => {
-                item.classList.remove('selected');
+                if(!item.classList.contains('disabled')) {
+                    item.classList.remove('selected');
+                }
             });
             document.getElementById(elementId).classList.add('selected');
 
             const textEl = document.getElementById("selectedNetworkText");
             textEl.innerHTML = `<span style="color: #fff; font-weight: 700; margin-right: 6px;">${shortName}</span> <span style="font-size: 13px; color: #848e9c;">${longName}</span>`;
             
-            // 🚀 ኔትወርክ ሲመረጥ ፎርሞቹን ማሳየት
             document.getElementById('deposit-address-box').style.display = 'block';
             document.getElementById('withdraw-form-box').style.display = 'block';
 
-            // አድራሻ ማስገባት
             const addressInput = document.getElementById('dep-address');
             if(shortName === 'BSC') addressInput.value = "0x892af0... (Your BSC Address)";
-            if(shortName === 'TRX') addressInput.value = "T9yGqR... (Your TRON Address)";
 
             closeNetworkModal();
             showToast(`${shortName} Network selected!`);
@@ -746,18 +770,15 @@
             document.querySelectorAll('.wallet-btn').forEach(b => b.classList.remove('active'));
             if(btnElement) btnElement.classList.add('active');
 
-            // ኔትወርክ ሪሴት ማድረግ
             chosenNetwork = "";
             document.getElementById("selectedNetworkText").innerText = "Please choose network first";
             document.querySelectorAll('.network-item').forEach(item => {
                 item.classList.remove('selected');
             });
             
-            // 🚀 ኔትወርክ ስላልተመረጠ ፎርሞቹን መደበቅ
             document.getElementById('deposit-address-box').style.display = 'none';
             document.getElementById('withdraw-form-box').style.display = 'none';
 
-            // ሴክሽኖችን ማስተካከል
             document.getElementById('deposit-section').style.display = 'none';
             document.getElementById('withdraw-section').style.display = 'none';
             document.getElementById('transfer-section').style.display = 'none';
