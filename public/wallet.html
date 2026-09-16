@@ -303,7 +303,7 @@
             justify-content: center;
             align-items: center;
             margin: 15px auto;
-            background: #ffffff; /* የ QR ኮድ ጀርባ ሁልጊዜ ነጭ መሆን አለበት */
+            background: #ffffff; /* የ QR ኮድ ጀርባ ነጭ መሆን አለበት */
             padding: 15px;
             border-radius: 10px;
             width: fit-content;
@@ -701,10 +701,10 @@
         let chosenNetwork = "";
         let isBalanceVisible = true;
         let userRawBalance = "0.00";
-        let userBscAddress = "Generating Address..."; // 🚀 ከዳታቤዝ የሚመጣው አድራሻ
+        let userBscAddress = ""; // 🚀 የሰውየውን አድራሻ ለመያዝ
 
         document.addEventListener("DOMContentLoaded", () => {
-            fetchUserProfile(); // 🚀 ፔጁ ሲከፈት መረጃውን ያመጣል
+            fetchUserProfile(); // 🚀 ፔጁ ሲከፈት መረጃውን ከሰርቨር ያመጣል
 
             const urlParams = new URLSearchParams(window.location.search);
             const action = urlParams.get('action');
@@ -718,19 +718,22 @@
             }
         });
 
-        // 🚀 ከዳታቤዝ አድራሻውን እና ባላንሱን የሚያመጣው ፋንክሽን
+        // 🚀 ከሰርቨር ዩዘሩን ፕሮፋይል እና ዋሌት አድራሻ የሚያመጣው ዋናው ፋንክشن
         async function fetchUserProfile() {
             try {
                 const token = localStorage.getItem("token") || localStorage.getItem("authToken");
-                if (!token) return;
+                if (!token) {
+                    console.error("No auth token found!");
+                    return;
+                }
 
                 const res = await fetch(`${API_BASE_URL}/api/user/profile`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
                 const data = await res.json();
                 
-                if (data.success) {
-                    const user = data.user || data;
+                if (data.success && data.user) {
+                    const user = data.user;
                     
                     if (user.balance !== undefined) {
                         userRawBalance = Number(user.balance).toFixed(2);
@@ -739,15 +742,17 @@
                         }
                     }
                     
-                    // ትክክለኛውን የ BSC አድራሻ መቀበያ
+                    // ትክክለኛውን የ BSC አድራሻ ከዳታቤዝ እንቀበላለን
                     if (user.bscAddress) {
                         userBscAddress = user.bscAddress;
+                        console.log("BSC Address loaded successfully:", userBscAddress);
                     } else {
-                        userBscAddress = "No address found. Contact Admin.";
+                        userBscAddress = "No address found. Please re-login.";
                     }
                 }
             } catch (e) {
                 console.error("Error fetching user profile:", e);
+                userBscAddress = "Error loading address.";
             }
         }
 
@@ -773,7 +778,7 @@
             document.getElementById("networkModal").style.display = "none";
         }
 
-        // 🚀 ኔትወርክ ሲመረጥ የሚሰራው 🚀
+        // 🚀 ኔትወርክ ሲመረጥ የሚሰራው (አድራሻውን እና QR ኮዱን የሚያወጣው) 🚀
         function selectNetwork(shortName, longName, elementId) {
             chosenNetwork = shortName;
             
@@ -793,7 +798,7 @@
             const addressInput = document.getElementById('dep-address');
             
             if(shortName === 'BSC') {
-                addressInput.value = userBscAddress; // ✅ ትክክለኛው አድራሻ ይገባል
+                addressInput.value = userBscAddress; // ✅ ትክክለኛው አድራሻ ሳጥኑ ውስጥ ይገባል
                 generateQRCode(userBscAddress);      // ✅ የ QR ኮዱ ይፈጠራል
             }
 
@@ -808,7 +813,7 @@
             
             qrContainer.innerHTML = ""; // የድሮውን ያጠፋዋል
             
-            if (address && address !== "Generating Address..." && address !== "No address found. Contact Admin.") {
+            if (address && address !== "Generating Address..." && !address.startsWith("No address") && !address.startsWith("Error")) {
                 qrWrapper.style.display = "flex"; // ቦታውን ያሳየዋል
                 new QRCode(qrContainer, {
                     text: address,
