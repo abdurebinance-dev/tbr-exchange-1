@@ -578,18 +578,56 @@
             </div>
         </div>
 
-        <!-- 2. WITHDRAW SECTION -->
+        <!-- 2. WITHDRAW SECTION (Binance Style) -->
         <div id="withdraw-section" class="tab-section" style="display: none;">
             <div id="withdraw-form-box" style="display: none;">
+                
                 <div class="form-group">
                     <label>Withdrawal Address</label>
-                    <input type="text" class="form-control" placeholder="Enter Destination USDT Address">
+                    <input type="text" class="form-control" id="withdraw-address" placeholder="Enter Destination USDT Address">
                 </div>
+
                 <div class="form-group">
-                    <label>Withdrawal Amount (USDT)</label>
-                    <input type="number" class="form-control" placeholder="Minimum 10 USDT">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <label style="margin: 0;">Amount</label>
+                        <span style="font-size: 12px; color: var(--text-muted);">Available: <strong id="withdraw-available-bal" style="color: #fff;">0.00</strong> USDT</span>
+                    </div>
+                    <div style="position: relative;">
+                        <input type="number" class="form-control" id="withdraw-amount" placeholder="Min. 3.00 USDT" oninput="calculateWithdrawFee()" style="padding-right: 65px;">
+                        <button onclick="setMaxWithdrawAmount()" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: #222; border: 1px solid var(--border-color); color: var(--accent-color); padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer;">MAX</button>
+                    </div>
                 </div>
-                <button class="action-submit-btn" onclick="showToast('Withdrawal request submitted for verification!')">Submit Withdrawal</button>
+
+                <!-- Breakdown Info -->
+                <div style="background: #16181d; border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; margin-bottom: 20px; font-size: 13px; display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; justify-content: space-between; color: var(--text-muted);">
+                        <span>Network fee</span>
+                        <span style="color: var(--accent-color); font-weight: 600;">- 1.00 USDT</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; color: var(--text-muted);">
+                        <span>You receive</span>
+                        <span id="withdraw-net-receive" style="color: #0ecb81; font-weight: 700;">0.00 USDT</span>
+                    </div>
+                </div>
+
+                <!-- Daily Limit Bar -->
+                <div style="margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">
+                        <span>Daily withdrawal limit</span>
+                        <span id="daily-limit-text">0.00 / 5,000 USDT</span>
+                    </div>
+                    <div style="width: 100%; background: #1a1a1a; height: 6px; border-radius: 3px; overflow: hidden;">
+                        <div id="daily-limit-bar" style="width: 0%; background: var(--accent-color); height: 100%; transition: width 0.3s;"></div>
+                    </div>
+                </div>
+
+                <!-- Email OTP Fallback Option -->
+                <div class="form-group" style="display: flex; align-items: center; gap: 10px; margin-bottom: 25px;">
+                    <input type="checkbox" id="useEmailFallback" style="width: 18px; height: 18px; cursor: pointer;">
+                    <label for="useEmailFallback" style="margin: 0; cursor: pointer; color: #ccc; font-size: 13px; text-transform: none;">Verify with Email Confirmation Code instead of Passkey</label>
+                </div>
+
+                <button class="action-submit-btn" onclick="submitWithdrawalRequest()">Submit Withdrawal</button>
             </div>
         </div>
 
@@ -673,6 +711,21 @@
         </div>
     </div>
 
+    <!-- Email OTP Verification Modal -->
+    <div class="modal-overlay" id="otpModal">
+        <div class="modal-content network-modal" style="width: 400px; padding: 25px;">
+            <div class="modal-header-styled" style="padding: 0 0 15px 0;">
+                <h3 style="color: var(--accent-color);">Email Verification</h3>
+                <i class="fa-solid fa-xmark" onclick="closeOtpModal()"></i>
+            </div>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">Please enter the 6-digit confirmation code sent to your email.</p>
+            <div class="form-group">
+                <input type="text" class="form-control" id="otpCodeInput" placeholder="Enter 6-digit OTP" maxlength="6" style="text-align: center; font-size: 20px; letter-spacing: 5px;">
+            </div>
+            <button class="action-submit-btn" onclick="verifyAndCompleteWithdrawal()">Verify & Withdraw</button>
+        </div>
+    </div>
+
     <!-- Toast Notification -->
     <div id="toastNotification">
         <i class="fa-solid fa-circle-check"></i>
@@ -686,11 +739,11 @@
         let isBalanceVisible = true;
         let userRawBalance = "0.00";
         let userBscAddress = ""; 
+        let pendingWithdrawAmount = 0;
 
         document.addEventListener("DOMContentLoaded", () => {
             fetchUserProfile(); 
             
-            // 🚀 በየ 30 ሴኮንዱ አውቶማቲካሊ ዲፖዚቱን ቼክ እንዲያደርግ (Silent Auto Refresh)
             setInterval(checkDepositSilently, 30000);
 
             const urlParams = new URLSearchParams(window.location.search);
@@ -723,11 +776,11 @@
                         if (isBalanceVisible) {
                             document.getElementById("user-balance").innerText = userRawBalance; 
                         }
+                        document.getElementById("withdraw-available-bal").innerText = userRawBalance;
                     }
                     
                     if (user.bscAddress) {
                         userBscAddress = user.bscAddress;
-                        // ፕሮፋይሉ ከመጣ በኋላ ወዲያውኑ ዲፖዚቱን በጀርባ ያጣራል
                         checkDepositSilently();
                     } else {
                         userBscAddress = "No address found. Please re-login.";
@@ -739,7 +792,6 @@
             }
         }
 
-        // 🚀 3. አውቶማቲክ የሆነ (Silent) የዲፖዚት መከታተያ 🚀
         async function checkDepositSilently() {
             try {
                 const token = localStorage.getItem('token') || localStorage.getItem('authToken');
@@ -764,11 +816,116 @@
                         if (isBalanceVisible) {
                             document.getElementById('user-balance').innerText = userRawBalance;
                         }
+                        document.getElementById("withdraw-available-bal").innerText = userRawBalance;
                     }
                 }
             } catch (error) {
                 console.error('Auto check failed silently:', error);
             }
+        }
+
+        function calculateWithdrawFee() {
+            const val = parseFloat(document.getElementById('withdraw-amount').value) || 0;
+            const netEl = document.getElementById('withdraw-net-receive');
+            if (val > 1) {
+                netEl.innerText = (val - 1).toFixed(2) + " USDT";
+            } else {
+                netEl.innerText = "0.00 USDT";
+            }
+        }
+
+        function setMaxWithdrawAmount() {
+            const maxVal = parseFloat(userRawBalance) || 0;
+            document.getElementById('withdraw-amount').value = maxVal > 0 ? maxVal : 0;
+            calculateWithdrawFee();
+        }
+
+        async function submitWithdrawalRequest() {
+            const address = document.getElementById('withdraw-address').value.trim();
+            const amount = document.getElementById('withdraw-amount').value;
+            const useEmailFallback = document.getElementById('useEmailFallback').checked;
+
+            if (!address) {
+                showToast("Please enter destination address!");
+                return;
+            }
+            if (!amount || parseFloat(amount) < 3) {
+                showToast("Minimum withdrawal is 3.00 USDT!");
+                return;
+            }
+
+            pendingWithdrawAmount = parseFloat(amount);
+            const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/withdraw/request`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ amount: pendingWithdrawAmount, destinationAddress: address, useEmailFallback })
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    if (data.requiresEmailOtp) {
+                        document.getElementById('otpModal').style.display = 'flex';
+                        showToast("Verification code sent to your email!");
+                    } else {
+                        showToast(data.message);
+                        fetchUserProfile();
+                        document.getElementById('withdraw-amount').value = "";
+                        document.getElementById('withdraw-address').value = "";
+                        calculateWithdrawFee();
+                    }
+                } else {
+                    showToast(data.message || "Withdrawal failed.");
+                }
+            } catch (err) {
+                console.error("Withdraw Error:", err);
+                showToast("Server connection error.");
+            }
+        }
+
+        async function verifyAndCompleteWithdrawal() {
+            const otp = document.getElementById('otpCodeInput').value.trim();
+            if (!otp || otp.length !== 6) {
+                showToast("Please enter valid 6-digit OTP code.");
+                return;
+            }
+
+            const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/withdraw/verify-otp`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ otp, amount: pendingWithdrawAmount })
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    showToast(data.message);
+                    closeOtpModal();
+                    fetchUserProfile();
+                    document.getElementById('otpCodeInput').value = "";
+                    document.getElementById('withdraw-amount').value = "";
+                    document.getElementById('withdraw-address').value = "";
+                    calculateWithdrawFee();
+                } else {
+                    showToast(data.message || "Verification failed.");
+                }
+            } catch (err) {
+                console.error("OTP Verify Error:", err);
+                showToast("Server error during verification.");
+            }
+        }
+
+        function closeOtpModal() {
+            document.getElementById('otpModal').style.display = 'none';
         }
 
         function toggleBalanceVisibility() {
