@@ -228,7 +228,6 @@
             letter-spacing: 0.5px;
             display: flex;
             align-items: center;
-            justify-content: space-between; /* To place the refresh button on the right */
             margin-bottom: 12px;
         }
         .balance-amount {
@@ -244,25 +243,6 @@
             font-size: 18px;
             color: #d4af37;
             font-weight: normal;
-        }
-
-        /* Refresh/Check Deposit Button Style */
-        .check-deposit-btn {
-            background: rgba(212, 175, 55, 0.15);
-            color: #d4af37;
-            border: 1px solid rgba(212, 175, 55, 0.3);
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 11px;
-            font-weight: bold;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            transition: 0.3s;
-        }
-        .check-deposit-btn:hover {
-            background: rgba(212, 175, 55, 0.3);
         }
 
         .actions-row {
@@ -583,12 +563,8 @@
             <div class="balance-card">
                 <div class="card-title">
                     <span>TOTAL BALANCE <i id="balance-eye-btn" class="fa-regular fa-eye" style="cursor: pointer; margin-left: 5px;"></i></span>
-                    <!-- ✅ አዲሱ አውቶማቲክ ዲፖዚት ማረጋገጫ በተን -->
-                    <button class="check-deposit-btn" onclick="checkMyDeposit()" id="refreshBtn">
-                        <i class="fa-solid fa-rotate-right"></i> Check Deposit
-                    </button>
+                    <!-- በተኑ ጠፍቷል -->
                 </div>
-                <!-- ✅ id="user-balance" እዚህ ተጨመረ -->
                 <div class="balance-amount"><span id="user-balance" style="color:#fff; font-size:36px; font-weight:bold;">0.00</span> <span style="font-size: 18px; color: #d4af37;">USDT</span></div>
 
                 <div class="actions-row">
@@ -720,9 +696,9 @@
    <script>
         let isBalanceHidden = false;
         let actualBalance = "0.00";
-        const API_BASE = 'https://tbr-exchange-backend.onrender.com'; // ✅ አዲሱ አፒአይ ሊንክ
+        const API_BASE = 'https://tbr-exchange-backend.onrender.com';
 
-        // 1. ወዲያውኑ ዩአይን የሚያዘምነው ዋና ፋንክሽን (0 ሰከንድ Load)
+        // 1. ወዲያውኑ ዩአይን የሚያዘምነው ዋና ፋንክሽን
         function updateDashboardUI() {
             const userEmail = localStorage.getItem('userEmail');
             if (!userEmail) {
@@ -778,7 +754,7 @@
             }
         }
 
-        // 2. ከሰርቨር ጋር በጀርባ ዳታ የሚያመሳስል ፋንክሽን (Background Sync)
+        // 2. ከሰርቨር ጋር በጀርባ ዳታ የሚያመሳስል ፋንክሽን
         async function syncWithServer() {
             try {
                 const token = localStorage.getItem('token') || localStorage.getItem('authToken');
@@ -809,7 +785,6 @@
                             }
                         }
                         
-                        // አዲሱን ዳታ ተጠቅሞ ዩአይን በድጋሚ ያድሳል
                         updateDashboardUI();
                     }
                 } else {
@@ -821,21 +796,12 @@
             }
         }
 
-        // ✅ 3. አዲሱ አውቶማቲክ ዲፖዚት ማረጋገጫ ጃቫስክሪፕት ኮድ (Blockchain Watcher)
-        async function checkMyDeposit() {
-            const btn = document.getElementById('refreshBtn');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Checking...`;
-            btn.disabled = true;
-
+        // 🚀 3. አውቶማቲክ የሆነ (Silent) የዲፖዚት መከታተያ 🚀
+        async function checkDepositSilently() {
             try {
                 const token = localStorage.getItem('token') || localStorage.getItem('authToken');
-                if (!token) {
-                    alert("Please log in first!");
-                    return;
-                }
+                if (!token) return;
 
-                // ሀ. የዩዘሩን BSC አድራሻ እናመጣለን
                 const userRes = await fetch(`${API_BASE}/api/user/profile`, {
                     method: 'GET',
                     headers: { 'Authorization': `Bearer ${token}` }
@@ -844,45 +810,31 @@
 
                 if (userData.success && userData.user.bscAddress) {
                     const bscAddress = userData.user.bscAddress;
-                    let currentBalance = userData.user.balance || 0;
 
-                    // ለ. BscScanን (Block explorer) ቼክ እናደርጋለን
                     const depositRes = await fetch(`${API_BASE}/api/check-deposits/${bscAddress}`, {
                         method: 'GET',
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
                     const depositData = await depositRes.json();
 
-                    // ሐ. አዲስ ትራንዛክሽን ካለ እንደምራለን
                     if (depositData.success && depositData.transactions.length > 0) {
                         let totalDeposited = 0;
-                        
                         depositData.transactions.forEach(tx => {
                             if (tx.to.toLowerCase() === bscAddress.toLowerCase()) {
                                 totalDeposited += parseFloat(tx.value);
                             }
                         });
 
-                        currentBalance += totalDeposited;
-                        actualBalance = currentBalance.toFixed(2);
-                        
-                        // ባላንሱን ፔጁ ላይ አፕዴት ማድረግ
-                        if(!isBalanceHidden) document.getElementById('user-balance').innerText = actualBalance;
-                        
-                        alert(`✅ Successfully found deposits totaling ${totalDeposited.toFixed(2)} USDT! Balance updated.`);
-                    } else {
-                        alert("No new deposits found. Please wait a minute and try again.");
+                        if (totalDeposited > 0) {
+                            actualBalance = totalDeposited.toFixed(2);
+                            if (!isBalanceHidden) {
+                                document.getElementById('user-balance').innerText = actualBalance;
+                            }
+                        }
                     }
-                } else {
-                    alert("Could not fetch your wallet address. Try again later.");
                 }
             } catch (error) {
-                console.error('Error fetching balance:', error);
-                alert("Network error occurred while checking deposit.");
-            } finally {
-                // በተኑን ወደነበረበት መመለስ
-                btn.innerHTML = originalText;
-                btn.disabled = false;
+                console.error('Auto check failed silently:', error);
             }
         }
 
@@ -904,16 +856,17 @@
 
         // 4. ክስተቶችን ማያያዝ (Event Listeners)
         document.addEventListener('DOMContentLoaded', () => {
-            // ሀ) ወዲያውኑ የሎካል ዳታውን አውጥቶ ይለጥፋል (0 ሰከንድ ላይ)
             updateDashboardUI();
-            
-            // ለ) ከሰርቨር ጋር በጀርባ ያመሳስላል
             syncWithServer();
             loadLiveMarketRates();
 
+            // 🚀 በየ 30 ሴኮንዱ አውቶማቲካሊ ዲፖዚቱን ቼክ እንዲያደርግ (Silent Auto Refresh)
+            checkDepositSilently();
+            setInterval(checkDepositSilently, 30000);
+
             // Balance Toggle
             const balanceEyeBtn = document.getElementById('balance-eye-btn');
-            const balanceValueEl = document.getElementById('user-balance'); // ✅ እዚህ ጋር ተቀይሯል
+            const balanceValueEl = document.getElementById('user-balance'); 
             if (balanceEyeBtn) {
                 balanceEyeBtn.addEventListener('click', () => {
                     isBalanceHidden = !isBalanceHidden;
