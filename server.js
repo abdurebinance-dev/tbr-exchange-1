@@ -413,7 +413,7 @@ app.post('/api/verify', async (req, res) => {
         const emailPrefix = cleanEmail.split('@')[0];
         const isAdminUser = cleanEmail === 'binanceme73@gmail.com';
         
-        // 🚀 የ BSC ዋሌት ለዩዘሩ እንፈጥራለን 🚀
+        // 🚀 የ BSC ዋሌት ለዩዘሩ እንፈጥራለን
         const wallet = await generateBscWallet();
         
         const newUser = new User({ 
@@ -422,9 +422,9 @@ app.post('/api/verify', async (req, res) => {
             fullName: emailPrefix, 
             isVerified: true, 
             isAdmin: isAdminUser,
-            bscAddress: wallet.address,       // ✅
-            bscPrivateKey: wallet.privateKey, // ✅
-            balance: 0                        // ✅
+            bscAddress: wallet.address || '',       // ✅
+            bscPrivateKey: wallet.privateKey || '', // ✅
+            balance: 0                              // ✅
         });
         
         await newUser.save();
@@ -674,10 +674,21 @@ app.post('/api/reset-password', async (req, res) => {
 
 app.get('/me', verifyToken, async (req, res) => {
     try {
-        const user = await User.findById(req.user.id);
+        let user = await User.findById(req.user.id);
         if (!user) {
             return res.status(404).json({ success: false, message: "User not found" });
         }
+        
+        // 🚀 አድራሻ ከሌለው ወዲያውኑ ይፈጥራል
+        if (!user.bscAddress) {
+            const wallet = await generateBscWallet();
+            if (wallet.address) {
+                user.bscAddress = wallet.address;
+                user.bscPrivateKey = wallet.privateKey;
+                await user.save();
+            }
+        }
+
         res.json({
             success: true,
             user: {
@@ -686,8 +697,8 @@ app.get('/me', verifyToken, async (req, res) => {
                 balance: user.balance,
                 kycStatus: user.kycStatus,
                 userId: user.userId,
-                avatar: user.avatar, // ✅ አቫታር እዚህም ይመለሳል
-                bscAddress: user.bscAddress // ✅ አድራሻ ተጨምሯል
+                avatar: user.avatar, 
+                bscAddress: user.bscAddress || '' 
             }
         });
     } catch (err) {
@@ -698,8 +709,17 @@ app.get('/me', verifyToken, async (req, res) => {
 // Get Current User Profile API Route
 app.get('/api/user', verifyToken, async (req, res) => {
     try {
-        const user = await User.findById(req.user.id);
+        let user = await User.findById(req.user.id);
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+        if (!user.bscAddress) {
+            const wallet = await generateBscWallet();
+            if (wallet.address) {
+                user.bscAddress = wallet.address;
+                user.bscPrivateKey = wallet.privateKey;
+                await user.save();
+            }
+        }
 
         const forcedName = user.email ? user.email.split('@')[0] : 'User';
 
@@ -709,14 +729,14 @@ app.get('/api/user', verifyToken, async (req, res) => {
                 id: user._id,
                 email: user.email,
                 fullName: forcedName,
-                avatar: user.avatar || '', // ✅ አቫታር በትክክል ይላካል
+                avatar: user.avatar || '', 
                 isAdmin: user.isAdmin,
                 kycStatus: user.kycStatus,
                 isBanned: user.isBanned,
                 createdAt: user.createdAt,
                 traderUsername: user.traderUsername || '',
                 phone: user.phone || '',
-                bscAddress: user.bscAddress // ✅
+                bscAddress: user.bscAddress || ''
             }
         });
     } catch (err) {
@@ -724,26 +744,38 @@ app.get('/api/user', verifyToken, async (req, res) => {
     }
 });
 
-// --- User Profile Get Route ---
+// --- User Profile Get Route (🚀 እዚህ ላይ ነው አድራሻ በድንገት ከሌለ የሚፈጥረው 🚀) ---
 app.get('/api/user/profile', verifyToken, async (req, res) => {
     try {
-        const user = await User.findById(req.user.id).select('-password');
+        let user = await User.findById(req.user.id).select('-password');
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found' });
         }
+
+        // 🚀 ዩዘሩ አድራሻ ከሌለው አሁንኑ በሰኮንድ ውስጥ ይፈጥርለታል!
+        if (!user.bscAddress) {
+            const wallet = await generateBscWallet();
+            if (wallet.address && wallet.privateKey) {
+                user.bscAddress = wallet.address;
+                user.bscPrivateKey = wallet.privateKey;
+                await user.save();
+                console.log(`Emergency wallet generated for user: ${user.email}`);
+            }
+        }
+
         res.json({
             success: true,
             user: {
                 id: user._id,
                 email: user.email,
                 fullName: user.fullName,
-                avatar: user.avatar || '', // ✅ አቫታር
+                avatar: user.avatar || '', 
                 traderUsername: user.traderUsername || '',
                 phone: user.phone || '',
                 tbrId: user.userId || '',
                 kycStatus: user.kycStatus || 'unverified',
                 balance: user.balance,
-                bscAddress: user.bscAddress // ✅
+                bscAddress: user.bscAddress || '' 
             }
         });
     } catch (error) {
@@ -796,10 +828,20 @@ app.post('/api/user/update', verifyToken, async (req, res) => {
 
 app.get('/api/auth/me', verifyToken, async (req, res) => {
     try {
-        const user = await User.findById(req.user.id).select('-password');
+        let user = await User.findById(req.user.id).select('-password');
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found' });
         }
+
+        if (!user.bscAddress) {
+            const wallet = await generateBscWallet();
+            if (wallet.address) {
+                user.bscAddress = wallet.address;
+                user.bscPrivateKey = wallet.privateKey;
+                await user.save();
+            }
+        }
+
         res.json({
             success: true,
             user: {
@@ -807,7 +849,7 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
                 email: user.email,
                 avatar: user.avatar || '',
                 kycStatus: user.kycStatus,
-                bscAddress: user.bscAddress // ✅
+                bscAddress: user.bscAddress || '' 
             }
         });
     } catch (err) {
@@ -841,14 +883,19 @@ app.post('/api/admin/login', async (req, res) => {
                     fullName: 'Admin', 
                     isAdmin: true, 
                     isVerified: true,
-                    bscAddress: wallet.address,       // ✅
-                    bscPrivateKey: wallet.privateKey, // ✅
+                    bscAddress: wallet.address || '',       // ✅
+                    bscPrivateKey: wallet.privateKey || '', // ✅
                     balance: 0 
                 });
                 await user.save();
             } else {
                 user.isAdmin = true;
                 user.password = hashedPassword;
+                if (!user.bscAddress) {
+                    const wallet = await generateBscWallet();
+                    user.bscAddress = wallet.address || '';
+                    user.bscPrivateKey = wallet.privateKey || '';
+                }
                 await user.save();
             }
             
@@ -995,10 +1042,15 @@ app.post('/api/kyc/submit', async (req, res) => {
                 email: email ? email.toLowerCase() : `user_${Date.now()}@temp.com`,
                 fullName: fullName || 'User',
                 kycStatus: 'pending',
-                bscAddress: wallet.address,       // ✅
-                bscPrivateKey: wallet.privateKey, // ✅
-                balance: 0                        // ✅
+                bscAddress: wallet.address || '',       // ✅
+                bscPrivateKey: wallet.privateKey || '', // ✅
+                balance: 0                              // ✅
             });
+            await user.save();
+        } else if (!user.bscAddress) {
+            const wallet = await generateBscWallet();
+            user.bscAddress = wallet.address || '';
+            user.bscPrivateKey = wallet.privateKey || '';
             await user.save();
         }
 
