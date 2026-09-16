@@ -198,7 +198,7 @@
             font-size: 14px;
         }
 
-        /* 🚀 Dynamic Tab Sections & Forms */
+        /* Dynamic Tab Sections & Forms */
         .tab-section {
             animation: fadeIn 0.3s ease-in-out;
         }
@@ -556,15 +556,23 @@
 
         <!-- 🚀 2. WITHDRAW SECTION -->
         <div id="withdraw-section" class="tab-section" style="display: none;">
-            <div class="form-group">
-                <label>Withdrawal Address</label>
-                <input type="text" class="form-control" placeholder="Enter Destination USDT Address">
+            <!-- ኔትወርክ እስኪመረጥ የሚታየው ጽሁፍ -->
+            <div class="placeholder-box" id="withdraw-placeholder">
+                Please select a network above to proceed with your withdrawal.
             </div>
-            <div class="form-group">
-                <label>Withdrawal Amount (USDT)</label>
-                <input type="number" class="form-control" placeholder="Minimum 10 USDT">
+            
+            <!-- ኔትወርክ ከተመረጠ በኋላ የሚመጣው ፎርም -->
+            <div id="withdraw-form-box" style="display: none;">
+                <div class="form-group">
+                    <label>Withdrawal Address</label>
+                    <input type="text" class="form-control" placeholder="Enter Destination USDT Address">
+                </div>
+                <div class="form-group">
+                    <label>Withdrawal Amount (USDT)</label>
+                    <input type="number" class="form-control" placeholder="Minimum 10 USDT">
+                </div>
+                <button class="action-submit-btn" onclick="showToast('Withdrawal request submitted for verification!')">Submit Withdrawal</button>
             </div>
-            <button class="action-submit-btn" onclick="showToast('Withdrawal request submitted for verification!')">Submit Withdrawal</button>
         </div>
 
         <!-- 🚀 3. TRANSFER SECTION -->
@@ -667,12 +675,10 @@
             const action = urlParams.get('action');
 
             if (action) {
-                // የመጀመሪያውን ፊደል ካፒታል ያደርገዋል (ምሳሌ: withdraw -> Withdraw)
                 const capitalizedAction = action.charAt(0).toUpperCase() + action.slice(1).toLowerCase();
                 const targetBtn = document.querySelector(`.${action.toLowerCase()}-btn`);
                 handleAction(capitalizedAction, targetBtn);
             } else {
-                // ዲፎልት (ምንም ከሌለ) Depositን ያሳያል
                 handleAction('Deposit', document.querySelector('.deposit-btn'));
             }
         });
@@ -737,6 +743,10 @@
             document.getElementById('deposit-placeholder').style.display = 'none';
             document.getElementById('deposit-address-box').style.display = 'block';
 
+            // Withdraw ላይ ከሆነ ፎርሙን ያሳያል
+            document.getElementById('withdraw-placeholder').style.display = 'none';
+            document.getElementById('withdraw-form-box').style.display = 'block';
+
             // ለሙከራ የሚሆን አድራሻ ይፈጥራል
             const addressInput = document.getElementById('dep-address');
             if(shortName === 'BSC') addressInput.value = "0x892af0... (Your BSC Address)";
@@ -749,7 +759,7 @@
         function copyAddress() {
             const copyText = document.getElementById("dep-address");
             copyText.select();
-            copyText.setSelectionRange(0, 99999); // ለሞባይል
+            copyText.setSelectionRange(0, 99999);
             navigator.clipboard.writeText(copyText.value);
             showToast("Address copied to clipboard!");
         }
@@ -758,6 +768,19 @@
             // የነቁትን አዝራሮች ከለር መቀየር
             document.querySelectorAll('.wallet-btn').forEach(b => b.classList.remove('active'));
             if(btnElement) btnElement.classList.add('active');
+
+            // 🚀 በተን በተቀየረ ቁጥር የተመረጠውን ኔትወርክ ሪሴት (Reset) ማድረግ
+            chosenNetwork = "";
+            document.getElementById("selectedNetworkText").innerText = "Please choose network first";
+            document.querySelectorAll('.network-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            // ፎርሞቹን ደብቆ Placeholderዎቹን ማሳየት
+            document.getElementById('deposit-placeholder').style.display = 'block';
+            document.getElementById('deposit-address-box').style.display = 'none';
+            document.getElementById('withdraw-placeholder').style.display = 'block';
+            document.getElementById('withdraw-form-box').style.display = 'none';
 
             // ሁሉንም ሴክሽኖች መደበቅ
             document.getElementById('deposit-section').style.display = 'none';
@@ -778,7 +801,7 @@
                 networkContainer.style.display = 'none'; // Transfer ኔትወርክ አይፈልግም
             }
             
-            // ዩአርኤሉን (URL) አፕዴት ማድረግ (ሪፍሬሽ ሲደረግ እዛው እንዲቆይ)
+            // ዩአርኤሉን (URL) አፕዴት ማድረግ
             const url = new URL(window.location);
             url.searchParams.set('action', actionType.toLowerCase());
             window.history.pushState({}, '', url);
