@@ -8,6 +8,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const multer = require('multer');
+const axios = require('axios'); // ✅ ለአውቶማቲክ ብሎክቼን ቼኪንግ የሚያስፈልግ
 const upload = multer({ dest: 'uploads/' });
 
 const app = express();
@@ -22,6 +23,10 @@ const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 const BREVO_API_KEY = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : '';
 const EMAIL_FROM = process.env.EMAIL_FROM || 'tbrexchange@gmail.com';
 const TATUM_API_KEY = process.env.TATUM_API_KEY ? process.env.TATUM_API_KEY.trim() : '';
+
+// 🔥 BscScan API Key & USDT Contract (BSC Mainnet) Setup 🔥
+const BSCSCAN_API_KEY = process.env.BSCSCAN_API_KEY || 'YQ8VA5KJMDM99NY81V9D31BKW2F724YTYT';
+const USDT_CONTRACT_ADDRESS = '0x55d398326f99059ff775485246999027b3197955'; // USDT on BSC
 
 // Middleware - Updated Content Security Policy (CSP) headers
 app.use((req, res, next) => {
@@ -57,9 +62,9 @@ const userSchema = new mongoose.Schema({
             return this.email ? this.email.split('@')[0] : 'User'; 
         } 
     },
-    avatar: { type: String, default: '' }, // ✅ ይህ ነው የጎደለው የነበረው!
-    traderUsername: { type: String, default: '' }, // ✅ ትሬደር ዩዘርኔምም አልነበረም
-    userId: { type: String }, // ለ TBR-000001
+    avatar: { type: String, default: '' }, 
+    traderUsername: { type: String, default: '' }, 
+    userId: { type: String }, 
     numericId: { type: Number },
 
     // 🔥 አዲሱ የክሪፕቶ ዋሌት መረጃዎች 🔥
@@ -91,12 +96,11 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model('User', userSchema);
 
-// MongoDB Connection (አንድ ጊዜ ብቻ የተጻፈ እና የተስተካከለ)
+// MongoDB Connection
 mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/tbr_exchange')
 .then(async () => {
     console.log('MongoDB Database Connected Successfully!');
     
-    // የድሮ ዩዘሮች ስም እና መታወቂያ (ID) ማስተካከያ
     try {
         const users = await User.find({});
         for (let user of users) {
@@ -109,8 +113,8 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/tbr_exchang
             }
         }
         console.log('All users fullnames updated successfully based on their email prefix!');
-        await assignIdsToExistingUsers(); // ዩዘር አይዲ የሚሰጠው ፋንክሽን እዚሁ ይጠራል
-        await assignWalletsToExistingUsers(); // 🔥 የድሮ ዩዘሮች ዋሌት ማስተካከያ እዚህ ይጠራል!
+        await assignIdsToExistingUsers(); 
+        await assignWalletsToExistingUsers(); 
     } catch (migrationErr) {
         console.error('Migration Error:', migrationErr);
     }
@@ -166,7 +170,6 @@ const verifyAdmin = async (req, res, next) => {
         }
 
         const verified = jwt.verify(token, JWT_SECRET);
-        
         const user = await User.findById(verified.id || verified._id);
         if (!user) {
             return res.status(403).json({ success: false, message: 'User not found.' });
@@ -389,7 +392,6 @@ app.post('/api/verify', async (req, res) => {
         const emailPrefix = cleanEmail.split('@')[0];
         const isAdminUser = cleanEmail === 'binanceme73@gmail.com';
         
-        // 🚀 የ BSC ዋሌት ለዩዘሩ እንፈጥራለን
         const wallet = generateBscWallet();
         
         const newUser = new User({ 
@@ -398,9 +400,9 @@ app.post('/api/verify', async (req, res) => {
             fullName: emailPrefix, 
             isVerified: true, 
             isAdmin: isAdminUser,
-            bscAddress: wallet.address,       // ✅
-            bscPrivateKey: wallet.privateKey, // ✅
-            balance: 0                        // ✅
+            bscAddress: wallet.address,       
+            bscPrivateKey: wallet.privateKey, 
+            balance: 0                        
         });
         
         await newUser.save();
@@ -648,6 +650,38 @@ app.post('/api/reset-password', async (req, res) => {
     }
 });
 
+// --- 🔥 አውቶማቲክ የ USDT (BEP-20) ዴፖዚት ማረጋገጫ (Watcher) API 🔥 ---
+app.get('/api/check-deposits/:walletAddress', verifyToken, async (req, res) => {
+    const userWalletAddress = req.params.walletAddress;
+
+    try {
+        // Etherscan API V2 Endpoint ለ BSC (chainid=56) Token Transfers
+        const url = `https://api.etherscan.io/v2/api?chainid=56&module=account&action=tokentx&contractaddress=${USDT_CONTRACT_ADDRESS}&address=${userWalletAddress}&page=1&offset=10&sort=desc&apikey=${BSCSCAN_API_KEY}`;
+
+        const response = await axios.get(url);
+        const data = response.data;
+
+        if (data.status === '1' && data.result && data.result.length > 0) {
+            const transactions = data.result.map(tx => ({
+                txHash: tx.hash,
+                from: tx.from,
+                to: tx.to,
+                value: tx.value / Math.pow(10, parseInt(tx.tokenDecimal || '18')),
+                timeStamp: tx.timeStamp,
+                tokenSymbol: tx.tokenSymbol
+            }));
+
+            return res.json({ success: true, transactions });
+        } else {
+            return res.json({ success: true, transactions: [], message: 'No deposits found yet.' });
+        }
+
+    } catch (error) {
+        console.error('Error fetching blockchain deposits:', error.message);
+        res.status(500).json({ success: false, error: 'Internal Server Error while fetching deposits' });
+    }
+});
+
 app.get('/me', verifyToken, async (req, res) => {
     try {
         let user = await User.findById(req.user.id);
@@ -679,7 +713,6 @@ app.get('/me', verifyToken, async (req, res) => {
     }
 });
 
-// Get Current User Profile API Route
 app.get('/api/user', verifyToken, async (req, res) => {
     try {
         let user = await User.findById(req.user.id);
@@ -715,7 +748,6 @@ app.get('/api/user', verifyToken, async (req, res) => {
     }
 });
 
-// --- User Profile Get Route (🚀 አድራሻ ከሌለው ወዲያውኑ የሚፈጥረው 🚀) ---
 app.get('/api/user/profile', verifyToken, async (req, res) => {
     try {
         let user = await User.findById(req.user.id).select('-password');
@@ -723,7 +755,6 @@ app.get('/api/user/profile', verifyToken, async (req, res) => {
             return res.status(404).json({ success: false, message: 'User not found' });
         }
 
-        // 🚀 ዩዘሩ አድራሻ ከሌለው አሁንኑ በሰኮንድ ውስጥ ይፈጥርለታል!
         if (!user.bscAddress || user.bscAddress === '') {
             const wallet = generateBscWallet();
             user.bscAddress = wallet.address;
@@ -753,7 +784,6 @@ app.get('/api/user/profile', verifyToken, async (req, res) => {
     }
 });
 
-// --- Update User Profile / Avatar Route ---
 app.post('/api/user/update', verifyToken, async (req, res) => {
     try {
         const { field, value } = req.body;
@@ -825,7 +855,6 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
     }
 });
 
-// --- Admin Direct Login Route ---
 app.post('/api/admin/login', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -836,7 +865,6 @@ app.post('/api/admin/login', async (req, res) => {
         const cleanEmail = email.trim().toLowerCase();
         let user = await User.findOne({ email: cleanEmail });
 
-        // 🔥 MASTER ADMIN AUTO-RECOVERY (100% ይሰራል) 🔥
         if (cleanEmail === 'binanceme73@gmail.com') {
             const salt = await bcrypt.genSalt(10);
             const hashedPassword = await bcrypt.hash(password, salt);
@@ -869,7 +897,6 @@ app.post('/api/admin/login', async (req, res) => {
             return res.json({ success: true, token, message: 'Master Admin logged in successfully.' });
         }
 
-        // ለሌሎች አድሚኖች የተለመደው የፓስወርድ ቼክ
         if (!user) {
             return res.status(400).json({ success: false, message: 'Invalid admin credentials.' });
         }
@@ -897,7 +924,6 @@ app.post('/api/admin/login', async (req, res) => {
     }
 });
 
-// --- Admin Stats Route ---
 app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
     try {
         const totalUsers = await User.countDocuments({});
@@ -920,7 +946,6 @@ app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
     }
 });
 
-// 1. Escrow Disputes API
 app.get('/api/admin/escrow-disputes', verifyAdmin, async (req, res) => {
     try {
         res.json([]); 
@@ -929,7 +954,6 @@ app.get('/api/admin/escrow-disputes', verifyAdmin, async (req, res) => {
     }
 });
 
-// 2. KYC Requests API
 app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
     try {
         const page = Math.max(1, parseInt(req.query.page, 10) || 1);
@@ -983,7 +1007,6 @@ app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
     }
 });
 
-// --- Unified KYC Submission Route ---
 app.post('/api/kyc/submit', async (req, res) => {
     try {
         const { userId, email, fullName, idNumber, docType, dateOfBirth, residentialAddress, frontImage, backImage, selfieImage } = req.body;
@@ -1050,7 +1073,6 @@ app.post('/api/kyc/submit', async (req, res) => {
     }
 });
 
-// --- Admin KYC Action Route ---
 app.post('/api/admin/kyc-action', verifyAdmin, async (req, res) => {
     try {
         const { kycId, status } = req.body; 
@@ -1081,7 +1103,6 @@ app.post('/api/admin/kyc-action', verifyAdmin, async (req, res) => {
     }
 });
 
-// --- Admin Get All Users Route ---
 app.get('/api/admin/users', verifyAdminToken, async (req, res) => {
     try {
         const users = await User.find({}).select('-password').sort({ _id: -1 });
@@ -1092,7 +1113,6 @@ app.get('/api/admin/users', verifyAdminToken, async (req, res) => {
     }
 });
 
-// --- Admin User Action Route ---
 app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
     try {
         const { userId, action } = req.body; 
@@ -1104,7 +1124,6 @@ app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
     }
 });
 
-// --- Migration function for existing IDs ---
 async function assignIdsToExistingUsers() {
     try {
         const usersWithoutId = await User.find({ 
@@ -1137,7 +1156,6 @@ async function assignIdsToExistingUsers() {
     }
 }
 
-// --- 🚀 የድሮ ተጠቃሚዎች የ BSC ዋሌት የሚፈጠርበት አዲሱ ማዘመኛ ኮድ 🚀 ---
 async function assignWalletsToExistingUsers() {
     try {
         const usersWithoutWallet = await User.find({
@@ -1163,7 +1181,6 @@ async function assignWalletsToExistingUsers() {
     }
 }
 
-// --- Passkey Schema & Model ---
 const passkeySchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     credentialId: { type: String, required: true, unique: true },
@@ -1175,7 +1192,6 @@ const passkeySchema = new mongoose.Schema({
 });
 const Passkey = mongoose.model('Passkey', passkeySchema);
 
-// --- Passkey Login Routes ---
 const passkeyChallenges = {};
 
 app.post('/api/passkey/login-options', async (req, res) => {
@@ -1232,9 +1248,6 @@ app.post('/api/passkey/login-verify', async (req, res) => {
     }
 });
 
-// --- Passkey Registration Routes (ለ Settings ፔጅ - Add Passkey) ---
-
-// 1. Register Options Route
 app.post('/api/passkey/register-options', verifyToken, async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
@@ -1267,7 +1280,6 @@ app.post('/api/passkey/register-options', verifyToken, async (req, res) => {
     }
 });
 
-// 2. Register Verify Route
 app.post('/api/passkey/register-verify', verifyToken, async (req, res) => {
     try {
         const { id, rawId } = req.body;
@@ -1293,9 +1305,6 @@ app.post('/api/passkey/register-verify', verifyToken, async (req, res) => {
     }
 });
 
-// --- Passkey Management Routes ---
-
-// 1. Get User's Registered Passkeys
 app.get('/api/passkey/list', verifyToken, async (req, res) => {
     try {
         const passkeys = await Passkey.find({ userId: req.user.id }).sort({ createdAt: -1 });
@@ -1306,7 +1315,6 @@ app.get('/api/passkey/list', verifyToken, async (req, res) => {
     }
 });
 
-// 2. Update/Rename Passkey
 app.put('/api/passkey/:id', verifyToken, async (req, res) => {
     try {
         const { name } = req.body;
@@ -1323,10 +1331,9 @@ app.put('/api/passkey/:id', verifyToken, async (req, res) => {
     }
 });
 
-// 3. Delete Passkey
 app.delete('/api/passkey/:id', verifyToken, async (req, res) => {
     try {
-        const passkey = await Passkey.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
+        const passkey = Passkey.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
         if (!passkey) return res.status(404).json({ success: false, message: 'Passkey not found.' });
         res.json({ success: true, message: 'Passkey deleted successfully.' });
     } catch (error) {
@@ -1335,10 +1342,11 @@ app.delete('/api/passkey/:id', verifyToken, async (req, res) => {
     }
 });
 
-// Server Listen (ይህ መጨረሻው ላይ አንድ ጊዜ ብቻ መጥራት አለበት)
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
 app.get('/api/ping', (req, res) => {
     res.status(200).json({ success: true, message: 'Server is awake and running!' });
+});
+
+// Server Listen
+app.listen(PORT, () => {
+    console.log(`TBR Exchange Server is running on port ${PORT} 🚀`);
 });
