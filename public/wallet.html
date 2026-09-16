@@ -288,17 +288,6 @@
             margin-bottom: 20px;
         }
 
-        .placeholder-box {
-            text-align: center;
-            color: var(--text-muted);
-            padding: 30px 20px;
-            border: 1px dashed var(--border-color);
-            border-radius: 12px;
-            margin-bottom: 20px;
-            background: var(--card-bg);
-            font-size: 14px;
-        }
-
         /* Network Modal */
         .modal-overlay {
             position: fixed;
@@ -539,9 +528,7 @@
 
         <!-- 🚀 1. DEPOSIT SECTION -->
         <div id="deposit-section" class="tab-section" style="display: none;">
-            <div class="placeholder-box" id="deposit-placeholder">
-                Please select a network above to view your deposit address.
-            </div>
+            <!-- ኔትወርክ ከተመረጠ በኋላ ብቻ ነው ይሄ የሚታየው -->
             <div class="deposit-address-container" id="deposit-address-box" style="display: none;">
                 <div class="form-group">
                     <label>Deposit Address</label>
@@ -556,12 +543,7 @@
 
         <!-- 🚀 2. WITHDRAW SECTION -->
         <div id="withdraw-section" class="tab-section" style="display: none;">
-            <!-- ኔትወርክ እስኪመረጥ የሚታየው ጽሁፍ -->
-            <div class="placeholder-box" id="withdraw-placeholder">
-                Please select a network above to proceed with your withdrawal.
-            </div>
-            
-            <!-- ኔትወርክ ከተመረጠ በኋላ የሚመጣው ፎርም -->
+            <!-- ኔትወርክ ከተመረጠ በኋላ ብቻ ነው ይሄ የሚታየው -->
             <div id="withdraw-form-box" style="display: none;">
                 <div class="form-group">
                     <label>Withdrawal Address</label>
@@ -739,15 +721,11 @@
             const textEl = document.getElementById("selectedNetworkText");
             textEl.innerHTML = `<span style="color: #fff; font-weight: 700; margin-right: 6px;">${shortName}</span> <span style="font-size: 13px; color: #848e9c;">${longName}</span>`;
             
-            // Deposit ላይ ከሆነ አድራሻውን ያሳያል
-            document.getElementById('deposit-placeholder').style.display = 'none';
+            // 🚀 ኔትወርክ ሲመረጥ ፎርሞቹን ማሳየት
             document.getElementById('deposit-address-box').style.display = 'block';
-
-            // Withdraw ላይ ከሆነ ፎርሙን ያሳያል
-            document.getElementById('withdraw-placeholder').style.display = 'none';
             document.getElementById('withdraw-form-box').style.display = 'block';
 
-            // ለሙከራ የሚሆን አድራሻ ይፈጥራል
+            // አድራሻ ማስገባት
             const addressInput = document.getElementById('dep-address');
             if(shortName === 'BSC') addressInput.value = "0x892af0... (Your BSC Address)";
             if(shortName === 'TRX') addressInput.value = "T9yGqR... (Your TRON Address)";
@@ -765,31 +743,27 @@
         }
 
         function handleAction(actionType, btnElement) {
-            // የነቁትን አዝራሮች ከለር መቀየር
             document.querySelectorAll('.wallet-btn').forEach(b => b.classList.remove('active'));
             if(btnElement) btnElement.classList.add('active');
 
-            // 🚀 በተን በተቀየረ ቁጥር የተመረጠውን ኔትወርክ ሪሴት (Reset) ማድረግ
+            // ኔትወርክ ሪሴት ማድረግ
             chosenNetwork = "";
             document.getElementById("selectedNetworkText").innerText = "Please choose network first";
             document.querySelectorAll('.network-item').forEach(item => {
                 item.classList.remove('selected');
             });
             
-            // ፎርሞቹን ደብቆ Placeholderዎቹን ማሳየት
-            document.getElementById('deposit-placeholder').style.display = 'block';
+            // 🚀 ኔትወርክ ስላልተመረጠ ፎርሞቹን መደበቅ
             document.getElementById('deposit-address-box').style.display = 'none';
-            document.getElementById('withdraw-placeholder').style.display = 'block';
             document.getElementById('withdraw-form-box').style.display = 'none';
 
-            // ሁሉንም ሴክሽኖች መደበቅ
+            // ሴክሽኖችን ማስተካከል
             document.getElementById('deposit-section').style.display = 'none';
             document.getElementById('withdraw-section').style.display = 'none';
             document.getElementById('transfer-section').style.display = 'none';
 
             const networkContainer = document.getElementById('network-container');
 
-            // የተመረጠውን ሴክሽን ማሳየት
             if (actionType === 'Deposit') {
                 document.getElementById('deposit-section').style.display = 'block';
                 networkContainer.style.display = 'block';
@@ -798,10 +772,9 @@
                 networkContainer.style.display = 'block';
             } else if (actionType === 'Transfer') {
                 document.getElementById('transfer-section').style.display = 'block';
-                networkContainer.style.display = 'none'; // Transfer ኔትወርክ አይፈልግም
+                networkContainer.style.display = 'none';
             }
             
-            // ዩአርኤሉን (URL) አፕዴት ማድረግ
             const url = new URL(window.location);
             url.searchParams.set('action', actionType.toLowerCase());
             window.history.pushState({}, '', url);
