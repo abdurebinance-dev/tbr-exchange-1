@@ -246,7 +246,7 @@
             border-color: var(--accent-color);
         }
 
-        /* 🚀 New Error Styles 🚀 */
+        /* 🚀 Error Styles 🚀 */
         .form-control.input-error {
             border-color: var(--red-color) !important;
         }
@@ -844,7 +844,7 @@
             }
         }
 
-        // 🚀 አዲሱ የ Amount እና Address ማረጋገጫ (Validation Logic) 🚀
+        // 🚀 የ Amount እና Address ማረጋገጫ (Validation Logic) 🚀
         function validateWithdrawForm() {
             const amountInput = document.getElementById('withdraw-amount');
             const addressInput = document.getElementById('withdraw-address');
@@ -858,7 +858,7 @@
 
             let isValid = true;
 
-            // 1. የገንዘብ መጠን ማረጋገጫ (Amount Validation)
+            // 1. የገንዘብ መጠን ማረጋገጫ
             if (amountInput.value !== "") {
                 if (val < 3) {
                     errorText.innerText = "Minimum is 3.00 USDT";
@@ -880,12 +880,12 @@
                 isValid = false;
             }
 
-            // 2. አድራሻ ማረጋገጫ (Address Validation)
+            // 2. አድራሻ ማረጋገጫ
             if (address === "") {
                 isValid = false;
             }
 
-            // የ ፊ ስሌት ማሳየት (Fee Calculation)
+            // የ ፊ ስሌት ማሳየት
             const netEl = document.getElementById('withdraw-net-receive');
             if (val >= 1) {
                 netEl.innerText = (val - 1).toFixed(2) + " USDT";
@@ -893,7 +893,7 @@
                 netEl.innerText = "0.00 USDT";
             }
 
-            // 3. ቁልፉን ማብራት / ማጥፋት (Button State)
+            // 3. ቁልፉን ማብራት / ማጥፋት
             if (isValid) {
                 submitBtn.classList.remove('btn-disabled');
                 submitBtn.disabled = false;
@@ -906,14 +906,13 @@
         function setMaxWithdrawAmount() {
             const maxVal = parseFloat(userRawBalance) || 0;
             document.getElementById('withdraw-amount').value = maxVal > 0 ? maxVal : 0;
-            validateWithdrawForm(); // ቫሊዴሽኑን ይጠራል
+            validateWithdrawForm();
         }
 
         async function submitWithdrawalRequest() {
             const address = document.getElementById('withdraw-address').value.trim();
             const amount = document.getElementById('withdraw-amount').value;
 
-            // ይህ ደህንነት ለማጠናከር ነው (Double check)
             if (!address || parseFloat(amount) < 3 || parseFloat(amount) > parseFloat(userRawBalance)) {
                 return;
             }
@@ -922,7 +921,6 @@
             const token = localStorage.getItem('token') || localStorage.getItem('authToken');
 
             try {
-                // Submit ሲደረግ በራስሰር በጀርባ ኢሜል ወይም ፓስኪ ይመረጣል 
                 const res = await fetch(`${API_BASE_URL}/api/withdraw/request`, {
                     method: 'POST',
                     headers: {
@@ -942,7 +940,7 @@
                         fetchUserProfile();
                         document.getElementById('withdraw-amount').value = "";
                         document.getElementById('withdraw-address').value = "";
-                        validateWithdrawForm(); // Reset button
+                        validateWithdrawForm();
                     }
                 } else {
                     showToast(data.message || "Withdrawal failed.");
@@ -979,7 +977,7 @@
                     document.getElementById('otpCodeInput').value = "";
                     document.getElementById('withdraw-amount').value = "";
                     document.getElementById('withdraw-address').value = "";
-                    validateWithdrawForm(); // Reset button
+                    validateWithdrawForm();
                 } else {
                     showToast(data.message || "Verification failed.");
                 }
@@ -1040,7 +1038,7 @@
 
             closeNetworkModal();
             showToast(`${shortName} Network selected!`);
-            validateWithdrawForm(); // ኔትወርክ ሲመረጥ ቁልፉን ቼክ ያደርጋል
+            validateWithdrawForm();
         }
 
         function generateQRCode(address) {
@@ -1082,6 +1080,27 @@
                 item.classList.remove('selected');
             });
             
+            // 🚀 1. ፎርሙን ባዶ ማድረጊያ (Reset Inputs on Tab Change) 🚀
+            const withdrawAddress = document.getElementById('withdraw-address');
+            if(withdrawAddress) withdrawAddress.value = "";
+            
+            const withdrawAmount = document.getElementById('withdraw-amount');
+            if(withdrawAmount) withdrawAmount.value = "";
+            
+            const errorMsgBox = document.getElementById('withdraw-error-msg');
+            if(errorMsgBox) errorMsgBox.style.display = "none";
+            
+            if(withdrawAmount) withdrawAmount.classList.remove('input-error');
+            
+            const netReceive = document.getElementById('withdraw-net-receive');
+            if(netReceive) netReceive.innerText = "0.00 USDT";
+            
+            const submitBtn = document.getElementById('withdraw-submit-btn');
+            if (submitBtn) {
+                submitBtn.classList.add('btn-disabled');
+                submitBtn.disabled = true;
+            }
+
             document.getElementById('deposit-address-box').style.display = 'none';
             document.getElementById('withdraw-form-box').style.display = 'none';
 
@@ -1097,7 +1116,7 @@
             } else if (actionType === 'Withdraw') {
                 document.getElementById('withdraw-section').style.display = 'block';
                 networkContainer.style.display = 'block';
-                validateWithdrawForm(); // ዊድድሮው ታብ ሲከፈት ቁልፉን ይፈትሻል
+                validateWithdrawForm();
             } else if (actionType === 'Transfer') {
                 document.getElementById('transfer-section').style.display = 'block';
                 networkContainer.style.display = 'none';
