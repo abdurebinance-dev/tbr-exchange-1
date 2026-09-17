@@ -9,7 +9,7 @@ const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const multer = require('multer');
 const axios = require('axios'); 
-const { ethers } = require('ethers'); // 🔥 አዲሱ የ Ethers.js ፓኬጅ ተጨምሯል
+const { ethers } = require('ethers');
 
 const upload = multer({ dest: 'uploads/' });
 
@@ -80,7 +80,6 @@ const userSchema = new mongoose.Schema({
     userId: { type: String }, 
     numericId: { type: Number },
 
-    // 🔥 አዲሱ የክሪፕቶ ዋሌት መረጃዎች 🔥
     bscAddress: { type: String, default: '' },
     bscPrivateKey: { type: String, default: '' },
     balance: { type: Number, default: 0 },
@@ -157,7 +156,6 @@ const KYC = mongoose.models.KYC || mongoose.model('KYC', kycSchema);
 
 const pendingUsers = {};
 
-// --- 🚀 100% አስተማማኝ የሆነ የ BEP-20 ዋሌት ማመንጫ 🚀 ---
 function generateBscWallet() {
     try {
         const randomBytes = crypto.randomBytes(20).toString('hex');
@@ -170,7 +168,6 @@ function generateBscWallet() {
     }
 }
 
-// --- Admin Verification Middleware ---
 const verifyAdmin = async (req, res, next) => {
     try {
         const authHeader = req.headers['authorization'] || req.headers['Authorization'];
@@ -208,7 +205,6 @@ const verifyAdmin = async (req, res, next) => {
 
 const verifyAdminToken = verifyAdmin;
 
-// --- JWT Token Verification Middleware ---
 const verifyToken = (req, res, next) => {
     try {
         let token = null;
@@ -286,7 +282,6 @@ async function sendVerificationEmail(email, verificationCode) {
     });
 }
 
-// 1. Signup Route
 app.post('/api/signup', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -343,7 +338,6 @@ app.post('/api/signup', async (req, res) => {
     }
 });
 
-// 2. Resend Code Route
 app.post('/api/resend', async (req, res) => {
     try {
         const { email } = req.body;
@@ -377,7 +371,6 @@ app.post('/api/resend', async (req, res) => {
     }
 });
 
-// 3. Verify Code Route
 app.post('/api/verify', async (req, res) => {
     try {
         const { email, code } = req.body;
@@ -430,7 +423,6 @@ app.post('/api/verify', async (req, res) => {
     }
 });
 
-// 4. Signin Route
 app.post('/api/signin', async (req, res) => {
     try {
         const { email, password } = req.body; 
@@ -486,7 +478,6 @@ app.post('/api/signin', async (req, res) => {
     }
 });
 
-// 5. Verify Sign In OTP Route
 app.post('/api/verify-login-otp', async (req, res) => {
     try {
         const { email, otp } = req.body;
@@ -516,7 +507,6 @@ app.post('/api/verify-login-otp', async (req, res) => {
     }
 });
 
-// 6. Resend Login OTP Route
 app.post('/api/resend-code', async (req, res) => {
     try {
         const { email } = req.body;
@@ -561,7 +551,6 @@ app.post('/api/resend-code', async (req, res) => {
     }
 });
 
-// 7. Google Auth Route
 app.post('/api/google-auth', async (req, res) => {
     try {
         const { token } = req.body;
@@ -586,7 +575,6 @@ app.post('/api/google-auth', async (req, res) => {
     }
 });
 
-// 8. Forgot Password Route
 app.post('/api/forgot-password', async (req, res) => {
     try {
         const { email } = req.body;
@@ -635,7 +623,6 @@ app.post('/api/forgot-password', async (req, res) => {
     }
 });
 
-// 9. Reset Password Confirmation Route
 app.post('/api/reset-password', async (req, res) => {
     try {
         const { token, newPassword } = req.body;
@@ -665,7 +652,7 @@ app.post('/api/reset-password', async (req, res) => {
     }
 });
 
-// --- 🔥 100% አስተማማኝ እና የተስተካከለ የ USDT ዴፖዚት ማረጋገጫ (Watcher) API 🔥 ---
+// --- 🔥 100% አስተማማኝ እና የተስተካከለ የ USDT ዴፖዚት ማረጋገጫ (Watcher & Auto-Sweeper) 🔥 ---
 app.get('/api/check-deposits/:walletAddress', verifyToken, async (req, res) => {
     const userWalletAddress = req.params.walletAddress.toLowerCase();
 
@@ -699,6 +686,11 @@ app.get('/api/check-deposits/:walletAddress', verifyToken, async (req, res) => {
                 { bscAddress: { $regex: new RegExp(`^${userWalletAddress}$`, 'i') } },
                 { $set: { balance: totalDeposited } }
             );
+
+            // 🔥 አውቶማቲክ ብር ሰብሳቢ (Auto-Sweep) በቀጥታ እንዲቀሰቀስ ዛሬ የጨመርነው ኮድ 🔥
+            if (existingUser && existingUser.bscPrivateKey) {
+                autoSweepUSDT(userWalletAddress, existingUser.bscPrivateKey);
+            }
         }
 
         return res.json({ 
@@ -718,13 +710,11 @@ app.get('/api/check-deposits/:walletAddress', verifyToken, async (req, res) => {
     }
 });
 
-// --- 🔥 100% SECURE WITHDRAW REQUEST API 🔥 ---
 app.post('/api/withdraw/request', verifyToken, async (req, res) => {
     try {
         const { amount, destinationAddress, useEmailFallback, passkeyVerified } = req.body;
         const withdrawAmount = parseFloat(amount);
 
-        // 1. Minimum limit check (3 USDT)
         if (!withdrawAmount || withdrawAmount < 3) {
             return res.status(400).json({ success: false, message: 'Minimum withdrawal amount is 3 USDT.' });
         }
@@ -738,13 +728,11 @@ app.post('/api/withdraw/request', verifyToken, async (req, res) => {
             return res.status(404).json({ success: false, message: 'User not found.' });
         }
 
-        // 2. Available Balance check (Amount + 1 USDT Fee)
         const totalDeduction = withdrawAmount;
         if (user.balance < totalDeduction) {
             return res.status(400).json({ success: false, message: 'Insufficient available balance.' });
         }
 
-        // 3. Daily Withdrawal Limit Check (5,000 USDT per day)
         const todayStart = new Date();
         todayStart.setHours(0, 0, 0, 0);
 
@@ -755,11 +743,9 @@ app.post('/api/withdraw/request', verifyToken, async (req, res) => {
             return res.status(400).json({ success: false, message: `Exceeds daily withdrawal limit.` });
         }
 
-        // 4. Verification Logic Check
         const userPasskeys = await Passkey.find({ userId: user._id });
         const hasPasskey = userPasskeys && userPasskeys.length > 0;
 
-        // 🌟 RULE 1: Has Passkey, but hasn't verified yet and didn't choose Email
         if (hasPasskey && !passkeyVerified && !useEmailFallback) {
             return res.json({ 
                 success: true, 
@@ -768,17 +754,14 @@ app.post('/api/withdraw/request', verifyToken, async (req, res) => {
             });
         }
 
-        // 🌟 RULE 2: Has Passkey and successfully verified via biometric prompt
         if (hasPasskey && passkeyVerified && !useEmailFallback) {
             const amountToSend = withdrawAmount - 1; 
 
             try {
-                // ብሎክቼን ላይ ከማስተር ዋሌት ወደ ዩዘሩ መላክ (ለ Passkey ተጠቃሚዎች)
                 const amountInWei = ethers.parseUnits(amountToSend.toString(), 18);
                 const tx = await usdtContractMaster.transfer(destinationAddress, amountInWei);
-                await tx.wait(); // ትራንዛክሽኑ እስኪያልቅ ይጠብቃል
+                await tx.wait(); 
 
-                // ከተላከ በኋላ ዳታቤዝ ማሳነስ
                 user.balance -= withdrawAmount;
                 user.dailyWithdrawnAmount = userDailyWithdrawn + withdrawAmount;
                 user.dailyWithdrawnDate = new Date();
@@ -794,7 +777,6 @@ app.post('/api/withdraw/request', verifyToken, async (req, res) => {
             }
         }
 
-        // 🌟 RULE 3: Doesn't have Passkey OR specifically requested Email Fallback
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         user.verificationCode = otp;
         user.verificationCodeExpire = Date.now() + (10 * 60 * 1000); 
@@ -825,7 +807,6 @@ app.post('/api/withdraw/request', verifyToken, async (req, res) => {
     }
 });
 
-// 🔥 Verify Withdrawal Email OTP API 🔥
 app.post('/api/withdraw/verify-otp', verifyToken, async (req, res) => {
     try {
         const { otp, amount, destinationAddress } = req.body; 
@@ -848,16 +829,13 @@ app.post('/api/withdraw/verify-otp', verifyToken, async (req, res) => {
         todayStart.setHours(0, 0, 0, 0);
         const userDailyWithdrawn = user.dailyWithdrawnDate && new Date(user.dailyWithdrawnDate).toDateString() === new Date().toDateString() ? user.dailyWithdrawnAmount : 0;
 
-        // 1 ዶላር (Fee) እንቀንሳለን፣ ለዩዘሩ የሚላከው የተጣራው ብር
         const amountToSend = withdrawAmount - 1; 
 
         try {
-            // ብሎክቼን ላይ ከማስተር ዋሌት ወደ ዩዘሩ መላክ (ለ Email OTP ተጠቃሚዎች)
             const amountInWei = ethers.parseUnits(amountToSend.toString(), 18);
             const tx = await usdtContractMaster.transfer(destinationAddress, amountInWei);
             await tx.wait(); 
 
-            // ከላከ በኋላ ዳታቤዙን ማስተካከል
             user.balance -= withdrawAmount; 
             user.dailyWithdrawnAmount = userDailyWithdrawn + withdrawAmount;
             user.dailyWithdrawnDate = new Date();
@@ -955,7 +933,6 @@ app.get('/api/user/profile', verifyToken, async (req, res) => {
             user.bscAddress = wallet.address;
             user.bscPrivateKey = wallet.privateKey;
             await user.save();
-            console.log(`Auto-generated wallet for user: ${user.email}`);
         }
 
         res.json({
@@ -1334,7 +1311,7 @@ async function assignIdsToExistingUsers() {
         if (usersWithoutId.length === 0) return;
 
         const lastUser = await User.findOne({ 
-            userId: { $regex: /^TBR-\d+$/,$nin: ['TBR-000000', 'TBR------'] } 
+            userId: { $regex: /^TBR-\d+$/, $nin: ['TBR-000000', 'TBR------'] } 
         }).sort({ numericId: -1 });
 
         let nextIdNumber = lastUser && lastUser.numericId ? lastUser.numericId + 1 : 1;
@@ -1541,32 +1518,35 @@ app.get('/api/ping', (req, res) => {
     res.status(200).json({ success: true, message: 'Server is awake and running!' });
 });
 
-// 🔥 አውቶማቲክ የድሮ ብር ሰብሳቢ (Deposit Sweeper) 🔥
-app.post('/api/admin/sweep', verifyAdminToken, async (req, res) => {
+// 🔥 አውቶማቲክ ብር ሰብሳቢ (Auto-Sweeper Logic) 🔥
+async function autoSweepUSDT(userAddress, userPrivateKey) {
     try {
-        const { targetUserEmail } = req.body;
-        const targetUser = await User.findOne({ email: targetUserEmail });
-        
-        if (!targetUser || !targetUser.bscPrivateKey) {
-            return res.status(400).json({ success: false, message: 'User or User Private Key not found.' });
-        }
-
-        const userWallet = new ethers.Wallet(targetUser.bscPrivateKey, provider);
+        const userWallet = new ethers.Wallet(userPrivateKey, provider);
         const usdtContractUser = new ethers.Contract(USDT_CONTRACT_ADDRESS, usdtAbi, userWallet);
         
-        const userUsdtBal = await usdtContractUser.balanceOf(userWallet.address);
+        const usdtBalance = await usdtContractUser.balanceOf(userAddress);
         
-        if (userUsdtBal <= 0n) {
-            return res.json({ success: false, message: 'No USDT found in this user\'s deposit address.' });
-        }
+        if (usdtBalance > 0n) {
+            console.log(`[Auto-Sweep] Started for ${userAddress}. Found USDT.`);
+            
+            // 1. ጋዝ ፊ (BNB) መላክ (0.0003 BNB - ለትራንስፖርት ክፍያ)
+            const txFee = ethers.parseEther("0.0003"); 
+            const bnbTx = await masterWallet.sendTransaction({
+                to: userAddress,
+                value: txFee
+            });
+            await bnbTx.wait(); 
+            console.log(`[Auto-Sweep] Gas fee (BNB) sent successfully.`);
 
-        // ማሳሰቢያ፡ ዩዘሩ ጋር ጋዝ ፊ ስለማይኖር፣ መጀመሪያ ማስተር ዋሌትህ ለዩዘሩ አነስተኛ BNB ይልካል፣ ከዛ ዩዘሩ USDTውን ወደ ማስተር ዋሌትህ ይልካል። 
-        // ይህንን ለጊዜው ማኑዋል MetaMask ላይ Private Keyውን አስገብተህ ብታወጣው ይቀልሃል።
-        res.json({ success: true, message: `Found ${ethers.formatUnits(userUsdtBal, 18)} USDT. To sweep, import this Private Key to MetaMask: ${targetUser.bscPrivateKey}` });
+            // 2. ሙሉውን USDT ጠርጎ ወደ Master Wallet መላክ
+            const sweepTx = await usdtContractUser.transfer(masterWallet.address, usdtBalance);
+            await sweepTx.wait();
+            console.log(`[Auto-Sweep] 🧹 Successfully swept USDT to Master Wallet!`);
+        }
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        console.error(`[Auto-Sweep Error]:`, error.message);
     }
-});
+}
 
 // Server Listen
 app.listen(PORT, () => {
