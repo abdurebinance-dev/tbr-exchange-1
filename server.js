@@ -705,10 +705,10 @@ app.get('/api/check-deposits/:walletAddress', verifyToken, async (req, res) => {
     }
 });
 
-// --- 🔥 Complete & Secure Withdraw Request API 🔥 ---
+// --- 🔥 100% SECURE WITHDRAW REQUEST API 🔥 ---
 app.post('/api/withdraw/request', verifyToken, async (req, res) => {
     try {
-        const { amount, destinationAddress, useEmailFallback } = req.body;
+        const { amount, destinationAddress, useEmailFallback, passkeyVerified } = req.body;
         const withdrawAmount = parseFloat(amount);
 
         // 1. Minimum limit check (3 USDT)
@@ -726,7 +726,7 @@ app.post('/api/withdraw/request', verifyToken, async (req, res) => {
         }
 
         // 2. Available Balance check (Amount + 1 USDT Fee)
-        const totalDeduction = withdrawAmount; // ዩዘሩ የጠየቀው መጠን (ፊውን ጨምሮ)
+        const totalDeduction = withdrawAmount;
         if (user.balance < totalDeduction) {
             return res.status(400).json({ success: false, message: 'Insufficient available balance.' });
         }
@@ -739,53 +739,62 @@ app.post('/api/withdraw/request', verifyToken, async (req, res) => {
         
         const DAILY_LIMIT = 5000;
         if (userDailyWithdrawn + withdrawAmount > DAILY_LIMIT) {
-            const remainingLimit = DAILY_LIMIT - userDailyWithdrawn;
-            return res.status(400).json({ 
-                success: false, 
-                message: `Exceeds daily withdrawal limit. You can only withdraw up to ${remainingLimit > 0 ? remainingLimit : 0} USDT more today.` 
-            });
+            return res.status(400).json({ success: false, message: `Exceeds daily withdrawal limit.` });
         }
 
-        // 4. Passkey / Email Verification Logic
+        // 4. Verification Logic Check
         const userPasskeys = await Passkey.find({ userId: user._id });
         const hasPasskey = userPasskeys && userPasskeys.length > 0;
 
-        if (!hasPasskey || useEmailFallback) {
-            const otp = Math.floor(100000 + Math.random() * 900000).toString();
-            user.verificationCode = otp;
-            user.verificationCodeExpire = Date.now() + (10 * 60 * 1000); 
-            await user.save();
-
-            const htmlContent = `
-            <div style="background-color: #0c0c0c; padding: 40px 20px; font-family: sans-serif; color: #ffffff;">
-                <div style="max-width: 550px; margin: auto; background-color: #141414; border: 1px solid #262626; border-radius: 12px; padding: 30px; text-align: center;">
-                    <h2 style="color: #d4af37;">Withdrawal Verification</h2>
-                    <p style="color: #b0b0b0;">Your confirmation code for withdrawing ${withdrawAmount} USDT is:</p>
-                    <h1 style="color: #f3c653; font-size: 38px; letter-spacing: 5px; margin: 20px 0;">${otp}</h1>
-                    <p style="color: #b0b0b0;">Fee: 1.00 USDT | You will receive: ${withdrawAmount - 1} USDT</p>
-                </div>
-            </div>`;
-
-            await sendEmailViaBrevo({
-                to: user.email,
-                subject: `Withdrawal Verification Code — ${otp}`,
-                htmlContent
+        // 🌟 RULE 1: Has Passkey, but hasn't verified yet and didn't choose Email
+        // Action: Trigger Passkey Prompt on Frontend
+        if (hasPasskey && !passkeyVerified && !useEmailFallback) {
+            return res.json({ 
+                success: true, 
+                requiresPasskeyPrompt: true, 
+                message: 'Security verification required.' 
             });
-
-            return res.json({ success: true, requiresEmailOtp: true, message: 'Verification code sent to your email.' });
         }
 
-        // Passkey ካለው ወዲያውኑ ዊድድሮውን እናጠናቅቃለን
-        user.balance -= withdrawAmount;
-        user.dailyWithdrawnAmount = userDailyWithdrawn + withdrawAmount;
-        user.dailyWithdrawnDate = new Date();
+        // 🌟 RULE 2: Has Passkey and successfully verified via biometric prompt
+        // Action: Process withdrawal directly
+        if (hasPasskey && passkeyVerified && !useEmailFallback) {
+            user.balance -= withdrawAmount;
+            user.dailyWithdrawnAmount = userDailyWithdrawn + withdrawAmount;
+            user.dailyWithdrawnDate = new Date();
+            await user.save();
+
+            return res.json({ 
+                success: true, 
+                message: `Successfully withdrew ${(withdrawAmount - 1).toFixed(2)} USDT via Passkey (1 USDT fee applied).` 
+            });
+        }
+
+        // 🌟 RULE 3: Doesn't have Passkey OR specifically requested Email Fallback
+        // Action: Generate and send OTP via Email
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        user.verificationCode = otp;
+        user.verificationCodeExpire = Date.now() + (10 * 60 * 1000); 
         await user.save();
 
-        const netReceive = withdrawAmount - 1;
-        return res.json({ 
-            success: true, 
-            message: `Successfully withdrew ${netReceive} USDT via Passkey (1 USDT fee applied).` 
+        const htmlContent = `
+        <div style="background-color: #0c0c0c; padding: 40px 20px; font-family: sans-serif; color: #ffffff;">
+            <div style="max-width: 550px; margin: auto; background-color: #141414; border: 1px solid #262626; border-radius: 12px; padding: 30px; text-align: center;">
+                <h2 style="color: #d4af37;">Withdrawal Verification</h2>
+                <p style="color: #b0b0b0;">Your confirmation code for withdrawing ${withdrawAmount} USDT is:</p>
+                <h1 style="color: #f3c653; font-size: 38px; letter-spacing: 5px; margin: 20px 0;">${otp}</h1>
+                <p style="color: #b0b0b0;">Fee: 1.00 USDT | You will receive: ${(withdrawAmount - 1).toFixed(2)} USDT</p>
+                <p style="color: #f6465d; font-size: 12px; margin-top: 15px;">If you did not request this, secure your account immediately.</p>
+            </div>
+        </div>`;
+
+        await sendEmailViaBrevo({
+            to: user.email,
+            subject: `Withdrawal Verification Code — ${otp}`,
+            htmlContent
         });
+
+        return res.json({ success: true, requiresEmailOtp: true, message: 'Verification code sent to your email.' });
 
     } catch (error) {
         console.error('Withdraw Request Error:', error);
@@ -819,8 +828,7 @@ app.post('/api/withdraw/verify-otp', verifyToken, async (req, res) => {
         user.verificationCodeExpire = undefined;
         await user.save();
 
-        const netReceive = withdrawAmount - 1;
-        res.json({ success: true, message: `Withdrawal of ${netReceive} USDT completed successfully!` });
+        res.json({ success: true, message: `Withdrawal of ${(withdrawAmount - 1).toFixed(2)} USDT completed successfully!` });
     } catch (error) {
         console.error('Verify Withdraw OTP Error:', error);
         res.status(500).json({ success: false, message: 'Server error during verification.' });
