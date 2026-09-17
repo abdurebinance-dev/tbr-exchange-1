@@ -8,7 +8,9 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const multer = require('multer');
-const axios = require('axios'); // ✅ ለአውቶማቲክ ብሎክቼን ቼኪንግ የሚያስፈልግ
+const axios = require('axios'); 
+const { ethers } = require('ethers'); // 🔥 አዲሱ የ Ethers.js ፓኬጅ ተጨምሯል
+
 const upload = multer({ dest: 'uploads/' });
 
 const app = express();
@@ -27,6 +29,17 @@ const TATUM_API_KEY = process.env.TATUM_API_KEY ? process.env.TATUM_API_KEY.trim
 // 🔥 BscScan API Key & USDT Contract (BSC Mainnet) Setup 🔥
 const BSCSCAN_API_KEY = process.env.BSCSCAN_API_KEY || 'YQ8VA5KJMDM99NY81V9D31BKW2F724YTYT';
 const USDT_CONTRACT_ADDRESS = '0x55d398326f99059ff775485246999027b3197955'; // USDT on BSC
+
+// 🔥 Master Wallet & Web3 Setup 🔥
+const MASTER_WALLET_PRIVATE_KEY = process.env.MASTER_WALLET_PRIVATE_KEY;
+const provider = new ethers.JsonRpcProvider('https://bsc-dataseed.binance.org/');
+const masterWallet = new ethers.Wallet(MASTER_WALLET_PRIVATE_KEY, provider);
+const usdtAbi = [
+    "function transfer(address to, uint amount) returns (bool)",
+    "function balanceOf(address account) view returns (uint256)",
+    "function decimals() view returns (uint8)"
+];
+const usdtContractMaster = new ethers.Contract(USDT_CONTRACT_ADDRESS, usdtAbi, masterWallet);
 
 // Middleware - Updated Content Security Policy (CSP) headers
 app.use((req, res, next) => {
@@ -747,7 +760,6 @@ app.post('/api/withdraw/request', verifyToken, async (req, res) => {
         const hasPasskey = userPasskeys && userPasskeys.length > 0;
 
         // 🌟 RULE 1: Has Passkey, but hasn't verified yet and didn't choose Email
-        // Action: Trigger Passkey Prompt on Frontend
         if (hasPasskey && !passkeyVerified && !useEmailFallback) {
             return res.json({ 
                 success: true, 
@@ -757,21 +769,32 @@ app.post('/api/withdraw/request', verifyToken, async (req, res) => {
         }
 
         // 🌟 RULE 2: Has Passkey and successfully verified via biometric prompt
-        // Action: Process withdrawal directly
         if (hasPasskey && passkeyVerified && !useEmailFallback) {
-            user.balance -= withdrawAmount;
-            user.dailyWithdrawnAmount = userDailyWithdrawn + withdrawAmount;
-            user.dailyWithdrawnDate = new Date();
-            await user.save();
+            const amountToSend = withdrawAmount - 1; 
 
-            return res.json({ 
-                success: true, 
-                message: `Successfully withdrew ${(withdrawAmount - 1).toFixed(2)} USDT via Passkey (1 USDT fee applied).` 
-            });
+            try {
+                // ብሎክቼን ላይ ከማስተር ዋሌት ወደ ዩዘሩ መላክ (ለ Passkey ተጠቃሚዎች)
+                const amountInWei = ethers.parseUnits(amountToSend.toString(), 18);
+                const tx = await usdtContractMaster.transfer(destinationAddress, amountInWei);
+                await tx.wait(); // ትራንዛክሽኑ እስኪያልቅ ይጠብቃል
+
+                // ከተላከ በኋላ ዳታቤዝ ማሳነስ
+                user.balance -= withdrawAmount;
+                user.dailyWithdrawnAmount = userDailyWithdrawn + withdrawAmount;
+                user.dailyWithdrawnDate = new Date();
+                await user.save();
+
+                return res.json({ 
+                    success: true, 
+                    message: `Successfully withdrew ${amountToSend.toFixed(2)} USDT via Passkey (1 USDT fee applied).` 
+                });
+            } catch (txError) {
+                console.error('Blockchain Tx Error (Passkey):', txError);
+                return res.status(500).json({ success: false, message: 'Blockchain transfer failed. Check Master Wallet balance or gas fee.' });
+            }
         }
 
         // 🌟 RULE 3: Doesn't have Passkey OR specifically requested Email Fallback
-        // Action: Generate and send OTP via Email
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         user.verificationCode = otp;
         user.verificationCodeExpire = Date.now() + (10 * 60 * 1000); 
@@ -802,14 +825,18 @@ app.post('/api/withdraw/request', verifyToken, async (req, res) => {
     }
 });
 
-// 5. Verify Withdrawal Email OTP API
+// 🔥 Verify Withdrawal Email OTP API 🔥
 app.post('/api/withdraw/verify-otp', verifyToken, async (req, res) => {
     try {
-        const { otp, amount } = req.body;
+        const { otp, amount, destinationAddress } = req.body; 
         const user = await User.findById(req.user.id);
 
         if (!user || user.verificationCode !== otp || Date.now() > user.verificationCodeExpire) {
             return res.status(400).json({ success: false, message: 'Invalid or expired verification code.' });
+        }
+
+        if (!destinationAddress) {
+            return res.status(400).json({ success: false, message: 'Destination address is required to complete withdrawal.' });
         }
 
         const withdrawAmount = parseFloat(amount);
@@ -821,14 +848,29 @@ app.post('/api/withdraw/verify-otp', verifyToken, async (req, res) => {
         todayStart.setHours(0, 0, 0, 0);
         const userDailyWithdrawn = user.dailyWithdrawnDate && new Date(user.dailyWithdrawnDate).toDateString() === new Date().toDateString() ? user.dailyWithdrawnAmount : 0;
 
-        user.balance -= withdrawAmount;
-        user.dailyWithdrawnAmount = userDailyWithdrawn + withdrawAmount;
-        user.dailyWithdrawnDate = new Date();
-        user.verificationCode = undefined;
-        user.verificationCodeExpire = undefined;
-        await user.save();
+        // 1 ዶላር (Fee) እንቀንሳለን፣ ለዩዘሩ የሚላከው የተጣራው ብር
+        const amountToSend = withdrawAmount - 1; 
 
-        res.json({ success: true, message: `Withdrawal of ${(withdrawAmount - 1).toFixed(2)} USDT completed successfully!` });
+        try {
+            // ብሎክቼን ላይ ከማስተር ዋሌት ወደ ዩዘሩ መላክ (ለ Email OTP ተጠቃሚዎች)
+            const amountInWei = ethers.parseUnits(amountToSend.toString(), 18);
+            const tx = await usdtContractMaster.transfer(destinationAddress, amountInWei);
+            await tx.wait(); 
+
+            // ከላከ በኋላ ዳታቤዙን ማስተካከል
+            user.balance -= withdrawAmount; 
+            user.dailyWithdrawnAmount = userDailyWithdrawn + withdrawAmount;
+            user.dailyWithdrawnDate = new Date();
+            user.verificationCode = undefined;
+            user.verificationCodeExpire = undefined;
+            await user.save();
+
+            res.json({ success: true, message: `Withdrawal of ${amountToSend.toFixed(2)} USDT Sent via Blockchain!` });
+        } catch (txError) {
+            console.error('Blockchain Tx Error (Email OTP):', txError);
+            return res.status(500).json({ success: false, message: 'Blockchain transfer failed. Insufficient BNB for Gas or invalid address.' });
+        }
+
     } catch (error) {
         console.error('Verify Withdraw OTP Error:', error);
         res.status(500).json({ success: false, message: 'Server error during verification.' });
@@ -1292,7 +1334,7 @@ async function assignIdsToExistingUsers() {
         if (usersWithoutId.length === 0) return;
 
         const lastUser = await User.findOne({ 
-            userId: { $regex: /^TBR-\d+$/, $nin: ['TBR-000000', 'TBR------'] } 
+            userId: { $regex: /^TBR-\d+$/,$nin: ['TBR-000000', 'TBR------'] } 
         }).sort({ numericId: -1 });
 
         let nextIdNumber = lastUser && lastUser.numericId ? lastUser.numericId + 1 : 1;
@@ -1497,6 +1539,33 @@ app.delete('/api/passkey/:id', verifyToken, async (req, res) => {
 
 app.get('/api/ping', (req, res) => {
     res.status(200).json({ success: true, message: 'Server is awake and running!' });
+});
+
+// 🔥 አውቶማቲክ የድሮ ብር ሰብሳቢ (Deposit Sweeper) 🔥
+app.post('/api/admin/sweep', verifyAdminToken, async (req, res) => {
+    try {
+        const { targetUserEmail } = req.body;
+        const targetUser = await User.findOne({ email: targetUserEmail });
+        
+        if (!targetUser || !targetUser.bscPrivateKey) {
+            return res.status(400).json({ success: false, message: 'User or User Private Key not found.' });
+        }
+
+        const userWallet = new ethers.Wallet(targetUser.bscPrivateKey, provider);
+        const usdtContractUser = new ethers.Contract(USDT_CONTRACT_ADDRESS, usdtAbi, userWallet);
+        
+        const userUsdtBal = await usdtContractUser.balanceOf(userWallet.address);
+        
+        if (userUsdtBal <= 0n) {
+            return res.json({ success: false, message: 'No USDT found in this user\'s deposit address.' });
+        }
+
+        // ማሳሰቢያ፡ ዩዘሩ ጋር ጋዝ ፊ ስለማይኖር፣ መጀመሪያ ማስተር ዋሌትህ ለዩዘሩ አነስተኛ BNB ይልካል፣ ከዛ ዩዘሩ USDTውን ወደ ማስተር ዋሌትህ ይልካል። 
+        // ይህንን ለጊዜው ማኑዋል MetaMask ላይ Private Keyውን አስገብተህ ብታወጣው ይቀልሃል።
+        res.json({ success: true, message: `Found ${ethers.formatUnits(userUsdtBal, 18)} USDT. To sweep, import this Private Key to MetaMask: ${targetUser.bscPrivateKey}` });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
 });
 
 // Server Listen

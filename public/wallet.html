@@ -951,12 +951,16 @@
             }
         }
 
+        // 🔥 አዲሱ የተስተካከለው የ OTP እና የአድራሻ መላኪያ ኮድ 🔥
         async function verifyAndCompleteWithdrawal() {
             const otp = document.getElementById('otpCodeInput').value.trim();
             if (!otp || otp.length !== 6) {
                 showToast("Please enter valid 6-digit OTP code.");
                 return;
             }
+
+            // 1. ዩዘሩ የጻፈውን አድራሻ እንይዛለን
+            const address = document.getElementById('withdraw-address').value.trim();
 
             const token = localStorage.getItem('token') || localStorage.getItem('authToken');
             try {
@@ -966,7 +970,8 @@
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify({ otp, amount: pendingWithdrawAmount })
+                    // 2. አድራሻውን (destinationAddress) ከ OTP እና ከ Amount ጋር አብረን ወደ ሰርቨር እንልካለን
+                    body: JSON.stringify({ otp, amount: pendingWithdrawAmount, destinationAddress: address })
                 });
 
                 const data = await res.json();
