@@ -12,16 +12,17 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "axios": "^1.6.8",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
+    "ethers": "^6.17.0",
     "express": "^5.2.1",
     "google-auth-library": "^11.0.2",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.9.5",
     "multer": "^2.3.0",
     "nodemailer": "^9.0.6",
-    "resend": "^6.25.0",
-    "axios": "^1.6.8"
+    "resend": "^6.25.0"
   }
 }
