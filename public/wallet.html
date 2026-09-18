@@ -753,20 +753,24 @@
                 if (data.success && data.user) {
                     const user = data.user;
                     
+                    // 1. መጀመሪያ የድሮውን ባላንስ ከፕሮፋይል እናወጣለን
+                    if (user.balance !== undefined) {
+                        userRawBalance = Number(user.balance).toFixed(2);
+                        localStorage.setItem("user_balance_val", userRawBalance);
+                        updateBalanceDisplay();
+                    }
+
+                    // 2. ከዛ አድራሻውን እናዘጋጅና አዲሱን ባላንስ ቼክ እንዲያደርግ እንልከዋለን (ያለ await)
                     if (user.bscAddress) {
                         userBscAddress = user.bscAddress;
                         localStorage.setItem("user_bsc_address", userBscAddress);
                         document.getElementById('dep-address').value = userBscAddress;
                         generateQRCode(userBscAddress);
-                        await checkDepositSilently();
+                        
+                        // Overwrite እንዳያደርግ await አጥፍተናል
+                        checkDepositSilently();
                     } else {
                         document.getElementById('dep-address').value = "No address found.";
-                    }
-
-                    if (user.balance !== undefined) {
-                        userRawBalance = Number(user.balance).toFixed(2);
-                        localStorage.setItem("user_balance_val", userRawBalance);
-                        updateBalanceDisplay();
                     }
                 } else {
                     console.error("Profile fetch failed:", data.message);
@@ -777,33 +781,32 @@
         }
 
         async function checkDepositSilently() {
-    try {
-        if (!userBscAddress || userBscAddress.startsWith("Error") || userBscAddress.startsWith("No address")) return;
+            try {
+                if (!userBscAddress || userBscAddress.startsWith("Error") || userBscAddress.startsWith("No address")) return;
 
-        const depositRes = await fetch(`${API_BASE_URL}/api/check-deposits/${userBscAddress}`, {
-            method: 'GET'
-        });
-        const depositData = await depositRes.json();
+                const depositRes = await fetch(`${API_BASE_URL}/api/check-deposits/${userBscAddress}`, {
+                    method: 'GET'
+                });
+                const depositData = await depositRes.json();
 
-        if (depositData.success) {
-            // ከሰርቨር በቀጥታ የመጣውን የተጣራ ባላንስ እንወስዳለን
-            let finalBal = 0;
-            if (depositData.balance !== undefined) {
-                finalBal = parseFloat(depositData.balance);
-            } else if (depositData.transactions && depositData.transactions.length > 0) {
-                finalBal = parseFloat(depositData.transactions[0].value);
-            }
+                if (depositData.success) {
+                    // ከሰርቨር በቀጥታ የመጣውን የተጣራ ባላንስ እንወስዳለን
+                    let finalBal = 0;
+                    if (depositData.balance !== undefined) {
+                        finalBal = parseFloat(depositData.balance);
+                    } else if (depositData.transactions && depositData.transactions.length > 0) {
+                        finalBal = parseFloat(depositData.transactions[0].value);
+                    }
 
-            if (finalBal > 0) {
-                userRawBalance = finalBal.toFixed(2);
-                localStorage.setItem("user_balance_val", userRawBalance);
-                updateBalanceDisplay();
+                    // አዲስ ትክክለኛ ባላንስ ከተገኘ ስክሪኑን ያድሳል
+                    userRawBalance = finalBal.toFixed(2);
+                    localStorage.setItem("user_balance_val", userRawBalance);
+                    updateBalanceDisplay();
+                }
+            } catch (error) {
+                console.error('Auto check failed silently:', error);
             }
         }
-    } catch (error) {
-        console.error('Auto check failed silently:', error);
-    }
-}
 
         function updateBalanceDisplay() {
             if (isBalanceVisible) {
