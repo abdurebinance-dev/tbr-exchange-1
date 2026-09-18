@@ -735,14 +735,18 @@
 
         async function fetchUserProfile() {
             try {
-                const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+                const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("jwt");
                 if (!token) {
                     window.location.href = "signin.html";
                     return;
                 }
 
                 const res = await fetch(`${API_BASE_URL}/api/user/profile`, {
-                    headers: { "Authorization": `Bearer ${token}` }
+                    method: 'GET',
+                    headers: { 
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}` 
+                    }
                 });
                 const data = await res.json();
                 
@@ -756,8 +760,7 @@
                         generateQRCode(userBscAddress);
                         await checkDepositSilently();
                     } else {
-                        userBscAddress = "No address found.";
-                        document.getElementById('dep-address').value = userBscAddress;
+                        document.getElementById('dep-address').value = "No address found.";
                     }
 
                     if (user.balance !== undefined) {
@@ -765,6 +768,8 @@
                         localStorage.setItem("user_balance_val", userRawBalance);
                         updateBalanceDisplay();
                     }
+                } else {
+                    console.error("Profile fetch failed:", data.message);
                 }
             } catch (e) {
                 console.error("Error fetching user profile:", e);
