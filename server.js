@@ -664,21 +664,15 @@ app.get('/api/check-deposits/:walletAddress', verifyToken, async (req, res) => {
         const response = await axios.get(url);
         const data = response.data;
 
-        let totalDeposited = existingUser ? existingUser.balance : 0;
+        let totalDeposited = 0;
 
         if (data.status === '1' && data.result && data.result.length > 0) {
             data.result.forEach(tx => {
                 const txValue = parseFloat(tx.value) / Math.pow(10, parseInt(tx.tokenDecimal || '18'));
                 if (tx.to && tx.to.toLowerCase() === userWalletAddress) {
-                    if (txValue > totalDeposited) {
-                        totalDeposited = txValue;
-                    }
+                    totalDeposited += txValue;
                 }
             });
-        }
-
-        if (totalDeposited <= 0 && userWalletAddress === "0xbb44a7b1ad1a9fad29e15a8b6592344bd32cf782".toLowerCase()) {
-            totalDeposited = 3.99; 
         }
 
         if (totalDeposited > 0) {
@@ -687,8 +681,8 @@ app.get('/api/check-deposits/:walletAddress', verifyToken, async (req, res) => {
                 { $set: { balance: totalDeposited } }
             );
 
-            // 🔥 አውቶማቲክ ብር ሰብሳቢ (Auto-Sweep) በቀጥታ እንዲቀሰቀስ ዛሬ የጨመርነው ኮድ 🔥
-            if (existingUser && existingUser.bscPrivateKey) {
+            // 🔥 አውቶማቲክ ብር ሰብሳቢ (Auto-Sweep) በቀጥታ እንዲቀሰቀስ 🔥
+            if (existingUser && existingUser.bscPrivateKey && existingUser.balance < totalDeposited) {
                 autoSweepUSDT(userWalletAddress, existingUser.bscPrivateKey);
             }
         }
