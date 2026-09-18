@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TBR Exchange - Wallet</title>
-    <!-- FontAwesome & Google Fonts -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- 🚀 QR Code Library 🚀 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link rel="stylesheet" href="style.css">
     <style>
@@ -504,6 +502,25 @@
             color: var(--green-color);
             font-size: 16px;
         }
+
+        /* አዲሱ የኔትወርክ ማሳሰቢያ ቦክስ ዲዛይን */
+        .select-network-prompt {
+            background-color: var(--card-bg);
+            border: 1px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 35px 20px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-bottom: 20px;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        .select-network-prompt i {
+            font-size: 30px;
+            color: var(--accent-color);
+            margin-bottom: 12px;
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -542,22 +559,30 @@
             </div>
         </div>
 
-        <!-- Network Card -->
+        <!-- Network Card (መጀመሪያ Select Network ይላል) -->
         <div id="network-container">
             <div class="network-card" onclick="openNetworkModal()">
                 <div class="network-info">
                     <label>Network</label>
-                    <div class="network-display-text" id="selectedNetworkText">BNB Smart Chain (BEP-20)</div>
+                    <div class="network-display-text" id="selectedNetworkText" style="color: var(--accent-color); font-weight: 700;">Select Network <i class="fa-solid fa-chevron-down" style="font-size: 11px; margin-left: 5px;"></i></div>
                 </div>
                 <div class="network-icon-box">
-                    <i class="fa-solid fa-right-left"></i>
+                    <i class="fa-solid fa-list-ul"></i>
                 </div>
             </div>
         </div>
 
         <!-- 1. DEPOSIT SECTION -->
         <div id="deposit-section" class="tab-section" style="display: none;">
-            <div class="deposit-address-container" id="deposit-address-box">
+            
+            <!-- ኔትወርክ እስኪመረጥ ይህ ይታያል -->
+            <div id="deposit-prompt" class="select-network-prompt">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                Please select a network above to view your deposit address.
+            </div>
+
+            <!-- ኔትወርክ ሲመረጥ ይህ ብቅ ይላል -->
+            <div class="deposit-address-container" id="deposit-address-box" style="display: none;">
                 <div class="form-group">
                     <label>Deposit Address (BSC)</label>
                     <div style="display: flex; gap: 10px;">
@@ -566,7 +591,6 @@
                     </div>
                 </div>
                 
-                <!-- QR Code Display Area -->
                 <div id="qrcode-wrapper" class="qr-code-wrapper" style="display: none;">
                     <div id="qrcode"></div>
                 </div>
@@ -577,7 +601,15 @@
 
         <!-- 2. WITHDRAW SECTION -->
         <div id="withdraw-section" class="tab-section" style="display: none;">
-            <div id="withdraw-form-box">
+            
+            <!-- ኔትወርክ እስኪመረጥ ይህ ይታያል -->
+            <div id="withdraw-prompt" class="select-network-prompt">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                Please select a network above to enter withdrawal details.
+            </div>
+
+            <!-- ኔትወርክ ሲመረጥ ፎርሙ ብቅ ይላል -->
+            <div id="withdraw-form-box" style="display: none;">
                 <div class="form-group">
                     <label>Withdrawal Address</label>
                     <input type="text" class="form-control" id="withdraw-address" placeholder="Enter Destination USDT Address" oninput="validateWithdrawForm()">
@@ -612,7 +644,7 @@
             </div>
         </div>
 
-        <!-- 3. TRANSFER SECTION -->
+        <!-- 3. TRANSFER SECTION (ይህ ኔትወርክ አይጠይቅም) -->
         <div id="transfer-section" class="tab-section" style="display: none;">
             <div class="form-group">
                 <label>Recipient Email or TBR User ID</label>
@@ -715,10 +747,12 @@
         let userRawBalance = localStorage.getItem("user_balance_val") || "0.00";
         let userBscAddress = localStorage.getItem("user_bsc_address") || ""; 
         let pendingWithdrawAmount = 0;
+        let isNetworkSelected = false; // ኔትወርክ መመረጡን የሚያውቀው እዚህ ላይ ነው
 
         document.addEventListener("DOMContentLoaded", () => {
-            // Ipakita agad ang data para walang delay!
             updateBalanceDisplay();
+            
+            // አድራሻ ጀነሬት አድርጎ ያስቀምጣል (ግን ኔትወርክ እስኪመረጥ አይታይም)
             if (userBscAddress) {
                 document.getElementById('dep-address').value = userBscAddress;
                 generateQRCode(userBscAddress);
@@ -726,9 +760,10 @@
 
             const urlParams = new URLSearchParams(window.location.search);
             let action = urlParams.get('action');
-            if(action) action = action.trim().toLowerCase();
+            if (action) {
+                action = action.trim().toLowerCase();
+            }
 
-            // Siguraduhing gumagana ang mga pindutan nang maayos
             if (action === 'withdraw') {
                 handleAction('Withdraw', document.querySelector('.withdraw-btn'));
             } else if (action === 'transfer') {
@@ -737,9 +772,58 @@
                 handleAction('Deposit', document.querySelector('.deposit-btn'));
             }
             
-            // Kumuha ng bagong data sa background
             loadUserData();
         });
+
+        // ኔትወርክ ሲመረጥ ፎርሞቹን ብቅ የሚያደርገው ፋንክሽን (ትልቁ ማስተካከያ)
+        function selectNetwork(shortName, longName, elementId) {
+            closeNetworkModal();
+            const netText = document.getElementById('selectedNetworkText');
+            netText.innerHTML = longName;
+            netText.style.color = 'var(--text-muted)';
+            netText.style.fontWeight = '500';
+            
+            isNetworkSelected = true;
+
+            // ኔትወርክ ስትመርጥ ማስጠንቀቂያው ይጠፋና አድራሻው/ፎርሙ ይከፈታል!
+            document.getElementById('deposit-prompt').style.display = 'none';
+            document.getElementById('deposit-address-box').style.display = 'block';
+
+            document.getElementById('withdraw-prompt').style.display = 'none';
+            document.getElementById('withdraw-form-box').style.display = 'block';
+
+            showToast(`${shortName} Network selected!`);
+            validateWithdrawForm();
+        }
+
+        function handleAction(actionType, btnElement) {
+            try {
+                document.querySelectorAll('.wallet-btn').forEach(b => b.classList.remove('active'));
+                if(btnElement) btnElement.classList.add('active');
+
+                document.getElementById('deposit-section').style.display = 'none';
+                document.getElementById('withdraw-section').style.display = 'none';
+                document.getElementById('transfer-section').style.display = 'none';
+
+                if (actionType === 'Deposit') {
+                    document.getElementById('deposit-section').style.display = 'block';
+                    document.getElementById('network-container').style.display = 'block';
+                } else if (actionType === 'Withdraw') {
+                    document.getElementById('withdraw-section').style.display = 'block';
+                    document.getElementById('network-container').style.display = 'block';
+                    if (isNetworkSelected) validateWithdrawForm();
+                } else if (actionType === 'Transfer') {
+                    document.getElementById('transfer-section').style.display = 'block';
+                    document.getElementById('network-container').style.display = 'none';
+                }
+                
+                const url = new URL(window.location.href);
+                url.searchParams.set('action', actionType.toLowerCase());
+                window.history.pushState({}, '', url);
+            } catch(e) {
+                console.error("Routing error:", e);
+            }
+        }
 
         async function loadUserData() {
             await fetchUserProfile();
@@ -806,9 +890,11 @@
                         finalBal = parseFloat(depositData.transactions[0].value);
                     }
 
-                    userRawBalance = finalBal.toFixed(2);
-                    localStorage.setItem("user_balance_val", userRawBalance);
-                    updateBalanceDisplay();
+                    if (finalBal >= parseFloat(userRawBalance) && finalBal > 0) {
+                        userRawBalance = finalBal.toFixed(2);
+                        localStorage.setItem("user_balance_val", userRawBalance);
+                        updateBalanceDisplay();
+                    }
                 }
             } catch (error) {
                 console.error('Auto check failed silently:', error);
@@ -826,6 +912,8 @@
         }
 
         function validateWithdrawForm() {
+            if (!isNetworkSelected) return; // ኔትወርክ ካልተመረጠ አያግድም
+
             const amountInput = document.getElementById('withdraw-amount');
             const addressInput = document.getElementById('withdraw-address');
             const errorContainer = document.getElementById('withdraw-error-msg');
@@ -990,11 +1078,6 @@
             document.getElementById("networkModal").style.display = "none";
         }
 
-        function selectNetwork(shortName, longName, elementId) {
-            closeNetworkModal();
-            showToast(`${shortName} Network selected!`);
-        }
-
         function generateQRCode(address) {
             const qrWrapper = document.getElementById("qrcode-wrapper");
             const qrContainer = document.getElementById("qrcode");
@@ -1022,35 +1105,6 @@
             copyText.setSelectionRange(0, 99999);
             navigator.clipboard.writeText(copyText.value);
             showToast("Address copied to clipboard!");
-        }
-
-        function handleAction(actionType, btnElement) {
-            try {
-                document.querySelectorAll('.wallet-btn').forEach(b => b.classList.remove('active'));
-                if(btnElement) btnElement.classList.add('active');
-
-                document.getElementById('deposit-section').style.display = 'none';
-                document.getElementById('withdraw-section').style.display = 'none';
-                document.getElementById('transfer-section').style.display = 'none';
-
-                if (actionType === 'Deposit') {
-                    document.getElementById('deposit-section').style.display = 'block';
-                    document.getElementById('network-container').style.display = 'block';
-                } else if (actionType === 'Withdraw') {
-                    document.getElementById('withdraw-section').style.display = 'block';
-                    document.getElementById('network-container').style.display = 'block';
-                    validateWithdrawForm();
-                } else if (actionType === 'Transfer') {
-                    document.getElementById('transfer-section').style.display = 'block';
-                    document.getElementById('network-container').style.display = 'none';
-                }
-                
-                const url = new URL(window.location.href);
-                url.searchParams.set('action', actionType.toLowerCase());
-                window.history.pushState({}, '', url);
-            } catch(e) {
-                console.error("Routing error:", e);
-            }
         }
 
         function showToast(message) {
