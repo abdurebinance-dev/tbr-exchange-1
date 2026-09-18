@@ -1311,7 +1311,7 @@ async function assignIdsToExistingUsers() {
         if (usersWithoutId.length === 0) return;
 
         const lastUser = await User.findOne({ 
-            userId: { $regex: /^TBR-\d+$/, $nin: ['TBR-000000', 'TBR------'] } 
+            userId: { $regex: /^TBR-\d+$/,$nin: ['TBR-000000', 'TBR------'] } 
         }).sort({ numericId: -1 });
 
         let nextIdNumber = lastUser && lastUser.numericId ? lastUser.numericId + 1 : 1;
@@ -1521,27 +1521,33 @@ app.get('/api/ping', (req, res) => {
 // 🔥 አውቶማቲክ ብር ሰብሳቢ (Auto-Sweeper Logic) 🔥
 async function autoSweepUSDT(userAddress, userPrivateKey) {
     try {
+        // የ Private keyን ትክክለኛ ዋሌት መፍጠር
         const userWallet = new ethers.Wallet(userPrivateKey, provider);
+        const actualAddress = userWallet.address; // ከ Private Key የሚገኘው 100% ትክክለኛው አድራሻ
+        
         const usdtContractUser = new ethers.Contract(USDT_CONTRACT_ADDRESS, usdtAbi, userWallet);
         
-        const usdtBalance = await usdtContractUser.balanceOf(userAddress);
+        // ባላንሱን የምናየው ከትክክለኛው አድራሻ ነው
+        const usdtBalance = await usdtContractUser.balanceOf(actualAddress);
         
         if (usdtBalance > 0n) {
-            console.log(`[Auto-Sweep] Started for ${userAddress}. Found USDT.`);
+            console.log(`[Auto-Sweep] Started for ${actualAddress}. Found USDT.`);
             
-            // 1. ጋዝ ፊ (BNB) መላክ (0.0003 BNB - ለትራንስፖርት ክፍያ)
+            // 1. ጋዝ ፊ (BNB) መላክ
             const txFee = ethers.parseEther("0.0003"); 
             const bnbTx = await masterWallet.sendTransaction({
-                to: userAddress,
+                to: actualAddress,
                 value: txFee
             });
             await bnbTx.wait(); 
-            console.log(`[Auto-Sweep] Gas fee (BNB) sent successfully.`);
+            console.log(`[Auto-Sweep] Gas fee (BNB) sent successfully to ${actualAddress}.`);
 
             // 2. ሙሉውን USDT ጠርጎ ወደ Master Wallet መላክ
             const sweepTx = await usdtContractUser.transfer(masterWallet.address, usdtBalance);
             await sweepTx.wait();
             console.log(`[Auto-Sweep] 🧹 Successfully swept USDT to Master Wallet!`);
+        } else {
+            console.log(`[Auto-Sweep] No USDT found in ${actualAddress}. (Mismatched DB Address: ${userAddress})`);
         }
     } catch (error) {
         console.error(`[Auto-Sweep Error]:`, error.message);
