@@ -35,7 +35,6 @@
             padding: 0 15px;
         }
 
-        /* Top Bar */
         .wallet-top-bar {
             display: flex;
             justify-content: space-between;
@@ -64,7 +63,6 @@
             color: #000;
         }
 
-        /* Balance Card */
         .balance-card {
             background-color: var(--card-bg);
             border: 1px solid var(--border-color);
@@ -156,11 +154,6 @@
             border-color: var(--accent-color);
         }
 
-        .wallet-btn:active {
-            transform: scale(0.96);
-        }
-
-        /* Network Selection Card */
         .network-card {
             background-color: var(--card-bg);
             border: 1px solid var(--border-color);
@@ -238,7 +231,6 @@
             border-radius: 8px;
             box-sizing: border-box;
             font-size: 14px;
-            transition: border-color 0.2s;
         }
 
         .form-control:focus {
@@ -246,7 +238,6 @@
             border-color: var(--accent-color);
         }
 
-        /* 🚀 Error Styles 🚀 */
         .form-control.input-error {
             border-color: var(--red-color) !important;
         }
@@ -297,7 +288,6 @@
             background: #e0ac2b;
         }
 
-        /* 🚀 Disabled Button Style 🚀 */
         .btn-disabled {
             opacity: 0.4;
             cursor: not-allowed;
@@ -364,12 +354,6 @@
             cursor: pointer;
             color: #ffffff; 
             font-size: 22px;
-            transition: transform 0.2s;
-        }
-        
-        .modal-header-styled i:hover {
-            transform: scale(1.1);
-            color: var(--red-color); 
         }
 
         .network-options-container {
@@ -407,8 +391,6 @@
             font-weight: 700;
             padding: 4px 10px;
             border-radius: 6px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
             margin-left: auto;
             align-self: center;
         }
@@ -491,11 +473,6 @@
             color: #333;
         }
 
-        .empty-activity p {
-            margin: 0;
-            font-size: 13px;
-        }
-
         #toastNotification {
             position: fixed;
             bottom: 25px;
@@ -514,7 +491,7 @@
             z-index: 2000;
             opacity: 0;
             transform: translateY(20px);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.3s;
             pointer-events: none;
         }
 
@@ -570,7 +547,7 @@
             <div class="network-card" onclick="openNetworkModal()">
                 <div class="network-info">
                     <label>Network</label>
-                    <div class="network-display-text" id="selectedNetworkText">Please choose network first</div>
+                    <div class="network-display-text" id="selectedNetworkText">BNB Smart Chain (BEP-20)</div>
                 </div>
                 <div class="network-icon-box">
                     <i class="fa-solid fa-right-left"></i>
@@ -580,10 +557,9 @@
 
         <!-- 1. DEPOSIT SECTION -->
         <div id="deposit-section" class="tab-section" style="display: none;">
-            <div class="deposit-address-container" id="deposit-address-box" style="display: none;">
-                
+            <div class="deposit-address-container" id="deposit-address-box">
                 <div class="form-group">
-                    <label>Deposit Address</label>
+                    <label>Deposit Address (BSC)</label>
                     <div style="display: flex; gap: 10px;">
                         <input type="text" class="form-control" value="Generating Address..." readonly id="dep-address">
                         <button class="copy-btn" onclick="copyAddress()" title="Copy Address"><i class="fa-regular fa-copy"></i></button>
@@ -599,10 +575,9 @@
             </div>
         </div>
 
-        <!-- 2. WITHDRAW SECTION (Binance Style - Advanced Validation) -->
+        <!-- 2. WITHDRAW SECTION -->
         <div id="withdraw-section" class="tab-section" style="display: none;">
-            <div id="withdraw-form-box" style="display: none;">
-                
+            <div id="withdraw-form-box">
                 <div class="form-group">
                     <label>Withdrawal Address</label>
                     <input type="text" class="form-control" id="withdraw-address" placeholder="Enter Destination USDT Address" oninput="validateWithdrawForm()">
@@ -617,13 +592,11 @@
                         <input type="number" class="form-control" id="withdraw-amount" placeholder="Min. 3.00 USDT" oninput="validateWithdrawForm()" style="padding-right: 65px;">
                         <button onclick="setMaxWithdrawAmount()" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: #222; border: 1px solid var(--border-color); color: var(--accent-color); padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer;">MAX</button>
                     </div>
-                    <!-- 🚀 Error Message Container 🚀 -->
                     <div id="withdraw-error-msg" class="error-message-box">
                         <i class="fa-solid fa-triangle-exclamation"></i> <span id="error-text">Minimum is 3.00 USDT</span>
                     </div>
                 </div>
 
-                <!-- Breakdown Info -->
                 <div style="background: #16181d; border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; margin-bottom: 20px; font-size: 13px; display: flex; flex-direction: column; gap: 8px;">
                     <div style="display: flex; justify-content: space-between; color: var(--text-muted);">
                         <span>Network fee</span>
@@ -635,18 +608,6 @@
                     </div>
                 </div>
 
-                <!-- Daily Limit Bar -->
-                <div style="margin-bottom: 25px;">
-                    <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">
-                        <span>Daily withdrawal limit</span>
-                        <span id="daily-limit-text">0.00 / 5,000 USDT</span>
-                    </div>
-                    <div style="width: 100%; background: #1a1a1a; height: 6px; border-radius: 3px; overflow: hidden;">
-                        <div id="daily-limit-bar" style="width: 0%; background: var(--accent-color); height: 100%; transition: width 0.3s;"></div>
-                    </div>
-                </div>
-
-                <!-- 🚀 Submit Button starts disabled 🚀 -->
                 <button class="action-submit-btn btn-disabled" id="withdraw-submit-btn" disabled onclick="submitWithdrawalRequest()">Submit Withdrawal</button>
             </div>
         </div>
@@ -690,7 +651,7 @@
             <div class="network-options-container">
                 
                 <!-- BSC Option -->
-                <div class="network-item" id="bsc-option" onclick="selectNetwork('BSC', 'BNB Smart Chain (BEP-20)', 'bsc-option')">
+                <div class="network-item selected" id="bsc-option" onclick="selectNetwork('BSC', 'BNB Smart Chain (BEP-20)', 'bsc-option')">
                     <div class="net-icon-wrapper">
                         <img src="bsc.png.jfif" alt="BSC Logo">
                     </div>
@@ -723,7 +684,6 @@
                             <span>Est. arrival ~1 min</span>
                         </div>
                     </div>
-                    <!-- Coming Soon Badge -->
                     <div class="coming-soon-badge">Coming Soon</div>
                 </div>
 
@@ -755,7 +715,6 @@
     <script>
         const API_BASE_URL = 'https://tbr-exchange-backend.onrender.com'; 
 
-        let chosenNetwork = "";
         let isBalanceVisible = true;
         let userRawBalance = "0.00";
         let userBscAddress = ""; 
@@ -763,7 +722,6 @@
 
         document.addEventListener("DOMContentLoaded", () => {
             fetchUserProfile(); 
-            
             setInterval(checkDepositSilently, 30000);
 
             const urlParams = new URLSearchParams(window.location.search);
@@ -801,14 +759,18 @@
                     
                     if (user.bscAddress) {
                         userBscAddress = user.bscAddress;
+                        document.getElementById('dep-address').value = userBscAddress;
+                        generateQRCode(userBscAddress);
                         checkDepositSilently();
                     } else {
                         userBscAddress = "No address found. Please re-login.";
+                        document.getElementById('dep-address').value = userBscAddress;
                     }
                 }
             } catch (e) {
                 console.error("Error fetching user profile:", e);
                 userBscAddress = "Error loading address.";
+                document.getElementById('dep-address').value = userBscAddress;
             }
         }
 
@@ -844,7 +806,6 @@
             }
         }
 
-        // 🚀 የ Amount እና Address ማረጋገጫ (Validation Logic) 🚀
         function validateWithdrawForm() {
             const amountInput = document.getElementById('withdraw-amount');
             const addressInput = document.getElementById('withdraw-address');
@@ -858,7 +819,6 @@
 
             let isValid = true;
 
-            // 1. የገንዘብ መጠን ማረጋገጫ
             if (amountInput.value !== "") {
                 if (val < 3) {
                     errorText.innerText = "Minimum is 3.00 USDT";
@@ -880,12 +840,10 @@
                 isValid = false;
             }
 
-            // 2. አድራሻ ማረጋገጫ
             if (address === "") {
                 isValid = false;
             }
 
-            // የ ፊ ስሌት ማሳየት
             const netEl = document.getElementById('withdraw-net-receive');
             if (val >= 1) {
                 netEl.innerText = (val - 1).toFixed(2) + " USDT";
@@ -893,7 +851,6 @@
                 netEl.innerText = "0.00 USDT";
             }
 
-            // 3. ቁልፉን ማብራት / ማጥፋት
             if (isValid) {
                 submitBtn.classList.remove('btn-disabled');
                 submitBtn.disabled = false;
@@ -951,7 +908,6 @@
             }
         }
 
-        // 🔥 አዲሱ የተስተካከለው የ OTP እና የአድራሻ መላኪያ ኮድ 🔥
         async function verifyAndCompleteWithdrawal() {
             const otp = document.getElementById('otpCodeInput').value.trim();
             if (!otp || otp.length !== 6) {
@@ -959,9 +915,7 @@
                 return;
             }
 
-            // 1. ዩዘሩ የጻፈውን አድራሻ እንይዛለን
             const address = document.getElementById('withdraw-address').value.trim();
-
             const token = localStorage.getItem('token') || localStorage.getItem('authToken');
             try {
                 const res = await fetch(`${API_BASE_URL}/api/withdraw/verify-otp`, {
@@ -970,7 +924,6 @@
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
-                    // 2. አድራሻውን (destinationAddress) ከ OTP እና ከ Amount ጋር አብረን ወደ ሰርቨር እንልካለን
                     body: JSON.stringify({ otp, amount: pendingWithdrawAmount, destinationAddress: address })
                 });
 
@@ -1019,31 +972,8 @@
         }
 
         function selectNetwork(shortName, longName, elementId) {
-            chosenNetwork = shortName;
-            
-            document.querySelectorAll('.network-item').forEach(item => {
-                if(!item.classList.contains('disabled')) {
-                    item.classList.remove('selected');
-                }
-            });
-            document.getElementById(elementId).classList.add('selected');
-
-            const textEl = document.getElementById("selectedNetworkText");
-            textEl.innerHTML = `<span style="color: #fff; font-weight: 700; margin-right: 6px;">${shortName}</span> <span style="font-size: 13px; color: #848e9c;">${longName}</span>`;
-            
-            document.getElementById('deposit-address-box').style.display = 'block';
-            document.getElementById('withdraw-form-box').style.display = 'block';
-
-            const addressInput = document.getElementById('dep-address');
-            
-            if(shortName === 'BSC') {
-                addressInput.value = userBscAddress; 
-                generateQRCode(userBscAddress);      
-            }
-
             closeNetworkModal();
             showToast(`${shortName} Network selected!`);
-            validateWithdrawForm();
         }
 
         function generateQRCode(address) {
@@ -1079,52 +1009,17 @@
             document.querySelectorAll('.wallet-btn').forEach(b => b.classList.remove('active'));
             if(btnElement) btnElement.classList.add('active');
 
-            chosenNetwork = "";
-            document.getElementById("selectedNetworkText").innerText = "Please choose network first";
-            document.querySelectorAll('.network-item').forEach(item => {
-                item.classList.remove('selected');
-            });
-            
-            // 🚀 1. ፎርሙን ባዶ ማድረጊያ (Reset Inputs on Tab Change) 🚀
-            const withdrawAddress = document.getElementById('withdraw-address');
-            if(withdrawAddress) withdrawAddress.value = "";
-            
-            const withdrawAmount = document.getElementById('withdraw-amount');
-            if(withdrawAmount) withdrawAmount.value = "";
-            
-            const errorMsgBox = document.getElementById('withdraw-error-msg');
-            if(errorMsgBox) errorMsgBox.style.display = "none";
-            
-            if(withdrawAmount) withdrawAmount.classList.remove('input-error');
-            
-            const netReceive = document.getElementById('withdraw-net-receive');
-            if(netReceive) netReceive.innerText = "0.00 USDT";
-            
-            const submitBtn = document.getElementById('withdraw-submit-btn');
-            if (submitBtn) {
-                submitBtn.classList.add('btn-disabled');
-                submitBtn.disabled = true;
-            }
-
-            document.getElementById('deposit-address-box').style.display = 'none';
-            document.getElementById('withdraw-form-box').style.display = 'none';
-
             document.getElementById('deposit-section').style.display = 'none';
             document.getElementById('withdraw-section').style.display = 'none';
             document.getElementById('transfer-section').style.display = 'none';
 
-            const networkContainer = document.getElementById('network-container');
-
             if (actionType === 'Deposit') {
                 document.getElementById('deposit-section').style.display = 'block';
-                networkContainer.style.display = 'block';
             } else if (actionType === 'Withdraw') {
                 document.getElementById('withdraw-section').style.display = 'block';
-                networkContainer.style.display = 'block';
                 validateWithdrawForm();
             } else if (actionType === 'Transfer') {
                 document.getElementById('transfer-section').style.display = 'block';
-                networkContainer.style.display = 'none';
             }
             
             const url = new URL(window.location);
