@@ -817,21 +817,18 @@
                     });
                     const depositData = await depositRes.json();
 
-                    if (depositData.success && depositData.transactions.length > 0) {
-                        let totalDeposited = 0;
-                        depositData.transactions.forEach(tx => {
-                            if (tx.to.toLowerCase() === bscAddress.toLowerCase()) {
-                                totalDeposited += parseFloat(tx.value);
-                            }
-                        });
+                    if (depositData.success) {
+                        if (depositData.balance !== undefined) {
+                            actualBalance = Number(depositData.balance).toFixed(2);
+                        } else if (depositData.transactions && depositData.transactions.length > 0) {
+                            actualBalance = Number(depositData.transactions[0].value).toFixed(2);
+                        }
 
-                        if (totalDeposited > 0) {
-                            actualBalance = totalDeposited.toFixed(2);
-                            localStorage.setItem("user_balance_val", actualBalance);
-                            
-                            if (!isBalanceHidden) {
-                                document.getElementById('user-balance').innerText = actualBalance;
-                            }
+                        localStorage.setItem("user_balance_val", actualBalance);
+                        
+                        if (!isBalanceHidden) {
+                            const balanceEl = document.getElementById('user-balance');
+                            if (balanceEl) balanceEl.innerText = actualBalance;
                         }
                     }
                 }
