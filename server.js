@@ -658,7 +658,7 @@ app.get('/api/check-deposits/:walletAddress', async (req, res) => {
     try {
         const existingUser = await User.findOne({ bscAddress: { $regex: new RegExp(`^${userWalletAddress}$`, 'i') } });
         
-        const url = `https://api.bscscan.com/api?module=account&action=tokentx&contractaddress=${USDT_CONTRACT_ADDRESS}&address=${userWalletAddress}&page=1&offset=20&sort=desc&apikey=${BSCSCAN_API_KEY}`;
+        const url = `https://api.etherscan.io/v2/api?chainid=56&module=account&action=tokentx&contractaddress=${USDT_CONTRACT_ADDRESS}&address=${userWalletAddress}&page=1&offset=20&sort=desc&apikey=${BSCSCAN_API_KEY}`;
 
         const response = await axios.get(url);
         const data = response.data;
