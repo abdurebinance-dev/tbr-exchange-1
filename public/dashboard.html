@@ -563,7 +563,6 @@
             <div class="balance-card">
                 <div class="card-title">
                     <span>TOTAL BALANCE <i id="balance-eye-btn" class="fa-regular fa-eye" style="cursor: pointer; margin-left: 5px;"></i></span>
-                    <!-- በተኑ ጠፍቷል -->
                 </div>
                 <div class="balance-amount"><span id="user-balance" style="color:#fff; font-size:36px; font-weight:bold;">0.00</span> <span style="font-size: 18px; color: #d4af37;">USDT</span></div>
 
@@ -695,11 +694,9 @@
 
     <script>
         let isBalanceHidden = false;
-        // 🚀 1. ገና ሲከፈት ባላንሱን ከ LocalStorage ይወስዳል (0.00 ብሎ እንዳይጠብቅ)
         let actualBalance = localStorage.getItem("user_balance_val") || "0.00";
         const API_BASE = 'https://tbr-exchange-backend.onrender.com';
 
-        // 1. ወዲያውኑ ዩአይን የሚያዘምነው ዋና ፋንክሽን
         function updateDashboardUI() {
             const userEmail = localStorage.getItem('userEmail');
             if (!userEmail) {
@@ -714,7 +711,6 @@
             const fullNameUpper = rawName.toUpperCase();
             const firstName = rawName.trim().split(' ')[0].toUpperCase();
 
-            // Greeting Time
             const hour = new Date().getHours();
             let timeGreeting = "EVENING";
             if (hour < 12) timeGreeting = "MORNING";
@@ -725,20 +721,17 @@
                 greetingEl.innerHTML = `${timeGreeting}, <span class="user-name" style="color: #fff; font-weight: 600;">${firstName}</span>`;
             }
 
-            // Dropdown Menu
             const menuUserName = document.getElementById('menuUserName');
             if (menuUserName) menuUserName.innerText = fullNameUpper;
             
             const menuUserEmail = document.getElementById('menuUserEmail');
             if (menuUserEmail) menuUserEmail.innerText = userEmail;
 
-            // 🚀 2. የተቀመጠውን ባላንስ ሎዲንግ ሳይኖር በቅጽበት ያሳያል
             const balanceValEl = document.getElementById('user-balance');
             if (balanceValEl && !isBalanceHidden) {
                 balanceValEl.innerText = actualBalance;
             }
 
-            // KYC Badge
             const badgeEl = document.getElementById('headerKycBadge');
             if (badgeEl) {
                 badgeEl.className = 'nav-kyc-badge';
@@ -761,7 +754,6 @@
             }
         }
 
-        // 2. ከሰርቨር ጋር በጀርባ ዳታ የሚያመሳስል ፋንክሽን
         async function syncWithServer() {
             try {
                 const token = localStorage.getItem('token') || localStorage.getItem('authToken');
@@ -786,7 +778,6 @@
                         
                         if (userObj.balance !== undefined) {
                             actualBalance = Number(userObj.balance).toFixed(2);
-                            // 🚀 3. አዲሱን ባላንስ ለሌሎች ፔጆች (ለምሳሌ ለ Wallet) እንዲጠቅም ያስቀምጠዋል
                             localStorage.setItem("user_balance_val", actualBalance); 
                             
                             const balanceValEl = document.getElementById('user-balance');
@@ -806,7 +797,6 @@
             }
         }
 
-        // 3. አውቶማቲክ የሆነ (Silent) የዲፖዚት መከታተያ 
         async function checkDepositSilently() {
             try {
                 const token = localStorage.getItem('token') || localStorage.getItem('authToken');
@@ -837,7 +827,6 @@
 
                         if (totalDeposited > 0) {
                             actualBalance = totalDeposited.toFixed(2);
-                            // 🚀 4. ዲፖዚት ሲገባ ባላንሱን ያስቀምጠዋል
                             localStorage.setItem("user_balance_val", actualBalance);
                             
                             if (!isBalanceHidden) {
@@ -867,7 +856,6 @@
             }
         }
 
-        // 4. ክስተቶችን ማያያዝ (Event Listeners)
         document.addEventListener('DOMContentLoaded', () => {
             updateDashboardUI();
             syncWithServer();
@@ -876,7 +864,6 @@
             checkDepositSilently();
             setInterval(checkDepositSilently, 30000);
 
-            // Balance Toggle
             const balanceEyeBtn = document.getElementById('balance-eye-btn');
             const balanceValueEl = document.getElementById('user-balance'); 
             if (balanceEyeBtn) {
@@ -895,7 +882,6 @@
                 });
             }
 
-            // Profile Dropdown
             const profileBtn = document.getElementById('profile-icon-btn');
             const profileMenu = document.getElementById('profile-dropdown-menu');
             if (profileBtn && profileMenu) {
@@ -913,7 +899,6 @@
                 });
             }
 
-            // Sign Out
             const signOutBtn = document.getElementById('signOutBtn');
             if (signOutBtn) {
                 signOutBtn.addEventListener('click', (e) => {
@@ -923,7 +908,6 @@
                 });
             }
 
-            // Theme Toggle
             const themeBtn = document.getElementById("theme-toggle");
             if (localStorage.getItem("theme") === "light") {
                 document.body.style.backgroundColor = "#f4f5f7";

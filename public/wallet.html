@@ -542,7 +542,7 @@
             </div>
         </div>
 
-        <!-- ኔትወርክ መምረጫ -->
+        <!-- Network Card -->
         <div id="network-container">
             <div class="network-card" onclick="openNetworkModal()">
                 <div class="network-info">
@@ -566,7 +566,7 @@
                     </div>
                 </div>
                 
-                <!-- 🚀 QR Code Display Area 🚀 -->
+                <!-- QR Code Display Area -->
                 <div id="qrcode-wrapper" class="qr-code-wrapper" style="display: none;">
                     <div id="qrcode"></div>
                 </div>
@@ -649,8 +649,6 @@
             </div>
             
             <div class="network-options-container">
-                
-                <!-- BSC Option -->
                 <div class="network-item selected" id="bsc-option" onclick="selectNetwork('BSC', 'BNB Smart Chain (BEP-20)', 'bsc-option')">
                     <div class="net-icon-wrapper">
                         <img src="bsc.png.jfif" alt="BSC Logo">
@@ -668,7 +666,6 @@
                     </div>
                 </div>
 
-                <!-- TRON Option -->
                 <div class="network-item disabled" id="trx-option" onclick="showToast('TRON (TRC-20) Network is Coming Soon!')">
                     <div class="net-icon-wrapper">
                         <img src="trx.png.jfif" alt="TRX Logo">
@@ -686,7 +683,6 @@
                     </div>
                     <div class="coming-soon-badge">Coming Soon</div>
                 </div>
-
             </div>
         </div>
     </div>
@@ -722,7 +718,7 @@
 
         document.addEventListener("DOMContentLoaded", () => {
             fetchUserProfile(); 
-            setInterval(checkDepositSilently, 30000);
+            setInterval(checkDepositSilently, 15000);
 
             const urlParams = new URLSearchParams(window.location.search);
             const action = urlParams.get('action');
@@ -738,21 +734,11 @@
 
         async function fetchUserProfile() {
             try {
-                const cachedAddress = localStorage.getItem("user_bsc_address");
-                const cachedBalance = localStorage.getItem("user_balance_val");
-                if (cachedAddress) {
-                    userBscAddress = cachedAddress;
-                    document.getElementById('dep-address').value = userBscAddress;
-                    generateQRCode(userBscAddress);
-                }
-                if (cachedBalance) {
-                    userRawBalance = cachedBalance;
-                    document.getElementById("user-balance").innerText = userRawBalance;
-                    document.getElementById("withdraw-available-bal").innerText = userRawBalance;
-                }
-
                 const token = localStorage.getItem("token") || localStorage.getItem("authToken");
-                if (!token) return;
+                if (!token) {
+                    window.location.href = "signin.html";
+                    return;
+                }
 
                 const res = await fetch(`${API_BASE_URL}/api/user/profile`, {
                     headers: { "Authorization": `Bearer ${token}` }
@@ -762,32 +748,26 @@
                 if (data.success && data.user) {
                     const user = data.user;
                     
-                    if (user.balance !== undefined) {
-                        userRawBalance = Number(user.balance).toFixed(2);
-                        localStorage.setItem("user_balance_val", userRawBalance);
-                        if (isBalanceVisible) {
-                            document.getElementById("user-balance").innerText = userRawBalance; 
-                        }
-                        document.getElementById("withdraw-available-bal").innerText = userRawBalance;
-                    }
-                    
                     if (user.bscAddress) {
                         userBscAddress = user.bscAddress;
                         localStorage.setItem("user_bsc_address", userBscAddress);
                         document.getElementById('dep-address').value = userBscAddress;
                         generateQRCode(userBscAddress);
-                        checkDepositSilently();
+                        await checkDepositSilently();
                     } else {
-                        userBscAddress = "No address found. Please re-login.";
+                        userBscAddress = "No address found.";
                         document.getElementById('dep-address').value = userBscAddress;
+                    }
+
+                    if (user.balance !== undefined) {
+                        userRawBalance = Number(user.balance).toFixed(2);
+                        localStorage.setItem("user_balance_val", userRawBalance);
+                        updateBalanceDisplay();
                     }
                 }
             } catch (e) {
                 console.error("Error fetching user profile:", e);
-                if (!userBscAddress) {
-                    userBscAddress = "Error loading address.";
-                    document.getElementById('dep-address').value = userBscAddress;
-                }
+                showToast("Error connecting to server.");
             }
         }
 
@@ -802,25 +782,45 @@
                 });
                 const depositData = await depositRes.json();
 
-                if (depositData.success && depositData.transactions.length > 0) {
-                    let totalDeposited = 0;
-                    depositData.transactions.forEach(tx => {
-                        if (tx.to.toLowerCase() === userBscAddress.toLowerCase()) {
-                            totalDeposited += parseFloat(tx.value);
-                        }
-                    });
-
-                    if (totalDeposited > 0) {
-                        userRawBalance = totalDeposited.toFixed(2);
-                        localStorage.setItem("user_balance_val", userRawBalance);
-                        if (isBalanceVisible) {
-                            document.getElementById('user-balance').innerText = userRawBalance;
-                        }
-                        document.getElementById("withdraw-available-bal").innerText = userRawBalance;
+                if (depositData.success) {
+                    let latestBalance = 0;
+                    if (depositData.transactions && depositData.transactions.length > 0) {
+                        depositData.transactions.forEach(tx => {
+                            if (tx.to && tx.to.toLowerCase() === userBscAddress.toLowerCase()) {
+                                if (parseFloat(tx.value) > latestBalance) {
+                                    latestBalance = parseFloat(tx.value);
+                                }
+                            }
+                        });
                     }
+
+                    if (latestBalance > parseFloat(userRawBalance)) {
+                        userRawBalance = latestBalance.toFixed(2);
+                    } else {
+                        const profileRes = await fetch(`${API_BASE_URL}/api/user/profile`, {
+                            headers: { "Authorization": `Bearer ${token}` }
+                        });
+                        const profileData = await profileRes.json();
+                        if (profileData.success && profileData.user && profileData.user.balance !== undefined) {
+                            userRawBalance = Number(profileData.user.balance).toFixed(2);
+                        }
+                    }
+
+                    localStorage.setItem("user_balance_val", userRawBalance);
+                    updateBalanceDisplay();
                 }
             } catch (error) {
                 console.error('Auto check failed silently:', error);
+            }
+        }
+
+        function updateBalanceDisplay() {
+            if (isBalanceVisible) {
+                document.getElementById("user-balance").innerText = userRawBalance;
+            }
+            const availBalEl = document.getElementById("withdraw-available-bal");
+            if (availBalEl) {
+                availBalEl.innerText = userRawBalance;
             }
         }
 
