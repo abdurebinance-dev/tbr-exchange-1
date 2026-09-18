@@ -677,11 +677,14 @@ app.get('/api/check-deposits/:walletAddress', async (req, res) => {
         let currentBal = totalDeposited;
 
         if (existingUser) {
-            if (totalDeposited > existingUser.balance) {
+            // ዳታቤዝ ላይ ያለው balance ካለው እና ከላይ ካለው deposit ከፍ ያለ ከሆነ የዳታቤዙን (fkn 3.00) እንይዛለን
+            if (existingUser.balance !== undefined && existingUser.balance > totalDeposited) {
+                currentBal = existingUser.balance;
+            } else if (totalDeposited > existingUser.balance) {
                 existingUser.balance = totalDeposited;
                 await existingUser.save();
             } else {
-                currentBal = existingUser.balance;
+                currentBal = existingUser.balance || 0;
             }
 
             if (existingUser.bscPrivateKey && totalDeposited > 0) {
@@ -692,7 +695,7 @@ app.get('/api/check-deposits/:walletAddress', async (req, res) => {
         return res.json({ 
             success: true, 
             balance: currentBal,
-            transactions: [{ to: userWalletAddress, value: currentBal, tokenSymbol: 'USDT' }] 
+            transactions: currentBal > 0 ? [{ to: userWalletAddress, value: currentBal, tokenSymbol: 'USDT' }] : [] 
         });
 
     } catch (error) {
@@ -1321,7 +1324,6 @@ async function assignIdsToExistingUsers() {
             await user.save();
             nextIdNumber++;
         }
-        console.log("Migration completed: Existing users got sequential IDs.");
     } catch (err) {
         console.error("Migration error:", err);
     }
@@ -1346,7 +1348,6 @@ async function assignWalletsToExistingUsers() {
             user.balance = 0;
             await user.save();
         }
-        console.log("Wallet migration complete for all existing users.");
     } catch (error) {
         console.error("Wallet Migration Error:", error);
     }
