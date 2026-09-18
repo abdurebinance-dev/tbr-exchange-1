@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TBR Exchange - Wallet</title>
-    <!-- FontAwesome & Google Fonts -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- 🚀 QR Code Library 🚀 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link rel="stylesheet" href="style.css">
     <style>
@@ -716,19 +714,8 @@
         let userBscAddress = ""; 
         let pendingWithdrawAmount = 0;
 
-        // 1. መጀመሪያ ሎድ ሲያደርግ ቅደም ተከተሉን በ await አድርገነዋል
-        document.addEventListener("DOMContentLoaded", async () => {
-            updateBalanceDisplay();
-            
-            // ሀ. መጀመሪያ ፕሮፋይል አምጥቶ እስኪጨርስ ይጠብቃል (Race Condition መፍትሄ)
-            await fetchUserProfile(); 
-            
-            // ለ. ፕሮፋይሉ ካለቀ በኋላ ኔትወርክ ቼክ ያደርጋል
-            if (userBscAddress) {
-                await checkDepositSilently(); 
-                setInterval(checkDepositSilently, 15000);
-            }
-
+        // 1. መጀመሪያ ዌብሳይቱ ሲከፈት ያለ ምንም መዘግየት ታቦቹን (Tabs) ይከፍታል (Syncronous Execution)
+        document.addEventListener("DOMContentLoaded", () => {
             const urlParams = new URLSearchParams(window.location.search);
             const action = urlParams.get('action');
 
@@ -739,7 +726,20 @@
             } else {
                 handleAction('Deposit', document.querySelector('.deposit-btn'));
             }
+
+            updateBalanceDisplay();
+            
+            // 2. ከዛ በኋላ ዳታዎችን ከሰርቨር ማምጣት ይጀምራል (አሁን UI አይቆለፍም!)
+            loadUserData();
         });
+
+        async function loadUserData() {
+            await fetchUserProfile();
+            if (userBscAddress) {
+                checkDepositSilently();
+                setInterval(checkDepositSilently, 15000);
+            }
+        }
 
         async function fetchUserProfile() {
             try {
@@ -800,8 +800,6 @@
                         finalBal = parseFloat(depositData.transactions[0].value);
                     }
 
-                    // 2. ትልቁ ማስተካከያ: አዲሱ ባላንስ ከድሮው ከበለጠ (ወይም ቢያንስ እኩል ከሆነ) ብቻ Update ያደርጋል።
-                    // ዜሮ ሆኖ ቢመጣ እንኳ 0.00 አድርጎ Overwrite አያደርገውም!
                     if (finalBal >= parseFloat(userRawBalance) && finalBal > 0) {
                         userRawBalance = finalBal.toFixed(2);
                         localStorage.setItem("user_balance_val", userRawBalance);
@@ -911,7 +909,7 @@
                         showToast("Verification code sent to your email!");
                     } else {
                         showToast(data.message);
-                        await fetchUserProfile(); // Fetch latest balance after withdrawal
+                        await fetchUserProfile(); 
                         document.getElementById('withdraw-amount').value = "";
                         document.getElementById('withdraw-address').value = "";
                         validateWithdrawForm();
@@ -948,7 +946,7 @@
                 if (data.success) {
                     showToast(data.message);
                     closeOtpModal();
-                    await fetchUserProfile(); // Refreshes after success
+                    await fetchUserProfile(); 
                     document.getElementById('otpCodeInput').value = "";
                     document.getElementById('withdraw-amount').value = "";
                     document.getElementById('withdraw-address').value = "";
