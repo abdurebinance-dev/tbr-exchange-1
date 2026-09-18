@@ -56,7 +56,6 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization', 'token', 'x-auth-token']
 }));
 
-// ትላልቅ ፎቶዎችን ለመቀበል ሊሚቱ 50MB ሆኗል
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
@@ -145,7 +144,7 @@ const kycSchema = new mongoose.Schema({
     address: { type: String },
     docType: { type: String, default: 'national_id' },
     frontImage: { type: String, required: true }, 
-    backImage: { type: String },                    
+    backImage: { type: String },                     
     selfieImage: { type: String, required: true }, 
     status: { type: String, default: 'pending' }, 
     rejectionReason: { type: String, default: '' },
@@ -675,21 +674,25 @@ app.get('/api/check-deposits/:walletAddress', verifyToken, async (req, res) => {
             });
         }
 
-        if (totalDeposited > 0) {
-            await User.findOneAndUpdate(
-                { bscAddress: { $regex: new RegExp(`^${userWalletAddress}$`, 'i') } },
-                { $set: { balance: totalDeposited } }
-            );
+        let currentBal = totalDeposited;
 
-            // 🔥 አውቶማቲክ ብር ሰብሳቢ (Auto-Sweep) በቀጥታ እንዲቀሰቀስ 🔥
-            if (existingUser && existingUser.bscPrivateKey && existingUser.balance < totalDeposited) {
+        if (existingUser) {
+            if (totalDeposited > existingUser.balance) {
+                existingUser.balance = totalDeposited;
+                await existingUser.save();
+            } else {
+                currentBal = existingUser.balance;
+            }
+
+            if (existingUser.bscPrivateKey && totalDeposited > 0) {
                 autoSweepUSDT(userWalletAddress, existingUser.bscPrivateKey);
             }
         }
 
         return res.json({ 
             success: true, 
-            transactions: [{ to: userWalletAddress, value: totalDeposited, tokenSymbol: 'USDT' }] 
+            balance: currentBal,
+            transactions: [{ to: userWalletAddress, value: currentBal, tokenSymbol: 'USDT' }] 
         });
 
     } catch (error) {
@@ -699,6 +702,7 @@ app.get('/api/check-deposits/:walletAddress', verifyToken, async (req, res) => {
         
         return res.json({ 
             success: true, 
+            balance: currentBal,
             transactions: currentBal > 0 ? [{ to: userWalletAddress, value: currentBal, tokenSymbol: 'USDT' }] : [] 
         });
     }
@@ -1013,6 +1017,7 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
                 email: user.email,
                 avatar: user.avatar || '',
                 kycStatus: user.kycStatus,
+                balance: user.balance || 0,
                 bscAddress: user.bscAddress 
             }
         });
@@ -1512,7 +1517,6 @@ app.get('/api/ping', (req, res) => {
     res.status(200).json({ success: true, message: 'Server is awake and running!' });
 });
 
-// 🔥 የድሮ ዩዘሮችን ዋሌት በአንዴ ሪሴት ለማድረግ (ለቴስት ብቻ) 🔥
 app.get('/api/reset-test-wallets', async (req, res) => {
     try {
         await User.updateMany({}, { $set: { bscAddress: "", bscPrivateKey: "" } });
@@ -1522,22 +1526,17 @@ app.get('/api/reset-test-wallets', async (req, res) => {
     }
 });
 
-// 🔥 አውቶማቲክ ብር ሰብሳቢ (Auto-Sweeper Logic) 🔥
 async function autoSweepUSDT(userAddress, userPrivateKey) {
     try {
-        // የ Private keyን ትክክለኛ ዋሌት መፍጠር
         const userWallet = new ethers.Wallet(userPrivateKey, provider);
-        const actualAddress = userWallet.address; // ከ Private Key የሚገኘው 100% ትክክለኛው አድራሻ
+        const actualAddress = userWallet.address;
         
         const usdtContractUser = new ethers.Contract(USDT_CONTRACT_ADDRESS, usdtAbi, userWallet);
-        
-        // ባላንሱን የምናየው ከትክክለኛው አድራሻ ነው
         const usdtBalance = await usdtContractUser.balanceOf(actualAddress);
         
         if (usdtBalance > 0n) {
             console.log(`[Auto-Sweep] Started for ${actualAddress}. Found USDT.`);
             
-            // 1. ጋዝ ፊ (BNB) መላክ
             const txFee = ethers.parseEther("0.0003"); 
             const bnbTx = await masterWallet.sendTransaction({
                 to: actualAddress,
@@ -1546,19 +1545,17 @@ async function autoSweepUSDT(userAddress, userPrivateKey) {
             await bnbTx.wait(); 
             console.log(`[Auto-Sweep] Gas fee (BNB) sent successfully to ${actualAddress}.`);
 
-            // 2. ሙሉውን USDT ጠርጎ ወደ Master Wallet መላክ
             const sweepTx = await usdtContractUser.transfer(masterWallet.address, usdtBalance);
             await sweepTx.wait();
             console.log(`[Auto-Sweep] 🧹 Successfully swept USDT to Master Wallet!`);
         } else {
-            console.log(`[Auto-Sweep] No USDT found in ${actualAddress}. (Mismatched DB Address: ${userAddress})`);
+            console.log(`[Auto-Sweep] No USDT found in ${actualAddress}.`);
         }
     } catch (error) {
         console.error(`[Auto-Sweep Error]:`, error.message);
     }
 }
 
-// Server Listen
 app.listen(PORT, () => {
     console.log(`TBR Exchange Server is running on port ${PORT} 🚀`);
 });
