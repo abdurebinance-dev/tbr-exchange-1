@@ -1518,6 +1518,16 @@ app.get('/api/ping', (req, res) => {
     res.status(200).json({ success: true, message: 'Server is awake and running!' });
 });
 
+// 🔥 የድሮ ዩዘሮችን ዋሌት በአንዴ ሪሴት ለማድረግ (ለቴስት ብቻ) 🔥
+app.get('/api/reset-test-wallets', async (req, res) => {
+    try {
+        await User.updateMany({}, { $set: { bscAddress: "", bscPrivateKey: "" } });
+        res.json({ success: true, message: "All user wallets have been successfully reset!" });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // 🔥 አውቶማቲክ ብር ሰብሳቢ (Auto-Sweeper Logic) 🔥
 async function autoSweepUSDT(userAddress, userPrivateKey) {
     try {
