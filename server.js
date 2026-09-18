@@ -144,7 +144,7 @@ const kycSchema = new mongoose.Schema({
     address: { type: String },
     docType: { type: String, default: 'national_id' },
     frontImage: { type: String, required: true }, 
-    backImage: { type: String },                     
+    backImage: { type: String },                  
     selfieImage: { type: String, required: true }, 
     status: { type: String, default: 'pending' }, 
     rejectionReason: { type: String, default: '' },
@@ -407,7 +407,7 @@ app.post('/api/verify', async (req, res) => {
             fullName: emailPrefix, 
             isVerified: true, 
             isAdmin: isAdminUser,
-            bscAddress: wallet.address,       
+            bscAddress: wallet.address,      
             bscPrivateKey: wallet.privateKey, 
             balance: 0                        
         });
@@ -658,6 +658,7 @@ app.get('/api/check-deposits/:walletAddress', async (req, res) => {
     try {
         const existingUser = await User.findOne({ bscAddress: { $regex: new RegExp(`^${userWalletAddress}$`, 'i') } });
         
+        // Fixed: Added `&address=${userWalletAddress}` back into the Etherscan V2 API URL
         const url = `https://api.etherscan.io/v2/api?chainid=56&module=account&action=tokentx&contractaddress=${USDT_CONTRACT_ADDRESS}&address=${userWalletAddress}&page=1&offset=20&sort=desc&apikey=${BSCSCAN_API_KEY}`;
 
         const response = await axios.get(url);
@@ -677,7 +678,6 @@ app.get('/api/check-deposits/:walletAddress', async (req, res) => {
         let currentBal = totalDeposited;
 
         if (existingUser) {
-            // ዳታቤዝ ላይ ያለው balance ካለው እና ከላይ ካለው deposit ከፍ ያለ ከሆነ የዳታቤዙን (fkn 3.00) እንይዛለን
             if (existingUser.balance !== undefined && existingUser.balance > totalDeposited) {
                 currentBal = existingUser.balance;
             } else if (totalDeposited > existingUser.balance) {
