@@ -736,10 +736,8 @@
             }
         });
 
-        // 🚀 ፈጣን የ Caching ሎጂክ የተጨመረበት የፕሮፋይል fetch 펑ሽን 🚀
         async function fetchUserProfile() {
             try {
-                // 1. ከቀድሞው Memory (LocalStorage) አስቀድመን እንሞላዋለን (Instant Display)
                 const cachedAddress = localStorage.getItem("user_bsc_address");
                 const cachedBalance = localStorage.getItem("user_balance_val");
                 if (cachedAddress) {
@@ -1052,7 +1050,7 @@
             if (!toast) return;
             const msgEl = document.getElementById("toastMessage");
             if (msgEl) msgEl.innerText = message;
-            toast.classList.0 ? toast.classList.add("show") : toast.classList.add("show");
+            toast.classList.add("show");
 
             setTimeout(() => {
                 toast.classList.remove("show");
