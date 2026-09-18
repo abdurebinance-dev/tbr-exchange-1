@@ -777,33 +777,30 @@
         }
 
         async function checkDepositSilently() {
-    try {
-        if (!userBscAddress || userBscAddress.startsWith("Error") || userBscAddress.startsWith("No address")) return;
+            try {
+                const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+                if (!token || !userBscAddress || userBscAddress.startsWith("Error") || userBscAddress.startsWith("No address")) return;
 
-        const depositRes = await fetch(`${API_BASE_URL}/api/check-deposits/${userBscAddress}`, {
-            method: 'GET'
-        });
-        const depositData = await depositRes.json();
+                const depositRes = await fetch(`${API_BASE_URL}/api/check-deposits/${userBscAddress}`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const depositData = await depositRes.json();
 
-        if (depositData.success) {
-            // ከሰርቨር በቀጥታ የመጣውን የተጣራ ባላንስ እንወስዳለን
-            let finalBal = 0;
-            if (depositData.balance !== undefined) {
-                finalBal = parseFloat(depositData.balance);
-            } else if (depositData.transactions && depositData.transactions.length > 0) {
-                finalBal = parseFloat(depositData.transactions[0].value);
-            }
+                if (depositData.success) {
+                    if (depositData.balance !== undefined) {
+                        userRawBalance = Number(depositData.balance).toFixed(2);
+                    } else if (depositData.transactions && depositData.transactions.length > 0) {
+                        userRawBalance = Number(depositData.transactions[0].value).toFixed(2);
+                    }
 
-            if (finalBal > 0) {
-                userRawBalance = finalBal.toFixed(2);
-                localStorage.setItem("user_balance_val", userRawBalance);
-                updateBalanceDisplay();
+                    localStorage.setItem("user_balance_val", userRawBalance);
+                    updateBalanceDisplay();
+                }
+            } catch (error) {
+                console.error('Auto check failed silently:', error);
             }
         }
-    } catch (error) {
-        console.error('Auto check failed silently:', error);
-    }
-}
 
         function updateBalanceDisplay() {
             if (isBalanceVisible) {
