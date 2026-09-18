@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TBR Exchange - Wallet</title>
+    <!-- FontAwesome & Google Fonts -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 🚀 QR Code Library 🚀 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link rel="stylesheet" href="style.css">
     <style>
@@ -502,25 +504,6 @@
             color: var(--green-color);
             font-size: 16px;
         }
-
-        /* አዲሱ የኔትወርክ ማሳሰቢያ ቦክስ ዲዛይን */
-        .select-network-prompt {
-            background-color: var(--card-bg);
-            border: 1px dashed var(--border-color);
-            border-radius: 12px;
-            padding: 35px 20px;
-            text-align: center;
-            color: var(--text-muted);
-            font-size: 14px;
-            margin-bottom: 20px;
-            animation: fadeIn 0.3s ease-in-out;
-        }
-        .select-network-prompt i {
-            font-size: 30px;
-            color: var(--accent-color);
-            margin-bottom: 12px;
-            display: block;
-        }
     </style>
 </head>
 <body>
@@ -559,15 +542,15 @@
             </div>
         </div>
 
-        <!-- Network Card (መጀመሪያ Select Network ይላል) -->
+        <!-- Network Card (Please choose network first ይላል) -->
         <div id="network-container">
             <div class="network-card" onclick="openNetworkModal()">
                 <div class="network-info">
                     <label>Network</label>
-                    <div class="network-display-text" id="selectedNetworkText" style="color: var(--accent-color); font-weight: 700;">Select Network <i class="fa-solid fa-chevron-down" style="font-size: 11px; margin-left: 5px;"></i></div>
+                    <div class="network-display-text" id="selectedNetworkText">Please choose network first</div>
                 </div>
                 <div class="network-icon-box">
-                    <i class="fa-solid fa-list-ul"></i>
+                    <i class="fa-solid fa-right-left"></i>
                 </div>
             </div>
         </div>
@@ -575,13 +558,7 @@
         <!-- 1. DEPOSIT SECTION -->
         <div id="deposit-section" class="tab-section" style="display: none;">
             
-            <!-- ኔትወርክ እስኪመረጥ ይህ ይታያል -->
-            <div id="deposit-prompt" class="select-network-prompt">
-                <i class="fa-solid fa-circle-exclamation"></i>
-                Please select a network above to view your deposit address.
-            </div>
-
-            <!-- ኔትወርክ ሲመረጥ ይህ ብቅ ይላል -->
+            <!-- ኔትወርክ ሲመረጥ ብቻ ይህ ብቅ ይላል -->
             <div class="deposit-address-container" id="deposit-address-box" style="display: none;">
                 <div class="form-group">
                     <label>Deposit Address (BSC)</label>
@@ -601,14 +578,8 @@
 
         <!-- 2. WITHDRAW SECTION -->
         <div id="withdraw-section" class="tab-section" style="display: none;">
-            
-            <!-- ኔትወርክ እስኪመረጥ ይህ ይታያል -->
-            <div id="withdraw-prompt" class="select-network-prompt">
-                <i class="fa-solid fa-circle-exclamation"></i>
-                Please select a network above to enter withdrawal details.
-            </div>
 
-            <!-- ኔትወርክ ሲመረጥ ፎርሙ ብቅ ይላል -->
+            <!-- ኔትወርክ ሲመረጥ ብቻ ፎርሙ ብቅ ይላል -->
             <div id="withdraw-form-box" style="display: none;">
                 <div class="form-group">
                     <label>Withdrawal Address</label>
@@ -775,21 +746,16 @@
             loadUserData();
         });
 
-        // ኔትወርክ ሲመረጥ ፎርሞቹን ብቅ የሚያደርገው ፋንክሽን (ትልቁ ማስተካከያ)
+        // ኔትወርክ ሲመረጥ ፎርሞቹን ብቅ የሚያደርገው ፋንክሽን
         function selectNetwork(shortName, longName, elementId) {
             closeNetworkModal();
             const netText = document.getElementById('selectedNetworkText');
             netText.innerHTML = longName;
-            netText.style.color = 'var(--text-muted)';
-            netText.style.fontWeight = '500';
             
             isNetworkSelected = true;
 
-            // ኔትወርክ ስትመርጥ ማስጠንቀቂያው ይጠፋና አድራሻው/ፎርሙ ይከፈታል!
-            document.getElementById('deposit-prompt').style.display = 'none';
+            // ኔትወርክ ስትመርጥ አድራሻው/ፎርሙ ይከፈታል!
             document.getElementById('deposit-address-box').style.display = 'block';
-
-            document.getElementById('withdraw-prompt').style.display = 'none';
             document.getElementById('withdraw-form-box').style.display = 'block';
 
             showToast(`${shortName} Network selected!`);
