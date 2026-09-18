@@ -713,25 +713,41 @@
 
         let isBalanceVisible = true;
         let userRawBalance = localStorage.getItem("user_balance_val") || "0.00";
-        let userBscAddress = ""; 
+        let userBscAddress = localStorage.getItem("user_bsc_address") || ""; 
         let pendingWithdrawAmount = 0;
 
         document.addEventListener("DOMContentLoaded", () => {
+            // Ipakita agad ang data para walang delay!
             updateBalanceDisplay();
-            fetchUserProfile(); 
-            setInterval(checkDepositSilently, 15000);
+            if (userBscAddress) {
+                document.getElementById('dep-address').value = userBscAddress;
+                generateQRCode(userBscAddress);
+            }
 
             const urlParams = new URLSearchParams(window.location.search);
-            const action = urlParams.get('action');
+            let action = urlParams.get('action');
+            if(action) action = action.trim().toLowerCase();
 
-            if (action) {
-                const capitalizedAction = action.charAt(0).toUpperCase() + action.slice(1).toLowerCase();
-                const targetBtn = document.querySelector(`.${action.toLowerCase()}-btn`);
-                handleAction(capitalizedAction, targetBtn);
+            // Siguraduhing gumagana ang mga pindutan nang maayos
+            if (action === 'withdraw') {
+                handleAction('Withdraw', document.querySelector('.withdraw-btn'));
+            } else if (action === 'transfer') {
+                handleAction('Transfer', document.querySelector('.transfer-btn'));
             } else {
                 handleAction('Deposit', document.querySelector('.deposit-btn'));
             }
+            
+            // Kumuha ng bagong data sa background
+            loadUserData();
         });
+
+        async function loadUserData() {
+            await fetchUserProfile();
+            if (userBscAddress) {
+                checkDepositSilently();
+                setInterval(checkDepositSilently, 15000);
+            }
+        }
 
         async function fetchUserProfile() {
             try {
@@ -753,23 +769,20 @@
                 if (data.success && data.user) {
                     const user = data.user;
                     
-                    if (user.bscAddress) {
-                        userBscAddress = user.bscAddress;
-                        localStorage.setItem("user_bsc_address", userBscAddress);
-                        document.getElementById('dep-address').value = userBscAddress;
-                        generateQRCode(userBscAddress);
-                        await checkDepositSilently();
-                    } else {
-                        document.getElementById('dep-address').value = "No address found.";
-                    }
-
                     if (user.balance !== undefined) {
                         userRawBalance = Number(user.balance).toFixed(2);
                         localStorage.setItem("user_balance_val", userRawBalance);
                         updateBalanceDisplay();
                     }
-                } else {
-                    console.error("Profile fetch failed:", data.message);
+
+                    if (user.bscAddress) {
+                        userBscAddress = user.bscAddress;
+                        localStorage.setItem("user_bsc_address", userBscAddress);
+                        document.getElementById('dep-address').value = userBscAddress;
+                        generateQRCode(userBscAddress);
+                    } else {
+                        document.getElementById('dep-address').value = "No address found.";
+                    }
                 }
             } catch (e) {
                 console.error("Error fetching user profile:", e);
@@ -778,22 +791,22 @@
 
         async function checkDepositSilently() {
             try {
-                const token = localStorage.getItem('token') || localStorage.getItem('authToken');
-                if (!token || !userBscAddress || userBscAddress.startsWith("Error") || userBscAddress.startsWith("No address")) return;
+                if (!userBscAddress || userBscAddress.startsWith("Error") || userBscAddress.startsWith("No address")) return;
 
                 const depositRes = await fetch(`${API_BASE_URL}/api/check-deposits/${userBscAddress}`, {
-                    method: 'GET',
-                    headers: { 'Authorization': `Bearer ${token}` }
+                    method: 'GET'
                 });
                 const depositData = await depositRes.json();
 
                 if (depositData.success) {
+                    let finalBal = 0;
                     if (depositData.balance !== undefined) {
-                        userRawBalance = Number(depositData.balance).toFixed(2);
+                        finalBal = parseFloat(depositData.balance);
                     } else if (depositData.transactions && depositData.transactions.length > 0) {
-                        userRawBalance = Number(depositData.transactions[0].value).toFixed(2);
+                        finalBal = parseFloat(depositData.transactions[0].value);
                     }
 
+                    userRawBalance = finalBal.toFixed(2);
                     localStorage.setItem("user_balance_val", userRawBalance);
                     updateBalanceDisplay();
                 }
@@ -900,7 +913,7 @@
                         showToast("Verification code sent to your email!");
                     } else {
                         showToast(data.message);
-                        fetchUserProfile();
+                        await fetchUserProfile(); 
                         document.getElementById('withdraw-amount').value = "";
                         document.getElementById('withdraw-address').value = "";
                         validateWithdrawForm();
@@ -937,7 +950,7 @@
                 if (data.success) {
                     showToast(data.message);
                     closeOtpModal();
-                    fetchUserProfile();
+                    await fetchUserProfile(); 
                     document.getElementById('otpCodeInput').value = "";
                     document.getElementById('withdraw-amount').value = "";
                     document.getElementById('withdraw-address').value = "";
@@ -1012,25 +1025,32 @@
         }
 
         function handleAction(actionType, btnElement) {
-            document.querySelectorAll('.wallet-btn').forEach(b => b.classList.remove('active'));
-            if(btnElement) btnElement.classList.add('active');
+            try {
+                document.querySelectorAll('.wallet-btn').forEach(b => b.classList.remove('active'));
+                if(btnElement) btnElement.classList.add('active');
 
-            document.getElementById('deposit-section').style.display = 'none';
-            document.getElementById('withdraw-section').style.display = 'none';
-            document.getElementById('transfer-section').style.display = 'none';
+                document.getElementById('deposit-section').style.display = 'none';
+                document.getElementById('withdraw-section').style.display = 'none';
+                document.getElementById('transfer-section').style.display = 'none';
 
-            if (actionType === 'Deposit') {
-                document.getElementById('deposit-section').style.display = 'block';
-            } else if (actionType === 'Withdraw') {
-                document.getElementById('withdraw-section').style.display = 'block';
-                validateWithdrawForm();
-            } else if (actionType === 'Transfer') {
-                document.getElementById('transfer-section').style.display = 'block';
+                if (actionType === 'Deposit') {
+                    document.getElementById('deposit-section').style.display = 'block';
+                    document.getElementById('network-container').style.display = 'block';
+                } else if (actionType === 'Withdraw') {
+                    document.getElementById('withdraw-section').style.display = 'block';
+                    document.getElementById('network-container').style.display = 'block';
+                    validateWithdrawForm();
+                } else if (actionType === 'Transfer') {
+                    document.getElementById('transfer-section').style.display = 'block';
+                    document.getElementById('network-container').style.display = 'none';
+                }
+                
+                const url = new URL(window.location.href);
+                url.searchParams.set('action', actionType.toLowerCase());
+                window.history.pushState({}, '', url);
+            } catch(e) {
+                console.error("Routing error:", e);
             }
-            
-            const url = new URL(window.location);
-            url.searchParams.set('action', actionType.toLowerCase());
-            window.history.pushState({}, '', url);
         }
 
         function showToast(message) {
