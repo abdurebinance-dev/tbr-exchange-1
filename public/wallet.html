@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TBR Exchange - Wallet</title>
+    <!-- FontAwesome & Google Fonts -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 🚀 QR Code Library 🚀 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link rel="stylesheet" href="style.css">
     <style>
@@ -714,8 +716,11 @@
         let userBscAddress = ""; 
         let pendingWithdrawAmount = 0;
 
-        // 1. መጀመሪያ ዌብሳይቱ ሲከፈት ያለ ምንም መዘግየት ታቦቹን (Tabs) ይከፍታል (Syncronous Execution)
         document.addEventListener("DOMContentLoaded", () => {
+            updateBalanceDisplay();
+            fetchUserProfile(); 
+            setInterval(checkDepositSilently, 15000);
+
             const urlParams = new URLSearchParams(window.location.search);
             const action = urlParams.get('action');
 
@@ -726,20 +731,7 @@
             } else {
                 handleAction('Deposit', document.querySelector('.deposit-btn'));
             }
-
-            updateBalanceDisplay();
-            
-            // 2. ከዛ በኋላ ዳታዎችን ከሰርቨር ማምጣት ይጀምራል (አሁን UI አይቆለፍም!)
-            loadUserData();
         });
-
-        async function loadUserData() {
-            await fetchUserProfile();
-            if (userBscAddress) {
-                checkDepositSilently();
-                setInterval(checkDepositSilently, 15000);
-            }
-        }
 
         async function fetchUserProfile() {
             try {
@@ -761,19 +753,20 @@
                 if (data.success && data.user) {
                     const user = data.user;
                     
-                    if (user.balance !== undefined) {
-                        userRawBalance = Number(user.balance).toFixed(2);
-                        localStorage.setItem("user_balance_val", userRawBalance);
-                        updateBalanceDisplay();
-                    }
-
                     if (user.bscAddress) {
                         userBscAddress = user.bscAddress;
                         localStorage.setItem("user_bsc_address", userBscAddress);
                         document.getElementById('dep-address').value = userBscAddress;
                         generateQRCode(userBscAddress);
+                        await checkDepositSilently();
                     } else {
                         document.getElementById('dep-address').value = "No address found.";
+                    }
+
+                    if (user.balance !== undefined) {
+                        userRawBalance = Number(user.balance).toFixed(2);
+                        localStorage.setItem("user_balance_val", userRawBalance);
+                        updateBalanceDisplay();
                     }
                 } else {
                     console.error("Profile fetch failed:", data.message);
@@ -784,32 +777,33 @@
         }
 
         async function checkDepositSilently() {
-            try {
-                if (!userBscAddress || userBscAddress.startsWith("Error") || userBscAddress.startsWith("No address")) return;
+    try {
+        if (!userBscAddress || userBscAddress.startsWith("Error") || userBscAddress.startsWith("No address")) return;
 
-                const depositRes = await fetch(`${API_BASE_URL}/api/check-deposits/${userBscAddress}`, {
-                    method: 'GET'
-                });
-                const depositData = await depositRes.json();
+        const depositRes = await fetch(`${API_BASE_URL}/api/check-deposits/${userBscAddress}`, {
+            method: 'GET'
+        });
+        const depositData = await depositRes.json();
 
-                if (depositData.success) {
-                    let finalBal = 0;
-                    if (depositData.balance !== undefined) {
-                        finalBal = parseFloat(depositData.balance);
-                    } else if (depositData.transactions && depositData.transactions.length > 0) {
-                        finalBal = parseFloat(depositData.transactions[0].value);
-                    }
+        if (depositData.success) {
+            // ከሰርቨር በቀጥታ የመጣውን የተጣራ ባላንስ እንወስዳለን
+            let finalBal = 0;
+            if (depositData.balance !== undefined) {
+                finalBal = parseFloat(depositData.balance);
+            } else if (depositData.transactions && depositData.transactions.length > 0) {
+                finalBal = parseFloat(depositData.transactions[0].value);
+            }
 
-                    if (finalBal >= parseFloat(userRawBalance) && finalBal > 0) {
-                        userRawBalance = finalBal.toFixed(2);
-                        localStorage.setItem("user_balance_val", userRawBalance);
-                        updateBalanceDisplay();
-                    }
-                }
-            } catch (error) {
-                console.error('Auto check failed silently:', error);
+            if (finalBal > 0) {
+                userRawBalance = finalBal.toFixed(2);
+                localStorage.setItem("user_balance_val", userRawBalance);
+                updateBalanceDisplay();
             }
         }
+    } catch (error) {
+        console.error('Auto check failed silently:', error);
+    }
+}
 
         function updateBalanceDisplay() {
             if (isBalanceVisible) {
@@ -909,7 +903,7 @@
                         showToast("Verification code sent to your email!");
                     } else {
                         showToast(data.message);
-                        await fetchUserProfile(); 
+                        fetchUserProfile();
                         document.getElementById('withdraw-amount').value = "";
                         document.getElementById('withdraw-address').value = "";
                         validateWithdrawForm();
@@ -946,7 +940,7 @@
                 if (data.success) {
                     showToast(data.message);
                     closeOtpModal();
-                    await fetchUserProfile(); 
+                    fetchUserProfile();
                     document.getElementById('otpCodeInput').value = "";
                     document.getElementById('withdraw-amount').value = "";
                     document.getElementById('withdraw-address').value = "";
