@@ -652,7 +652,7 @@ app.post('/api/reset-password', async (req, res) => {
 });
 
 // --- 🔥 100% አስተማማኝ እና የተስተካከለ የ USDT ዴፖዚት ማረጋገጫ (Watcher & Auto-Sweeper) 🔥 ---
-app.get('/api/check-deposits/:walletAddress', verifyToken, async (req, res) => {
+app.get('/api/check-deposits/:walletAddress', async (req, res) => {
     const userWalletAddress = req.params.walletAddress.toLowerCase();
 
     try {
