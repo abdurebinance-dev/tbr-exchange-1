@@ -712,11 +712,12 @@
         const API_BASE_URL = 'https://tbr-exchange-backend.onrender.com'; 
 
         let isBalanceVisible = true;
-        let userRawBalance = "0.00";
+        let userRawBalance = localStorage.getItem("user_balance_val") || "0.00";
         let userBscAddress = ""; 
         let pendingWithdrawAmount = 0;
 
         document.addEventListener("DOMContentLoaded", () => {
+            updateBalanceDisplay();
             fetchUserProfile(); 
             setInterval(checkDepositSilently, 15000);
 
@@ -767,7 +768,6 @@
                 }
             } catch (e) {
                 console.error("Error fetching user profile:", e);
-                showToast("Error connecting to server.");
             }
         }
 
@@ -783,27 +783,10 @@
                 const depositData = await depositRes.json();
 
                 if (depositData.success) {
-                    let latestBalance = 0;
-                    if (depositData.transactions && depositData.transactions.length > 0) {
-                        depositData.transactions.forEach(tx => {
-                            if (tx.to && tx.to.toLowerCase() === userBscAddress.toLowerCase()) {
-                                if (parseFloat(tx.value) > latestBalance) {
-                                    latestBalance = parseFloat(tx.value);
-                                }
-                            }
-                        });
-                    }
-
-                    if (latestBalance > parseFloat(userRawBalance)) {
-                        userRawBalance = latestBalance.toFixed(2);
-                    } else {
-                        const profileRes = await fetch(`${API_BASE_URL}/api/user/profile`, {
-                            headers: { "Authorization": `Bearer ${token}` }
-                        });
-                        const profileData = await profileRes.json();
-                        if (profileData.success && profileData.user && profileData.user.balance !== undefined) {
-                            userRawBalance = Number(profileData.user.balance).toFixed(2);
-                        }
+                    if (depositData.balance !== undefined) {
+                        userRawBalance = Number(depositData.balance).toFixed(2);
+                    } else if (depositData.transactions && depositData.transactions.length > 0) {
+                        userRawBalance = Number(depositData.transactions[0].value).toFixed(2);
                     }
 
                     localStorage.setItem("user_balance_val", userRawBalance);
