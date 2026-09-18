@@ -561,7 +561,7 @@
                 <div class="form-group">
                     <label>Deposit Address (BSC)</label>
                     <div style="display: flex; gap: 10px;">
-                       <input type="text" class="form-control" value="" readonly id="dep-address" placeholder="Loading address...">
+                        <input type="text" class="form-control" value="" readonly id="dep-address" placeholder="Loading address...">
                         <button class="copy-btn" onclick="copyAddress()" title="Copy Address"><i class="fa-regular fa-copy"></i></button>
                     </div>
                 </div>
@@ -736,8 +736,23 @@
             }
         });
 
+        // 🚀 ፈጣን የ Caching ሎጂክ የተጨመረበት የፕሮፋይል fetch 펑ሽን 🚀
         async function fetchUserProfile() {
             try {
+                // 1. ከቀድሞው Memory (LocalStorage) አስቀድመን እንሞላዋለን (Instant Display)
+                const cachedAddress = localStorage.getItem("user_bsc_address");
+                const cachedBalance = localStorage.getItem("user_balance_val");
+                if (cachedAddress) {
+                    userBscAddress = cachedAddress;
+                    document.getElementById('dep-address').value = userBscAddress;
+                    generateQRCode(userBscAddress);
+                }
+                if (cachedBalance) {
+                    userRawBalance = cachedBalance;
+                    document.getElementById("user-balance").innerText = userRawBalance;
+                    document.getElementById("withdraw-available-bal").innerText = userRawBalance;
+                }
+
                 const token = localStorage.getItem("token") || localStorage.getItem("authToken");
                 if (!token) return;
 
@@ -751,6 +766,7 @@
                     
                     if (user.balance !== undefined) {
                         userRawBalance = Number(user.balance).toFixed(2);
+                        localStorage.setItem("user_balance_val", userRawBalance);
                         if (isBalanceVisible) {
                             document.getElementById("user-balance").innerText = userRawBalance; 
                         }
@@ -759,6 +775,7 @@
                     
                     if (user.bscAddress) {
                         userBscAddress = user.bscAddress;
+                        localStorage.setItem("user_bsc_address", userBscAddress);
                         document.getElementById('dep-address').value = userBscAddress;
                         generateQRCode(userBscAddress);
                         checkDepositSilently();
@@ -769,8 +786,10 @@
                 }
             } catch (e) {
                 console.error("Error fetching user profile:", e);
-                userBscAddress = "Error loading address.";
-                document.getElementById('dep-address').value = userBscAddress;
+                if (!userBscAddress) {
+                    userBscAddress = "Error loading address.";
+                    document.getElementById('dep-address').value = userBscAddress;
+                }
             }
         }
 
@@ -795,6 +814,7 @@
 
                     if (totalDeposited > 0) {
                         userRawBalance = totalDeposited.toFixed(2);
+                        localStorage.setItem("user_balance_val", userRawBalance);
                         if (isBalanceVisible) {
                             document.getElementById('user-balance').innerText = userRawBalance;
                         }
@@ -1032,7 +1052,7 @@
             if (!toast) return;
             const msgEl = document.getElementById("toastMessage");
             if (msgEl) msgEl.innerText = message;
-            toast.classList.add("show");
+            toast.classList.0 ? toast.classList.add("show") : toast.classList.add("show");
 
             setTimeout(() => {
                 toast.classList.remove("show");
