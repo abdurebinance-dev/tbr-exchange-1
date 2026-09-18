@@ -697,175 +697,22 @@
         let actualBalance = localStorage.getItem("user_balance_val") || "0.00";
         const API_BASE = 'https://tbr-exchange-backend.onrender.com';
 
-        function updateDashboardUI() {
-            const userEmail = localStorage.getItem('userEmail');
-            if (!userEmail) {
-                window.location.href = 'signin.html';
-                return;
-            }
-
-            const kycStatus = (localStorage.getItem('kycStatus') || 'not_submitted').toLowerCase();
-            let storedName = localStorage.getItem('userName') || localStorage.getItem('fullName') || localStorage.getItem('name') || '';
-            
-            let rawName = storedName || userEmail.split('@')[0];
-            const fullNameUpper = rawName.toUpperCase();
-            const firstName = rawName.trim().split(' ')[0].toUpperCase();
-
-            const hour = new Date().getHours();
-            let timeGreeting = "EVENING";
-            if (hour < 12) timeGreeting = "MORNING";
-            else if (hour < 17) timeGreeting = "AFTERNOON";
-
-            const greetingEl = document.getElementById('userGreeting');
-            if (greetingEl) {
-                greetingEl.innerHTML = `${timeGreeting}, <span class="user-name" style="color: #fff; font-weight: 600;">${firstName}</span>`;
-            }
-
-            const menuUserName = document.getElementById('menuUserName');
-            if (menuUserName) menuUserName.innerText = fullNameUpper;
-            
-            const menuUserEmail = document.getElementById('menuUserEmail');
-            if (menuUserEmail) menuUserEmail.innerText = userEmail;
-
+        // 1. መጀመሪያ ሲከፈት ያለውን ባላንስ ያሳያል
+        document.addEventListener('DOMContentLoaded', () => {
             const balanceValEl = document.getElementById('user-balance');
             if (balanceValEl && !isBalanceHidden) {
                 balanceValEl.innerText = actualBalance;
             }
-
-            const badgeEl = document.getElementById('headerKycBadge');
-            if (badgeEl) {
-                badgeEl.className = 'nav-kyc-badge';
-                if (kycStatus === 'not_submitted' || kycStatus === 'unverified') {
-                    badgeEl.classList.add('unverified');
-                    badgeEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Unverified`;
-                } else if (kycStatus === 'pending' || kycStatus === 'under_review') {
-                    badgeEl.classList.add('pending');
-                    badgeEl.innerHTML = `<i class="fa-solid fa-clock"></i> Under Review`;
-                } else if (kycStatus === 'verified' || kycStatus === 'approved' || kycStatus === 'true') {
-                    badgeEl.classList.add('approved');
-                    badgeEl.innerHTML = `<i class="fa-solid fa-circle-check"></i> Verified`;
-                } else if (kycStatus === 'rejected') {
-                    badgeEl.classList.add('rejected');
-                    badgeEl.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> Rejected`;
-                } else {
-                    badgeEl.classList.add('unverified');
-                    badgeEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Unverified`;
-                }
-            }
-        }
-
-        async function syncWithServer() {
-            try {
-                const token = localStorage.getItem('token') || localStorage.getItem('authToken');
-                if (!token) return;
-                
-                const res = await fetch(`${API_BASE}/api/auth/me`, { 
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}` 
-                    } 
-                });
-                
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.success && data.user) {
-                        const userObj = data.user;
-                        if (userObj.email) localStorage.setItem('userEmail', userObj.email);
-                        if (userObj.fullName || userObj.name) {
-                            localStorage.setItem('userName', userObj.fullName || userObj.name);
-                        }
-                        if (userObj.kycStatus) localStorage.setItem('kycStatus', userObj.kycStatus);
-                        
-                        if (userObj.balance !== undefined) {
-                            actualBalance = Number(userObj.balance).toFixed(2);
-                            localStorage.setItem("user_balance_val", actualBalance); 
-                            
-                            const balanceValEl = document.getElementById('user-balance');
-                            if (balanceValEl && !isBalanceHidden) {
-                                balanceValEl.innerText = actualBalance;
-                            }
-                        }
-                        
-                        updateDashboardUI();
-                    }
-                } else {
-                    localStorage.clear();
-                    window.location.href = 'signin.html';
-                }
-            } catch (e) {
-                console.error('Background sync failed:', e);
-            }
-        }
-
-        async function checkDepositSilently() {
-            try {
-                const token = localStorage.getItem('token') || localStorage.getItem('authToken');
-                if (!token) return;
-
-                const userRes = await fetch(`${API_BASE}/api/user/profile`, {
-                    method: 'GET',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const userData = await userRes.json();
-
-                if (userData.success && userData.user.bscAddress) {
-                    const bscAddress = userData.user.bscAddress;
-
-                    const depositRes = await fetch(`${API_BASE}/api/check-deposits/${bscAddress}`, {
-                        method: 'GET',
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                    const depositData = await depositRes.json();
-
-                    if (depositData.success) {
-                        if (depositData.balance !== undefined) {
-                            actualBalance = Number(depositData.balance).toFixed(2);
-                        } else if (depositData.transactions && depositData.transactions.length > 0) {
-                            actualBalance = Number(depositData.transactions[0].value).toFixed(2);
-                        }
-
-                        localStorage.setItem("user_balance_val", actualBalance);
-                        
-                        if (!isBalanceHidden) {
-                            const balanceEl = document.getElementById('user-balance');
-                            if (balanceEl) balanceEl.innerText = actualBalance;
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error('Auto check failed silently:', error);
-            }
-        }
-
-        async function loadLiveMarketRates() {
-            try {
-                const res = await fetch(`${API_BASE}/api/market/rates`);
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.success) {
-                        if (data.liveRate) document.getElementById('liveRateValue').innerText = Number(data.liveRate).toFixed(2);
-                        if (data.bestBuy) document.getElementById('bestBuyValue').innerText = Number(data.bestBuy).toFixed(2) + ' ETB';
-                        if (data.bestSell) document.getElementById('bestSellValue').innerText = Number(data.bestSell).toFixed(2) + ' ETB';
-                    }
-                }
-            } catch (e) {
-                console.error('Error fetching live rates:', e);
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
+            
             updateDashboardUI();
-            syncWithServer();
+            loadDashboardData();
             loadLiveMarketRates();
 
-            checkDepositSilently();
-            setInterval(checkDepositSilently, 30000);
-
             const balanceEyeBtn = document.getElementById('balance-eye-btn');
-            const balanceValueEl = document.getElementById('user-balance'); 
             if (balanceEyeBtn) {
                 balanceEyeBtn.addEventListener('click', () => {
                     isBalanceHidden = !isBalanceHidden;
+                    const balanceValueEl = document.getElementById('user-balance');
                     if (isBalanceHidden) {
                         balanceValueEl.innerText = '******';
                         balanceEyeBtn.classList.replace('fa-eye', 'fa-eye-slash');
@@ -935,6 +782,151 @@
                 });
             }
         });
+
+        // 2. ዳታዎችን ማምጣት እና ማስተካከል (Race condition እንዳይኖር)
+        async function loadDashboardData() {
+            await syncWithServer();
+            checkDepositSilently();
+            setInterval(checkDepositSilently, 15000);
+        }
+
+        function updateDashboardUI() {
+            const userEmail = localStorage.getItem('userEmail');
+            if (!userEmail) return;
+
+            const kycStatus = (localStorage.getItem('kycStatus') || 'not_submitted').toLowerCase();
+            let storedName = localStorage.getItem('userName') || localStorage.getItem('fullName') || localStorage.getItem('name') || '';
+            
+            let rawName = storedName || userEmail.split('@')[0];
+            const fullNameUpper = rawName.toUpperCase();
+            const firstName = rawName.trim().split(' ')[0].toUpperCase();
+
+            const hour = new Date().getHours();
+            let timeGreeting = "EVENING";
+            if (hour < 12) timeGreeting = "MORNING";
+            else if (hour < 17) timeGreeting = "AFTERNOON";
+
+            const greetingEl = document.getElementById('userGreeting');
+            if (greetingEl) {
+                greetingEl.innerHTML = `${timeGreeting}, <span class="user-name" style="color: #fff; font-weight: 600;">${firstName}</span>`;
+            }
+
+            const menuUserName = document.getElementById('menuUserName');
+            if (menuUserName) menuUserName.innerText = fullNameUpper;
+            
+            const menuUserEmail = document.getElementById('menuUserEmail');
+            if (menuUserEmail) menuUserEmail.innerText = userEmail;
+
+            const badgeEl = document.getElementById('headerKycBadge');
+            if (badgeEl) {
+                badgeEl.className = 'nav-kyc-badge';
+                if (kycStatus === 'not_submitted' || kycStatus === 'unverified') {
+                    badgeEl.classList.add('unverified');
+                    badgeEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Unverified`;
+                } else if (kycStatus === 'pending' || kycStatus === 'under_review') {
+                    badgeEl.classList.add('pending');
+                    badgeEl.innerHTML = `<i class="fa-solid fa-clock"></i> Under Review`;
+                } else if (kycStatus === 'verified' || kycStatus === 'approved' || kycStatus === 'true') {
+                    badgeEl.classList.add('approved');
+                    badgeEl.innerHTML = `<i class="fa-solid fa-circle-check"></i> Verified`;
+                } else if (kycStatus === 'rejected') {
+                    badgeEl.classList.add('rejected');
+                    badgeEl.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> Rejected`;
+                } else {
+                    badgeEl.classList.add('unverified');
+                    badgeEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Unverified`;
+                }
+            }
+        }
+
+        async function syncWithServer() {
+            try {
+                const token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem("jwt");
+                if (!token) return;
+                
+                const res = await fetch(`${API_BASE}/api/user/profile`, { 
+                    headers: { 'Authorization': `Bearer ${token}` } 
+                });
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success && data.user) {
+                        const userObj = data.user;
+                        if (userObj.email) localStorage.setItem('userEmail', userObj.email);
+                        if (userObj.fullName || userObj.name) localStorage.setItem('userName', userObj.fullName || userObj.name);
+                        if (userObj.kycStatus) localStorage.setItem('kycStatus', userObj.kycStatus);
+                        if (userObj.bscAddress) localStorage.setItem('user_bsc_address', userObj.bscAddress);
+                        
+                        // ዳታቤዝ ላይ ያለውን ትክክለኛ ባላንስ ይወስዳል
+                        if (userObj.balance !== undefined) {
+                            actualBalance = Number(userObj.balance).toFixed(2);
+                            localStorage.setItem("user_balance_val", actualBalance); 
+                            
+                            const balanceValEl = document.getElementById('user-balance');
+                            if (balanceValEl && !isBalanceHidden) {
+                                balanceValEl.innerText = actualBalance;
+                            }
+                        }
+                        updateDashboardUI();
+                    }
+                } else {
+                    localStorage.clear();
+                    window.location.href = 'signin.html';
+                }
+            } catch (e) {
+                console.error('Background sync failed:', e);
+            }
+        }
+
+        async function checkDepositSilently() {
+            try {
+                const bscAddress = localStorage.getItem('user_bsc_address');
+                if (!bscAddress || bscAddress.startsWith("Error")) return;
+
+                const depositRes = await fetch(`${API_BASE}/api/check-deposits/${bscAddress}`, {
+                    method: 'GET'
+                });
+                const depositData = await depositRes.json();
+
+                if (depositData.success) {
+                    let finalBal = 0;
+                    if (depositData.balance !== undefined) {
+                        finalBal = parseFloat(depositData.balance);
+                    } else if (depositData.transactions && depositData.transactions.length > 0) {
+                        finalBal = parseFloat(depositData.transactions[0].value);
+                    }
+
+                    // አዲስ ትልቅ ባላንስ ከሰርቨር ከመጣ ብቻ Overwrite ያደርጋል (ዜሮ አያደርገውም)
+                    if (finalBal >= parseFloat(actualBalance) && finalBal > 0) {
+                        actualBalance = finalBal.toFixed(2);
+                        localStorage.setItem("user_balance_val", actualBalance);
+                        
+                        if (!isBalanceHidden) {
+                            const balanceEl = document.getElementById('user-balance');
+                            if (balanceEl) balanceEl.innerText = actualBalance;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Auto check failed silently:', error);
+            }
+        }
+
+        async function loadLiveMarketRates() {
+            try {
+                const res = await fetch(`${API_BASE}/api/market/rates`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success) {
+                        if (data.liveRate) document.getElementById('liveRateValue').innerText = Number(data.liveRate).toFixed(2);
+                        if (data.bestBuy) document.getElementById('bestBuyValue').innerText = Number(data.bestBuy).toFixed(2) + ' ETB';
+                        if (data.bestSell) document.getElementById('bestSellValue').innerText = Number(data.bestSell).toFixed(2) + ' ETB';
+                    }
+                }
+            } catch (e) {
+                console.error('Error fetching live rates:', e);
+            }
+        }
     </script>
 </body>
 </html>
