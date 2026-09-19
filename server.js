@@ -763,9 +763,9 @@ app.post('/api/withdraw/request', verifyToken, async (req, res) => {
         const { amount, destinationAddress, useEmailFallback, passkeyVerified } = req.body;
         const withdrawAmount = parseFloat(amount);
 
-        if (!withdrawAmount || withdrawAmount < 3) {
-            return res.status(400).json({ success: false, message: 'Minimum withdrawal amount is 3 USDT.' });
-        }
+        if (!withdrawAmount || withdrawAmount < 2) {
+    return res.status(400).json({ success: false, message: 'Minimum withdrawal amount is 2 USDT.' });
+}
 
         if (!destinationAddress) {
             return res.status(400).json({ success: false, message: 'Destination address is required.' });
