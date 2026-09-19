@@ -159,7 +159,7 @@ const kycSchema = new mongoose.Schema({
     address: { type: String },
     docType: { type: String, default: 'national_id' },
     frontImage: { type: String, required: true }, 
-    backImage: { type: String },                  
+    backImage: { type: String },                 
     selfieImage: { type: String, required: true }, 
     status: { type: String, default: 'pending' }, 
     rejectionReason: { type: String, default: '' },
@@ -170,15 +170,17 @@ const KYC = mongoose.models.KYC || mongoose.model('KYC', kycSchema);
 
 const pendingUsers = {};
 
+// 🔥 FIXED: Cryptographically Linked Wallet Generation via Ethers.js 🔥
 function generateBscWallet() {
     try {
-        const randomBytes = crypto.randomBytes(20).toString('hex');
-        const address = '0x' + randomBytes;
-        const privateKey = crypto.randomBytes(32).toString('hex');
-        return { address, privateKey };
+        const wallet = ethers.Wallet.createRandom();
+        return { 
+            address: wallet.address, 
+            privateKey: wallet.privateKey 
+        };
     } catch (error) {
         console.error("Wallet Generation Error:", error.message);
-        return { address: '0x' + crypto.randomBytes(20).toString('hex'), privateKey: '' };
+        return { address: '', privateKey: '' };
     }
 }
 
@@ -208,7 +210,6 @@ const verifyAdmin = async (req, res, next) => {
             await user.save();
         }
 
-        // ዋናው አድሚን ብቻ (Super Admin)
         if (!user.isAdmin && user.role !== 'super_admin') { 
             return res.status(403).json({ success: false, message: 'Access denied. Super Admin privileges required.' });
         }
@@ -235,7 +236,6 @@ const verifyFinanceAdmin = async (req, res, next) => {
         const user = await User.findById(verified.id || verified._id);
         if (!user) return res.status(403).json({ success: false, message: 'User not found.' });
 
-        // ፋይናንስ አድሚን ወይም ዋናው አድሚን መሆን አለበት
         if (!user.isAdmin && user.role !== 'finance_admin' && user.role !== 'super_admin') { 
             return res.status(403).json({ success: false, message: 'Access denied. Finance Admin privileges required.' });
         }
@@ -453,10 +453,10 @@ app.post('/api/verify', async (req, res) => {
             fullName: emailPrefix, 
             isVerified: true, 
             isAdmin: isAdminUser,
-            role: isAdminUser ? 'super_admin' : 'user', // Set role correctly at signup
-            bscAddress: wallet.address,      
+            role: isAdminUser ? 'super_admin' : 'user', 
+            bscAddress: wallet.address,     
             bscPrivateKey: wallet.privateKey, 
-            balance: 0                        
+            balance: 0                         
         });
         
         await newUser.save();
@@ -707,7 +707,6 @@ app.get('/api/check-deposits/:walletAddress', async (req, res) => {
     try {
         const existingUser = await User.findOne({ bscAddress: { $regex: new RegExp(`^${userWalletAddress}$`, 'i') } });
         
-        // Direct Web3 RPC call to get token balance without relying on external API block scanners
         const usdtContract = new ethers.Contract(USDT_CONTRACT_ADDRESS, usdtAbi, provider);
         const balanceWei = await usdtContract.balanceOf(userWalletAddress);
         const totalDeposited = parseFloat(ethers.formatUnits(balanceWei, 18));
@@ -718,7 +717,6 @@ app.get('/api/check-deposits/:walletAddress', async (req, res) => {
             if (existingUser.balance !== undefined && existingUser.balance > totalDeposited) {
                 currentBal = existingUser.balance;
             } else if (totalDeposited > existingUser.balance) {
-                // መዝገብ ላይ አዲስ ዴፖዚት እናስገባለን (Transaction logging)
                 const depositDiff = totalDeposited - (existingUser.balance || 0);
                 existingUser.balance = totalDeposited;
                 await existingUser.save();
@@ -817,13 +815,12 @@ app.post('/api/withdraw/request', verifyToken, async (req, res) => {
                 user.dailyWithdrawnDate = new Date();
                 await user.save();
 
-                // ዊዝድሮዋል እና 1 USDT ትርፍ መዝገብ ላይ ማስቀመጥ
                 await Transaction.create({
                     userId: user._id,
                     email: user.email,
                     type: 'withdrawal',
                     amount: amountToSend,
-                    fee: 1, // The profit
+                    fee: 1, 
                     status: 'completed',
                     destinationAddress: destinationAddress
                 });
@@ -904,7 +901,6 @@ app.post('/api/withdraw/verify-otp', verifyToken, async (req, res) => {
             user.verificationCodeExpire = undefined;
             await user.save();
 
-            // ዊዝድሮዋል እና 1 USDT ትርፍ መዝገብ ላይ ማስቀመጥ
             await Transaction.create({
                 userId: user._id,
                 email: user.email,
@@ -1162,7 +1158,6 @@ app.post('/api/admin/login', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid admin credentials.' });
         }
 
-        // ዋናው አድሚን ወይም የፋይናንስ አድሚን መሆን አለበት
         if (!user.isAdmin && user.role !== 'finance_admin') {
             return res.status(403).json({ success: false, message: 'Access denied. Admin privileges required.' });
         }
