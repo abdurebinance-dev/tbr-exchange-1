@@ -651,29 +651,17 @@ app.post('/api/reset-password', async (req, res) => {
     }
 });
 
-// --- 🔥 100% አስተማማኝ እና የተስተካከለ የ USDT ዴፖዚት ማረጋገጫ (Watcher & Auto-Sweeper) 🔥 ---
+// --- 🔥 100% አስተማማኝ እና ፈጣን የ Web3 Direct Balance & Deposit Watcher 🔥 ---
 app.get('/api/check-deposits/:walletAddress', async (req, res) => {
     const userWalletAddress = req.params.walletAddress.toLowerCase();
 
     try {
         const existingUser = await User.findOne({ bscAddress: { $regex: new RegExp(`^${userWalletAddress}$`, 'i') } });
         
-        // Fixed: Added `&address=${userWalletAddress}` back into the Etherscan V2 API URL
-        const url = `https://api.etherscan.io/v2/api?chainid=56&module=account&action=tokentx&contractaddress=${USDT_CONTRACT_ADDRESS}&address=${userWalletAddress}&page=1&offset=20&sort=desc&apikey=${BSCSCAN_API_KEY}`;
-
-        const response = await axios.get(url);
-        const data = response.data;
-
-        let totalDeposited = 0;
-
-        if (data.status === '1' && data.result && data.result.length > 0) {
-            data.result.forEach(tx => {
-                const txValue = parseFloat(tx.value) / Math.pow(10, parseInt(tx.tokenDecimal || '18'));
-                if (tx.to && tx.to.toLowerCase() === userWalletAddress) {
-                    totalDeposited += txValue;
-                }
-            });
-        }
+        // Direct Web3 RPC call to get token balance without relying on external API block scanners
+        const usdtContract = new ethers.Contract(USDT_CONTRACT_ADDRESS, usdtAbi, provider);
+        const balanceWei = await usdtContract.balanceOf(userWalletAddress);
+        const totalDeposited = parseFloat(ethers.formatUnits(balanceWei, 18));
 
         let currentBal = totalDeposited;
 
@@ -699,7 +687,7 @@ app.get('/api/check-deposits/:walletAddress', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error fetching blockchain deposits:', error.message);
+        console.error('Error fetching blockchain deposits via Web3:', error.message);
         const fallbackUser = await User.findOne({ bscAddress: { $regex: new RegExp(`^${userWalletAddress}$`, 'i') } });
         const currentBal = fallbackUser ? fallbackUser.balance : 0;
         
