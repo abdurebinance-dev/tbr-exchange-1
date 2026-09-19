@@ -5,38 +5,148 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Finance Dashboard - TBR Exchange</title>
     <style>
-        body { background-color: #0c0c0c; color: #ffffff; font-family: Arial, sans-serif; padding: 20px; margin: 0; }
+        /* Modern Crypto Exchange Theme */
+        :root {
+            --bg-main: #0b0e11;
+            --bg-card: #181a20;
+            --text-primary: #eaecef;
+            --text-secondary: #848e9c;
+            --accent-color: #fcd535; /* Binance Yellow */
+            --accent-hover: #f0c808;
+            --danger-color: #f6465d;
+            --danger-hover: #ff5e73;
+            --border-color: #2b3139;
+        }
+
+        body { 
+            background-color: var(--bg-main); 
+            color: var(--text-primary); 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            padding: 20px 40px; 
+            margin: 0; 
+            font-size: 14px;
+        }
+        
         .container { max-width: 1200px; margin: auto; }
-        .card { background-color: #141414; border: 1px solid #262626; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
-        h1, h2 { color: #d4af37; margin-top: 0; }
-        .stats-grid { display: flex; gap: 20px; flex-wrap: wrap; }
-        .stat-box { background-color: #262626; padding: 20px; border-radius: 8px; flex: 1; text-align: center; min-width: 200px; }
-        .stat-value { font-size: 28px; color: #f3c653; font-weight: bold; margin-top: 10px; display: block; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { border: 1px solid #262626; padding: 12px; text-align: left; }
-        th { background-color: #1a1a1a; color: #d4af37; }
-        button { background-color: #d4af37; color: #000; border: none; padding: 10px 15px; cursor: pointer; font-weight: bold; border-radius: 4px; }
-        button:hover { background-color: #f3c653; }
-        .btn-logout { background-color: #f6465d; color: white; float: right; margin-top: -45px; }
-        .btn-logout:hover { background-color: #ff5e73; }
-        input { padding: 10px; background: #262626; border: 1px solid #444; color: white; border-radius: 4px; width: 300px; }
+        
+        /* Header Section */
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        h1 { font-size: 22px; margin: 0; color: var(--text-primary); font-weight: 600; }
+        h2 { font-size: 14px; margin: 0 0 15px 0; color: var(--text-secondary); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        /* Cards */
+        .card { 
+            background-color: var(--bg-card); 
+            border: 1px solid var(--border-color); 
+            border-radius: 8px; 
+            padding: 24px; 
+            margin-bottom: 24px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        /* Stats Grid */
+        .stats-grid { display: flex; gap: 16px; flex-wrap: wrap; }
+        .stat-box { 
+            background-color: var(--bg-main); 
+            padding: 16px 20px; 
+            border-radius: 6px; 
+            flex: 1; 
+            min-width: 200px; 
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .stat-label { color: var(--text-secondary); font-size: 12px; font-weight: 500; margin-bottom: 6px; }
+        .stat-value { font-size: 22px; color: var(--text-primary); font-weight: 600; }
+        .stat-value span { font-size: 14px; color: var(--text-secondary); font-weight: 400; margin-left: 4px; }
+
+        /* Table */
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { padding: 14px 16px; text-align: left; border-bottom: 1px solid var(--border-color); }
+        th { color: var(--text-secondary); font-weight: 500; text-transform: uppercase; font-size: 12px; border-bottom: 1px solid var(--border-color); }
+        tr:hover td { background-color: rgba(255,255,255,0.02); }
+        tr:last-child td { border-bottom: none; }
+        
+        .wallet-addr { color: var(--text-secondary); font-family: monospace; font-size: 13px; }
+        .balance-val { color: var(--accent-color); font-weight: 600; }
+
+        /* Buttons */
+        button { 
+            background-color: var(--accent-color); 
+            color: #000; 
+            border: none; 
+            padding: 8px 16px; 
+            cursor: pointer; 
+            font-weight: 600; 
+            border-radius: 4px; 
+            font-size: 13px;
+            transition: all 0.2s ease;
+        }
+        button:hover { background-color: var(--accent-hover); }
+        
+        .btn-logout { background-color: transparent; color: var(--danger-color); border: 1px solid var(--danger-color); }
+        .btn-logout:hover { background-color: var(--danger-color); color: white; }
+        
+        .btn-sweep { padding: 6px 14px; font-size: 12px; border-radius: 4px; }
+
+        /* Inputs */
+        .input-group { display: flex; gap: 10px; align-items: center; margin-top: 15px; }
+        input { 
+            padding: 10px 12px; 
+            background: var(--bg-main); 
+            border: 1px solid var(--border-color); 
+            color: var(--text-primary); 
+            border-radius: 4px; 
+            width: 280px; 
+            font-size: 13px;
+            outline: none;
+        }
+        input:focus { border-color: var(--accent-color); }
+        
+        .assign-desc { font-size: 13px; color: var(--text-secondary); margin: 0; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Finance Dashboard</h1>
-        <button class="btn-logout" onclick="logout()">Logout</button>
         
+        <!-- Header -->
+        <div class="header-container">
+            <h1>Finance Dashboard</h1>
+            <button class="btn-logout" onclick="logout()">Logout</button>
+        </div>
+        
+        <!-- Analytics Card -->
         <div class="card">
             <h2>System Analytics (ትርፍ እና እንቅስቃሴ)</h2>
             <div class="stats-grid">
-                <div class="stat-box">Total Volume<span class="stat-value" id="totalVolume">0.00</span></div>
-                <div class="stat-box">Today Volume<span class="stat-value" id="todayVolume">0.00</span></div>
-                <div class="stat-box">Total Profit (Fees)<span class="stat-value" id="totalProfit">0.00</span></div>
-                <div class="stat-box">Today Profit<span class="stat-value" id="todayProfit">0.00</span></div>
+                <div class="stat-box">
+                    <span class="stat-label">Total Volume</span>
+                    <span class="stat-value" id="totalVolume">0.00 <span>USDT</span></span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">Today Volume</span>
+                    <span class="stat-value" id="todayVolume">0.00 <span>USDT</span></span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">Total Profit (Fees)</span>
+                    <span class="stat-value" id="totalProfit" style="color: var(--accent-color);">0.00 <span>USDT</span></span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">Today Profit</span>
+                    <span class="stat-value" id="todayProfit" style="color: var(--accent-color);">0.00 <span>USDT</span></span>
+                </div>
             </div>
         </div>
 
+        <!-- Pending Sweeps Card -->
         <div class="card">
             <h2>Pending Sweeps (ያልተጠረጉ ዶላሮች)</h2>
             <table>
@@ -44,31 +154,33 @@
                     <tr>
                         <th>Email</th>
                         <th>Wallet Address</th>
-                        <th>Balance (USDT)</th>
+                        <th>Balance</th>
                         <th>Action</th>
                     </tr>
                 </thead>
                 <tbody id="pendingTable">
-                    <tr><td colspan="4">Loading data...</td></tr>
+                    <tr><td colspan="4" style="text-align: center; color: var(--text-secondary);">Loading data...</td></tr>
                 </tbody>
             </table>
         </div>
 
+        <!-- Assign Role Card (Super Admin Only) -->
         <div class="card" id="assignRoleSection" style="display: none;">
-            <h2>Assign Finance Admin (ለዋናው አድሚን ብቻ የሚታይ)</h2>
-            <p>የፋይናንስ አድሚን ማድረግ የምትፈልገውን ሰው ኢሜል አስገባ፦</p>
-            <input type="email" id="newAdminEmail" placeholder="user@example.com">
-            <button onclick="assignRole()">Make Finance Admin</button>
-            <p id="roleMsg" style="margin-top: 10px; color: #d4af37;"></p>
+            <h2>Finance Admin Management</h2>
+            <p class="assign-desc">የፋይናንስ ዳሽቦርድ መቆጣጠር የሚችል አዲስ አድሚን (Finance Admin) ለመሾም የሰውን ኢሜል ያስገቡ፦</p>
+            <div class="input-group">
+                <input type="email" id="newAdminEmail" placeholder="user@tbrexchange.com">
+                <button onclick="assignRole()">Assign Role</button>
+            </div>
+            <p id="roleMsg" style="margin-top: 10px; color: var(--accent-color); font-size: 13px;"></p>
         </div>
+
     </div>
 
     <script>
-        // ቶከን ማረጋገጫ (አድሚኑ ሎግ-ኢን ማድረጉን ቼክ ያደርጋል)
         const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
         if (!token) {
-            alert("Please log in as an Admin first.");
-            window.location.href = "/"; // ወደ ሎግ-ኢን ፔጅ ይመልሰዋል
+            window.location.href = "/";
         }
 
         async function fetchStats() {
@@ -79,39 +191,34 @@
                 const data = await res.json();
                 
                 if (data.success) {
-                    // ዳታውን ማሳየት
-                    document.getElementById('totalVolume').innerText = data.stats.totalVolume + ' USDT';
-                    document.getElementById('todayVolume').innerText = data.stats.todayVolume + ' USDT';
-                    document.getElementById('totalProfit').innerText = data.stats.totalProfit + ' USDT';
-                    document.getElementById('todayProfit').innerText = data.stats.todayProfit + ' USDT';
+                    document.getElementById('totalVolume').innerHTML = `${data.stats.totalVolume} <span>USDT</span>`;
+                    document.getElementById('todayVolume').innerHTML = `${data.stats.todayVolume} <span>USDT</span>`;
+                    document.getElementById('totalProfit').innerHTML = `${data.stats.totalProfit} <span>USDT</span>`;
+                    document.getElementById('todayProfit').innerHTML = `${data.stats.todayProfit} <span>USDT</span>`;
 
-                    // ያመለጡ ዶላሮችን በሠንጠረዥ ማሳየት
                     const tbody = document.getElementById('pendingTable');
                     tbody.innerHTML = '';
                     if (data.pendingSweeps.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="4">No pending sweeps at the moment.</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-secondary);">No pending sweeps at the moment.</td></tr>';
                     } else {
                         data.pendingSweeps.forEach(user => {
                             tbody.innerHTML += `
                                 <tr>
                                     <td>${user.email}</td>
-                                    <td>${user.bscAddress}</td>
-                                    <td style="color: #f3c653; font-weight: bold;">${user.balance}</td>
-                                    <td><button onclick="manualSweep('${user._id}')">Sweep to Master</button></td>
+                                    <td class="wallet-addr">${user.bscAddress}</td>
+                                    <td class="balance-val">${user.balance} USDT</td>
+                                    <td><button class="btn-sweep" onclick="manualSweep('${user._id}')">Sweep to Master</button></td>
                                 </tr>
                             `;
                         });
                     }
                     
-                    // ዋናው አድሚን (Super Admin) ከሆነ ብቻ ዩዘርን አድሚን ማድረጊያውን ያሳያል
                     try {
                         const payload = JSON.parse(atob(token.split('.')[1]));
                         if (payload.role === 'super_admin') {
                             document.getElementById('assignRoleSection').style.display = 'block';
                         }
                     } catch(e) {}
-                } else {
-                    alert("Error: " + data.message);
                 }
             } catch (error) {
                 console.error("Fetch Error:", error);
@@ -128,7 +235,7 @@
                 });
                 const data = await res.json();
                 alert(data.message);
-                if(data.success) fetchStats(); // ከተጠረገ በኋላ ፔጁን ሪፍሬሽ ያደርገዋል
+                if(data.success) fetchStats(); 
             } catch (error) {
                 alert('Sweep request failed.');
             }
@@ -156,7 +263,6 @@
             window.location.href = "/";
         }
 
-        // ፔጁ ሲከፈት ዳታውን ያመጣል
         fetchStats();
     </script>
 </body>
