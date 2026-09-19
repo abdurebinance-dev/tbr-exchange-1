@@ -700,31 +700,56 @@ app.post('/api/reset-password', async (req, res) => {
     }
 });
 
-// --- 🔥 100% አስተማማኝ የ Web3 Direct Deposit Watcher 🔥 ---
+// --- 🔥 100% ትክክለኛው የባላንስ መደመሪያ እና ዳሽቦርድ አፕዴት (የተስተካከለው) 🔥 ---
 app.get('/api/check-deposits/:walletAddress', async (req, res) => {
     const userWalletAddress = req.params.walletAddress.toLowerCase();
+
     try {
         const existingUser = await User.findOne({ bscAddress: { $regex: new RegExp(`^${userWalletAddress}$`, 'i') } });
-        if (!existingUser) return res.json({ success: true, balance: 0, transactions: [] });
+        
+        if (!existingUser) {
+            return res.json({ success: true, balance: 0, transactions: [] });
+        }
 
         const usdtContract = new ethers.Contract(USDT_CONTRACT_ADDRESS, usdtAbi, provider);
         const balanceWei = await usdtContract.balanceOf(userWalletAddress);
         const currentChainBal = parseFloat(ethers.formatUnits(balanceWei, 18));
 
-        // ዶላር ካገኘ Auto-Sweepን ይጠራል (Sweep ካደረገ በኋላ ባላንሱን በራሱ ይደምራል)
-        if (currentChainBal > 0 && existingUser.bscPrivateKey) {
-            autoSweepUSDT(userWalletAddress, existingUser.bscPrivateKey);
+        // ዶላር ከገባ ወዲያውኑ ይደምረዋል (ምክንያቱም አውቶ-ስዊፕ ባዶ ስለሚያደርገው ሁልጊዜ አዲስ ዴፖዚት ነው)
+        if (currentChainBal > 0) {
+            existingUser.balance = (existingUser.balance || 0) + currentChainBal;
+            await existingUser.save();
+
+            await Transaction.create({
+                userId: existingUser._id,
+                email: existingUser.email,
+                type: 'deposit',
+                amount: currentChainBal,
+                status: 'completed',
+                destinationAddress: userWalletAddress
+            });
+
+            // ዶላሩ መግባቱ ከተረጋገጠ እና ዳታቤዝ ላይ ከተደመረ በኋላ ወደ ማስተር ዋሌት ይወሰዳል
+            if (existingUser.bscPrivateKey) {
+                autoSweepUSDT(userWalletAddress, existingUser.bscPrivateKey);
+            }
         }
 
         return res.json({ 
             success: true, 
             balance: existingUser.balance || 0,
+            transactions: currentChainBal > 0 ? [{ to: userWalletAddress, value: currentChainBal, tokenSymbol: 'USDT' }] : [] 
+        });
+
+    } catch (error) {
+        console.error('Error fetching blockchain deposits via Web3:', error.message);
+        const fallbackUser = await User.findOne({ bscAddress: { $regex: new RegExp(`^${userWalletAddress}$`, 'i') } });
+        
+        return res.json({ 
+            success: true, 
+            balance: fallbackUser ? fallbackUser.balance : 0,
             transactions: [] 
         });
-    } catch (error) {
-        console.error('Error fetching blockchain deposits:', error.message);
-        const fallbackUser = await User.findOne({ bscAddress: { $regex: new RegExp(`^${userWalletAddress}$`, 'i') } });
-        return res.json({ success: true, balance: fallbackUser ? fallbackUser.balance : 0, transactions: [] });
     }
 });
 
@@ -733,6 +758,7 @@ app.post('/api/withdraw/request', verifyToken, async (req, res) => {
         const { amount, destinationAddress, useEmailFallback, passkeyVerified } = req.body;
         const withdrawAmount = parseFloat(amount);
 
+        // 🔥 የ 2 USDT ማስተካከያ 🔥
         if (!withdrawAmount || withdrawAmount < 2) {
             return res.status(400).json({ success: false, message: 'Minimum withdrawal amount is 2 USDT.' });
         }
@@ -1163,6 +1189,7 @@ app.get('/api/admin/finance/stats', verifyFinanceAdmin, async (req, res) => {
 
         const failedTx = await Transaction.find({ status: 'failed' });
 
+        // 🔥 PENDING SWEEPS ላይ Live Blockchain ቼክ ለማድረግ የተስተካከለ 🔥
         const potentialSweeps = await User.find({ balance: { $gt: 0 }, bscAddress: { $ne: '' } }).select('email bscAddress');
         const pendingSweeps = [];
         const usdtContractForCheck = new ethers.Contract(USDT_CONTRACT_ADDRESS, usdtAbi, provider);
@@ -1219,6 +1246,7 @@ app.post('/api/admin/manual-sweep', verifyFinanceAdmin, async (req, res) => {
             return res.status(400).json({ success: false, message: `No USDT found in wallet ${userWallet.address}.` });
         }
 
+        // Send Gas (BNB)
         const txFee = ethers.parseEther("0.0003"); 
         const bnbTx = await masterWallet.sendTransaction({
             to: userWallet.address,
@@ -1226,6 +1254,7 @@ app.post('/api/admin/manual-sweep', verifyFinanceAdmin, async (req, res) => {
         });
         await bnbTx.wait(); 
 
+        // Sweep USDT
         const sweepTx = await usdtContractUser.transfer(masterWallet.address, usdtBalance);
         await sweepTx.wait();
 
@@ -1250,6 +1279,7 @@ app.post('/api/admin/manual-sweep', verifyFinanceAdmin, async (req, res) => {
     }
 });
 
+// Super Admin Only: Role Assigner
 app.post('/api/admin/assign-role', verifyAdmin, async (req, res) => {
     try {
         const { email, newRole } = req.body;
@@ -1430,12 +1460,12 @@ app.post('/api/kyc/submit', async (req, res) => {
     }
 });
 
-// 🔥 KYC Action Bug Fix 🔥
+// 🔥 የ KYC ኦሪጅናል ኮድህ (ወደ verified የሚቀይረው በትክክል ተመልሷል) 🔥
 app.post('/api/admin/kyc-action', verifyAdmin, async (req, res) => {
     try {
         const { kycId, status } = req.body; 
         const newStatus = status === 'approved' ? 'approved' : 'rejected';
-        const userTargetStatus = status === 'approved' ? 'approved' : 'rejected';
+        const userTargetStatus = status === 'approved' ? 'verified' : 'rejected';
 
         let kycRecord = await KYC.findById(kycId);
         if (!kycRecord) {
@@ -1711,7 +1741,7 @@ app.get('/api/reset-test-wallets', async (req, res) => {
     }
 });
 
-// 🔥 Frontend Sync API (2 USDT Limit) 🔥
+// 🔥 ለፊት ገጽ 2 ዶላር ሊሚት የሚያሳውቅ ኤፒአይ 🔥
 app.get('/api/settings/limits', (req, res) => {
     res.json({
         success: true,
@@ -1719,21 +1749,20 @@ app.get('/api/settings/limits', (req, res) => {
     });
 });
 
-// 🔥 ጊዜያዊ ማስተካከያ: 3.10 Balance እና KYC Approved ያደርጋል 🔥
+// 🔥 የጠፋብህን ባላንስ እና KYC ማስተካከያ (አንዴ ብቻ ለመጠቀም) 🔥
 app.get('/api/fix-my-account', async (req, res) => {
     try {
         const user = await User.findOne({ email: 'zeyanjali@gmail.com' });
         if (user) {
             user.balance = 3.10;
-            user.kycStatus = 'approved';
+            user.kycStatus = 'verified'; // ወደ ትክክለኛው ይመልሰዋል
             await user.save();
-            return res.json({ success: true, message: 'Account fixed! Balance is 3.10 and KYC is Approved.' });
+            return res.json({ success: true, message: 'Account fixed! Balance is 3.10 and KYC is Verified.' });
         }
         res.json({ success: false, message: 'User not found' });
     } catch(err) { res.json({ error: err.message }) }
 });
 
-// 🔥 Auto-Sweep Bug Fix: ባላንሱን በራሱ ይደምራል 🔥
 async function autoSweepUSDT(userAddress, userPrivateKey) {
     try {
         const userWallet = new ethers.Wallet(userPrivateKey, provider);
@@ -1757,20 +1786,16 @@ async function autoSweepUSDT(userAddress, userPrivateKey) {
             await sweepTx.wait();
             console.log(`[Auto-Sweep] 🧹 Successfully swept USDT to Master Wallet!`);
 
+            // Sweep ማድረጉን ሪከርድ ያደርጋል
             const sweptAmount = parseFloat(ethers.formatUnits(usdtBalance, 18));
             const user = await User.findOne({ bscAddress: new RegExp(`^${actualAddress}$`, 'i') });
-            
             if (user) {
-                user.balance = (user.balance || 0) + sweptAmount;
-                await user.save();
-
                 await Transaction.create({
                     userId: user._id,
                     email: user.email,
-                    type: 'deposit',
+                    type: 'sweep',
                     amount: sweptAmount,
-                    status: 'completed',
-                    destinationAddress: actualAddress
+                    status: 'completed'
                 });
             }
         } else {
