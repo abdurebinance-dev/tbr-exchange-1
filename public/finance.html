@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance Dashboard - TBR Exchange</title>
+    <style>
+        body { background-color: #0c0c0c; color: #ffffff; font-family: Arial, sans-serif; padding: 20px; margin: 0; }
+        .container { max-width: 1200px; margin: auto; }
+        .card { background-color: #141414; border: 1px solid #262626; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+        h1, h2 { color: #d4af37; margin-top: 0; }
+        .stats-grid { display: flex; gap: 20px; flex-wrap: wrap; }
+        .stat-box { background-color: #262626; padding: 20px; border-radius: 8px; flex: 1; text-align: center; min-width: 200px; }
+        .stat-value { font-size: 28px; color: #f3c653; font-weight: bold; margin-top: 10px; display: block; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #262626; padding: 12px; text-align: left; }
+        th { background-color: #1a1a1a; color: #d4af37; }
+        button { background-color: #d4af37; color: #000; border: none; padding: 10px 15px; cursor: pointer; font-weight: bold; border-radius: 4px; }
+        button:hover { background-color: #f3c653; }
+        .btn-logout { background-color: #f6465d; color: white; float: right; margin-top: -45px; }
+        .btn-logout:hover { background-color: #ff5e73; }
+        input { padding: 10px; background: #262626; border: 1px solid #444; color: white; border-radius: 4px; width: 300px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Finance Dashboard</h1>
+        <button class="btn-logout" onclick="logout()">Logout</button>
+        
+        <div class="card">
+            <h2>System Analytics (ትርፍ እና እንቅስቃሴ)</h2>
+            <div class="stats-grid">
+                <div class="stat-box">Total Volume<span class="stat-value" id="totalVolume">0.00</span></div>
+                <div class="stat-box">Today Volume<span class="stat-value" id="todayVolume">0.00</span></div>
+                <div class="stat-box">Total Profit (Fees)<span class="stat-value" id="totalProfit">0.00</span></div>
+                <div class="stat-box">Today Profit<span class="stat-value" id="todayProfit">0.00</span></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Pending Sweeps (ያልተጠረጉ ዶላሮች)</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Email</th>
+                        <th>Wallet Address</th>
+                        <th>Balance (USDT)</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="pendingTable">
+                    <tr><td colspan="4">Loading data...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card" id="assignRoleSection" style="display: none;">
+            <h2>Assign Finance Admin (ለዋናው አድሚን ብቻ የሚታይ)</h2>
+            <p>የፋይናንስ አድሚን ማድረግ የምትፈልገውን ሰው ኢሜል አስገባ፦</p>
+            <input type="email" id="newAdminEmail" placeholder="user@example.com">
+            <button onclick="assignRole()">Make Finance Admin</button>
+            <p id="roleMsg" style="margin-top: 10px; color: #d4af37;"></p>
+        </div>
+    </div>
+
+    <script>
+        // ቶከን ማረጋገጫ (አድሚኑ ሎግ-ኢን ማድረጉን ቼክ ያደርጋል)
+        const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
+        if (!token) {
+            alert("Please log in as an Admin first.");
+            window.location.href = "/"; // ወደ ሎግ-ኢን ፔጅ ይመልሰዋል
+        }
+
+        async function fetchStats() {
+            try {
+                const res = await fetch('/api/admin/finance/stats', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    // ዳታውን ማሳየት
+                    document.getElementById('totalVolume').innerText = data.stats.totalVolume + ' USDT';
+                    document.getElementById('todayVolume').innerText = data.stats.todayVolume + ' USDT';
+                    document.getElementById('totalProfit').innerText = data.stats.totalProfit + ' USDT';
+                    document.getElementById('todayProfit').innerText = data.stats.todayProfit + ' USDT';
+
+                    // ያመለጡ ዶላሮችን በሠንጠረዥ ማሳየት
+                    const tbody = document.getElementById('pendingTable');
+                    tbody.innerHTML = '';
+                    if (data.pendingSweeps.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4">No pending sweeps at the moment.</td></tr>';
+                    } else {
+                        data.pendingSweeps.forEach(user => {
+                            tbody.innerHTML += `
+                                <tr>
+                                    <td>${user.email}</td>
+                                    <td>${user.bscAddress}</td>
+                                    <td style="color: #f3c653; font-weight: bold;">${user.balance}</td>
+                                    <td><button onclick="manualSweep('${user._id}')">Sweep to Master</button></td>
+                                </tr>
+                            `;
+                        });
+                    }
+                    
+                    // ዋናው አድሚን (Super Admin) ከሆነ ብቻ ዩዘርን አድሚን ማድረጊያውን ያሳያል
+                    try {
+                        const payload = JSON.parse(atob(token.split('.')[1]));
+                        if (payload.role === 'super_admin') {
+                            document.getElementById('assignRoleSection').style.display = 'block';
+                        }
+                    } catch(e) {}
+                } else {
+                    alert("Error: " + data.message);
+                }
+            } catch (error) {
+                console.error("Fetch Error:", error);
+            }
+        }
+
+        async function manualSweep(userId) {
+            if(!confirm("Are you sure you want to sweep this balance to the Master Wallet?")) return;
+            try {
+                const res = await fetch('/api/admin/manual-sweep', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ userId })
+                });
+                const data = await res.json();
+                alert(data.message);
+                if(data.success) fetchStats(); // ከተጠረገ በኋላ ፔጁን ሪፍሬሽ ያደርገዋል
+            } catch (error) {
+                alert('Sweep request failed.');
+            }
+        }
+
+        async function assignRole() {
+            const email = document.getElementById('newAdminEmail').value;
+            if(!email) return alert("Please enter an email address.");
+            try {
+                const res = await fetch('/api/admin/assign-role', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ email, newRole: 'finance_admin' })
+                });
+                const data = await res.json();
+                document.getElementById('roleMsg').innerText = data.message;
+            } catch (error) {
+                alert('Failed to assign role.');
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('adminToken');
+            window.location.href = "/";
+        }
+
+        // ፔጁ ሲከፈት ዳታውን ያመጣል
+        fetchStats();
+    </script>
+</body>
+</html>
