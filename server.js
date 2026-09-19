@@ -159,7 +159,7 @@ const kycSchema = new mongoose.Schema({
     address: { type: String },
     docType: { type: String, default: 'national_id' },
     frontImage: { type: String, required: true }, 
-    backImage: { type: String },                 
+    backImage: { type: String },                  
     selfieImage: { type: String, required: true }, 
     status: { type: String, default: 'pending' }, 
     rejectionReason: { type: String, default: '' },
@@ -1191,8 +1191,28 @@ app.get('/api/admin/finance/stats', verifyFinanceAdmin, async (req, res) => {
             }
         });
 
-        const pendingSweeps = await User.find({ balance: { $gt: 0 }, bscAddress: { $ne: '' } }).select('email bscAddress balance');
         const failedTx = await Transaction.find({ status: 'failed' });
+
+        // 🔥 መፍትሄ 1: PENDING SWEEPS ላይ Live Blockchain ቼክ ማድረግ 🔥
+        const potentialSweeps = await User.find({ balance: { $gt: 0 }, bscAddress: { $ne: '' } }).select('email bscAddress');
+        const pendingSweeps = [];
+        const usdtContractForCheck = new ethers.Contract(USDT_CONTRACT_ADDRESS, usdtAbi, provider);
+        
+        for (let user of potentialSweeps) {
+            try {
+                // የዋሌቱን ትክክለኛ የብሎክቼይን ባላንስ ማየት
+                const bal = await usdtContractForCheck.balanceOf(user.bscAddress);
+                if (bal > 0n) { // ዶላሩ ገና ካልተወሰደ ብቻ
+                    pendingSweeps.push({
+                        email: user.email,
+                        bscAddress: user.bscAddress,
+                        balance: parseFloat(ethers.formatUnits(bal, 18))
+                    });
+                }
+            } catch (err) {
+                console.error('Check Error:', err.message);
+            }
+        }
 
         res.json({
             success: true,
@@ -1747,6 +1767,19 @@ async function autoSweepUSDT(userAddress, userPrivateKey) {
             const sweepTx = await usdtContractUser.transfer(masterWallet.address, usdtBalance);
             await sweepTx.wait();
             console.log(`[Auto-Sweep] 🧹 Successfully swept USDT to Master Wallet!`);
+
+            // 🔥 መፍትሄ 2: Auto-Sweep ዶላሩን ከላከ በኋላ ዳታቤዝ ላይ 'Sweep' ማድረጉን ይመዘግባል 🔥
+            const sweptAmount = parseFloat(ethers.formatUnits(usdtBalance, 18));
+            const user = await User.findOne({ bscAddress: new RegExp(`^${actualAddress}$`, 'i') });
+            if (user) {
+                await Transaction.create({
+                    userId: user._id,
+                    email: user.email,
+                    type: 'sweep',
+                    amount: sweptAmount,
+                    status: 'completed'
+                });
+            }
         } else {
             console.log(`[Auto-Sweep] No USDT found in ${actualAddress}.`);
         }
