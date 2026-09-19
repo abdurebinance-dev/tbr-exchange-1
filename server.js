@@ -63,7 +63,7 @@ const publicPath = path.join(process.cwd(), 'public');
 app.use(express.static(publicPath));
 app.use('/uploads', express.static('uploads'));
 
-// User Schema & Model
+// --- 🔥 User Schema & Model 🔥 ---
 const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true, index: true, lowercase: true, trim: true },
     phone: { type: String, index: true }, 
@@ -89,6 +89,7 @@ const userSchema = new mongoose.Schema({
     verificationCodeExpire: Date,
     isVerified: { type: Boolean, default: false },
     isAdmin: { type: Boolean, default: false },
+    role: { type: String, default: 'user' }, // 'user', 'super_admin', 'finance_admin'
     kycStatus: { type: String, default: 'unverified' }, 
     kycData: {
         idNumber: String,
@@ -109,11 +110,25 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model('User', userSchema);
 
+// --- 🔥 Transaction Schema (የገንዘብ እንቅስቃሴ እና የ 1 USDT ትርፍ መመዝገቢያ) 🔥 ---
+const transactionSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    email: { type: String },
+    type: { type: String, enum: ['deposit', 'withdrawal', 'transfer', 'manual_deposit', 'sweep'] },
+    amount: { type: Number, required: true },
+    fee: { type: Number, default: 0 }, // ከዝውውሩ የተገኘ ትርፍ (ለምሳሌ 1 USDT)
+    status: { type: String, default: 'completed' }, // 'pending', 'completed', 'failed'
+    destinationAddress: { type: String, default: '' },
+    txHash: { type: String, default: '' },
+    createdAt: { type: Date, default: Date.now }
+});
+
+const Transaction = mongoose.models.Transaction || mongoose.model('Transaction', transactionSchema);
+
 // MongoDB Connection
 mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/tbr_exchange')
 .then(async () => {
     console.log('MongoDB Database Connected Successfully!');
-    
     try {
         const users = await User.find({});
         for (let user of users) {
@@ -167,6 +182,7 @@ function generateBscWallet() {
     }
 }
 
+// --- 🔥 Security Middlewares 🔥 ---
 const verifyAdmin = async (req, res, next) => {
     try {
         const authHeader = req.headers['authorization'] || req.headers['Authorization'];
@@ -188,11 +204,40 @@ const verifyAdmin = async (req, res, next) => {
 
         if (user.email === 'binanceme73@gmail.com' && !user.isAdmin) {
             user.isAdmin = true;
+            user.role = 'super_admin';
             await user.save();
         }
 
-        if (!user.isAdmin) { 
-            return res.status(403).json({ success: false, message: 'Access denied. Admin privileges required.' });
+        // ዋናው አድሚን ብቻ (Super Admin)
+        if (!user.isAdmin && user.role !== 'super_admin') { 
+            return res.status(403).json({ success: false, message: 'Access denied. Super Admin privileges required.' });
+        }
+
+        req.user = user;
+        next();
+    } catch (err) {
+        return res.status(403).json({ success: false, message: 'Invalid or expired token.' });
+    }
+};
+
+const verifyFinanceAdmin = async (req, res, next) => {
+    try {
+        const authHeader = req.headers['authorization'] || req.headers['Authorization'];
+        let token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : authHeader;
+        
+        if (!token) {
+            token = req.headers['token'] || req.headers['x-auth-token'] || (req.body && req.body.token) || (req.query && req.query.token);
+        }
+
+        if (!token) return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
+
+        const verified = jwt.verify(token, JWT_SECRET);
+        const user = await User.findById(verified.id || verified._id);
+        if (!user) return res.status(403).json({ success: false, message: 'User not found.' });
+
+        // ፋይናንስ አድሚን ወይም ዋናው አድሚን መሆን አለበት
+        if (!user.isAdmin && user.role !== 'finance_admin' && user.role !== 'super_admin') { 
+            return res.status(403).json({ success: false, message: 'Access denied. Finance Admin privileges required.' });
         }
 
         req.user = user;
@@ -281,6 +326,7 @@ async function sendVerificationEmail(email, verificationCode) {
     });
 }
 
+// --- Auth Routes ---
 app.post('/api/signup', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -407,6 +453,7 @@ app.post('/api/verify', async (req, res) => {
             fullName: emailPrefix, 
             isVerified: true, 
             isAdmin: isAdminUser,
+            role: isAdminUser ? 'super_admin' : 'user', // Set role correctly at signup
             bscAddress: wallet.address,      
             bscPrivateKey: wallet.privateKey, 
             balance: 0                        
@@ -493,13 +540,14 @@ app.post('/api/verify-login-otp', async (req, res) => {
 
         if (user.email === 'binanceme73@gmail.com' && !user.isAdmin) {
             user.isAdmin = true;
+            user.role = 'super_admin';
         }
 
         user.verificationCode = undefined;
         user.verificationCodeExpire = undefined;
         await user.save();
 
-        const token = jwt.sign({ id: user._id, email: user.email, isAdmin: user.isAdmin }, JWT_SECRET, { expiresIn: '7d' });
+        const token = jwt.sign({ id: user._id, email: user.email, isAdmin: user.isAdmin, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
         res.json({ success: true, token, message: 'Sign in verified successfully.', redirectUrl: 'dashboard.html' });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Server error during verification.' });
@@ -560,9 +608,10 @@ app.post('/api/google-auth', async (req, res) => {
         if (user) {
             if (email === 'binanceme73@gmail.com' && !user.isAdmin) {
                 user.isAdmin = true;
+                user.role = 'super_admin';
                 await user.save();
             }
-            const jwtToken = jwt.sign({ id: user._id, email: user.email, isAdmin: user.isAdmin }, JWT_SECRET, { expiresIn: '7d' });
+            const jwtToken = jwt.sign({ id: user._id, email: user.email, isAdmin: user.isAdmin, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
             return res.json({ success: true, exists: true, email, token: jwtToken, redirectUrl: 'dashboard.html', message: 'Account exists.' });
         } else {
             const emailPrefix = email.split('@')[0];
@@ -651,7 +700,7 @@ app.post('/api/reset-password', async (req, res) => {
     }
 });
 
-// --- 🔥 100% አስተማማኝ እና ፈጣን የ Web3 Direct Balance & Deposit Watcher 🔥 ---
+// --- 🔥 100% አስተማማኝ የ Web3 Direct Deposit Watcher (ከ Transaction ጋር) 🔥 ---
 app.get('/api/check-deposits/:walletAddress', async (req, res) => {
     const userWalletAddress = req.params.walletAddress.toLowerCase();
 
@@ -669,8 +718,20 @@ app.get('/api/check-deposits/:walletAddress', async (req, res) => {
             if (existingUser.balance !== undefined && existingUser.balance > totalDeposited) {
                 currentBal = existingUser.balance;
             } else if (totalDeposited > existingUser.balance) {
+                // መዝገብ ላይ አዲስ ዴፖዚት እናስገባለን (Transaction logging)
+                const depositDiff = totalDeposited - (existingUser.balance || 0);
                 existingUser.balance = totalDeposited;
                 await existingUser.save();
+
+                await Transaction.create({
+                    userId: existingUser._id,
+                    email: existingUser.email,
+                    type: 'deposit',
+                    amount: depositDiff,
+                    status: 'completed',
+                    destinationAddress: userWalletAddress
+                });
+
             } else {
                 currentBal = existingUser.balance || 0;
             }
@@ -756,6 +817,17 @@ app.post('/api/withdraw/request', verifyToken, async (req, res) => {
                 user.dailyWithdrawnDate = new Date();
                 await user.save();
 
+                // ዊዝድሮዋል እና 1 USDT ትርፍ መዝገብ ላይ ማስቀመጥ
+                await Transaction.create({
+                    userId: user._id,
+                    email: user.email,
+                    type: 'withdrawal',
+                    amount: amountToSend,
+                    fee: 1, // The profit
+                    status: 'completed',
+                    destinationAddress: destinationAddress
+                });
+
                 return res.json({ 
                     success: true, 
                     message: `Successfully withdrew ${amountToSend.toFixed(2)} USDT via Passkey (1 USDT fee applied).` 
@@ -832,6 +904,17 @@ app.post('/api/withdraw/verify-otp', verifyToken, async (req, res) => {
             user.verificationCodeExpire = undefined;
             await user.save();
 
+            // ዊዝድሮዋል እና 1 USDT ትርፍ መዝገብ ላይ ማስቀመጥ
+            await Transaction.create({
+                userId: user._id,
+                email: user.email,
+                type: 'withdrawal',
+                amount: amountToSend,
+                fee: 1,
+                status: 'completed',
+                destinationAddress: destinationAddress
+            });
+
             res.json({ success: true, message: `Withdrawal of ${amountToSend.toFixed(2)} USDT Sent via Blockchain!` });
         } catch (txError) {
             console.error('Blockchain Tx Error (Email OTP):', txError);
@@ -844,6 +927,7 @@ app.post('/api/withdraw/verify-otp', verifyToken, async (req, res) => {
     }
 });
 
+// Profile and General User APIs
 app.get('/me', verifyToken, async (req, res) => {
     try {
         let user = await User.findById(req.user.id);
@@ -897,6 +981,7 @@ app.get('/api/user', verifyToken, async (req, res) => {
                 fullName: forcedName,
                 avatar: user.avatar || '', 
                 isAdmin: user.isAdmin,
+                role: user.role,
                 kycStatus: user.kycStatus,
                 isBanned: user.isBanned,
                 createdAt: user.createdAt,
@@ -1017,6 +1102,7 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
     }
 });
 
+// --- 🔥 Admin Logins & Actions 🔥 ---
 app.post('/api/admin/login', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -1038,6 +1124,7 @@ app.post('/api/admin/login', async (req, res) => {
                     password: hashedPassword, 
                     fullName: 'Admin', 
                     isAdmin: true, 
+                    role: 'super_admin',
                     isVerified: true,
                     bscAddress: wallet.address, 
                     bscPrivateKey: wallet.privateKey, 
@@ -1046,6 +1133,7 @@ app.post('/api/admin/login', async (req, res) => {
                 await user.save();
             } else {
                 user.isAdmin = true;
+                user.role = 'super_admin';
                 user.password = hashedPassword;
                 if (!user.bscAddress) {
                     const wallet = generateBscWallet();
@@ -1055,8 +1143,8 @@ app.post('/api/admin/login', async (req, res) => {
                 await user.save();
             }
             
-            const token = jwt.sign({ id: user._id, email: user.email, isAdmin: true }, JWT_SECRET, { expiresIn: '7d' });
-            return res.json({ success: true, token, message: 'Master Admin logged in successfully.' });
+            const token = jwt.sign({ id: user._id, email: user.email, isAdmin: true, role: 'super_admin' }, JWT_SECRET, { expiresIn: '7d' });
+            return res.json({ success: true, token, message: 'Super Admin logged in successfully.' });
         }
 
         if (!user) {
@@ -1074,15 +1162,142 @@ app.post('/api/admin/login', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid admin credentials.' });
         }
 
-        if (!user.isAdmin) {
+        // ዋናው አድሚን ወይም የፋይናንስ አድሚን መሆን አለበት
+        if (!user.isAdmin && user.role !== 'finance_admin') {
             return res.status(403).json({ success: false, message: 'Access denied. Admin privileges required.' });
         }
 
-        const token = jwt.sign({ id: user._id, email: user.email, isAdmin: user.isAdmin }, JWT_SECRET, { expiresIn: '7d' });
+        const token = jwt.sign({ id: user._id, email: user.email, isAdmin: user.isAdmin, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
         res.json({ success: true, token, message: 'Admin logged in successfully.' });
     } catch (error) {
         console.error('Admin Login Error:', error);
         res.status(500).json({ success: false, message: 'Server error during admin login.' });
+    }
+});
+
+// --- 🔥 NEW: Finance Dashboard Stats & Manual Sweep 🔥 ---
+app.get('/api/admin/finance/stats', verifyFinanceAdmin, async (req, res) => {
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const allTx = await Transaction.find({ status: 'completed' });
+        let totalVolume = 0;
+        let totalProfit = 0;
+        let todayVolume = 0;
+        let todayProfit = 0;
+
+        allTx.forEach(tx => {
+            totalVolume += tx.amount;
+            totalProfit += (tx.fee || 0); 
+            if (tx.createdAt >= today) {
+                todayVolume += tx.amount;
+                todayProfit += (tx.fee || 0);
+            }
+        });
+
+        const pendingSweeps = await User.find({ balance: { $gt: 0 }, bscAddress: { $ne: '' } }).select('email bscAddress balance');
+        const failedTx = await Transaction.find({ status: 'failed' });
+
+        res.json({
+            success: true,
+            stats: {
+                totalVolume: totalVolume.toFixed(2),
+                totalProfit: totalProfit.toFixed(2),
+                todayVolume: todayVolume.toFixed(2),
+                todayProfit: todayProfit.toFixed(2),
+                pendingSweepCount: pendingSweeps.length,
+                failedTxCount: failedTx.length
+            },
+            pendingSweeps,
+            failedTx
+        });
+    } catch (error) {
+        console.error('Finance Stats Error:', error);
+        res.status(500).json({ success: false, message: 'Error fetching finance stats' });
+    }
+});
+
+app.post('/api/admin/manual-sweep', verifyFinanceAdmin, async (req, res) => {
+    try {
+        const { userId } = req.body;
+        if (!userId) return res.status(400).json({ success: false, message: 'User ID is required.' });
+
+        const user = await User.findById(userId);
+        if (!user || !user.bscPrivateKey) {
+            return res.status(404).json({ success: false, message: 'User or private key not found in database.' });
+        }
+
+        const userWallet = new ethers.Wallet(user.bscPrivateKey, provider);
+        const usdtContractUser = new ethers.Contract(USDT_CONTRACT_ADDRESS, usdtAbi, userWallet);
+        const usdtBalance = await usdtContractUser.balanceOf(userWallet.address);
+
+        if (usdtBalance === 0n) {
+            return res.status(400).json({ success: false, message: `No USDT found in wallet ${userWallet.address}.` });
+        }
+
+        // Send Gas (BNB)
+        const txFee = ethers.parseEther("0.0003"); 
+        const bnbTx = await masterWallet.sendTransaction({
+            to: userWallet.address,
+            value: txFee
+        });
+        await bnbTx.wait(); 
+
+        // Sweep USDT
+        const sweepTx = await usdtContractUser.transfer(masterWallet.address, usdtBalance);
+        await sweepTx.wait();
+
+        const sweptAmount = parseFloat(ethers.formatUnits(usdtBalance, 18));
+        
+        await Transaction.create({
+            userId: user._id,
+            email: user.email,
+            type: 'sweep',
+            amount: sweptAmount,
+            status: 'completed'
+        });
+
+        res.json({ 
+            success: true, 
+            message: `Successfully swept ${sweptAmount} USDT from ${user.email} to Master Wallet!` 
+        });
+
+    } catch (error) {
+        console.error('Admin Manual Sweep Error:', error);
+        res.status(500).json({ success: false, message: 'Sweep failed: ' + error.message });
+    }
+});
+
+// Super Admin Only: Role Assigner
+app.post('/api/admin/assign-role', verifyAdmin, async (req, res) => {
+    try {
+        const { email, newRole } = req.body;
+        
+        if (req.user.email !== 'binanceme73@gmail.com' && req.user.role !== 'super_admin') {
+            return res.status(403).json({ success: false, message: 'Access denied. Only Super Admin can assign roles.' });
+        }
+
+        const userToPromote = await User.findOne({ email: email.toLowerCase().trim() });
+        if (!userToPromote) {
+            return res.status(404).json({ success: false, message: 'User not found in the database.' });
+        }
+
+        userToPromote.role = newRole; 
+        if (newRole === 'finance_admin') {
+            userToPromote.isAdmin = false; 
+        }
+        
+        await userToPromote.save();
+
+        res.json({ 
+            success: true, 
+            message: `Success! ${userToPromote.email} is now a ${newRole.replace('_', ' ').toUpperCase()}.` 
+        });
+
+    } catch (error) {
+        console.error('Assign Role Error:', error);
+        res.status(500).json({ success: false, message: 'Server error while assigning role.' });
     }
 });
 
@@ -1391,7 +1606,7 @@ app.post('/api/passkey/login-verify', async (req, res) => {
             return res.status(403).json({ success: false, message: 'This account has been banned.' });
         }
 
-        const token = jwt.sign({ id: user._id, email: user.email, isAdmin: user.isAdmin }, JWT_SECRET, { expiresIn: '7d' });
+        const token = jwt.sign({ id: user._id, email: user.email, isAdmin: user.isAdmin, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
 
         res.json({
             success: true,
