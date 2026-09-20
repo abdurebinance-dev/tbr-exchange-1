@@ -542,7 +542,7 @@
             </div>
         </div>
 
-        <!-- Network Card (Please choose network first ይላል) -->
+        <!-- Network Card -->
         <div id="network-container">
             <div class="network-card" onclick="openNetworkModal()">
                 <div class="network-info">
@@ -557,8 +557,6 @@
 
         <!-- 1. DEPOSIT SECTION -->
         <div id="deposit-section" class="tab-section" style="display: none;">
-            
-            <!-- ኔትወርክ ሲመረጥ ብቻ ይህ ብቅ ይላል -->
             <div class="deposit-address-container" id="deposit-address-box" style="display: none;">
                 <div class="form-group">
                     <label>Deposit Address (BSC)</label>
@@ -578,8 +576,6 @@
 
         <!-- 2. WITHDRAW SECTION -->
         <div id="withdraw-section" class="tab-section" style="display: none;">
-
-            <!-- ኔትወርክ ሲመረጥ ብቻ ፎርሙ ብቅ ይላል -->
             <div id="withdraw-form-box" style="display: none;">
                 <div class="form-group">
                     <label>Withdrawal Address</label>
@@ -615,7 +611,7 @@
             </div>
         </div>
 
-        <!-- 3. TRANSFER SECTION (ይህ ኔትወርክ አይጠይቅም) -->
+        <!-- 3. TRANSFER SECTION -->
         <div id="transfer-section" class="tab-section" style="display: none;">
             <div class="form-group">
                 <label>Recipient Email or TBR User ID</label>
@@ -632,7 +628,7 @@
         <div class="activity-section">
             <div class="section-header">
                 <span>Recent Activity</span>
-                <span style="font-size: 12px; color: var(--accent-color); cursor: pointer;" onclick="showToast('Loading full history...')">View all &gt;</span>
+                <span style="font-size: 12px; color: var(--accent-color); cursor: pointer;" onclick="fetchTransactions()">View all &gt;</span>
             </div>
             <div id="activity-list">
                 <div class="empty-activity">
@@ -718,12 +714,11 @@
         let userRawBalance = localStorage.getItem("user_balance_val") || "0.00";
         let userBscAddress = localStorage.getItem("user_bsc_address") || ""; 
         let pendingWithdrawAmount = 0;
-        let isNetworkSelected = false; // ኔትወርክ መመረጡን የሚያውቀው እዚህ ላይ ነው
+        let isNetworkSelected = false;
 
         document.addEventListener("DOMContentLoaded", () => {
             updateBalanceDisplay();
             
-            // አድራሻ ጀነሬት አድርጎ ያስቀምጣል (ግን ኔትወርክ እስኪመረጥ አይታይም)
             if (userBscAddress) {
                 document.getElementById('dep-address').value = userBscAddress;
                 generateQRCode(userBscAddress);
@@ -746,7 +741,6 @@
             loadUserData();
         });
 
-        // ኔትወርክ ሲመረጥ ፎርሞቹን ብቅ የሚያደርገው ፋንክሽን
         function selectNetwork(shortName, longName, elementId) {
             closeNetworkModal();
             const netText = document.getElementById('selectedNetworkText');
@@ -754,7 +748,6 @@
             
             isNetworkSelected = true;
 
-            // ኔትወርክ ስትመርጥ አድራሻው/ፎርሙ ይከፈታል!
             document.getElementById('deposit-address-box').style.display = 'block';
             document.getElementById('withdraw-form-box').style.display = 'block';
 
@@ -793,11 +786,68 @@
 
         async function loadUserData() {
             await fetchUserProfile();
+            fetchTransactions(); // <--- ትራንዛክሽኖቹን የሚያመጣው አዲሱ መስመር
             if (userBscAddress) {
                 checkDepositSilently();
                 setInterval(checkDepositSilently, 15000);
             }
         }
+
+        // --- አዲሱ የትራንዛክሽን ማምጫ ኮድ ከዚህ ይጀምራል ---
+        async function fetchTransactions() {
+            const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+            if (!token) return;
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/transactions`, { 
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+
+                if (data.success && data.transactions && data.transactions.length > 0) {
+                    renderTransactions(data.transactions);
+                }
+            } catch (err) {
+                console.error("Error fetching transactions:", err);
+            }
+        }
+
+        function renderTransactions(transactions) {
+            const listContainer = document.getElementById('activity-list');
+            listContainer.innerHTML = ''; // "No transactions yet" የሚለውን ያጠፋዋል
+
+            transactions.forEach(tx => {
+                const isDeposit = tx.type === 'Deposit' || tx.type === 'Trade Credit' || tx.amount > 0;
+                const color = isDeposit ? 'var(--green-color)' : 'var(--red-color)';
+                const sign = isDeposit ? '+' : '-';
+                const icon = isDeposit ? 'fa-arrow-down' : 'fa-arrow-up';
+                const iconColor = isDeposit ? '#0ecb81' : '#f6465d';
+
+                const dateObj = new Date(tx.createdAt || tx.date || new Date());
+                const timeStr = dateObj.toLocaleDateString() + ' - ' + dateObj.toLocaleTimeString();
+                
+                const txHtml = `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--border-color);">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div style="background: #1a1a1a; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
+                            <i class="fa-solid ${icon}" style="color: ${iconColor}; font-size: 16px;"></i>
+                        </div>
+                        <div>
+                            <div style="color: #fff; font-weight: 600; font-size: 14px; margin-bottom: 4px;">${tx.type || (isDeposit ? 'Deposit' : 'Withdrawal')}</div>
+                            <div style="color: var(--text-muted); font-size: 12px;">${timeStr}</div>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="color: ${color}; font-weight: 700; font-size: 15px; margin-bottom: 4px;">${sign}${parseFloat(tx.amount || tx.value || 0).toFixed(2)} USDT</div>
+                        <div style="color: var(--text-muted); font-size: 13px;"><i class="fa-solid fa-download" style="cursor:pointer;"></i></div>
+                    </div>
+                </div>
+                `;
+                listContainer.insertAdjacentHTML('beforeend', txHtml);
+            });
+        }
+        // --- የአዲሱ ኮድ መጨረሻ ---
 
         async function fetchUserProfile() {
             try {
@@ -878,7 +928,7 @@
         }
 
         function validateWithdrawForm() {
-            if (!isNetworkSelected) return; // ኔትወርክ ካልተመረጠ አያግድም
+            if (!isNetworkSelected) return; 
 
             const amountInput = document.getElementById('withdraw-amount');
             const addressInput = document.getElementById('withdraw-address');
@@ -971,6 +1021,7 @@
                         document.getElementById('withdraw-amount').value = "";
                         document.getElementById('withdraw-address').value = "";
                         validateWithdrawForm();
+                        fetchTransactions(); // ሲወጣ አዲሱን ትራንዛክሽን ወዲያው እንዲጨምር
                     }
                 } else {
                     showToast(data.message || "Withdrawal failed.");
@@ -1009,6 +1060,7 @@
                     document.getElementById('withdraw-amount').value = "";
                     document.getElementById('withdraw-address').value = "";
                     validateWithdrawForm();
+                    fetchTransactions(); // ሲወጣ አዲሱን ትራንዛክሽን ወዲያው እንዲጨምር
                 } else {
                     showToast(data.message || "Verification failed.");
                 }
