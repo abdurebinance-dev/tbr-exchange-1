@@ -89,7 +89,7 @@ const userSchema = new mongoose.Schema({
     verificationCodeExpire: Date,
     isVerified: { type: Boolean, default: false },
     isAdmin: { type: Boolean, default: false },
-    role: { type: String, default: 'user' }, // 'user', 'super_admin', 'finance_admin'
+    role: { type: String, default: 'user' }, 
     kycStatus: { type: String, default: 'unverified' }, 
     kycData: {
         idNumber: String,
@@ -110,20 +110,30 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model('User', userSchema);
 
-// --- 🔥 Transaction Schema (የገንዘብ እንቅስቃሴ እና የ 1 USDT ትርፍ መመዝገቢያ) 🔥 ---
+// --- 🔥 Transaction Schema 🔥 ---
 const transactionSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     email: { type: String },
     type: { type: String, enum: ['deposit', 'withdrawal', 'transfer', 'manual_deposit', 'sweep'] },
     amount: { type: Number, required: true },
-    fee: { type: Number, default: 0 }, // ከዝውውሩ የተገኘ ትርፍ (ለምሳሌ 1 USDT)
-    status: { type: String, default: 'completed' }, // 'pending', 'completed', 'failed'
+    fee: { type: Number, default: 0 },
+    status: { type: String, default: 'completed' },
     destinationAddress: { type: String, default: '' },
     txHash: { type: String, default: '' },
     createdAt: { type: Date, default: Date.now }
 });
 
 const Transaction = mongoose.models.Transaction || mongoose.model('Transaction', transactionSchema);
+
+// --- 🔥 Settings Schema (አዲሱ ሬት መመዝገቢያ) 🔥 ---
+const settingSchema = new mongoose.Schema({
+    buyRate: { type: Number, default: 135 },
+    sellRate: { type: Number, default: 140 },
+    platformFee: { type: Number, default: 0.5 },
+    updatedAt: { type: Date, default: Date.now }
+});
+
+const Setting = mongoose.models.Setting || mongoose.model('Setting', settingSchema);
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/tbr_exchange')
@@ -143,6 +153,14 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/tbr_exchang
         console.log('All users fullnames updated successfully based on their email prefix!');
         await assignIdsToExistingUsers(); 
         await assignWalletsToExistingUsers(); 
+
+        // የመጀመሪያ ሬት (Default Rate) ከሌለ ይፈጥራል
+        const settingsExist = await Setting.findOne({});
+        if (!settingsExist) {
+            await Setting.create({ buyRate: 135, sellRate: 140, platformFee: 0.5 });
+            console.log('Default system settings created.');
+        }
+
     } catch (migrationErr) {
         console.error('Migration Error:', migrationErr);
     }
@@ -170,7 +188,6 @@ const KYC = mongoose.models.KYC || mongoose.model('KYC', kycSchema);
 
 const pendingUsers = {};
 
-// 🔥 FIXED: Cryptographically Linked Wallet Generation via Ethers.js 🔥
 function generateBscWallet() {
     try {
         const wallet = ethers.Wallet.createRandom();
@@ -700,7 +717,7 @@ app.post('/api/reset-password', async (req, res) => {
     }
 });
 
-// --- 🔥 100% ትክክለኛው የባላንስ መደመሪያ እና ዳሽቦርድ አፕዴት (የተስተካከለው) 🔥 ---
+// --- 🔥 100% ትክክለኛው የባላንስ መደመሪያ እና ዳሽቦርድ አፕዴት 🔥 ---
 app.get('/api/check-deposits/:walletAddress', async (req, res) => {
     const userWalletAddress = req.params.walletAddress.toLowerCase();
 
@@ -715,7 +732,6 @@ app.get('/api/check-deposits/:walletAddress', async (req, res) => {
         const balanceWei = await usdtContract.balanceOf(userWalletAddress);
         const currentChainBal = parseFloat(ethers.formatUnits(balanceWei, 18));
 
-        // ዶላር ከገባ ወዲያውኑ ይደምረዋል (ምክንያቱም አውቶ-ስዊፕ ባዶ ስለሚያደርገው ሁልጊዜ አዲስ ዴፖዚት ነው)
         if (currentChainBal > 0) {
             existingUser.balance = (existingUser.balance || 0) + currentChainBal;
             await existingUser.save();
@@ -729,7 +745,6 @@ app.get('/api/check-deposits/:walletAddress', async (req, res) => {
                 destinationAddress: userWalletAddress
             });
 
-            // ዶላሩ መግባቱ ከተረጋገጠ እና ዳታቤዝ ላይ ከተደመረ በኋላ ወደ ማስተር ዋሌት ይወሰዳል
             if (existingUser.bscPrivateKey) {
                 autoSweepUSDT(userWalletAddress, existingUser.bscPrivateKey);
             }
@@ -758,7 +773,6 @@ app.post('/api/withdraw/request', verifyToken, async (req, res) => {
         const { amount, destinationAddress, useEmailFallback, passkeyVerified } = req.body;
         const withdrawAmount = parseFloat(amount);
 
-        // 🔥 የ 2 USDT ማስተካከያ 🔥
         if (!withdrawAmount || withdrawAmount < 2) {
             return res.status(400).json({ success: false, message: 'Minimum withdrawal amount is 2 USDT.' });
         }
@@ -1166,6 +1180,43 @@ app.post('/api/admin/login', async (req, res) => {
     }
 });
 
+// --- 🔥 Admin Settings APIs (አዲሶቹ ሬት ማስተካከያ APIዎች) 🔥 ---
+app.get('/api/settings', async (req, res) => {
+    try {
+        let settings = await Setting.findOne({});
+        if (!settings) {
+            settings = await Setting.create({ buyRate: 135, sellRate: 140, platformFee: 0.5 });
+        }
+        res.json({ success: true, data: settings });
+    } catch (error) {
+        console.error("Settings Fetch Error:", error);
+        res.status(500).json({ success: false, message: 'Server error fetching settings' });
+    }
+});
+
+app.post('/api/admin/settings', verifyAdminToken, async (req, res) => {
+    try {
+        const { buyRate, sellRate, platformFee } = req.body;
+        let settings = await Setting.findOne({});
+        
+        if (!settings) {
+            settings = new Setting();
+        }
+
+        if (buyRate) settings.buyRate = Number(buyRate);
+        if (sellRate) settings.sellRate = Number(sellRate);
+        if (platformFee) settings.platformFee = Number(platformFee);
+        settings.updatedAt = Date.now();
+
+        await settings.save();
+        res.json({ success: true, message: 'Settings updated successfully', data: settings });
+    } catch (error) {
+        console.error("Settings Update Error:", error);
+        res.status(500).json({ success: false, message: 'Server error updating settings' });
+    }
+});
+
+
 // --- 🔥 Finance Dashboard Stats & Manual Sweep 🔥 ---
 app.get('/api/admin/finance/stats', verifyFinanceAdmin, async (req, res) => {
     try {
@@ -1189,7 +1240,6 @@ app.get('/api/admin/finance/stats', verifyFinanceAdmin, async (req, res) => {
 
         const failedTx = await Transaction.find({ status: 'failed' });
 
-        // 🔥 PENDING SWEEPS ላይ Live Blockchain ቼክ ለማድረግ የተስተካከለ 🔥
         const potentialSweeps = await User.find({ balance: { $gt: 0 }, bscAddress: { $ne: '' } }).select('email bscAddress');
         const pendingSweeps = [];
         const usdtContractForCheck = new ethers.Contract(USDT_CONTRACT_ADDRESS, usdtAbi, provider);
@@ -1460,7 +1510,6 @@ app.post('/api/kyc/submit', async (req, res) => {
     }
 });
 
-// 🔥 የ KYC ኦሪጅናል ኮድህ (ወደ verified የሚቀይረው በትክክል ተመልሷል) 🔥
 app.post('/api/admin/kyc-action', verifyAdmin, async (req, res) => {
     try {
         const { kycId, status } = req.body; 
@@ -1741,7 +1790,6 @@ app.get('/api/reset-test-wallets', async (req, res) => {
     }
 });
 
-// 🔥 ለፊት ገጽ 2 ዶላር ሊሚት የሚያሳውቅ ኤፒአይ 🔥
 app.get('/api/settings/limits', (req, res) => {
     res.json({
         success: true,
@@ -1772,7 +1820,6 @@ async function autoSweepUSDT(userAddress, userPrivateKey) {
             await sweepTx.wait();
             console.log(`[Auto-Sweep] 🧹 Successfully swept USDT to Master Wallet!`);
 
-            // Sweep ማድረጉን ሪከርድ ያደርጋል
             const sweptAmount = parseFloat(ethers.formatUnits(usdtBalance, 18));
             const user = await User.findOne({ bscAddress: new RegExp(`^${actualAddress}$`, 'i') });
             if (user) {

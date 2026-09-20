@@ -227,6 +227,7 @@
                 
                 // ቀላል ዳታዎችን መጀመሪያ እናምጣ
                 fetchStats();
+                loadCurrentRates(); // <--- አዲሱ የተጨመረው ኮድ
                 fetchEscrowDisputes();
                 fetchUsersList();
                 
@@ -253,6 +254,7 @@
                     document.getElementById('mainDashboard').style.display = 'block';
                     
                     fetchStats();
+                    loadCurrentRates(); // <--- አዲሱ የተጨመረው ኮድ
                     fetchEscrowDisputes();
                     fetchUsersList();
                     loadKycData('pending');
@@ -289,7 +291,6 @@
             } catch (err) { console.error('Error loading stats:', err); }
         }
 
-        // ✅ ይሄ ነው የ KYC ሎዲንግን የሚያፈጥነው ማስተካከያ (Optimization)
         async function loadKycData(targetStatus = 'pending') {
             document.querySelectorAll('#tab-kyc button.btn').forEach(b => {
                 if (b.id) b.style.opacity = '0.6';
@@ -300,11 +301,9 @@
             const tbody = document.getElementById('kycTableBody');
             if (!tbody) return;
 
-            // ጽሁፉን ግልጽ ለማድረግ
             tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#f3ba2f; padding: 25px;"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading ${targetStatus.toUpperCase()} KYC Data... (Fetching photos)</td></tr>`;
 
             try {
-                // ሰርቨሩ ሁሉንም ከመላክ ይልቅ የተጠየቀውን status ብቻ ገድቦ እንዲልክ አድርገነዋል
                 const res = await fetch(`${API_BASE}/api/admin/kyc-requests?status=${targetStatus}&limit=20`, { 
                     headers: { 'Authorization': 'Bearer ' + getToken() } 
                 });
@@ -561,6 +560,21 @@
                 }
             } catch (err) {
                 alert('Network error while saving settings.');
+            }
+        }
+
+        // --- አዲሱ የተጨመረው የ ሬት ማምጫ ፋንክሽን ---
+        async function loadCurrentRates() {
+            try {
+                const res = await fetch(`${API_BASE}/api/settings`);
+                const json = await res.json();
+                if (res.ok && json.success && json.data) {
+                    document.getElementById('buyRateInput').value = json.data.buyRate;
+                    document.getElementById('sellRateInput').value = json.data.sellRate;
+                    document.getElementById('feeInput').value = json.data.platformFee;
+                }
+            } catch (err) {
+                console.error('Error loading current rates:', err);
             }
         }
     </script>
