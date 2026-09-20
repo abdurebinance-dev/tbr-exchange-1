@@ -407,7 +407,7 @@
                     <div class="user-info">
                         <h3 id="profile-name"> <i class="fa-solid fa-pen edit-icon" onclick="openModal('name')"></i></h3>
                         <div class="id-container">
-                            <span>ID:</span> <span id="profile-id"></span> 
+                            <span>ID:</span> <span id="profile-id">Loading...</span> 
                             <i class="fa-solid fa-copy" style="cursor:pointer;" title="Copy ID" onclick="copyId()"></i>
                         </div>
                     </div>
@@ -539,13 +539,34 @@
 
         let currentField = "";
 
+        // 🛠️ Helpers for Passkey Base64URL Conversion
+        function base64urlToBuffer(base64url) {
+            const padding = '='.repeat((4 - base64url.length % 4) % 4);
+            const base64 = (base64url + padding).replace(/\-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const buffer = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) {
+                buffer[i] = rawData.charCodeAt(i);
+            }
+            return buffer;
+        }
+
+        function bufferToBase64url(buffer) {
+            const bytes = new Uint8Array(buffer);
+            let str = '';
+            for (let i = 0; i < bytes.byteLength; i++) {
+                str += String.fromCharCode(bytes[i]);
+            }
+            return window.btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+        }
+
         // 🔴 ሚሞሪ ውስጥ ካሉት ሁሉንም ID Keys ፈልጎ ያወጣል
         function getStoredId() {
             return localStorage.getItem('tbrId') || 
                    localStorage.getItem('tbrExchangeId') || 
                    localStorage.getItem('userId') || 
                    localStorage.getItem('userUniqueId') || 
-                   '';
+                   'Loading...';
         }
 
         document.addEventListener("DOMContentLoaded", async function() {
@@ -555,8 +576,8 @@
 
             try {
                 const token = localStorage.getItem("token") || 
-                            localStorage.getItem("authToken") || 
-                            localStorage.getItem("access_token");
+                              localStorage.getItem("authToken") || 
+                              localStorage.getItem("access_token");
                 
                 if (!token) return;
 
@@ -575,7 +596,7 @@
                     const username = userData.fullName || userData.username || userData.name || localStorage.getItem("userName") || "User";
                     const email = userData.email || localStorage.getItem("userEmail") || "";
                     
-                    // 🔴 ከሰርቨር ትክክለኛው አይዲ ሲመጣ ይተካል (ራንደም የለም)
+                    // 🔴 ከሰርቨር ትክክለኛው አይዲ ሲመጣ ይተካል
                     let newId = userData.tbrId || userData.userId || userData.customId || userData.id || userData._id || "";
                     if (userData.numericId && (!newId.startsWith('TBR-'))) {
                         newId = 'TBR-' + String(userData.numericId).padStart(6, '0');
@@ -669,10 +690,7 @@
         function loadFromLocalStorageFallback() {
             const username = localStorage.getItem("userName") || localStorage.getItem("fullName") || "User";
             const email = localStorage.getItem("userEmail") || "";
-            
-            // 🔴 የራንደም ኮዱ ጠፍቷል። ሚሞሪ ላይ ያለውን ብቻ ያወጣል
             let tbrId = getStoredId();
-            
             const phone = localStorage.getItem("userPhone") || "";
             const traderHandle = localStorage.getItem("traderUsername") || "";
             const kycStatus = localStorage.getItem("kycStatus") || "approved";
@@ -724,7 +742,7 @@
             }
         }
 
-        // 🔐 WebAuthn Passkey Registration
+        // 🔐 WebAuthn Passkey Registration (FIXED FOR BROWSER SUPPORT)
         async function registerPasskey() {
             try {
                 showToast("Requesting device biometric setup...");
@@ -745,11 +763,21 @@
                 }
 
                 const options = data.options;
-                options.challenge = Uint8Array.from(atob(options.challenge), c => c.charCodeAt(0));
-                options.user.id = Uint8Array.from(atob(options.user.id), c => c.charCodeAt(0));
+                
+                // 🔴 Safe Base64URL to ArrayBuffer decoding
+                options.challenge = base64urlToBuffer(options.challenge);
+                options.user.id = base64urlToBuffer(options.user.id);
+                
+                if (options.excludeCredentials) {
+                    options.excludeCredentials = options.excludeCredentials.map(cred => ({
+                        ...cred,
+                        id: base64urlToBuffer(cred.id)
+                    }));
+                }
 
                 const credential = await navigator.credentials.create({ publicKey: options });
 
+                // 🔴 Safe ArrayBuffer to Base64URL encoding
                 const verificationResponse = await fetch(`${API_BASE_URL}/api/passkey/register-verify`, {
                     method: 'POST',
                     headers: { 
@@ -758,10 +786,10 @@
                     },
                     body: JSON.stringify({
                         id: credential.id,
-                        rawId: btoa(String.fromCharCode(...new Uint8Array(credential.rawId))),
+                        rawId: bufferToBase64url(credential.rawId),
                         response: {
-                            clientDataJSON: btoa(String.fromCharCode(...new Uint8Array(credential.response.clientDataJSON))),
-                            attestationObject: btoa(String.fromCharCode(...new Uint8Array(credential.response.attestationObject)))
+                            clientDataJSON: bufferToBase64url(credential.response.clientDataJSON),
+                            attestationObject: bufferToBase64url(credential.response.attestationObject)
                         },
                         type: credential.type
                     })
@@ -959,7 +987,7 @@
 
         function copyId() {
             const profileId = document.getElementById("profile-id");
-            if (profileId) {
+            if (profileId && profileId.innerText !== 'Loading...') {
                 navigator.clipboard.writeText(profileId.innerText);
                 showToast("Account ID copied to clipboard!");
             }
