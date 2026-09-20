@@ -134,7 +134,7 @@
             width: 100%;
             border-collapse: collapse;
             text-align: left;
-            min-width: 1000px;
+            min-width: 1100px;
         }
         th {
             font-size: 11px;
@@ -156,6 +156,13 @@
         tr:last-child td {
             border-bottom: none;
         }
+
+        /* Column Widths & Spacing Adjustments */
+        th:nth-child(1), td:nth-child(1) { width: 300px; }
+        th:nth-child(2), td:nth-child(2) { width: 180px; padding-left: 40px; }
+        th:nth-child(3), td:nth-child(3) { width: 280px; }
+        th:nth-child(4), td:nth-child(4) { width: 260px; }
+        th:nth-child(5), td:nth-child(5) { width: 150px; text-align: right; }
 
         /* Columns Content */
         .advertiser-cell {
@@ -198,6 +205,7 @@
             font-size: 20px;
             font-weight: 700;
             color: var(--green);
+            padding-left: 40px;
         }
 
         .limit-cell .available {
@@ -211,9 +219,6 @@
             color: #848e9c;
         }
 
-        .payment-cell {
-            max-width: 280px;
-        }
         .payment-tags {
             display: flex;
             gap: 6px;
@@ -333,11 +338,11 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Advertiser</th>
-                        <th>Price</th>
+                        <th style="padding-left: 24px;">Advertiser</th>
+                        <th style="padding-left: 40px;">Price</th>
                         <th>Available / Limit</th>
                         <th>Payment</th>
-                        <th style="text-align: right;">Action</th>
+                        <th style="text-align: right; padding-right: 24px;">Action</th>
                     </tr>
                 </thead>
                 <tbody id="p2pOrdersBody">
@@ -459,7 +464,7 @@
                             ${t.pay.map(p => `<span class="pay-tag">${p}</span>`).join('')}
                         </div>
                     </td>
-                    <td style="text-align: right;">
+                    <td class="action-cell">
                         <button class="${btnClass}" onclick="openOrderModal('${actionLabel}', '${effectivePrice}')">${actionLabel}</button>
                     </td>
                 </tr>`;
