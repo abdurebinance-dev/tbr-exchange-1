@@ -1639,7 +1639,7 @@ app.post('/api/passkey/login-options', async (req, res) => {
             options: {
                 challenge: challenge,
                 timeout: 60000,
-                rpId: req.hostname || 'tbr-exchange-backend.onrender.com',
+                rpId: 'tbrexchange.com',
                 userVerification: "preferred"
             }
         });
@@ -1694,7 +1694,7 @@ app.post('/api/passkey/register-options', verifyToken, async (req, res) => {
             success: true,
             options: {
                 challenge: challenge,
-                rp: { name: "TBR Exchange", id: req.hostname || 'tbr-exchange-backend.onrender.com' },
+                rp: { name: "TBR Exchange", id: 'tbrexchange.com' },
                 user: {
                     id: Buffer.from(user._id.toString()).toString('base64'),
                     name: user.email,
