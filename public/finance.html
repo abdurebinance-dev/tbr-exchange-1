@@ -96,22 +96,6 @@
         .btn-logout:hover { background-color: var(--danger-color); color: white; }
         
         .btn-sweep { padding: 6px 14px; font-size: 12px; border-radius: 4px; }
-
-        /* Inputs */
-        .input-group { display: flex; gap: 10px; align-items: center; margin-top: 15px; }
-        input { 
-            padding: 10px 12px; 
-            background: var(--bg-main); 
-            border: 1px solid var(--border-color); 
-            color: var(--text-primary); 
-            border-radius: 4px; 
-            width: 280px; 
-            font-size: 13px;
-            outline: none;
-        }
-        input:focus { border-color: var(--accent-color); }
-        
-        .assign-desc { font-size: 13px; color: var(--text-secondary); margin: 0; }
     </style>
 </head>
 <body>
@@ -164,17 +148,6 @@
             </table>
         </div>
 
-        <!-- Assign Role Card (Super Admin Only) -->
-        <div class="card" id="assignRoleSection" style="display: none;">
-            <h2>Finance Admin Management</h2>
-            <p class="assign-desc">የፋይናንስ ዳሽቦርድ መቆጣጠር የሚችል አዲስ አድሚን (Finance Admin) ለመሾም የሰውን ኢሜል ያስገቡ፦</p>
-            <div class="input-group">
-                <input type="email" id="newAdminEmail" placeholder="user@tbrexchange.com">
-                <button onclick="assignRole()">Assign Role</button>
-            </div>
-            <p id="roleMsg" style="margin-top: 10px; color: var(--accent-color); font-size: 13px;"></p>
-        </div>
-
     </div>
 
     <script>
@@ -212,13 +185,6 @@
                             `;
                         });
                     }
-                    
-                    try {
-                        const payload = JSON.parse(atob(token.split('.')[1]));
-                        if (payload.role === 'super_admin') {
-                            document.getElementById('assignRoleSection').style.display = 'block';
-                        }
-                    } catch(e) {}
                 }
             } catch (error) {
                 console.error("Fetch Error:", error);
@@ -238,22 +204,6 @@
                 if(data.success) fetchStats(); 
             } catch (error) {
                 alert('Sweep request failed.');
-            }
-        }
-
-        async function assignRole() {
-            const email = document.getElementById('newAdminEmail').value;
-            if(!email) return alert("Please enter an email address.");
-            try {
-                const res = await fetch('/api/admin/assign-role', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                    body: JSON.stringify({ email, newRole: 'finance_admin' })
-                });
-                const data = await res.json();
-                document.getElementById('roleMsg').innerText = data.message;
-            } catch (error) {
-                alert('Failed to assign role.');
             }
         }
 
