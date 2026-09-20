@@ -592,18 +592,18 @@
                         <div class="card-title" style="margin: 0;"><i class="fa-solid fa-chart-line"></i> Live Rate</div>
                         <button class="trade-quick-btn" onclick="window.location.href='market.html'">Trade <i class="fa-solid fa-arrow-right"></i></button>
                     </div>
-                    <div class="rate-value"><span id="liveRateValue">189.00</span> <span>ETB</span></div>
+                    <div class="rate-value"><span id="liveRateValue">...</span> <span>ETB</span></div>
                     <div class="rate-subtext">PER USDT</div>
                 </div>
 
                 <div class="rate-stats">
                     <div class="rate-stat-item">
                         <div>BEST BUY</div>
-                        <div id="bestBuyValue">189.50 ETB</div>
+                        <div id="bestBuyValue">... ETB</div>
                     </div>
                     <div class="rate-stat-item">
                         <div>BEST SELL</div>
-                        <div id="bestSellValue">188.50 ETB</div>
+                        <div id="bestSellValue">... ETB</div>
                     </div>
                 </div>
             </div>
@@ -849,7 +849,7 @@
                 });
                 
                 if (res.ok) {
-                    const data = await res.json();
+                    const data = await json();
                     if (data.success && data.user) {
                         const userObj = data.user;
                         if (userObj.email) localStorage.setItem('userEmail', userObj.email);
@@ -912,15 +912,25 @@
             }
         }
 
+        // --- 🔥 ይህ ክፍል ነው የተስተካከለው አዲሱን የ Settings API እንዲጠራ ተደርጎ 🔥 ---
         async function loadLiveMarketRates() {
             try {
-                const res = await fetch(`${API_BASE}/api/market/rates`);
+                // በ server.js ላይ የሰራነውን አዲሱን API ይጠራል
+                const res = await fetch(`${API_BASE}/api/settings`);
                 if (res.ok) {
-                    const data = await res.json();
-                    if (data.success) {
-                        if (data.liveRate) document.getElementById('liveRateValue').innerText = Number(data.liveRate).toFixed(2);
-                        if (data.bestBuy) document.getElementById('bestBuyValue').innerText = Number(data.bestBuy).toFixed(2) + ' ETB';
-                        if (data.bestSell) document.getElementById('bestSellValue').innerText = Number(data.bestSell).toFixed(2) + ' ETB';
+                    const json = await res.json();
+                    if (json.success && json.data) {
+                        const buyRate = json.data.buyRate;   // ፕላትፎርሙ የሚገዛበት (ተጠቃሚው የሚሸጥበት)
+                        const sellRate = json.data.sellRate; // ፕላትፎርሙ የሚሸጥበት (ተጠቃሚው የሚገዛበት)
+                        
+                        // Live Rate (የሁለቱ አማካይ Mid-market rate)
+                        const liveRate = ((buyRate + sellRate) / 2).toFixed(2);
+                        
+                        document.getElementById('liveRateValue').innerText = liveRate;
+                        // Best Buy (ተጠቃሚው የሚገዛበት ሬት - ማለትም የፕላትፎርሙ መሸጫ)
+                        document.getElementById('bestBuyValue').innerText = sellRate.toFixed(2) + ' ETB';
+                        // Best Sell (ተጠቃሚው የሚሸጥበት ሬት - ማለትም የፕላትፎርሙ መግዣ)
+                        document.getElementById('bestSellValue').innerText = buyRate.toFixed(2) + ' ETB';
                     }
                 }
             } catch (e) {
