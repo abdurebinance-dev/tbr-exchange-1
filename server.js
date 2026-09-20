@@ -1640,17 +1640,14 @@ app.post('/api/passkey/login-options', async (req, res) => {
         const challenge = crypto.randomBytes(32);
         const encodedChallenge = toBase64Url(challenge);
         passkeyChallenges['latest_challenge'] = encodedChallenge;
-        
-        // አድራሻውን በራሱ አውቶማቲክ እንዲሞላው ተደርጓል
-        const rpId = req.hostname.replace(/^www\./, '');
 
         res.json({
             success: true,
             options: {
                 challenge: encodedChallenge,
                 timeout: 60000,
-                rpId: rpId,
-                userVerification: "discouraged" // ስልኩን እንዳያስገድድ
+                rpId: 'tbrexchange.com', // <--- እዚህ ጋር ዶሜንህን በቋሚነት ጻፍነው
+                userVerification: "discouraged"
             }
         });
     } catch (error) {
@@ -1702,13 +1699,12 @@ app.post('/api/passkey/register-options', verifyToken, async (req, res) => {
         const challenge = crypto.randomBytes(32);
         const encodedChallenge = toBase64Url(challenge);
         const encodedUserId = toBase64Url(Buffer.from(user._id.toString()));
-        const rpId = req.hostname.replace(/^www\./, '');
 
         res.json({
             success: true,
             options: {
                 challenge: encodedChallenge,
-                rp: { name: "TBR Exchange", id: rpId },
+                rp: { name: "TBR Exchange", id: 'tbrexchange.com' }, // <--- እዚህ ጋርም
                 user: {
                     id: encodedUserId,
                     name: user.email,
@@ -1716,9 +1712,9 @@ app.post('/api/passkey/register-options', verifyToken, async (req, res) => {
                 },
                 pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
                 timeout: 60000,
-                attestation: "none", // 🔥 ይሄ ወሳኙ እዚህ ጋር ነው - ስልኩ ኤረር እንዳያመጣ
+                attestation: "none",
                 authenticatorSelection: {
-                    userVerification: "discouraged", // 🔥 አያስገድድም
+                    userVerification: "discouraged",
                     residentKey: "discouraged"
                 }
             }
