@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TBR Exchange - P2P Marketplace | Buy & Sell USDT</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #080808;
+            --card-bg: #121212;
+            --border-color: #262626;
+            --accent-gold: #d4af37;
+            --text-main: #ffffff;
+            --text-muted: #888888;
+            --green: #0ecb81;
+            --red: #f6465d;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: var(--text-main);
+            padding-top: 80px;
+            padding-bottom: 70px;
+        }
+
+        /* Navbar */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: #121212;
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            box-sizing: border-box;
+        }
+        .nav-left { display: flex; align-items: center; gap: 20px; }
+        .logo-container img { height: 32px; width: auto; object-fit: contain; }
+        .nav-links { display: flex; gap: 15px; }
+        .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: 8px;
+            transition: 0.2s;
+        }
+        .nav-links a.active, .nav-links a:hover {
+            color: var(--accent-gold);
+            background: rgba(212, 175, 55, 0.08);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+        }
+        .nav-right { display: flex; align-items: center; gap: 15px; }
+        .dashboard-btn {
+            background: #1a1a1a;
+            color: var(--accent-gold);
+            border: 1px solid var(--border-color);
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        @media(max-width: 900px) {
+            .nav-links { display: none; }
+        }
+
+        /* Market Container */
+        .market-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 10px 20px;
+        }
+
+        .market-header-label {
+            font-size: 11px;
+            color: var(--green);
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+
+        /* Buy / Sell Switch Tabs */
+        .trade-toggle-wrap {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .toggle-btn {
+            padding: 10px 28px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            background: #181a20;
+            color: var(--text-muted);
+            transition: all 0.2s ease;
+        }
+        .toggle-btn.active.buy-active {
+            background: var(--green);
+            color: #000;
+        }
+        .toggle-btn.active.sell-active {
+            background: var(--red);
+            color: #fff;
+        }
+
+        /* Filter Controls */
+        .filter-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .filter-btn {
+            background: #16181d;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Market Table Styling */
+        .p2p-table-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            min-width: 850px;
+        }
+        th {
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+            padding: 16px 20px;
+            border-bottom: 1px solid #1f2228;
+            letter-spacing: 0.5px;
+        }
+        td {
+            padding: 18px 20px;
+            border-bottom: 1px solid #1a1c22;
+            vertical-align: middle;
+        }
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.015);
+        }
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Columns Content */
+        .advertiser-cell {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .avatar-box {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #1c2027;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent-gold);
+            font-weight: bold;
+            font-size: 14px;
+            border: 1px solid #2b313a;
+        }
+        .adv-name {
+            font-weight: 700;
+            font-size: 14px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .adv-name i {
+            color: var(--accent-gold);
+            font-size: 12px;
+        }
+        .adv-stats {
+            font-size: 11px;
+            color: #777;
+            margin-top: 3px;
+        }
+
+        .price-cell {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--green);
+        }
+        .price-cell span {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: normal;
+        }
+
+        .limit-cell .available {
+            font-weight: 700;
+            font-size: 13px;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+        .limit-cell .range {
+            font-size: 11px;
+            color: #777;
+        }
+
+        .payment-tags {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            max-width: 250px;
+        }
+        .pay-tag {
+            background: #1a1d24;
+            border: 1px solid #2b313a;
+            color: #9aa4b2;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .order-btn {
+            background: var(--green);
+            color: #000;
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 13px;
+            border: none;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .order-btn.sell {
+            background: var(--red);
+            color: #fff;
+        }
+        .order-btn:hover {
+            opacity: 0.9;
+        }
+
+        /* Order Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        .modal-box {
+            background: #16181d;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            width: 440px;
+            padding: 25px;
+            box-sizing: border-box;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .modal-header h3 {
+            margin: 0;
+            font-size: 17px;
+            color: #fff;
+        }
+        .modal-header i {
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+        .input-control {
+            width: 100%;
+            background: #0d0f12;
+            border: 1px solid #2b313a;
+            color: #fff;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Navbar -->
+    <div class="navbar">
+        <div class="nav-left">
+            <div class="logo-container">
+                <img src="logo.png" alt="TBR Exchange Logo" onerror="this.style.display='none'">
+            </div>
+            <div class="nav-links">
+                <a href="dashboard.html"><i class="fa-solid fa-house"></i> Dashboard</a>
+                <a href="market.html" class="active"><i class="fa-solid fa-store"></i> Market</a>
+                <a href="my-ads.html"><i class="fa-solid fa-bullhorn"></i> My Ads</a>
+                <a href="trades.html"><i class="fa-solid fa-right-left"></i> Trades</a>
+                <a href="wallet.html"><i class="fa-solid fa-wallet"></i> Wallet</a>
+            </div>
+        </div>
+        <div class="nav-right">
+            <a href="dashboard.html" class="dashboard-btn">
+                <i class="fa-solid fa-gauge-high"></i> Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Market Section -->
+    <div class="market-container">
+        <div class="market-header-label">P2P Marketplace &bull; Live Orderbook</div>
+
+        <div class="trade-toggle-wrap">
+            <button id="buyTabBtn" class="toggle-btn active buy-active" onclick="switchTradeType('buy')">Buy</button>
+            <button id="sellTabBtn" class="toggle-btn" onclick="switchTradeType('sell')">Sell</button>
+        </div>
+
+        <div class="filter-row">
+            <button class="filter-btn"><i class="fa-solid fa-circle" style="font-size: 8px; color: var(--green);"></i> Online</button>
+            <button class="filter-btn">Amount <i class="fa-solid fa-chevron-down"></i></button>
+            <button class="filter-btn">Payment Method <i class="fa-solid fa-chevron-down"></i></button>
+        </div>
+
+        <!-- Orders Table -->
+        <div class="p2p-table-card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Advertiser</th>
+                        <th>Price</th>
+                        <th>Available / Limit</th>
+                        <th>Payment</th>
+                        <th style="text-align: right;">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="p2pOrdersBody">
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 40px 0;">
+                            <i class="fa-solid fa-circle-notch fa-spin"></i> Loading live orders...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Order Action Modal -->
+    <div class="modal-overlay" id="orderModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 id="modalTitle">Create P2P Order</h3>
+                <i class="fa-solid fa-xmark" onclick="closeOrderModal()"></i>
+            </div>
+            <div class="form-group">
+                <label>Unit Price</label>
+                <input type="text" class="input-control" id="modalPriceInput" readonly>
+            </div>
+            <div class="form-group">
+                <label>Amount (USDT)</label>
+                <input type="number" class="input-control" id="modalAmountInput" placeholder="Enter amount">
+            </div>
+            <button id="modalConfirmBtn" class="order-btn" style="width: 100%; margin-top: 10px;" onclick="confirmTrade()">Proceed Trade</button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://tbr-exchange-backend.onrender.com';
+        let currentType = 'buy';
+        let currentRates = { buyRate: 192.00, sellRate: 195.00 };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const initialType = urlParams.get('type');
+            if (initialType === 'sell') {
+                switchTradeType('sell');
+            } else {
+                fetchSettingsAndRender();
+            }
+        });
+
+        function switchTradeType(type) {
+            currentType = type;
+            const buyBtn = document.getElementById('buyTabBtn');
+            const sellBtn = document.getElementById('sellTabBtn');
+
+            if (type === 'buy') {
+                buyBtn.className = 'toggle-btn active buy-active';
+                sellBtn.className = 'toggle-btn';
+            } else {
+                sellBtn.className = 'toggle-btn active sell-active';
+                buyBtn.className = 'toggle-btn';
+            }
+
+            fetchSettingsAndRender();
+        }
+
+        async function fetchSettingsAndRender() {
+            try {
+                const res = await fetch(`${API_BASE}/api/settings`);
+                if (res.ok) {
+                    const json = await res.json();
+                    if (json.success && json.data) {
+                        currentRates.buyRate = json.data.buyRate || 192.00;
+                        currentRates.sellRate = json.data.sellRate || 195.00;
+                    }
+                }
+            } catch (e) {
+                console.error("Rates fetch error:", e);
+            }
+            renderOrderBook();
+        }
+
+        function renderOrderBook() {
+            const tbody = document.getElementById('p2pOrdersBody');
+            const isBuy = currentType === 'buy';
+            const basePrice = isBuy ? currentRates.sellRate : currentRates.buyRate;
+            const actionLabel = isBuy ? 'Buy' : 'Sell';
+            const btnClass = isBuy ? 'order-btn' : 'order-btn sell';
+
+            // ማርኬትፕሌሱ ላይ የሚታዩ የነጋዴዎች ኦርደሮች
+            const sampleTraders = [
+                { name: 'TBR Direct', verified: true, orders: 1540, comp: '99%', priceOffset: 0, avail: '12,500.00', min: '500', max: '2,000,000', pay: ['Telebirr', 'CBE Birr', 'Bank of Abyssinia'] },
+                { name: 'EthioTrader_Pro', verified: true, orders: 840, comp: '97%', priceOffset: 0.20, avail: '3,450.00', min: '1,000', max: '650,000', pay: ['CBE Birr', 'Telebirr'] },
+                { name: 'AddisCrypto_Desk', verified: true, orders: 490, comp: '95%', priceOffset: 0.50, avail: '980.00', min: '500', max: '190,000', pay: ['Telebirr', 'Awash Bank'] },
+                { name: 'Nugget_Exchange', verified: false, orders: 210, comp: '94%', priceOffset: 0.80, avail: '420.00', min: '200', max: '80,000', pay: ['Commercial Bank of Ethiopia'] }
+            ];
+
+            let html = '';
+            sampleTraders.forEach(t => {
+                const effectivePrice = (basePrice + t.priceOffset).toFixed(2);
+                html += `
+                <tr>
+                    <td>
+                        <div class="advertiser-cell">
+                            <div class="avatar-box">${t.name.charAt(0)}</div>
+                            <div>
+                                <div class="adv-name">${t.name} ${t.verified ? '<i class="fa-solid fa-circle-check"></i>' : ''}</div>
+                                <div class="adv-stats">${t.orders} orders &bull; ${t.comp} completion</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="price-cell">${effectivePrice} <span>ETB</span></div>
+                    </td>
+                    <td>
+                        <div class="limit-cell">
+                            <div class="available">${t.avail} USDT</div>
+                            <div class="range">Limits: ${t.min} - ${t.max} ETB</div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="payment-tags">
+                            ${t.pay.map(p => `<span class="pay-tag">${p}</span>`).join('')}
+                        </div>
+                    </td>
+                    <td style="text-align: right;">
+                        <button class="${btnClass}" onclick="openOrderModal('${actionLabel}', '${effectivePrice}')">${actionLabel} USDT</button>
+                    </td>
+                </tr>`;
+            });
+
+            tbody.innerHTML = html;
+        }
+
+        function openOrderModal(action, price) {
+            document.getElementById('modalTitle').innerText = `${action} USDT via Escrow`;
+            document.getElementById('modalPriceInput').value = `${price} ETB`;
+            document.getElementById('modalConfirmBtn').innerText = `Confirm ${action}`;
+            document.getElementById('orderModal').style.display = 'flex';
+        }
+
+        function closeOrderModal() {
+            document.getElementById('orderModal').style.display = 'none';
+        }
+
+        function confirmTrade() {
+            const amount = document.getElementById('modalAmountInput').value;
+            if (!amount || amount <= 0) {
+                alert('Please enter a valid amount.');
+                return;
+            }
+            alert(`Order initiated for ${amount} USDT! Transferring to secure Escrow Trade room...`);
+            closeOrderModal();
+            window.location.href = 'trades.html';
+        }
+    </script>
+</body>
+</html>
