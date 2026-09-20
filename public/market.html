@@ -62,18 +62,6 @@
             border: 1px solid rgba(212, 175, 55, 0.2);
         }
         .nav-right { display: flex; align-items: center; gap: 15px; }
-        .dashboard-btn {
-            background: #1a1a1a;
-            color: var(--accent-gold);
-            border: 1px solid var(--border-color);
-            padding: 6px 14px;
-            border-radius: 6px;
-            font-size: 13px;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
 
         @media(max-width: 900px) {
             .nav-links { display: none; }
@@ -83,16 +71,7 @@
         .market-container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 10px 20px;
-        }
-
-        .market-header-label {
-            font-size: 11px;
-            color: var(--green);
-            font-weight: 700;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            margin-bottom: 12px;
+            padding: 20px 20px 10px 20px;
         }
 
         /* Buy / Sell Switch Tabs */
@@ -346,16 +325,13 @@
             </div>
         </div>
         <div class="nav-right">
-            <a href="dashboard.html" class="dashboard-btn">
-                <i class="fa-solid fa-gauge-high"></i> Dashboard
-            </a>
+            <!-- ባዶ ሆኗል (Dashboard በተን ጠፍቷል) -->
         </div>
     </div>
 
     <!-- Main Market Section -->
     <div class="market-container">
-        <div class="market-header-label">P2P Marketplace &bull; Live Orderbook</div>
-
+        
         <div class="trade-toggle-wrap">
             <button id="buyTabBtn" class="toggle-btn active buy-active" onclick="switchTradeType('buy')">Buy</button>
             <button id="sellTabBtn" class="toggle-btn" onclick="switchTradeType('sell')">Sell</button>
