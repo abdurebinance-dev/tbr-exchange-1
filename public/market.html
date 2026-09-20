@@ -157,12 +157,12 @@
             border-bottom: none;
         }
 
-        /* Column Widths & Spacing */
-        th:nth-child(1), td:nth-child(1) { width: 320px; }
-        th:nth-child(2), td:nth-child(2) { width: 220px; padding-left: 40px; }
-        th:nth-child(3), td:nth-child(3) { width: 280px; }
-        th:nth-child(4), td:nth-child(4) { width: 260px; }
-        th:nth-child(5), td:nth-child(5) { width: 140px; text-align: right; }
+        /* Perfect Column Alignments (Headers and Cells matched) */
+        th:nth-child(1), td:nth-child(1) { width: 300px; padding-left: 24px; text-align: left; }
+        th:nth-child(2), td:nth-child(2) { width: 180px; padding-left: 40px; text-align: left; }
+        th:nth-child(3), td:nth-child(3) { width: 300px; text-align: left; }
+        th:nth-child(4), td:nth-child(4) { width: 280px; padding-left: 24px; text-align: left; }
+        th:nth-child(5), td:nth-child(5) { width: 160px; padding-right: 24px; text-align: right; }
 
         /* Columns Content */
         .advertiser-cell {
@@ -221,6 +221,7 @@
 
         .payment-cell {
             max-width: 280px;
+            padding-left: 24px;
         }
         .payment-tags {
             display: flex;
@@ -239,6 +240,7 @@
 
         .action-cell {
             text-align: right;
+            padding-right: 24px;
         }
         .order-btn {
             background: var(--green-btn);
@@ -341,11 +343,11 @@
             <table>
                 <thead>
                     <tr>
-                        <th style="padding-left: 24px;">Advertiser</th>
-                        <th style="padding-left: 40px;">Price</th>
+                        <th>Advertiser</th>
+                        <th>Price</th>
                         <th>Available / Limit</th>
                         <th>Payment</th>
-                        <th style="text-align: right; padding-right: 24px;">Action</th>
+                        <th style="text-align: right;">Action</th>
                     </tr>
                 </thead>
                 <tbody id="p2pOrdersBody">
@@ -462,7 +464,7 @@
                             <div class="range">Limits: ${t.min} - ${t.max} ETB</div>
                         </div>
                     </td>
-                    <td>
+                    <td class="payment-cell">
                         <div class="payment-tags">
                             ${t.pay.map(p => `<span class="pay-tag">${p}</span>`).join('')}
                         </div>
