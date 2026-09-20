@@ -22,7 +22,7 @@
             margin: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             color: var(--text-main);
-            padding-top: 80px;
+            padding-top: 70px;
             padding-bottom: 70px;
         }
 
@@ -34,7 +34,7 @@
             width: 100%;
             background: #121212;
             border-bottom: 1px solid var(--border-color);
-            padding: 12px 20px;
+            padding: 10px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -42,7 +42,7 @@
             box-sizing: border-box;
         }
         .nav-left { display: flex; align-items: center; gap: 20px; }
-        .logo-container img { height: 32px; width: auto; object-fit: contain; }
+        .logo-container img { height: 28px; width: auto; object-fit: contain; }
         .nav-links { display: flex; gap: 15px; }
         .nav-links a {
             color: var(--text-muted);
@@ -53,7 +53,7 @@
             align-items: center;
             gap: 6px;
             padding: 6px 10px;
-            border-radius: 8px;
+            border-radius: 6px;
             transition: 0.2s;
         }
         .nav-links a.active, .nav-links a:hover {
@@ -71,20 +71,20 @@
         .market-container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 20px 20px 10px 20px;
+            padding: 15px 20px 10px 20px;
         }
 
-        /* Buy / Sell Switch Tabs */
+        /* Buy / Sell Switch Tabs - Size Reduced */
         .trade-toggle-wrap {
             display: flex;
             align-items: center;
-            gap: 15px;
-            margin-bottom: 25px;
+            gap: 10px;
+            margin-bottom: 15px;
         }
         .toggle-btn {
-            padding: 10px 28px;
-            border-radius: 8px;
-            font-size: 14px;
+            padding: 8px 24px;
+            border-radius: 6px;
+            font-size: 13px;
             font-weight: 700;
             cursor: pointer;
             border: none;
@@ -101,11 +101,11 @@
             color: #fff;
         }
 
-        /* Filter Controls */
+        /* Filter Controls - Size Reduced */
         .filter-row {
             display: flex;
-            gap: 12px;
-            margin-bottom: 20px;
+            gap: 10px;
+            margin-bottom: 15px;
             align-items: center;
             flex-wrap: wrap;
         }
@@ -113,39 +113,39 @@
             background: #16181d;
             border: 1px solid var(--border-color);
             color: var(--text-muted);
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 12px;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 11px;
             font-weight: 600;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
-        /* Market Table Styling */
+        /* Market Table Styling - Compact */
         .p2p-table-card {
             background: var(--card-bg);
             border: 1px solid var(--border-color);
-            border-radius: 12px;
+            border-radius: 8px;
             overflow-x: auto;
         }
         table {
             width: 100%;
             border-collapse: collapse;
             text-align: left;
-            min-width: 850px;
+            min-width: 800px;
         }
         th {
-            font-size: 11px;
+            font-size: 10px;
             color: #666;
             text-transform: uppercase;
-            padding: 16px 20px;
+            padding: 12px 16px;
             border-bottom: 1px solid #1f2228;
             letter-spacing: 0.5px;
         }
         td {
-            padding: 18px 20px;
+            padding: 12px 16px;
             border-bottom: 1px solid #1a1c22;
             vertical-align: middle;
         }
@@ -156,15 +156,15 @@
             border-bottom: none;
         }
 
-        /* Columns Content */
+        /* Columns Content - Size Reduced */
         .advertiser-cell {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
         }
         .avatar-box {
-            width: 40px;
-            height: 40px;
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
             background: #1c2027;
             display: flex;
@@ -172,72 +172,72 @@
             justify-content: center;
             color: var(--accent-gold);
             font-weight: bold;
-            font-size: 14px;
+            font-size: 13px;
             border: 1px solid #2b313a;
         }
         .adv-name {
             font-weight: 700;
-            font-size: 14px;
+            font-size: 13px;
             color: #fff;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
         }
         .adv-name i {
             color: var(--accent-gold);
-            font-size: 12px;
+            font-size: 11px;
         }
         .adv-stats {
-            font-size: 11px;
+            font-size: 10px;
             color: #777;
-            margin-top: 3px;
+            margin-top: 2px;
         }
 
         .price-cell {
-            font-size: 20px;
+            font-size: 16px;
             font-weight: 800;
             color: var(--green);
         }
         .price-cell span {
-            font-size: 12px;
+            font-size: 11px;
             color: var(--text-muted);
             font-weight: normal;
         }
 
         .limit-cell .available {
             font-weight: 700;
-            font-size: 13px;
+            font-size: 12px;
             color: #fff;
-            margin-bottom: 4px;
+            margin-bottom: 3px;
         }
         .limit-cell .range {
-            font-size: 11px;
+            font-size: 10px;
             color: #777;
         }
 
         .payment-tags {
             display: flex;
-            gap: 6px;
+            gap: 4px;
             flex-wrap: wrap;
-            max-width: 250px;
+            max-width: 220px;
         }
         .pay-tag {
             background: #1a1d24;
             border: 1px solid #2b313a;
             color: #9aa4b2;
-            padding: 4px 8px;
+            padding: 3px 6px;
             border-radius: 4px;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 500;
         }
 
         .order-btn {
             background: var(--green);
             color: #000;
-            padding: 10px 24px;
-            border-radius: 6px;
+            padding: 8px 18px;
+            border-radius: 4px;
             font-weight: 700;
-            font-size: 13px;
+            font-size: 12px;
             border: none;
             cursor: pointer;
             transition: opacity 0.2s;
@@ -266,44 +266,44 @@
         .modal-box {
             background: #16181d;
             border: 1px solid var(--border-color);
-            border-radius: 12px;
-            width: 440px;
-            padding: 25px;
+            border-radius: 8px;
+            width: 400px;
+            padding: 20px;
             box-sizing: border-box;
         }
         .modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         .modal-header h3 {
             margin: 0;
-            font-size: 17px;
+            font-size: 15px;
             color: #fff;
         }
         .modal-header i {
             cursor: pointer;
             color: var(--text-muted);
-            font-size: 20px;
+            font-size: 18px;
         }
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 12px;
         }
         .form-group label {
             display: block;
-            font-size: 12px;
+            font-size: 11px;
             color: var(--text-muted);
-            margin-bottom: 6px;
+            margin-bottom: 5px;
         }
         .input-control {
             width: 100%;
             background: #0d0f12;
             border: 1px solid #2b313a;
             color: #fff;
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 14px;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 13px;
             box-sizing: border-box;
         }
     </style>
@@ -325,7 +325,7 @@
             </div>
         </div>
         <div class="nav-right">
-            <!-- ባዶ ሆኗል (Dashboard በተን ጠፍቷል) -->
+            <!-- Dashboard btn removed as requested -->
         </div>
     </div>
 
@@ -338,7 +338,7 @@
         </div>
 
         <div class="filter-row">
-            <button class="filter-btn"><i class="fa-solid fa-circle" style="font-size: 8px; color: var(--green);"></i> Online</button>
+            <button class="filter-btn"><i class="fa-solid fa-circle" style="font-size: 6px; color: var(--green);"></i> Online</button>
             <button class="filter-btn">Amount <i class="fa-solid fa-chevron-down"></i></button>
             <button class="filter-btn">Payment Method <i class="fa-solid fa-chevron-down"></i></button>
         </div>
@@ -357,7 +357,7 @@
                 </thead>
                 <tbody id="p2pOrdersBody">
                     <tr>
-                        <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 40px 0;">
+                        <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 30px 0; font-size: 13px;">
                             <i class="fa-solid fa-circle-notch fa-spin"></i> Loading live orders...
                         </td>
                     </tr>
@@ -381,7 +381,7 @@
                 <label>Amount (USDT)</label>
                 <input type="number" class="input-control" id="modalAmountInput" placeholder="Enter amount">
             </div>
-            <button id="modalConfirmBtn" class="order-btn" style="width: 100%; margin-top: 10px;" onclick="confirmTrade()">Proceed Trade</button>
+            <button id="modalConfirmBtn" class="order-btn" style="width: 100%; margin-top: 10px; padding: 10px;" onclick="confirmTrade()">Proceed Trade</button>
         </div>
     </div>
 
@@ -439,7 +439,6 @@
             const actionLabel = isBuy ? 'Buy' : 'Sell';
             const btnClass = isBuy ? 'order-btn' : 'order-btn sell';
 
-            // ማርኬትፕሌሱ ላይ የሚታዩ የነጋዴዎች ኦርደሮች
             const sampleTraders = [
                 { name: 'TBR Direct', verified: true, orders: 1540, comp: '99%', priceOffset: 0, avail: '12,500.00', min: '500', max: '2,000,000', pay: ['Telebirr', 'CBE Birr', 'Bank of Abyssinia'] },
                 { name: 'EthioTrader_Pro', verified: true, orders: 840, comp: '97%', priceOffset: 0.20, avail: '3,450.00', min: '1,000', max: '650,000', pay: ['CBE Birr', 'Telebirr'] },
