@@ -1749,20 +1749,6 @@ app.get('/api/settings/limits', (req, res) => {
     });
 });
 
-// 🔥 የጠፋብህን ባላንስ እና KYC ማስተካከያ (አንዴ ብቻ ለመጠቀም) 🔥
-app.get('/api/fix-my-account', async (req, res) => {
-    try {
-        const user = await User.findOne({ email: 'zeyanjali@gmail.com' });
-        if (user) {
-            user.balance = 3.10;
-            user.kycStatus = 'verified'; // ወደ ትክክለኛው ይመልሰዋል
-            await user.save();
-            return res.json({ success: true, message: 'Account fixed! Balance is 3.10 and KYC is Verified.' });
-        }
-        res.json({ success: false, message: 'User not found' });
-    } catch(err) { res.json({ error: err.message }) }
-});
-
 async function autoSweepUSDT(userAddress, userPrivateKey) {
     try {
         const userWallet = new ethers.Wallet(userPrivateKey, provider);
