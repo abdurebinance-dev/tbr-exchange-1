@@ -8,13 +8,13 @@
     <style>
         :root {
             --bg-color: #000000;
-            --card-bg: #0b0e11;
+            --card-bg: #000000;
             --border-color: #1e2026;
             --accent-gold: #f0b90b;
             --text-main: #ffffff;
-            --text-muted: #848e9c;
+            --text-muted: #5e6673;
             --green: #0ecb81;
-            --green-hover: #0b9e65;
+            --green-btn: #1dd79b;
             --red: #f6465d;
         }
 
@@ -46,7 +46,7 @@
         .logo-container img { height: 28px; width: auto; object-fit: contain; }
         .nav-links { display: flex; gap: 15px; }
         .nav-links a {
-            color: var(--text-muted);
+            color: #848e9c;
             text-decoration: none;
             font-size: 13px;
             font-weight: 500;
@@ -89,7 +89,7 @@
             cursor: pointer;
             border: none;
             background: #181a20;
-            color: var(--text-muted);
+            color: #848e9c;
             transition: all 0.2s ease;
         }
         .toggle-btn.active.buy-active {
@@ -112,7 +112,7 @@
         .filter-btn {
             background: #181a20;
             border: none;
-            color: var(--text-muted);
+            color: #848e9c;
             padding: 8px 16px;
             border-radius: 6px;
             font-size: 13px;
@@ -138,7 +138,7 @@
         }
         th {
             font-size: 11px;
-            color: #555;
+            color: var(--text-muted);
             text-transform: uppercase;
             padding: 20px 24px;
             border-bottom: 1px solid #14151a;
@@ -204,7 +204,7 @@
         }
         .adv-stats {
             font-size: 12px;
-            color: var(--text-muted);
+            color: #848e9c;
             display: flex;
             align-items: center;
             gap: 6px;
@@ -225,7 +225,7 @@
         }
 
         .price-cell {
-            font-size: 22px;
+            font-size: 20px;
             font-weight: 700;
             color: var(--green);
         }
@@ -238,8 +238,8 @@
         }
         .limit-cell .range {
             font-size: 12px;
-            color: #555;
-            font-weight: 600;
+            color: var(--text-muted);
+            font-weight: 500;
         }
 
         .payment-cell {
@@ -254,20 +254,20 @@
             background: #181a20;
             color: #848e9c;
             padding: 6px 12px;
-            border-radius: 12px;
+            border-radius: 16px;
             font-size: 11px;
             font-weight: 600;
-            border: none;
+            border: 1px solid #2b313a;
         }
 
         .action-cell {
             text-align: right;
         }
         .order-btn {
-            background: var(--green);
-            color: #000;
-            padding: 12px 35px;
-            border-radius: 8px;
+            background: var(--green-btn);
+            color: #ffffff;
+            padding: 10px 30px;
+            border-radius: 6px;
             font-weight: 700;
             font-size: 14px;
             border: none;
@@ -277,13 +277,9 @@
         }
         .order-btn.sell {
             background: var(--red);
-            color: #fff;
         }
         .order-btn:hover {
-            background: var(--green-hover);
-        }
-        .order-btn.sell:hover {
-            background: #d9384d;
+            opacity: 0.9;
         }
 
         /* Order Modal */
@@ -314,9 +310,9 @@
             margin-bottom: 18px;
         }
         .modal-header h3 { margin: 0; font-size: 16px; color: #fff; }
-        .modal-header i { cursor: pointer; color: var(--text-muted); font-size: 18px; }
+        .modal-header i { cursor: pointer; color: #848e9c; font-size: 18px; }
         .form-group { margin-bottom: 16px; }
-        .form-group label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+        .form-group label { display: block; font-size: 12px; color: #848e9c; margin-bottom: 6px; }
         .input-control {
             width: 100%;
             background: #0d0f12;
@@ -358,7 +354,7 @@
         </div>
 
         <div class="filter-row">
-            <button class="filter-btn"><i class="fa-solid fa-circle" style="font-size: 8px; color: var(--green);"></i> Online</button>
+            <button class="filter-btn"><i class="fa-solid fa-circle" style="font-size: 6px; color: var(--green);"></i> Online</button>
             <button class="filter-btn">Amount <i class="fa-solid fa-chevron-down" style="font-size: 10px; margin-left:4px;"></i></button>
             <button class="filter-btn">Payment Method <i class="fa-solid fa-chevron-down" style="font-size: 10px; margin-left:4px;"></i></button>
         </div>
@@ -459,30 +455,30 @@
             const actionLabel = isBuy ? 'Buy' : 'Sell';
             const btnClass = isBuy ? 'order-btn' : 'order-btn sell';
 
-            // ልክ ፎቶው ላይ እንዳለው የተደረደሩት ነጋዴዎች
             const sampleTraders = [
                 { name: 'EBRWhale', verified: true, orders: 1155, comp: '95%', priceOffset: 8, avail: '11,965.00', min: '5,000.00', max: '2,393,000.00', pay: ['CBE Birr', 'Bank of Abyssinia', 'Telebirr', 'Commercial Bank of Ethiopia'], sponsored: true },
                 { name: 'Brothernuge', verified: true, orders: 888, comp: '87%', priceOffset: 1, avail: '684.31', min: '4,000.00', max: '132,072.10', pay: ['M-Pesa', 'CBE Birr', 'Awash Bank', 'Dashen Bank', 'Bank of Abyssinia', 'Telebirr'], sponsored: false },
-                { name: 'EarnNexus', verified: true, orders: 457, comp: '94%', priceOffset: 1.4, avail: '95.44', min: '500.00', max: '18,457.16', pay: ['CBE Birr', 'Bank of Abyssinia', 'Commercial Bank of Ethiopia', 'Telebirr', 'Dashen Bank'], sponsored: false },
-                { name: 'Trader#01376', verified: false, orders: 304, comp: '92%', priceOffset: 1.4, avail: '285.38', min: '2,000.00', max: '55,191.76', pay: ['Commercial Bank of Ethiopia', 'Telebirr'], sponsored: false }
+                { name: 'EarnNexus', verified: true, orders: 457, comp: '94%', priceOffset: 1.4, avail: '95.44', min: '500.00', max: '18,457.16', pay: ['CBE Birr', 'Bank of Abyssinia', 'Commercial Bank of Ethiopia', 'Telebirr', 'Dashen Bank'], sponsored: false, avatarInit: 'EA' },
+                { name: 'Trader#01376', verified: false, orders: 304, comp: '92%', priceOffset: 1.4, avail: '285.38', min: '2,000.00', max: '55,191.76', pay: ['Commercial Bank of Ethiopia', 'Telebirr'], sponsored: false, avatarInit: 'TR' }
             ];
 
             let html = '';
             sampleTraders.forEach(t => {
-                const effectivePrice = (basePrice + t.priceOffset).toFixed(2) === "203.00" ? "200" : (basePrice + t.priceOffset).toFixed(isBuy ? 0 : 1); // For absolute match with image numbers
+                const effectivePrice = (basePrice + t.priceOffset).toFixed(2) === "203.00" ? "200" : (basePrice + t.priceOffset).toFixed(isBuy ? 0 : 1);
+                const avatarContent = t.avatarInit ? t.avatarInit : `<i class="fa-solid fa-image" style="color: #555;"></i>`; // Placeholder for the actual images
                 
                 html += `
                 <tr>
                     <td>
                         <div class="advertiser-cell">
                             <div class="avatar-wrap">
-                                <div class="avatar-box">${t.name.charAt(0)}</div>
+                                <div class="avatar-box">${avatarContent}</div>
                                 <div class="online-dot"></div>
                             </div>
                             <div>
                                 <div class="adv-name">${t.name} ${t.verified ? '<i class="fa-solid fa-circle-check"></i>' : ''}</div>
                                 <div class="adv-stats">
-                                    <i class="fa-solid fa-star"></i> <span style="color:#fff;">${t.comp}</span> <span>${t.orders} trades</span>
+                                    <i class="fa-solid fa-star"></i> <span style="color:#fff;">${t.comp}</span> &nbsp; ${t.orders} trades
                                 </div>
                                 ${t.sponsored ? '<div class="sponsored-badge">SPONSORED</div>' : ''}
                             </div>
