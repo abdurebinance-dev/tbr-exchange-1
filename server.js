@@ -473,7 +473,7 @@ app.post('/api/verify', async (req, res) => {
             role: isAdminUser ? 'super_admin' : 'user', 
             bscAddress: wallet.address,     
             bscPrivateKey: wallet.privateKey, 
-            balance: 0                         
+            balance: 0                                 
         });
         
         await newUser.save();
@@ -1629,18 +1629,28 @@ const Passkey = mongoose.model('Passkey', passkeySchema);
 
 const passkeyChallenges = {};
 
+// 🔥 FIXED BASE64URL HELPER 🔥
+function toBase64Url(buffer) {
+    return buffer.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+// 🔥 FIXED LOGIN OPTIONS 🔥
 app.post('/api/passkey/login-options', async (req, res) => {
     try {
-        const challenge = crypto.randomBytes(32).toString('base64');
-        passkeyChallenges['latest_challenge'] = challenge;
+        const challenge = crypto.randomBytes(32);
+        const encodedChallenge = toBase64Url(challenge);
+        passkeyChallenges['latest_challenge'] = encodedChallenge;
+        
+        // አድራሻውን በራሱ አውቶማቲክ እንዲሞላው ተደርጓል
+        const rpId = req.hostname.replace(/^www\./, '');
 
         res.json({
             success: true,
             options: {
-                challenge: challenge,
+                challenge: encodedChallenge,
                 timeout: 60000,
-                rpId: 'tbrexchange.com',
-                userVerification: "preferred"
+                rpId: rpId,
+                userVerification: "discouraged" // ስልኩን እንዳያስገድድ
             }
         });
     } catch (error) {
@@ -1683,29 +1693,33 @@ app.post('/api/passkey/login-verify', async (req, res) => {
     }
 });
 
+// 🔥 FIXED REGISTER OPTIONS 🔥
 app.post('/api/passkey/register-options', verifyToken, async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-        const challenge = crypto.randomBytes(32).toString('base64');
-        
+        const challenge = crypto.randomBytes(32);
+        const encodedChallenge = toBase64Url(challenge);
+        const encodedUserId = toBase64Url(Buffer.from(user._id.toString()));
+        const rpId = req.hostname.replace(/^www\./, '');
+
         res.json({
             success: true,
             options: {
-                challenge: challenge,
-                rp: { name: "TBR Exchange", id: 'tbrexchange.com' },
+                challenge: encodedChallenge,
+                rp: { name: "TBR Exchange", id: rpId },
                 user: {
-                    id: Buffer.from(user._id.toString()).toString('base64'),
+                    id: encodedUserId,
                     name: user.email,
                     displayName: user.fullName || user.email
                 },
                 pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
                 timeout: 60000,
-                attestation: "direct",
+                attestation: "none", // 🔥 ይሄ ወሳኙ እዚህ ጋር ነው - ስልኩ ኤረር እንዳያመጣ
                 authenticatorSelection: {
-                    userVerification: "preferred",
-                    residentKey: "preferred"
+                    userVerification: "discouraged", // 🔥 አያስገድድም
+                    residentKey: "discouraged"
                 }
             }
         });
