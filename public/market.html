@@ -157,13 +157,6 @@
             border-bottom: none;
         }
 
-        /* Precise Column Alignments */
-        th:nth-child(1), td:nth-child(1) { width: 280px; text-align: left; }
-        th:nth-child(2), td:nth-child(2) { width: 160px; text-align: left; }
-        th:nth-child(3), td:nth-child(3) { width: 260px; text-align: left; }
-        th:nth-child(4), td:nth-child(4) { width: 280px; text-align: left; }
-        th:nth-child(5), td:nth-child(5) { width: 140px; text-align: right; }
-
         /* Columns Content */
         .advertiser-cell {
             display: flex;
@@ -344,7 +337,7 @@
                         <th>Price</th>
                         <th>Available / Limit</th>
                         <th>Payment</th>
-                        <th>Action</th>
+                        <th style="text-align: right;">Action</th>
                     </tr>
                 </thead>
                 <tbody id="p2pOrdersBody">
@@ -486,7 +479,7 @@
             document.getElementById('orderModal').style.display = 'none';
         }
 
-        /function confirmTrade() {
+        function confirmTrade() {
             const amount = document.getElementById('modalAmountInput').value;
             if (!amount || amount <= 0) {
                 alert('Please enter a valid amount.');
