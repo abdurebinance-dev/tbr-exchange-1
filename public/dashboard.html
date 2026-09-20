@@ -783,7 +783,7 @@
             }
         });
 
-        // 2. ዳታዎችን ማምጣት እና ማስተካከል (Race condition እንዳይኖር)
+        // 2. ዳታዎችን ማምጣት እና ማስተካከል 
         async function loadDashboardData() {
             await syncWithServer();
             checkDepositSilently();
@@ -849,7 +849,8 @@
                 });
                 
                 if (res.ok) {
-                    const data = await json();
+                    // እዚህ ጋር ነበር ስህተቱ (Typo) -> 'res.json()' አድርጌ አስተካክዬዋለሁ!
+                    const data = await res.json(); 
                     if (data.success && data.user) {
                         const userObj = data.user;
                         if (userObj.email) localStorage.setItem('userEmail', userObj.email);
@@ -870,6 +871,7 @@
                         updateDashboardUI();
                     }
                 } else {
+                    // ቶከን ኤክስፓየር ካደረገ ወደ ሎጊን ይመልሰዋል
                     localStorage.clear();
                     window.location.href = 'signin.html';
                 }
@@ -896,7 +898,7 @@
                         finalBal = parseFloat(depositData.transactions[0].value);
                     }
 
-                    // አዲስ ትልቅ ባላንስ ከሰርቨር ከመጣ ብቻ Overwrite ያደርጋል (ዜሮ አያደርገውም)
+                    // አዲስ ትልቅ ባላንስ ከሰርቨር ከመጣ ብቻ Overwrite ያደርጋል
                     if (finalBal >= parseFloat(actualBalance) && finalBal > 0) {
                         actualBalance = finalBal.toFixed(2);
                         localStorage.setItem("user_balance_val", actualBalance);
@@ -912,24 +914,19 @@
             }
         }
 
-        // --- 🔥 ይህ ክፍል ነው የተስተካከለው አዲሱን የ Settings API እንዲጠራ ተደርጎ 🔥 ---
         async function loadLiveMarketRates() {
             try {
-                // በ server.js ላይ የሰራነውን አዲሱን API ይጠራል
                 const res = await fetch(`${API_BASE}/api/settings`);
                 if (res.ok) {
                     const json = await res.json();
                     if (json.success && json.data) {
-                        const buyRate = json.data.buyRate;   // ፕላትፎርሙ የሚገዛበት (ተጠቃሚው የሚሸጥበት)
-                        const sellRate = json.data.sellRate; // ፕላትፎርሙ የሚሸጥበት (ተጠቃሚው የሚገዛበት)
+                        const buyRate = json.data.buyRate;   
+                        const sellRate = json.data.sellRate; 
                         
-                        // Live Rate (የሁለቱ አማካይ Mid-market rate)
                         const liveRate = ((buyRate + sellRate) / 2).toFixed(2);
                         
                         document.getElementById('liveRateValue').innerText = liveRate;
-                        // Best Buy (ተጠቃሚው የሚገዛበት ሬት - ማለትም የፕላትፎርሙ መሸጫ)
                         document.getElementById('bestBuyValue').innerText = sellRate.toFixed(2) + ' ETB';
-                        // Best Sell (ተጠቃሚው የሚሸጥበት ሬት - ማለትም የፕላትፎርሙ መግዣ)
                         document.getElementById('bestSellValue').innerText = buyRate.toFixed(2) + ' ETB';
                     }
                 }
