@@ -134,7 +134,7 @@
             width: 100%;
             border-collapse: collapse;
             text-align: left;
-            min-width: 1000px;
+            min-width: 900px;
         }
         th {
             font-size: 11px;
@@ -225,25 +225,13 @@
         }
 
         .price-cell {
-            font-size: 20px;
+            font-size: 22px;
             font-weight: 700;
             color: var(--green);
         }
 
-        .limit-cell .available {
-            font-weight: 700;
-            font-size: 14px;
-            color: #fff;
-            margin-bottom: 8px;
-        }
-        .limit-cell .range {
-            font-size: 12px;
-            color: var(--text-muted);
-            font-weight: 500;
-        }
-
         .payment-cell {
-            max-width: 280px;
+            max-width: 350px;
         }
         .payment-tags {
             display: flex;
@@ -366,14 +354,13 @@
                     <tr>
                         <th>Advertiser</th>
                         <th>Price</th>
-                        <th>Available &middot; Limit</th>
                         <th>Payment</th>
                         <th></th>
                     </tr>
                 </thead>
                 <tbody id="p2pOrdersBody">
                     <tr>
-                        <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 40px 0; font-size: 14px;">
+                        <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 40px 0; font-size: 14px;">
                             <i class="fa-solid fa-circle-notch fa-spin"></i> Loading live orders...
                         </td>
                     </tr>
@@ -402,9 +389,7 @@
     </div>
 
     <script>
-        const API_BASE = 'https://tbr-exchange-backend.onrender.com';
         let currentType = 'buy';
-        let currentRates = { buyRate: 192.00, sellRate: 195.00 };
 
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
@@ -412,7 +397,7 @@
             if (initialType === 'sell') {
                 switchTradeType('sell');
             } else {
-                fetchSettingsAndRender();
+                renderOrderBook();
             }
         });
 
@@ -429,43 +414,24 @@
                 buyBtn.className = 'toggle-btn';
             }
 
-            fetchSettingsAndRender();
-        }
-
-        async function fetchSettingsAndRender() {
-            try {
-                const res = await fetch(`${API_BASE}/api/settings`);
-                if (res.ok) {
-                    const json = await res.json();
-                    if (json.success && json.data) {
-                        currentRates.buyRate = json.data.buyRate || 192.00;
-                        currentRates.sellRate = json.data.sellRate || 195.00;
-                    }
-                }
-            } catch (e) {
-                console.error("Rates fetch error:", e);
-            }
             renderOrderBook();
         }
 
         function renderOrderBook() {
             const tbody = document.getElementById('p2pOrdersBody');
-            const isBuy = currentType === 'buy';
-            const basePrice = isBuy ? currentRates.sellRate : currentRates.buyRate;
-            const actionLabel = isBuy ? 'Buy' : 'Sell';
-            const btnClass = isBuy ? 'order-btn' : 'order-btn sell';
+            const actionLabel = 'Buy';
+            const btnClass = 'order-btn';
 
             const sampleTraders = [
-                { name: 'EBRWhale', verified: true, orders: 1155, comp: '95%', priceOffset: 8, avail: '11,965.00', min: '5,000.00', max: '2,393,000.00', pay: ['CBE Birr', 'Bank of Abyssinia', 'Telebirr', 'Commercial Bank of Ethiopia'], sponsored: true },
-                { name: 'Brothernuge', verified: true, orders: 888, comp: '87%', priceOffset: 1, avail: '684.31', min: '4,000.00', max: '132,072.10', pay: ['M-Pesa', 'CBE Birr', 'Awash Bank', 'Dashen Bank', 'Bank of Abyssinia', 'Telebirr'], sponsored: false },
-                { name: 'EarnNexus', verified: true, orders: 457, comp: '94%', priceOffset: 1.4, avail: '95.44', min: '500.00', max: '18,457.16', pay: ['CBE Birr', 'Bank of Abyssinia', 'Commercial Bank of Ethiopia', 'Telebirr', 'Dashen Bank'], sponsored: false, avatarInit: 'EA' },
-                { name: 'Trader#01376', verified: false, orders: 304, comp: '92%', priceOffset: 1.4, avail: '285.38', min: '2,000.00', max: '55,191.76', pay: ['Commercial Bank of Ethiopia', 'Telebirr'], sponsored: false, avatarInit: 'TR' }
+                { name: 'EBRWhale', verified: true, orders: '1155 trades', comp: '95%', price: '200', pay: ['CBE Birr', 'Bank of Abyssinia', 'Telebirr', 'Commercial Bank of Ethiopia'], sponsored: true, avatar: '🦮' },
+                { name: 'Brothernuge', verified: true, orders: '888 trades', comp: '87%', price: '193', pay: ['M-Pesa', 'CBE Birr', 'Awash Bank', 'Dashen Bank', 'Bank of Abyssinia', 'Telebirr'], sponsored: false, avatar: '🛡️' },
+                { name: 'EarnNexus', verified: true, orders: '457 trades', comp: '94%', price: '193.4', pay: ['CBE Birr', 'Bank of Abyssinia', 'Commercial Bank of Ethiopia', 'Telebirr', 'Dashen Bank'], sponsored: false, avatarInit: 'EA' },
+                { name: 'Trader#01376', verified: false, orders: '304 trades', comp: '92%', price: '193.4', pay: ['Commercial Bank of Ethiopia', 'Telebirr'], sponsored: false, avatarInit: 'TR' }
             ];
 
             let html = '';
             sampleTraders.forEach(t => {
-                const effectivePrice = (basePrice + t.priceOffset).toFixed(2) === "203.00" ? "200" : (basePrice + t.priceOffset).toFixed(isBuy ? 0 : 1);
-                const avatarContent = t.avatarInit ? t.avatarInit : `<i class="fa-solid fa-image" style="color: #555;"></i>`; // Placeholder for the actual images
+                const avatarContent = t.avatar ? t.avatar : t.avatarInit;
                 
                 html += `
                 <tr>
@@ -478,20 +444,14 @@
                             <div>
                                 <div class="adv-name">${t.name} ${t.verified ? '<i class="fa-solid fa-circle-check"></i>' : ''}</div>
                                 <div class="adv-stats">
-                                    <i class="fa-solid fa-star"></i> <span style="color:#fff;">${t.comp}</span> &nbsp; ${t.orders} trades
+                                    <span style="color:var(--accent-gold);">★ ${t.comp}</span> &nbsp; ${t.orders}
                                 </div>
                                 ${t.sponsored ? '<div class="sponsored-badge">SPONSORED</div>' : ''}
                             </div>
                         </div>
                     </td>
                     <td>
-                        <div class="price-cell">${effectivePrice}</div>
-                    </td>
-                    <td>
-                        <div class="limit-cell">
-                            <div class="available">${t.avail} USDT</div>
-                            <div class="range">${t.min}-${t.max} ETB</div>
-                        </div>
+                        <div class="price-cell">${t.price}</div>
                     </td>
                     <td class="payment-cell">
                         <div class="payment-tags">
@@ -499,7 +459,7 @@
                         </div>
                     </td>
                     <td class="action-cell">
-                        <button class="${btnClass}" onclick="openOrderModal('${actionLabel}', '${effectivePrice}')">${actionLabel}</button>
+                        <button class="${btnClass}" onclick="openOrderModal('${actionLabel}', '${t.price}')">${actionLabel}</button>
                     </td>
                 </tr>`;
             });
