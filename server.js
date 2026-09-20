@@ -1647,7 +1647,7 @@ app.post('/api/passkey/login-options', async (req, res) => {
                 challenge: encodedChallenge,
                 timeout: 60000,
                 rpId: 'tbrexchange.com', // <--- እዚህ ጋር ዶሜንህን በቋሚነት ጻፍነው
-                userVerification: "discouraged"
+                userVerification: "required"
             }
         });
     } catch (error) {
@@ -1714,8 +1714,8 @@ app.post('/api/passkey/register-options', verifyToken, async (req, res) => {
                 timeout: 60000,
                 attestation: "none",
                 authenticatorSelection: {
-                    userVerification: "discouraged",
-                    residentKey: "discouraged"
+                    userVerification: "required",
+                    residentKey: "required"
                 }
             }
         });
