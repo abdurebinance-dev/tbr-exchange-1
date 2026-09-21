@@ -1069,9 +1069,10 @@
             withdrawals.forEach(tx => {
                 const addr = formatAddress(tx.destinationAddress);
                 
-                // 🚀 ምንም Processing ሳይል ቀጥታ እንዲከፍት 🚀
-                const hash = tx.transactionHash || tx.txHash || tx.hash || tx.txId || tx._id || ''; 
-                const onClickAction = `window.open('https://bscscan.com/tx/${hash}', '_blank')`;
+                // 🚀 የ 0x ማጣሪያው ተመልሷል 🚀
+                const hash = tx.transactionHash || tx.txHash || tx.hash || tx.txId || ''; 
+                const isValidHash = hash && String(hash).startsWith('0x');
+                const onClickAction = isValidHash ? `window.open('https://bscscan.com/tx/${hash}', '_blank')` : `showToast('Transaction hash processing...')`;
                 
                 const html = `
                 <div class="status-item">
@@ -1138,9 +1139,10 @@
             const icon = isWithdrawal ? 'fa-arrow-up' : 'fa-arrow-down';
             const desc = isWithdrawal ? `Withdrawal to ${formatAddress(tx.destinationAddress)} on BSC` : `Received on BSC`;
 
-            // 🚀 ምንም Processing ሳይል ቀጥታ እንዲከፍት 🚀
-            const hash = tx.transactionHash || tx.txHash || tx.hash || tx.txId || tx._id || '';
-            const onClickAction = `window.open('https://bscscan.com/tx/${hash}', '_blank')`;
+            // 🚀 የ 0x ማጣሪያው ተመልሷል 🚀
+            const hash = tx.transactionHash || tx.txHash || tx.hash || tx.txId || '';
+            const isValidHash = hash && String(hash).startsWith('0x');
+            const onClickAction = isValidHash ? `window.open('https://bscscan.com/tx/${hash}', '_blank')` : `showToast('Transaction hash processing...')`;
 
             return `
             <div class="tx-item">
