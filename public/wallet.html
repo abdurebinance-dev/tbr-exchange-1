@@ -1339,6 +1339,7 @@
             }, 500);
         }
 
+        // 🚀 Confirm Transfer ሲነካ ልክ እንደ Withdraw የደህንነት ማረጋገጫ (Passkey/Email OTP) ሞዳል መክፈት 🚀
         async function initiateTransfer() {
             const recipient = document.getElementById('transfer-recipient').value.trim();
             const amount = parseFloat(document.getElementById('transfer-amount').value);
@@ -1351,21 +1352,16 @@
             }
 
             if (!recipient || !isRecipientValid) {
-                showToast("Please enter a valid recipient.", true);
+                showToast("Recipient not found! Please check the Email or ID.", true);
                 return;
             }
 
-            if (isNaN(amount) || amount <= 0) {
-                showToast("Please enter a valid amount.", true);
+            if (isNaN(amount) || amount <= 0 || amount > currentBalance) {
+                showToast("Please enter a valid amount within your balance.", true);
                 return;
             }
 
-            // 🚀 1. ከባላንስ በላይ ሲገባ ትክክለኛውን ባላንስ አሳይቶ ማቆም 🚀
-            if (amount > currentBalance) {
-                showToast(`Your available balance is ${currentBalance.toFixed(2)} USDT. Insufficient balance!`, true);
-                return;
-            }
-
+            // 🚀 የ Withdrawal Confirmation Modal-ን መጠቀም (Passkey እና Email OTP እንዲኖረው) 🚀
             if (typeof openWithdrawalConfirmModal === 'function') {
                 openWithdrawalConfirmModal({
                     type: 'Transfer',
@@ -1373,15 +1369,19 @@
                     amount: amount
                 });
                 return;
+            } else {
+                // ሞዳሉ ከሌለ በቀጥታ ይልካል (Fallback)
+                executeTransferAPI(recipient, amount);
             }
-
-            executeTransferAPI(recipient, amount);
         }
 
-        async function executeTransferAPI(recipient, amount) {
+        // 🚀 ትክክለኛውን የትራንስፈር API ጥሪ የሚያደርገው (ማረጋገጫው ካለፈ በኋላ በ ሞዳሉ ይጠራል) 🚀
+        async function executeTransferAPI(recipient, amount, verificationCode = '', authType = '') {
             const btn = document.getElementById('transfer-submit-btn');
-            btn.disabled = true;
-            btn.innerText = "Processing...";
+            if (btn) {
+                btn.disabled = true;
+                btn.innerText = "Processing...";
+            }
 
             try {
                 const token = localStorage.getItem("token") || localStorage.getItem("authToken");
@@ -1391,7 +1391,12 @@
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify({ recipient, amount })
+                    body: JSON.stringify({ 
+                        recipient, 
+                        amount, 
+                        code: verificationCode, 
+                        authType: authType 
+                    })
                 });
 
                 const data = await res.json();
@@ -1415,8 +1420,10 @@
                 console.error("Transfer error:", err);
                 showToast("Server error during transfer.", true);
             } finally {
-                btn.disabled = false;
-                btn.innerText = "Confirm Transfer";
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerText = "Confirm Transfer";
+                }
                 checkTransferForm();
             }
         }
