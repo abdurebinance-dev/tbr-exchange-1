@@ -1255,13 +1255,28 @@
         }
 
         let recipientCheckTimer = null;
+        let isRecipientValid = false; // 🚀 ተቀባዩ ትክክል መሆኑን የሚይዝ ተለዋዋጭ (Variable)
 
+        // 🚀 2. ሰሚት ቤተኑን ሁኔታ በሁኔታዎች የሚቆጣጠረው ዋናው ፈንክሽን 🚀
         function checkTransferForm() {
             const recipient = document.getElementById('transfer-recipient').value.trim();
-            const amount = document.getElementById('transfer-amount').value.trim();
+            const amountVal = document.getElementById('transfer-amount').value.trim();
+            const amount = parseFloat(amountVal);
             const submitBtn = document.getElementById('transfer-submit-btn');
 
-            if (!recipient || !amount || parseFloat(amount) <= 0) {
+            let currentBalance = 0;
+            try {
+                currentBalance = parseFloat(userRawBalance || localStorage.getItem("user_balance_val") || 0);
+            } catch(e) {
+                currentBalance = 0;
+            }
+
+            // ሁኔታዎች፡- 
+            // 1. ሬስፒደንት ባዶ መሆን የለበትም
+            // 2. ሬስፒደንቱ በሰርቨር ተረጋግጦ ትክክል መሆን አለበት (isRecipientValid === true)
+            // 3. መጠኑ (amount) ከባዶ መብለጥ አለበት
+            // 4. መጠኑ ካለው ባላንስ (currentBalance) ማነስ ወይም እኩል መሆን አለበት
+            if (!recipient || !isRecipientValid || isNaN(amount) || amount <= 0 || amount > currentBalance) {
                 submitBtn.disabled = true;
                 submitBtn.style.opacity = "0.5";
                 submitBtn.style.cursor = "not-allowed";
@@ -1272,7 +1287,7 @@
             }
         }
 
-        // 🚀 1. ዩዘር ሲጽፍ ሳጥኑ ውስጥ "Finding..." (ሎዲንግ) አሳይቶ ሲያገኘው አረንጓዴ ቲክ ማሳየት 🚀
+        // 🚀 1. ዩዘር ሲጽፍ ሪስፒደንቱን በሰርቨር ማረጋገጥ 🚀
         function debouncedCheckRecipient() {
             clearTimeout(recipientCheckTimer);
             const recipient = document.getElementById('transfer-recipient').value.trim();
@@ -1280,12 +1295,16 @@
 
             if (!recipient) {
                 iconEl.style.display = 'none';
+                isRecipientValid = false;
+                checkTransferForm();
                 return;
             }
 
             iconEl.style.display = 'inline-block';
             iconEl.className = "fa-solid fa-spinner fa-spin";
             iconEl.style.color = "#f0b90b"; // ሎዲንግ ከለር
+            isRecipientValid = false;
+            checkTransferForm();
 
             recipientCheckTimer = setTimeout(async () => {
                 try {
@@ -1298,13 +1317,17 @@
                     if (data.success) {
                         iconEl.className = "fa-solid fa-circle-check";
                         iconEl.style.color = "var(--green-color)"; // አረንጓዴ ትክክል ምልክት
+                        isRecipientValid = true;
                     } else {
                         iconEl.className = "fa-solid fa-circle-xmark";
                         iconEl.style.color = "var(--red-color)"; // ቀይ ስህተት ምልክት
+                        isRecipientValid = false;
                     }
                 } catch (err) {
                     iconEl.style.display = 'none';
+                    isRecipientValid = false;
                 }
+                checkTransferForm(); // 🚀 ሁኔታዎችን እንደገና ማጣራት
             }, 500);
         }
 
@@ -1312,14 +1335,26 @@
             const recipient = document.getElementById('transfer-recipient').value.trim();
             const amount = parseFloat(document.getElementById('transfer-amount').value);
 
-            if (!recipient || isNaN(amount) || amount <= 0) {
-                showToast("Please enter a valid recipient and amount.", true);
+            let currentBalance = 0;
+            try {
+                currentBalance = parseFloat(userRawBalance || localStorage.getItem("user_balance_val") || 0);
+            } catch(e) {
+                currentBalance = 0;
+            }
+
+            if (!recipient || !isRecipientValid) {
+                showToast("Please enter a valid recipient.", true);
                 return;
             }
 
-            // 🚀 3. ከባላንስ በላይ ሲሆን ትክክለኛውን ባላንስ አሳይቶ ማቆም 🚀
-            if (amount > parseFloat(userRawBalance)) {
-                showToast(`Your available balance is ${userRawBalance} USDT. Insufficient balance!`, true);
+            if (isNaN(amount) || amount <= 0) {
+                showToast("Please enter a valid amount.", true);
+                return;
+            }
+
+            // 🚀 1. ከባላንስ በላይ ሲገባ ትክክለኛውን ባላንስ አሳይቶ ማቆም 🚀
+            if (amount > currentBalance) {
+                showToast(`Your available balance is ${currentBalance.toFixed(2)} USDT. Insufficient balance!`, true);
                 return;
             }
 
@@ -1358,6 +1393,7 @@
                     document.getElementById('transfer-recipient').value = "";
                     document.getElementById('transfer-amount').value = "";
                     document.getElementById('recipient-status-icon').style.display = 'none';
+                    isRecipientValid = false;
                     
                     userRawBalance = (parseFloat(userRawBalance) - amount).toFixed(2);
                     localStorage.setItem("user_balance_val", userRawBalance);
@@ -1376,7 +1412,6 @@
                 checkTransferForm();
             }
         }
-
         function updateBalanceDisplay() {
             if (isBalanceVisible) {
                 document.getElementById("user-balance").innerText = userRawBalance;
