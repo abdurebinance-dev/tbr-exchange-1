@@ -337,7 +337,7 @@
             box-shadow: 0 10px 40px rgba(0,0,0,0.9);
         }
 
-        /* 🚀 አዲሱ Full Screen History Modal Styles 🚀 */
+        /* Full Screen History Modal Styles */
         .history-modal-content {
             width: 100%;
             height: 100%;
@@ -466,12 +466,13 @@
             color: #848e9c;
         }
 
-        /* 🚀 አዲሱ የትራንዛክሽን ዲዛይን 🚀 */
+        /* Recent Activity Section */
         .activity-section {
             background-color: var(--card-bg);
             border: 1px solid var(--border-color);
             border-radius: 12px;
             padding: 20px 25px;
+            margin-top: 25px;
         }
 
         .section-header {
@@ -517,12 +518,12 @@
         .tx-download { color: #848e9c; font-size: 13px; cursor: pointer; transition: 0.2s;}
         .tx-download:hover { color: #fff; }
 
-        /* 🚀 Withdrawal Status Box 🚀 */
+        /* Withdrawal Status Box */
         .status-box {
             background: #121418;
             border-radius: 12px;
             padding: 0 15px;
-            margin-bottom: 30px;
+            margin-bottom: 25px;
             border: 1px solid var(--border-color);
         }
         .status-item {
@@ -531,7 +532,7 @@
         }
         .status-item:last-child { border-bottom: none; }
         
-        /* 🚀 History Filter Tabs 🚀 */
+        /* History Filter Tabs */
         .history-tabs {
             display: flex; gap: 10px; padding: 15px 28px; border-bottom: 1px solid #1f242c;
         }
@@ -648,17 +649,6 @@
 
         <!-- 2. WITHDRAW SECTION -->
         <div id="withdraw-section" class="tab-section" style="display: none;">
-            
-            <!-- 🚀 አዲሱ Withdrawal Status 🚀 -->
-            <div id="withdrawal-status-container" style="display: none;">
-                <div class="section-header" style="border-bottom: none; margin-bottom: 5px;">
-                    <span style="font-size: 14px;"><i class="fa-regular fa-clock" style="margin-right: 6px;"></i> Withdrawal Status</span>
-                </div>
-                <div class="status-box" id="withdrawal-status-list">
-                    <!-- Status items will load here -->
-                </div>
-            </div>
-
             <div id="withdraw-form-box" style="display: none;">
                 <div class="form-group">
                     <label>Withdrawal Address</label>
@@ -705,6 +695,16 @@
                 </div>
 
                 <button class="action-submit-btn btn-disabled" id="withdraw-submit-btn" disabled onclick="initiateWithdrawal()">Submit Withdrawal</button>
+
+                <!-- 🚀 Withdrawal Status (ከ Submit በታች፣ ከ Recent Activity በላይ ተዛውሯል) 🚀 -->
+                <div id="withdrawal-status-container" style="display: none; margin-top: 15px;">
+                    <div class="section-header" style="border-bottom: none; margin-bottom: 8px; padding-bottom: 0;">
+                        <span style="font-size: 14px; font-weight: 600; color: #fff;"><i class="fa-regular fa-clock" style="margin-right: 6px; color: var(--accent-color);"></i> Withdrawal Status</span>
+                    </div>
+                    <div class="status-box" id="withdrawal-status-list">
+                        <!-- Status items will load here -->
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -721,7 +721,7 @@
             <button class="action-submit-btn" onclick="showToast('Transfer completed instantly!')">Confirm Transfer</button>
         </div>
 
-        <!-- 🚀 አዲሱ Recent Activity (6 items max) 🚀 -->
+        <!-- Recent Activity (6 items max) -->
         <div class="activity-section">
             <div class="section-header">
                 <span>Recent Activity</span>
@@ -839,7 +839,7 @@
         </div>
     </div>
 
-    <!-- 🚀 አዲሱ Full Screen Transaction History Modal 🚀 -->
+    <!-- Full Screen Transaction History Modal -->
     <div class="modal-overlay" id="historyModal">
         <div class="modal-content history-modal-content">
             <div class="modal-header-styled">
@@ -878,7 +878,6 @@
         const DAILY_LIMIT = 6000;
         let dailyWithdrawn = parseFloat(localStorage.getItem("daily_withdrawn") || 0);
 
-        // 🚀 Global Transaction Store 🚀
         let allTransactions = [];
 
         document.addEventListener("DOMContentLoaded", () => {
@@ -998,7 +997,6 @@
             } catch(e) {}
         }
 
-        // --- 🚀 አዲሱ የትራንዛክሽን ማስተዳደሪያ ኮድ 🚀 ---
         function timeAgo(dateParam) {
             const date = new Date(dateParam);
             const seconds = Math.round((new Date() - date) / 1000);
@@ -1032,7 +1030,7 @@
                     allTransactions = data.transactions;
                     renderRecentActivity();
                     renderWithdrawalStatus();
-                    filterHistory('All'); // ሞዳሉ ላይም ያሳየዋል
+                    filterHistory('All');
                 }
             } catch (err) {
                 console.error("Error fetching tx:", err);
@@ -1043,7 +1041,7 @@
             const list = document.getElementById('recent-activity-list');
             list.innerHTML = '';
             
-            const recent6 = allTransactions.slice(0, 6); // የመጨረሻዎቹ 6 ብቻ
+            const recent6 = allTransactions.slice(0, 6);
             
             if (recent6.length === 0) {
                 list.innerHTML = `<div class="empty-activity"><i class="fa-regular fa-file-lines"></i><p>No transactions yet</p></div>`;
@@ -1060,7 +1058,7 @@
             const statusList = document.getElementById('withdrawal-status-list');
             statusList.innerHTML = '';
 
-            const withdrawals = allTransactions.filter(tx => tx.type && tx.type.toLowerCase() === 'withdrawal').slice(0, 3);
+            const withdrawals = allTransactions.filter(tx => (tx.type || '').toLowerCase().includes('withdraw')).slice(0, 3);
             
             if (withdrawals.length === 0) {
                 statusContainer.style.display = 'none';
@@ -1088,7 +1086,6 @@
             });
         }
 
-        // Full Screen Modal Logic
         function openHistoryModal() {
             document.getElementById('historyModal').style.display = 'flex';
         }
@@ -1103,14 +1100,14 @@
             }
 
             const list = document.getElementById('full-history-list');
-            list.innerHTML = '<div style="font-size:12px; color:#848e9c; margin-top: 20px;">TODAY</div>';
+            list.innerHTML = '<div style="font-size:12px; color:#848e9c; margin-top: 20px; font-weight:600;">TODAY</div>';
 
             let filtered = allTransactions;
             if(type !== 'All') {
                 filtered = allTransactions.filter(tx => {
                     const t = (tx.type || '').toLowerCase();
-                    if(type === 'Deposit') return t === 'deposit' || tx.amount > 0;
-                    if(type === 'Withdrawal') return t === 'withdrawal' || t === 'withdraw';
+                    if(type === 'Deposit') return t.includes('deposit');
+                    if(type === 'Withdrawal') return t.includes('withdraw');
                     if(type === 'Trades') return t.includes('trade');
                     return true;
                 });
@@ -1126,14 +1123,15 @@
             });
         }
 
-        // የጋራ HTML መፍጠሪያ ፈንክሽን
         function createTxHTML(tx) {
-            const isDeposit = (tx.type || '').toLowerCase().includes('deposit') || (tx.type || '').toLowerCase().includes('trade') || tx.amount > 0;
-            const title = tx.type || (isDeposit ? 'Deposit' : 'Withdrawal');
-            const color = isDeposit ? 'var(--green-color)' : 'var(--red-color)';
-            const sign = isDeposit ? '+' : '-';
-            const icon = isDeposit ? 'fa-arrow-down' : 'fa-arrow-up';
-            const desc = isDeposit ? `Received on BSC` : `Withdrawal to ${formatAddress(tx.destinationAddress)} on BSC`;
+            const isWithdrawal = (tx.type || '').toLowerCase().includes('withdraw');
+            const isDeposit = !isWithdrawal && ((tx.type || '').toLowerCase().includes('deposit') || (tx.type || '').toLowerCase().includes('trade') || (tx.type || '').toLowerCase().includes('credit'));
+            
+            const title = tx.type || (isWithdrawal ? 'Withdrawal' : 'Deposit');
+            const color = isWithdrawal ? 'var(--red-color)' : 'var(--green-color)';
+            const sign = isWithdrawal ? '-' : '+';
+            const icon = isWithdrawal ? 'fa-arrow-up' : 'fa-arrow-down';
+            const desc = isWithdrawal ? `Withdrawal to ${formatAddress(tx.destinationAddress)} on BSC` : `Received on BSC`;
 
             return `
             <div class="tx-item">
@@ -1153,7 +1151,6 @@
                 </div>
             </div>`;
         }
-        // --- መጨረሻ ---
 
         async function fetchUserProfile() {
             try {
@@ -1216,7 +1213,7 @@
                         userRawBalance = finalBal.toFixed(2);
                         localStorage.setItem("user_balance_val", userRawBalance);
                         updateBalanceDisplay();
-                        fetchTransactions(); // ዳታውን አዲስ ያመጣዋል
+                        fetchTransactions();
                     }
                 }
             } catch (error) {
