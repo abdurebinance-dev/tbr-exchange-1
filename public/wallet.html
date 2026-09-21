@@ -708,16 +708,27 @@
             </div>
         </div>
 
-       <!-- 3. TRANSFER SECTION -->
+       <style>
+    /* 🚀 4. የቁጥር ሳጥን ቀስቶችን (Spinners) ማጥፊያ 🚀 */
+    #transfer-section input[type=number]::-webkit-inner-spin-button, 
+    #transfer-section input[type=number]::-webkit-outer-spin-button { 
+        -webkit-appearance: none; 
+        margin: 0; 
+    }
+    #transfer-section input[type=number] {
+        -moz-appearance: textfield;
+    }
+</style>
+
+        <!-- 3. TRANSFER SECTION -->
         <div id="transfer-section" class="tab-section" style="display: none;">
-            <div class="form-group" style="position: relative;">
+            <div class="form-group">
                 <label>Recipient Email or TBR User ID</label>
+                <!-- 🚀 1. አኮኑ ከሳጥኑ ውስጥ በቀኝ በኩል እንዲቀመጥ ተደርጓል 🚀 -->
                 <div style="position: relative; display: flex; align-items: center;">
-                    <input type="text" id="transfer-recipient" class="form-control" placeholder="Enter recipient details" oninput="checkTransferForm(); debouncedCheckRecipient();" style="padding-right: 35px;">
-                    <!-- 🚀 1. Finding... እና የ Tick/Error ምልክት የሚታይበት ቦታ 🚀 -->
-                    <span id="recipient-status-icon" style="position: absolute; right: 12px; font-size: 14px; display: none;"></span>
+                    <input type="text" id="transfer-recipient" class="form-control" placeholder="Enter recipient details" oninput="checkTransferForm(); debouncedCheckRecipient();" style="padding-right: 40px;">
+                    <span id="recipient-status-icon" style="position: absolute; right: 14px; font-size: 14px; display: none;"></span>
                 </div>
-                <div id="recipient-feedback" style="font-size: 11px; margin-top: 4px; color: #848e9c;"></div>
             </div>
             
             <div class="form-group">
@@ -725,7 +736,7 @@
                 <input type="number" id="transfer-amount" class="form-control" placeholder="Enter amount to transfer (Zero Fee)" oninput="checkTransferForm()">
             </div>
             
-            <!-- 🚀 3. ሳትሞላቸው Fezez (Disabled) ብሎ ይቀመጣል 🚀 -->
+            <!-- 🚀 3. ሳትሞላው Fezez (Disabled) ብሎ ይቀመጣል 🚀 -->
             <button class="action-submit-btn" id="transfer-submit-btn" onclick="initiateTransfer()" disabled style="opacity: 0.5; cursor: not-allowed;">Confirm Transfer</button>
         </div>
 
@@ -1245,7 +1256,6 @@
 
         let recipientCheckTimer = null;
 
-        // 🚀 3. ፎርሙ ሲሞላ Submit-ን ማቀጣጠል ወይም ማሰር 🚀
         function checkTransferForm() {
             const recipient = document.getElementById('transfer-recipient').value.trim();
             const amount = document.getElementById('transfer-amount').value.trim();
@@ -1262,24 +1272,20 @@
             }
         }
 
-        // 🚀 1. ዩዘር ሲጽፍ "Finding..." እያለ ሰርቨር ላይ ሄዶ ዩዘሩ መኖሩን ማረጋገጥ 🚀
+        // 🚀 1. ዩዘር ሲጽፍ ሳጥኑ ውስጥ "Finding..." (ሎዲንግ) አሳይቶ ሲያገኘው አረንጓዴ ቲክ ማሳየት 🚀
         function debouncedCheckRecipient() {
             clearTimeout(recipientCheckTimer);
             const recipient = document.getElementById('transfer-recipient').value.trim();
             const iconEl = document.getElementById('recipient-status-icon');
-            const feedbackEl = document.getElementById('recipient-feedback');
 
             if (!recipient) {
                 iconEl.style.display = 'none';
-                feedbackEl.innerText = '';
                 return;
             }
 
             iconEl.style.display = 'inline-block';
             iconEl.className = "fa-solid fa-spinner fa-spin";
-            iconEl.style.color = "#f0b90b"; // ጫጫታ/ሎዲንግ ከለር
-            feedbackEl.innerText = "Finding...";
-            feedbackEl.style.color = "#f0b90b";
+            iconEl.style.color = "#f0b90b"; // ሎዲንግ ከለር
 
             recipientCheckTimer = setTimeout(async () => {
                 try {
@@ -1291,23 +1297,17 @@
 
                     if (data.success) {
                         iconEl.className = "fa-solid fa-circle-check";
-                        iconEl.style.color = "var(--green-color)";
-                        feedbackEl.innerText = `Found: ${data.email}`;
-                        feedbackEl.style.color = "var(--green-color)";
+                        iconEl.style.color = "var(--green-color)"; // አረንጓዴ ትክክል ምልክት
                     } else {
                         iconEl.className = "fa-solid fa-circle-xmark";
-                        iconEl.style.color = "var(--red-color)";
-                        feedbackEl.innerText = "Recipient not found!";
-                        feedbackEl.style.color = "var(--red-color)";
+                        iconEl.style.color = "var(--red-color)"; // ቀይ ስህተት ምልክት
                     }
                 } catch (err) {
                     iconEl.style.display = 'none';
-                    feedbackEl.innerText = '';
                 }
             }, 500);
         }
 
-        // 🚀 4. Submit ሲነካ ልክ እንደ Withdrawal Passkey ወይም Email OTP መጠየቅ 🚀
         async function initiateTransfer() {
             const recipient = document.getElementById('transfer-recipient').value.trim();
             const amount = parseFloat(document.getElementById('transfer-amount').value);
@@ -1317,13 +1317,12 @@
                 return;
             }
 
-            // 🚀 2. ካለው ባላንስ በላይ ሲሆን ትክክለኛውን ባላንስ አሳይቶ ማቆም 🚀
+            // 🚀 3. ከባላንስ በላይ ሲሆን ትክክለኛውን ባላንስ አሳይቶ ማቆም 🚀
             if (amount > parseFloat(userRawBalance)) {
                 showToast(`Your available balance is ${userRawBalance} USDT. Insufficient balance!`, true);
                 return;
             }
 
-            // ልክ እንደ ዊዝድሮዋል ሁሉ የደህንነት ማረጋገጫ (Passkey/OTP) ሞዳል መክፈት
             if (typeof openWithdrawalConfirmModal === 'function') {
                 openWithdrawalConfirmModal({
                     type: 'Transfer',
@@ -1333,12 +1332,10 @@
                 return;
             }
 
-            // ሞዳሉ ከሌለ በቀጥታ ሂደቱን ማጠናቀቅ
             executeTransferAPI(recipient, amount);
         }
 
-        // የመጨረሻው የትራንስፈር API ጥሪ
-        async function executeTransferAPI(recipient, amount, verificationCode = '') {
+        async function executeTransferAPI(recipient, amount) {
             const btn = document.getElementById('transfer-submit-btn');
             btn.disabled = true;
             btn.innerText = "Processing...";
@@ -1351,7 +1348,7 @@
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify({ recipient, amount, code: verificationCode })
+                    body: JSON.stringify({ recipient, amount })
                 });
 
                 const data = await res.json();
@@ -1361,7 +1358,6 @@
                     document.getElementById('transfer-recipient').value = "";
                     document.getElementById('transfer-amount').value = "";
                     document.getElementById('recipient-status-icon').style.display = 'none';
-                    document.getElementById('recipient-feedback').innerText = '';
                     
                     userRawBalance = (parseFloat(userRawBalance) - amount).toFixed(2);
                     localStorage.setItem("user_balance_val", userRawBalance);
