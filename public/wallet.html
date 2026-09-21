@@ -607,7 +607,7 @@
                     </div>
                 </div>
 
-                <button class="action-submit-btn btn-disabled" id="withdraw-submit-btn" disabled onclick="submitWithdrawalRequest()">Submit Withdrawal</button>
+                <button class="action-submit-btn btn-disabled" id="withdraw-submit-btn" disabled onclick="initiateWithdrawal()">Submit Withdrawal</button>
             </div>
         </div>
 
@@ -691,7 +691,7 @@
         <div class="modal-content network-modal" style="width: 400px; padding: 25px; border-radius: 16px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <h3 style="color: #fff; margin: 0; font-size: 16px; display: flex; align-items: center; gap: 8px;">
-                    <i class="fa-solid fa-shield-halved" style="color: #0ecb81;"></i> Security Verification
+                    <i class="fa-solid fa-shield-halved" style="color: var(--accent-color);"></i> Security Verification
                 </h3>
                 <i class="fa-solid fa-xmark" style="cursor: pointer; color: #888; font-size: 18px;" onclick="closeSecurityModal()"></i>
             </div>
@@ -700,7 +700,7 @@
 
             <!-- Tabs -->
             <div style="display: flex; background: #1a1c22; border-radius: 8px; padding: 4px; margin-bottom: 20px;">
-                <button style="flex: 1; padding: 10px; border-radius: 6px; border: none; background: #2b313a; color: #0ecb81; font-weight: 600; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px;">
+                <button style="flex: 1; padding: 10px; border-radius: 6px; border: none; background: #2b313a; color: var(--accent-color); font-weight: 600; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px;">
                     <i class="fa-solid fa-fingerprint"></i> Passkey
                 </button>
                 <button style="flex: 1; padding: 10px; border-radius: 6px; border: none; background: transparent; color: #888; font-weight: 600; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; transition: 0.2s;" onclick="switchToEmailOTP()">
@@ -710,13 +710,13 @@
 
             <!-- Passkey Content -->
             <div style="background: #1a1c22; border: 1px solid #2b313a; border-radius: 12px; padding: 30px 20px; text-align: center;">
-                <div style="width: 60px; height: 60px; background: rgba(14, 203, 129, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px auto;">
-                    <i class="fa-solid fa-fingerprint" style="font-size: 30px; color: #0ecb81;"></i>
+                <div style="width: 60px; height: 60px; background: rgba(243, 186, 47, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px auto;">
+                    <i class="fa-solid fa-fingerprint" style="font-size: 30px; color: var(--accent-color);"></i>
                 </div>
                 <h4 style="color: #fff; margin: 0 0 8px 0; font-size: 15px;">Use your passkey</h4>
                 <p style="color: #888; font-size: 12px; margin: 0 0 20px 0;">Touch ID, Face ID, Windows Hello, or security key</p>
                 
-                <button onclick="verifyWithdrawalPasskey()" style="width: 100%; background: #0ecb81; color: #000; padding: 14px; border: none; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer; margin-bottom: 10px;">
+                <button onclick="verifyWithdrawalPasskey()" style="width: 100%; background: var(--accent-color); color: #000; padding: 14px; border: none; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer; margin-bottom: 10px;">
                     <i class="fa-solid fa-fingerprint"></i> Verify with Passkey
                 </button>
                 <button onclick="closeSecurityModal()" style="width: 100%; background: transparent; color: #888; padding: 10px; border: none; font-weight: 600; cursor: pointer;">
@@ -733,9 +733,10 @@
                 <h3 style="color: var(--accent-color);">Email Verification</h3>
                 <i class="fa-solid fa-xmark" onclick="closeOtpModal()"></i>
             </div>
-            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">Please enter the 6-digit confirmation code sent to your email.</p>
-            <div class="form-group">
-                <input type="text" class="form-control" id="otpCodeInput" placeholder="Enter 6-digit OTP" maxlength="6" style="text-align: center; font-size: 20px; letter-spacing: 5px;">
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">Click 'Send Code' to receive a 6-digit confirmation code to your email.</p>
+            <div class="form-group" style="position: relative;">
+                <input type="text" class="form-control" id="otpCodeInput" placeholder="Enter 6-digit OTP" maxlength="6" style="text-align: center; font-size: 18px; letter-spacing: 5px; padding-right: 110px;">
+                <button id="sendEmailCodeBtn" onclick="triggerEmailOTP()" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: #2b313a; border: none; color: var(--accent-color); padding: 8px 12px; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer;">Send Code</button>
             </div>
             <button class="action-submit-btn" onclick="verifyAndCompleteWithdrawal()">Verify & Withdraw</button>
         </div>
@@ -748,13 +749,14 @@
     </div>
 
     <script>
-        const API_BASE_URL = ''; // አዲሱ የ API ሊንክ
+        const API_BASE_URL = ''; 
 
         let isBalanceVisible = true;
         let userRawBalance = localStorage.getItem("user_balance_val") || "0.00";
         let userBscAddress = localStorage.getItem("user_bsc_address") || ""; 
         let pendingWithdrawAmount = 0;
         let isNetworkSelected = false;
+        let userHasPasskey = false; // አዲስ: ዩዘሩ Passkey እንዳለው የሚያውቅበት
 
         document.addEventListener("DOMContentLoaded", () => {
             updateBalanceDisplay();
@@ -827,10 +829,26 @@
         async function loadUserData() {
             await fetchUserProfile();
             fetchTransactions(); 
+            checkUserPasskeys(); // ዩዘሩ አሻራ እንዳለው ያጣራል
             if (userBscAddress) {
                 checkDepositSilently();
                 setInterval(checkDepositSilently, 15000);
             }
+        }
+
+        // ዩዘሩ Passkey እንዳለው በድብቅ ያጣራል
+        async function checkUserPasskeys() {
+            const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+            if (!token) return;
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/passkey/list`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (data.success && data.passkeys && data.passkeys.length > 0) {
+                    userHasPasskey = true;
+                }
+            } catch(e) {}
         }
 
         async function fetchTransactions() {
@@ -1027,8 +1045,8 @@
             validateWithdrawForm();
         }
 
-        // 🚀 አዲሱ የ ዊዝድሮዋል ጥያቄ ኮድ (Passkey & Email መለየት) 🚀
-        async function submitWithdrawalRequest() {
+        // 🚀 ዊዝድሮዋል ሲነካ ፖፕ-አፑን ያመጣል እንጂ አውቶማቲክ ኢሜል አይልክም 🚀
+        async function initiateWithdrawal() {
             const address = document.getElementById('withdraw-address').value.trim();
             const amount = document.getElementById('withdraw-amount').value;
 
@@ -1037,43 +1055,16 @@
             }
 
             pendingWithdrawAmount = parseFloat(amount);
-            const token = localStorage.getItem('token') || localStorage.getItem('authToken');
 
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/withdraw/request`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ amount: pendingWithdrawAmount, destinationAddress: address, useEmailFallback: false, passkeyVerified: false })
-                });
-
-                const data = await res.json();
-                
-                if (data.requiresPasskeyPrompt) {
-                    // Passkey ተመዝግቧል፣ መምረጫውን ያምጣ!
-                    document.getElementById('securityModal').style.display = 'flex';
-                } 
-                else if (data.requiresEmailOtp) {
-                    // Passkey የለውም፣ ቀጥታ የድሮውን OTP ያምጣ
-                    document.getElementById('otpModal').style.display = 'flex';
-                    showToast("Verification code sent to your email!");
-                } 
-                else if (data.success) {
-                    // ካለ ፓስወርድ ዊዝድሮዋል ተፈቅዷል ማለት ነው (አልፎ አልፎ)
-                    showToast(data.message);
-                    await fetchUserProfile(); 
-                    document.getElementById('withdraw-amount').value = "";
-                    document.getElementById('withdraw-address').value = "";
-                    validateWithdrawForm();
-                    fetchTransactions();
-                } else {
-                    showToast(data.message || "Withdrawal failed.");
-                }
-            } catch (err) {
-                console.error("Withdraw Error:", err);
-                showToast("Server connection error.");
+            if (userHasPasskey) {
+                // Passkey ካለው መምረጫውን ያምጣል
+                document.getElementById('securityModal').style.display = 'flex';
+            } else {
+                // Passkey ከሌለው የኢሜል ኮድ መሙያውን ያምጣል
+                document.getElementById('otpModal').style.display = 'flex';
+                // በተኑን ሪሴት ያደርጋል
+                document.getElementById('sendEmailCodeBtn').innerText = "Send Code";
+                document.getElementById('sendEmailCodeBtn').disabled = false;
             }
         }
 
@@ -1081,10 +1072,22 @@
             document.getElementById('securityModal').style.display = 'none';
         }
 
-        // 🚀 ዩዘሩ በገዛ ፈቃዱ ወደ Email ሲቀይር 🚀
-        async function switchToEmailOTP() {
+        // 🚀 ዩዘሩ 'Email Code' የሚለውን ታብ ሲነካ 🚀
+        function switchToEmailOTP() {
+            closeSecurityModal(); 
+            document.getElementById('otpModal').style.display = 'flex'; 
+            document.getElementById('sendEmailCodeBtn').innerText = "Send Code";
+            document.getElementById('sendEmailCodeBtn').disabled = false;
+        }
+
+        // 🚀 'Send Code' በተኑ ሲነካ ብቻ ኢሜሉ ይላካል 🚀
+        async function triggerEmailOTP() {
             const address = document.getElementById('withdraw-address').value.trim();
             const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+            const sendBtn = document.getElementById('sendEmailCodeBtn');
+            
+            sendBtn.disabled = true;
+            sendBtn.innerText = "Sending...";
 
             try {
                 const res = await fetch(`${API_BASE_URL}/api/withdraw/request`, {
@@ -1098,13 +1101,35 @@
 
                 const data = await res.json();
                 if (data.requiresEmailOtp) {
-                    closeSecurityModal(); 
-                    document.getElementById('otpModal').style.display = 'flex'; 
                     showToast("Verification code sent to your email!");
+                    startOtpCountdown();
+                } else {
+                    showToast(data.message || "Error sending code.");
+                    sendBtn.disabled = false;
+                    sendBtn.innerText = "Send Code";
                 }
             } catch (err) {
-                showToast("Error switching to email.");
+                showToast("Server error switching to email.");
+                sendBtn.disabled = false;
+                sendBtn.innerText = "Send Code";
             }
+        }
+
+        function startOtpCountdown() {
+            const btn = document.getElementById('sendEmailCodeBtn');
+            let timeLeft = 60;
+            btn.innerText = `${timeLeft}s`;
+            
+            const timer = setInterval(() => {
+                timeLeft--;
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    btn.innerText = "Send Code";
+                    btn.disabled = false;
+                } else {
+                    btn.innerText = `${timeLeft}s`;
+                }
+            }, 1000);
         }
 
         function base64urlToBufferWallet(base64url) {
