@@ -708,19 +708,18 @@
             </div>
         </div>
 
-        <!-- 3. TRANSFER SECTION -->
+       <!-- 3. TRANSFER SECTION -->
         <div id="transfer-section" class="tab-section" style="display: none;">
             <div class="form-group">
                 <label>Recipient Email or TBR User ID</label>
-                <!-- 🚀 ID ጨምረናል 🚀 -->
-                <input type="text" id="transfer-recipient" class="form-control" placeholder="Enter recipient details">
+                <input type="text" id="transfer-recipient" class="form-control" placeholder="Enter recipient details" oninput="checkTransferForm()">
             </div>
             <div class="form-group">
                 <label>Transfer Amount (USDT)</label>
-                <!-- 🚀 ID ጨምረናል 🚀 -->
-                <input type="number" id="transfer-amount" class="form-control" placeholder="Enter amount to transfer (Zero Fee)">
+                <input type="number" id="transfer-amount" class="form-control" placeholder="Enter amount to transfer (Zero Fee)" oninput="checkTransferForm()">
             </div>
-            <button class="action-submit-btn" id="transfer-submit-btn" onclick="initiateTransfer()">Confirm Transfer</button>
+            <!-- 🚀 3. ክፍት ቦታዎቹ ካልሞሉ Fezez (Disabled) ይላል 🚀 -->
+            <button class="action-submit-btn" id="transfer-submit-btn" onclick="initiateTransfer()" disabled style="opacity: 0.5; cursor: not-allowed;">Confirm Transfer</button>
         </div>
 
         <!-- Recent Activity (6 items max) -->
@@ -1234,6 +1233,90 @@
                 }
             } catch (error) {
                 console.error('Auto check failed silently:', error);
+            }
+        }
+
+        // 🚀 3. Inputዎቹ ሲሞሉ ሰሚት ቤተኑን የሚያነቃቁና የሚያስሩ 🚀
+        function checkTransferForm() {
+            const recipient = document.getElementById('transfer-recipient').value.trim();
+            const amount = document.getElementById('transfer-amount').value.trim();
+            const submitBtn = document.getElementById('transfer-submit-btn');
+
+            if (!recipient || !amount || parseFloat(amount) <= 0) {
+                submitBtn.disabled = true;
+                submitBtn.style.opacity = "0.5";
+                submitBtn.style.cursor = "not-allowed";
+            } else {
+                submitBtn.disabled = false;
+                submitBtn.style.opacity = "1";
+                submitBtn.style.cursor = "pointer";
+            }
+        }
+
+        async function initiateTransfer() {
+            const recipient = document.getElementById('transfer-recipient').value.trim();
+            const amount = parseFloat(document.getElementById('transfer-amount').value);
+            const btn = document.getElementById('transfer-submit-btn');
+
+            if (!recipient || isNaN(amount) || amount <= 0) {
+                showToast("Please enter a valid recipient and amount.", true);
+                return;
+            }
+
+            // 🚀 2. ካለው ባላንስ በላይ ሲሆን የሚሰጥ ትክክለኛ ኤረር 🚀
+            if (amount > parseFloat(userRawBalance)) {
+                showToast(`Your available balance is ${userRawBalance} USDT. Insufficient balance!`, true);
+                return;
+            }
+
+            // 🚀 4. ልክ እንደ Withdraw ሁሉ ማረጋገጫ (Passkey/OTP) መጠየቂያ 
+            if (typeof openWithdrawalConfirmModal === 'function') {
+                // የትራንስፈር መረጃውን አስቀምጦ የሴኪዩሪቲ ማረጋገጫውን (Passkey/OTP) እንዲከፍት ማድረግ
+                openWithdrawalConfirmModal({
+                    type: 'Transfer',
+                    recipient: recipient,
+                    amount: amount
+                });
+                return;
+            }
+
+            // ማረጋገጫ ሞዳል ከሌለ በቀጥታ ወደ ፋይንዲንግ እና  ப்ሮሰሲንግ ይገባል
+            btn.disabled = true;
+            btn.innerText = "Finding..."; // 🚀 1. Finding... ጽሁፍ 
+
+            try {
+                const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+                const res = await fetch(`${API_BASE_URL}/api/transfer`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ recipient, amount })
+                });
+
+                const data = await res.json();
+                
+                if (data.success) {
+                    showToast(data.message, false);
+                    document.getElementById('transfer-recipient').value = "";
+                    document.getElementById('transfer-amount').value = "";
+                    
+                    userRawBalance = (parseFloat(userRawBalance) - amount).toFixed(2);
+                    localStorage.setItem("user_balance_val", userRawBalance);
+                    updateBalanceDisplay();
+                    fetchTransactions();
+                    checkTransferForm();
+                } else {
+                    showToast(data.message || "Transfer failed.", true);
+                }
+            } catch (err) {
+                console.error("Transfer error:", err);
+                showToast("Server error during transfer.", true);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Confirm Transfer";
+                checkTransferForm();
             }
         }
 
