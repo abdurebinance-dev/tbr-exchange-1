@@ -1809,35 +1809,37 @@ app.get('/api/settings/limits', (req, res) => {
 
 // --- 🔥 Internal Transfer API (Zero Fee) 🔥 ---
 app.post('/api/transfer', verifyToken, async (req, res) => {
-    const { recipient, amount } = req.body;
     try {
+        const { recipient, amount } = req.body;
         const senderId = req.user.id;
         const transferAmount = parseFloat(amount);
 
         if (!recipient || isNaN(transferAmount) || transferAmount <= 0) {
-            return res.status(400).json({ success: false, message: 'Invalid transfer details' });
+            return res.status(400).json({ success: false, message: 'Invalid transfer details.' });
         }
 
         // 1. የላኪውን አካውንት ማግኘት
         const sender = await User.findById(senderId);
         if (!sender || sender.balance < transferAmount) {
-            return res.status(400).json({ success: false, message: 'Insufficient balance' });
+            return res.status(400).json({ success: false, message: 'Insufficient balance.' });
         }
 
         // 2. ተቀባዩን በ ኢሜል መፈለግ
-        let receiver = await User.findOne({ email: recipient.toLowerCase() });
+        let receiver = await User.findOne({ email: recipient.toLowerCase().trim() });
         
-        // በኢሜል ካላገኘው፣ በ User ID መፈለግ
-        if (!receiver && mongoose.Types.ObjectId.isValid(recipient)) {
-            receiver = await User.findById(recipient);
+        // በኢሜል ካላገኘው፣ 24 ፊደል ባለው User ID መፈለግ
+        const isObjectId = /^[0-9a-fA-F]{24}$/.test(recipient.trim());
+        if (!receiver && isObjectId) {
+            receiver = await User.findById(recipient.trim());
         }
 
+        // 🚀 ተቀባዩ ካልተገኘ ቀጥታ ኤረር ይመልሳል 🚀
         if (!receiver) {
-            return res.status(404).json({ success: false, message: 'Recipient not found' });
+            return res.status(404).json({ success: false, message: 'Recipient not found! Please check the Email or ID.' });
         }
 
         if (sender._id.toString() === receiver._id.toString()) {
-            return res.status(400).json({ success: false, message: 'You cannot transfer to yourself' });
+            return res.status(400).json({ success: false, message: 'You cannot transfer to yourself.' });
         }
 
         // 3. ከላኪው ላይ ቀንሶ፣ ለተቀባዩ መደመር
@@ -1847,30 +1849,34 @@ app.post('/api/transfer', verifyToken, async (req, res) => {
         await sender.save();
         await receiver.save();
 
-        // 4. ሂስትሪ መመዝገብ (ለላኪው እና ለተቀባዩ)
-        const senderTx = new Transaction({
-            userId: sender._id,
-            type: 'Transfer',
-            amount: transferAmount, // Positive እናደርገውና HTML ላይ Transfer ከሆነ እናስተካክለዋለን
-            destinationAddress: receiver.email,
-            status: 'Completed'
-        });
-        await senderTx.save();
+        // 4. ሂስትሪ መመዝገብ (ኤረር ቢፈጠርም ብሩ መላኩ እንዳይቋረጥ try-catch ውስጥ ገብቷል)
+        try {
+            const senderTx = new Transaction({
+                userId: sender._id,
+                type: 'Transfer',
+                amount: transferAmount, 
+                destinationAddress: receiver.email,
+                status: 'Completed'
+            });
+            await senderTx.save();
 
-        const receiverTx = new Transaction({
-            userId: receiver._id,
-            type: 'Trade Credit', // ተቀባዩ ጋር ሲደርስ እንደ Credit እንዲታይ
-            amount: transferAmount,
-            destinationAddress: sender.email,
-            status: 'Completed'
-        });
-        await receiverTx.save();
+            const receiverTx = new Transaction({
+                userId: receiver._id,
+                type: 'Deposit', 
+                amount: transferAmount,
+                destinationAddress: sender.email,
+                status: 'Completed'
+            });
+            await receiverTx.save();
+        } catch(txErr) {
+            console.error("History save error:", txErr);
+        }
 
-        res.json({ success: true, message: 'Transfer successful' });
+        res.json({ success: true, message: 'Transfer successful!' });
 
     } catch (error) {
         console.error("Transfer Error:", error);
-        res.status(500).json({ success: false, message: 'Server error during transfer' });
+        res.status(500).json({ success: false, message: 'Server error during transfer.' });
     }
 });
 

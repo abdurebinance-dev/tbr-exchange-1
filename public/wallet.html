@@ -1466,18 +1466,17 @@
             }
         }
 
-        // 🚀 አዲሱ የ Transfer ጃቫስክሪፕት ኮድ 🚀
-        async function initiateTransfer() {
+       async function initiateTransfer() {
             const recipient = document.getElementById('transfer-recipient').value.trim();
             const amount = parseFloat(document.getElementById('transfer-amount').value);
             const btn = document.getElementById('transfer-submit-btn');
 
             if (!recipient || isNaN(amount) || amount <= 0) {
-                showToast("Please enter a valid recipient and amount.");
+                showToast("Please enter a valid recipient and amount.", true);
                 return;
             }
             if (amount > parseFloat(userRawBalance)) {
-                showToast("Insufficient balance.");
+                showToast("Insufficient balance.", true);
                 return;
             }
 
@@ -1496,17 +1495,24 @@
                 });
 
                 const data = await res.json();
+                
                 if (data.success) {
-                    showToast("Transfer successful!");
+                    showToast(data.message, false);
                     document.getElementById('transfer-recipient').value = "";
                     document.getElementById('transfer-amount').value = "";
-                    await loadUserData(); // ባላንስ እና ሂስትሪ አዲስ እንዲያመጣ
+                    
+                    // 🚀 ብሩን ወዲያውኑ ፊትለፊትህ ላይ ይቀንሰዋል 🚀
+                    userRawBalance = (parseFloat(userRawBalance) - amount).toFixed(2);
+                    localStorage.setItem("user_balance_val", userRawBalance);
+                    updateBalanceDisplay();
+                    fetchTransactions(); 
                 } else {
-                    showToast(data.message || "Transfer failed.");
+                    // 🚀 የተሳሳተ ሰው ሲሆን እዚህ ጋር ኤረሩን ያወጣል 🚀
+                    showToast(data.message || "Transfer failed.", true);
                 }
             } catch (err) {
                 console.error("Transfer error:", err);
-                showToast("Server error during transfer.");
+                showToast("Server error during transfer.", true);
             } finally {
                 btn.disabled = false;
                 btn.innerText = "Confirm Transfer";
@@ -1610,16 +1616,28 @@
             showToast("Address copied to clipboard!");
         }
 
-        function showToast(message) {
+        function showToast(message, isError = false) {
             const toast = document.getElementById("toastNotification");
             if (!toast) return;
             const msgEl = document.getElementById("toastMessage");
+            const iconEl = toast.querySelector("i");
+            
             if (msgEl) msgEl.innerText = message;
+            
+            // 🚀 ኤረር ከሆነ ቀይ ያደርገዋል 🚀
+            if (isError) {
+                iconEl.className = "fa-solid fa-circle-xmark";
+                iconEl.style.color = "var(--red-color)";
+            } else {
+                iconEl.className = "fa-solid fa-circle-check";
+                iconEl.style.color = "var(--green-color)";
+            }
+            
             toast.classList.add("show");
 
             setTimeout(() => {
                 toast.classList.remove("show");
-            }, 2500);
+            }, 3000);
         }
     </script>
 </body>
