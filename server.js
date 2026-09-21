@@ -1922,6 +1922,94 @@ async function autoSweepUSDT(userAddress, userPrivateKey) {
     }
 }
 
+// --- 🔥 Verify Recipient API (ለ Finding...) 🔥 ---
+app.get('/api/verify-recipient', verifyToken, async (req, res) => {
+    try {
+        const query = (req.query.q || '').trim().toLowerCase();
+        const currentUserId = req.user.id;
+
+        let receiver = await User.findOne({ email: query });
+        const isObjectId = /^[0-9a-fA-F]{24}$/.test(query);
+        if (!receiver && isObjectId) {
+            receiver = await User.findById(query);
+        }
+
+        if (!receiver || receiver._id.toString() === currentUserId) {
+            return res.json({ success: false });
+        }
+
+        res.json({ success: true, email: receiver.email });
+    } catch (error) {
+        res.status(500).json({ success: false });
+    }
+});
+
+// --- 🔥 Internal Transfer API (Zero Fee) 🔥 ---
+app.post('/api/transfer', verifyToken, async (req, res) => {
+    try {
+        const { recipient, amount } = req.body;
+        const senderId = req.user.id;
+        const transferAmount = parseFloat(amount);
+
+        if (!recipient || isNaN(transferAmount) || transferAmount <= 0) {
+            return res.status(400).json({ success: false, message: 'Invalid transfer details.' });
+        }
+
+        const sender = await User.findById(senderId);
+        if (!sender || sender.balance < transferAmount) {
+            return res.status(400).json({ success: false, message: `Your available balance is ${sender ? sender.balance : 0} USDT. Insufficient balance!` });
+        }
+
+        let receiver = await User.findOne({ email: recipient.toLowerCase().trim() });
+        const isObjectId = /^[0-9a-fA-F]{24}$/.test(recipient.trim());
+        if (!receiver && isObjectId) {
+            receiver = await User.findById(recipient.trim());
+        }
+
+        if (!receiver) {
+            return res.status(404).json({ success: false, message: 'Recipient not found!' });
+        }
+
+        if (sender._id.toString() === receiver._id.toString()) {
+            return res.status(400).json({ success: false, message: 'You cannot transfer to yourself.' });
+        }
+
+        sender.balance -= transferAmount;
+        receiver.balance += transferAmount;
+
+        await sender.save();
+        await receiver.save();
+
+        try {
+            const senderTx = new Transaction({
+                userId: sender._id,
+                type: 'Transfer',
+                amount: transferAmount, 
+                destinationAddress: receiver.email,
+                status: 'Completed'
+            });
+            await senderTx.save();
+
+            const receiverTx = new Transaction({
+                userId: receiver._id,
+                type: 'Deposit', 
+                amount: transferAmount,
+                destinationAddress: sender.email,
+                status: 'Completed'
+            });
+            await receiverTx.save();
+        } catch(txErr) {
+            console.error("History save error:", txErr);
+        }
+
+        res.json({ success: true, message: 'Transfer successful!' });
+
+    } catch (error) {
+        console.error("Transfer Error:", error);
+        res.status(500).json({ success: false, message: 'Server error during transfer.' });
+    }
+});
+
 // --- 🔥 የተጠቃሚውን ትራንዛክሽኖች ማምጫ (Transaction History API) 🔥 ---
 app.get('/api/transactions', verifyToken, async (req, res) => {
     try {
