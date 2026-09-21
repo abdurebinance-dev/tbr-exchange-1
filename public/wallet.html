@@ -1069,8 +1069,10 @@
             withdrawals.forEach(tx => {
                 const addr = formatAddress(tx.destinationAddress);
                 
-                // 🚀 የ BscScan ሊንክ ማዘጋጃ 🚀 (tx.hash ከዳታቤዝ ከመጣ ሊንኩን ይሰራል)
-                const txLink = tx.hash ? `https://bscscan.com/tx/${tx.hash}` : '#';
+                // 🚀 የ ፔጅ መዝለልን ለማስቆም አዲሱ JavaScript ሊንክ 🚀
+                const hash = tx.transactionHash || tx.txHash || tx.hash || tx.txId; 
+                const isValidHash = hash && String(hash).startsWith('0x');
+                const onClickAction = isValidHash ? `window.open('https://bscscan.com/tx/${hash}', '_blank')` : `showToast('Transaction hash processing...')`;
                 
                 const html = `
                 <div class="status-item">
@@ -1083,7 +1085,7 @@
                     </div>
                     <div style="text-align: right;">
                         <div style="color: var(--green-color); font-size: 12px; font-weight: 600;">Confirmed</div>
-                        <a href="${txLink}" target="_blank" style="color: var(--green-color); font-size: 11px; margin-top: 2px; cursor: pointer; text-decoration: none; display: inline-block;">Tx <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 10px;"></i></a>
+                        <span onclick="${onClickAction}" style="color: var(--green-color); font-size: 11px; margin-top: 2px; cursor: pointer; display: inline-block;">Tx <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 10px;"></i></span>
                     </div>
                 </div>`;
                 statusList.insertAdjacentHTML('beforeend', html);
@@ -1137,6 +1139,11 @@
             const icon = isWithdrawal ? 'fa-arrow-up' : 'fa-arrow-down';
             const desc = isWithdrawal ? `Withdrawal to ${formatAddress(tx.destinationAddress)} on BSC` : `Received on BSC`;
 
+            // 🚀 የ ፔጅ መዝለልን ለማስቆም አዲሱ JavaScript ሊንክ 🚀
+            const hash = tx.transactionHash || tx.txHash || tx.hash || tx.txId;
+            const isValidHash = hash && String(hash).startsWith('0x');
+            const onClickAction = isValidHash ? `window.open('https://bscscan.com/tx/${hash}', '_blank')` : `showToast('Transaction hash processing...')`;
+
             return `
             <div class="tx-item">
                 <div class="tx-left">
@@ -1144,7 +1151,7 @@
                         <i class="fa-solid ${icon}" style="color: ${color};"></i>
                     </div>
                     <div>
-                        <div class="tx-title">${title} <span class="tx-badge">BNB</span> <i class="fa-solid fa-arrow-up-right-from-square" style="color: #0ecb81; font-size: 11px;"></i></div>
+                        <div class="tx-title">${title} <span class="tx-badge">BNB</span> <i class="fa-solid fa-arrow-up-right-from-square" onclick="${onClickAction}" style="color: #0ecb81; font-size: 11px; cursor: pointer; margin-left: 5px;"></i></div>
                         <div class="tx-sub"><span class="dot"></span> Completed • ${timeAgo(tx.createdAt)}</div>
                         <div style="font-size: 11px; color: #555; margin-top: 2px;">${desc}</div>
                     </div>
