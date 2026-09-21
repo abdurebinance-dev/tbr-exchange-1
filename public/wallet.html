@@ -686,6 +686,46 @@
         </div>
     </div>
 
+    <!-- New Security Verification Modal (Passkey & Email Options) -->
+    <div class="modal-overlay" id="securityModal">
+        <div class="modal-content network-modal" style="width: 400px; padding: 25px; border-radius: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="color: #fff; margin: 0; font-size: 16px; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-shield-halved" style="color: #0ecb81;"></i> Security Verification
+                </h3>
+                <i class="fa-solid fa-xmark" style="cursor: pointer; color: #888; font-size: 18px;" onclick="closeSecurityModal()"></i>
+            </div>
+
+            <p style="font-size: 13px; color: #888; margin-bottom: 20px;">Confirm your identity to complete: <strong style="color: #fff;">Withdrawal</strong></p>
+
+            <!-- Tabs -->
+            <div style="display: flex; background: #1a1c22; border-radius: 8px; padding: 4px; margin-bottom: 20px;">
+                <button style="flex: 1; padding: 10px; border-radius: 6px; border: none; background: #2b313a; color: #0ecb81; font-weight: 600; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-fingerprint"></i> Passkey
+                </button>
+                <button style="flex: 1; padding: 10px; border-radius: 6px; border: none; background: transparent; color: #888; font-weight: 600; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; transition: 0.2s;" onclick="switchToEmailOTP()">
+                    <i class="fa-regular fa-envelope"></i> Email Code
+                </button>
+            </div>
+
+            <!-- Passkey Content -->
+            <div style="background: #1a1c22; border: 1px solid #2b313a; border-radius: 12px; padding: 30px 20px; text-align: center;">
+                <div style="width: 60px; height: 60px; background: rgba(14, 203, 129, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px auto;">
+                    <i class="fa-solid fa-fingerprint" style="font-size: 30px; color: #0ecb81;"></i>
+                </div>
+                <h4 style="color: #fff; margin: 0 0 8px 0; font-size: 15px;">Use your passkey</h4>
+                <p style="color: #888; font-size: 12px; margin: 0 0 20px 0;">Touch ID, Face ID, Windows Hello, or security key</p>
+                
+                <button onclick="verifyWithdrawalPasskey()" style="width: 100%; background: #0ecb81; color: #000; padding: 14px; border: none; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer; margin-bottom: 10px;">
+                    <i class="fa-solid fa-fingerprint"></i> Verify with Passkey
+                </button>
+                <button onclick="closeSecurityModal()" style="width: 100%; background: transparent; color: #888; padding: 10px; border: none; font-weight: 600; cursor: pointer;">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Email OTP Verification Modal -->
     <div class="modal-overlay" id="otpModal">
         <div class="modal-content network-modal" style="width: 400px; padding: 25px;">
@@ -708,7 +748,7 @@
     </div>
 
     <script>
-        const API_BASE_URL = 'https://tbr-exchange-backend.onrender.com'; 
+        const API_BASE_URL = ''; // አዲሱ የ API ሊንክ
 
         let isBalanceVisible = true;
         let userRawBalance = localStorage.getItem("user_balance_val") || "0.00";
@@ -786,14 +826,13 @@
 
         async function loadUserData() {
             await fetchUserProfile();
-            fetchTransactions(); // <--- ትራንዛክሽኖቹን የሚያመጣው አዲሱ መስመር
+            fetchTransactions(); 
             if (userBscAddress) {
                 checkDepositSilently();
                 setInterval(checkDepositSilently, 15000);
             }
         }
 
-        // --- አዲሱ የትራንዛክሽን ማምጫ ኮድ ከዚህ ይጀምራል ---
         async function fetchTransactions() {
             const token = localStorage.getItem("token") || localStorage.getItem("authToken");
             if (!token) return;
@@ -815,7 +854,7 @@
 
         function renderTransactions(transactions) {
             const listContainer = document.getElementById('activity-list');
-            listContainer.innerHTML = ''; // "No transactions yet" የሚለውን ያጠፋዋል
+            listContainer.innerHTML = '';
 
             transactions.forEach(tx => {
                 const isDeposit = tx.type === 'Deposit' || tx.type === 'Trade Credit' || tx.amount > 0;
@@ -847,7 +886,6 @@
                 listContainer.insertAdjacentHTML('beforeend', txHtml);
             });
         }
-        // --- የአዲሱ ኮድ መጨረሻ ---
 
         async function fetchUserProfile() {
             try {
@@ -989,6 +1027,7 @@
             validateWithdrawForm();
         }
 
+        // 🚀 አዲሱ የ ዊዝድሮዋል ጥያቄ ኮድ (Passkey & Email መለየት) 🚀
         async function submitWithdrawalRequest() {
             const address = document.getElementById('withdraw-address').value.trim();
             const amount = document.getElementById('withdraw-amount').value;
@@ -1007,28 +1046,132 @@
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify({ amount: pendingWithdrawAmount, destinationAddress: address, useEmailFallback: false })
+                    body: JSON.stringify({ amount: pendingWithdrawAmount, destinationAddress: address, useEmailFallback: false, passkeyVerified: false })
                 });
 
                 const data = await res.json();
-                if (data.success) {
-                    if (data.requiresEmailOtp) {
-                        document.getElementById('otpModal').style.display = 'flex';
-                        showToast("Verification code sent to your email!");
-                    } else {
-                        showToast(data.message);
-                        await fetchUserProfile(); 
-                        document.getElementById('withdraw-amount').value = "";
-                        document.getElementById('withdraw-address').value = "";
-                        validateWithdrawForm();
-                        fetchTransactions(); // ሲወጣ አዲሱን ትራንዛክሽን ወዲያው እንዲጨምር
-                    }
+                
+                if (data.requiresPasskeyPrompt) {
+                    // Passkey ተመዝግቧል፣ መምረጫውን ያምጣ!
+                    document.getElementById('securityModal').style.display = 'flex';
+                } 
+                else if (data.requiresEmailOtp) {
+                    // Passkey የለውም፣ ቀጥታ የድሮውን OTP ያምጣ
+                    document.getElementById('otpModal').style.display = 'flex';
+                    showToast("Verification code sent to your email!");
+                } 
+                else if (data.success) {
+                    // ካለ ፓስወርድ ዊዝድሮዋል ተፈቅዷል ማለት ነው (አልፎ አልፎ)
+                    showToast(data.message);
+                    await fetchUserProfile(); 
+                    document.getElementById('withdraw-amount').value = "";
+                    document.getElementById('withdraw-address').value = "";
+                    validateWithdrawForm();
+                    fetchTransactions();
                 } else {
                     showToast(data.message || "Withdrawal failed.");
                 }
             } catch (err) {
                 console.error("Withdraw Error:", err);
                 showToast("Server connection error.");
+            }
+        }
+
+        function closeSecurityModal() {
+            document.getElementById('securityModal').style.display = 'none';
+        }
+
+        // 🚀 ዩዘሩ በገዛ ፈቃዱ ወደ Email ሲቀይር 🚀
+        async function switchToEmailOTP() {
+            const address = document.getElementById('withdraw-address').value.trim();
+            const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/withdraw/request`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ amount: pendingWithdrawAmount, destinationAddress: address, useEmailFallback: true, passkeyVerified: false })
+                });
+
+                const data = await res.json();
+                if (data.requiresEmailOtp) {
+                    closeSecurityModal(); 
+                    document.getElementById('otpModal').style.display = 'flex'; 
+                    showToast("Verification code sent to your email!");
+                }
+            } catch (err) {
+                showToast("Error switching to email.");
+            }
+        }
+
+        function base64urlToBufferWallet(base64url) {
+            const padding = '='.repeat((4 - base64url.length % 4) % 4);
+            const base64 = (base64url + padding).replace(/\-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const buffer = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) {
+                buffer[i] = rawData.charCodeAt(i);
+            }
+            return buffer;
+        }
+
+        // 🚀 የጣት አሻራውን ሲነካ ማረጋገጫ 🚀
+        async function verifyWithdrawalPasskey() {
+            try {
+                const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+                
+                const optionsRes = await fetch(`${API_BASE_URL}/api/passkey/login-options`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const optionsData = await optionsRes.json();
+                
+                if (!optionsData.success) {
+                    showToast("Passkey system busy."); return;
+                }
+
+                const challengeBuffer = base64urlToBufferWallet(optionsData.options.challenge);
+                const credential = await navigator.credentials.get({ 
+                    publicKey: {
+                        challenge: challengeBuffer,
+                        rpId: window.location.hostname.replace(/^www\./, ''),
+                        userVerification: "preferred"
+                    } 
+                });
+                
+                if (!credential) {
+                    showToast("Passkey verification cancelled."); return;
+                }
+
+                const address = document.getElementById('withdraw-address').value.trim();
+                const withdrawRes = await fetch(`${API_BASE_URL}/api/withdraw/request`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ amount: pendingWithdrawAmount, destinationAddress: address, useEmailFallback: false, passkeyVerified: true })
+                });
+
+                const data = await withdrawRes.json();
+                if (data.success) {
+                    closeSecurityModal();
+                    showToast(data.message);
+                    document.getElementById('withdraw-amount').value = "";
+                    document.getElementById('withdraw-address').value = "";
+                    validateWithdrawForm();
+                    await fetchUserProfile();
+                    fetchTransactions();
+                } else {
+                    showToast(data.message || "Passkey withdrawal failed.");
+                }
+
+            } catch (err) {
+                console.error("Passkey Verify Error:", err);
+                showToast("Action cancelled or Passkey not supported.");
             }
         }
 
@@ -1060,7 +1203,7 @@
                     document.getElementById('withdraw-amount').value = "";
                     document.getElementById('withdraw-address').value = "";
                     validateWithdrawForm();
-                    fetchTransactions(); // ሲወጣ አዲሱን ትራንዛክሽን ወዲያው እንዲጨምር
+                    fetchTransactions(); 
                 } else {
                     showToast(data.message || "Verification failed.");
                 }
