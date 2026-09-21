@@ -999,7 +999,7 @@
             let isValid = true;
 
             if (amountInput.value !== "") {
-                if (val < 3) {
+                if (val < 2) {
                     errorText.innerText = "Minimum is 2.00 USDT";
                     errorContainer.style.display = "flex";
                     amountInput.classList.add('input-error');
@@ -1050,7 +1050,7 @@
             const address = document.getElementById('withdraw-address').value.trim();
             const amount = document.getElementById('withdraw-amount').value;
 
-            if (!address || parseFloat(amount) < 3 || parseFloat(amount) > parseFloat(userRawBalance)) {
+            if (!address || parseFloat(amount) < 2 || parseFloat(amount) > parseFloat(userRawBalance)) {
                 return;
             }
 
