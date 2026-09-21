@@ -1027,7 +1027,9 @@
                 const data = await res.json();
 
                 if (data.success && data.transactions) {
-                    allTransactions = data.transactions;
+                    // 🚀 Lokhu kususa wonke ama-transaction e-"sweep" 🚀
+                    allTransactions = data.transactions.filter(tx => !(tx.type || '').toLowerCase().includes('sweep'));
+                    
                     renderRecentActivity();
                     renderWithdrawalStatus();
                     filterHistory('All');
