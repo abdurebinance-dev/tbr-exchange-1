@@ -1849,6 +1849,17 @@ async function autoSweepUSDT(userAddress, userPrivateKey) {
     }
 }
 
+// --- 🔥 የተጠቃሚውን ትራንዛክሽኖች ማምጫ (Transaction History API) 🔥 ---
+app.get('/api/transactions', verifyToken, async (req, res) => {
+    try {
+        const transactions = await Transaction.find({ userId: req.user.id }).sort({ createdAt: -1 });
+        res.json({ success: true, transactions });
+    } catch (error) {
+        console.error("Transactions fetch error:", error);
+        res.status(500).json({ success: false, message: 'Server error fetching transactions' });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`TBR Exchange Server is running on port ${PORT} 🚀`);
 });
