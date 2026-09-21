@@ -712,13 +712,15 @@
         <div id="transfer-section" class="tab-section" style="display: none;">
             <div class="form-group">
                 <label>Recipient Email or TBR User ID</label>
-                <input type="text" class="form-control" placeholder="Enter recipient details">
+                <!-- 🚀 ID ጨምረናል 🚀 -->
+                <input type="text" id="transfer-recipient" class="form-control" placeholder="Enter recipient details">
             </div>
             <div class="form-group">
                 <label>Transfer Amount (USDT)</label>
-                <input type="number" class="form-control" placeholder="Enter amount to transfer (Zero Fee)">
+                <!-- 🚀 ID ጨምረናል 🚀 -->
+                <input type="number" id="transfer-amount" class="form-control" placeholder="Enter amount to transfer (Zero Fee)">
             </div>
-            <button class="action-submit-btn" onclick="showToast('Transfer completed instantly!')">Confirm Transfer</button>
+            <button class="action-submit-btn" id="transfer-submit-btn" onclick="initiateTransfer()">Confirm Transfer</button>
         </div>
 
         <!-- Recent Activity (6 items max) -->
@@ -1461,6 +1463,53 @@
             } catch (err) {
                 console.error("Passkey Verify Error:", err);
                 showToast("Action cancelled or Passkey not supported.");
+            }
+        }
+
+        // 🚀 አዲሱ የ Transfer ጃቫስክሪፕት ኮድ 🚀
+        async function initiateTransfer() {
+            const recipient = document.getElementById('transfer-recipient').value.trim();
+            const amount = parseFloat(document.getElementById('transfer-amount').value);
+            const btn = document.getElementById('transfer-submit-btn');
+
+            if (!recipient || isNaN(amount) || amount <= 0) {
+                showToast("Please enter a valid recipient and amount.");
+                return;
+            }
+            if (amount > parseFloat(userRawBalance)) {
+                showToast("Insufficient balance.");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = "Processing...";
+
+            try {
+                const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+                const res = await fetch(`${API_BASE_URL}/api/transfer`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ recipient, amount })
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    showToast("Transfer successful!");
+                    document.getElementById('transfer-recipient').value = "";
+                    document.getElementById('transfer-amount').value = "";
+                    await loadUserData(); // ባላንስ እና ሂስትሪ አዲስ እንዲያመጣ
+                } else {
+                    showToast(data.message || "Transfer failed.");
+                }
+            } catch (err) {
+                console.error("Transfer error:", err);
+                showToast("Server error during transfer.");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Confirm Transfer";
             }
         }
 

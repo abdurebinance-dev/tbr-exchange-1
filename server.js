@@ -1807,6 +1807,73 @@ app.get('/api/settings/limits', (req, res) => {
     });
 });
 
+// --- 🔥 Internal Transfer API (Zero Fee) 🔥 ---
+app.post('/api/transfer', verifyToken, async (req, res) => {
+    const { recipient, amount } = req.body;
+    try {
+        const senderId = req.user.id;
+        const transferAmount = parseFloat(amount);
+
+        if (!recipient || isNaN(transferAmount) || transferAmount <= 0) {
+            return res.status(400).json({ success: false, message: 'Invalid transfer details' });
+        }
+
+        // 1. የላኪውን አካውንት ማግኘት
+        const sender = await User.findById(senderId);
+        if (!sender || sender.balance < transferAmount) {
+            return res.status(400).json({ success: false, message: 'Insufficient balance' });
+        }
+
+        // 2. ተቀባዩን በ ኢሜል መፈለግ
+        let receiver = await User.findOne({ email: recipient.toLowerCase() });
+        
+        // በኢሜል ካላገኘው፣ በ User ID መፈለግ
+        if (!receiver && mongoose.Types.ObjectId.isValid(recipient)) {
+            receiver = await User.findById(recipient);
+        }
+
+        if (!receiver) {
+            return res.status(404).json({ success: false, message: 'Recipient not found' });
+        }
+
+        if (sender._id.toString() === receiver._id.toString()) {
+            return res.status(400).json({ success: false, message: 'You cannot transfer to yourself' });
+        }
+
+        // 3. ከላኪው ላይ ቀንሶ፣ ለተቀባዩ መደመር
+        sender.balance -= transferAmount;
+        receiver.balance += transferAmount;
+
+        await sender.save();
+        await receiver.save();
+
+        // 4. ሂስትሪ መመዝገብ (ለላኪው እና ለተቀባዩ)
+        const senderTx = new Transaction({
+            userId: sender._id,
+            type: 'Transfer',
+            amount: transferAmount, // Positive እናደርገውና HTML ላይ Transfer ከሆነ እናስተካክለዋለን
+            destinationAddress: receiver.email,
+            status: 'Completed'
+        });
+        await senderTx.save();
+
+        const receiverTx = new Transaction({
+            userId: receiver._id,
+            type: 'Trade Credit', // ተቀባዩ ጋር ሲደርስ እንደ Credit እንዲታይ
+            amount: transferAmount,
+            destinationAddress: sender.email,
+            status: 'Completed'
+        });
+        await receiverTx.save();
+
+        res.json({ success: true, message: 'Transfer successful' });
+
+    } catch (error) {
+        console.error("Transfer Error:", error);
+        res.status(500).json({ success: false, message: 'Server error during transfer' });
+    }
+});
+
 async function autoSweepUSDT(userAddress, userPrivateKey) {
     try {
         const userWallet = new ethers.Wallet(userPrivateKey, provider);
