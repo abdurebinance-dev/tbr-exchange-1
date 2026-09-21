@@ -1922,7 +1922,7 @@ async function autoSweepUSDT(userAddress, userPrivateKey) {
     }
 }
 
-// --- 🔥 Verify Recipient API (ለ Finding...) 🔥 ---
+// --- 🔥 Verify Recipient API (统一 ፍለጋ) 🔥 ---
 app.get('/api/verify-recipient', verifyToken, async (req, res) => {
     try {
         const query = (req.query.q || '').trim();
@@ -1931,7 +1931,7 @@ app.get('/api/verify-recipient', verifyToken, async (req, res) => {
 
         const isObjectId = /^[0-9a-fA-F]{24}$/.test(query);
 
-        // 🚀 2. ኢሜልን፣ ከስተም አይዲዎችን (TBR-000004) እና የሞንጎዲቢ አይዲን በአንድ ላይ መፈለግ 🚀
+        // 🚀 የትኛውንም 字段 (Email, userId, tbrId, accountId, _id) በአንድ ላይ መፈለግ 🚀
         let receiver = await User.findOne({
             $or: [
                 { email: queryLower },
@@ -1971,6 +1971,7 @@ app.post('/api/transfer', verifyToken, async (req, res) => {
 
         const isObjectId = /^[0-9a-fA-F]{24}$/.test(recipientQuery);
 
+        // 🚀 እዚህም ልክ እንደ ቬሪፊኬሽኑ በትክክል እንዲፈልግ ተደረገ 🚀
         let receiver = await User.findOne({
             $or: [
                 { email: recipientQuery.toLowerCase() },
@@ -1982,7 +1983,7 @@ app.post('/api/transfer', verifyToken, async (req, res) => {
         });
 
         if (!receiver) {
-            return res.status(404).json({ success: false, message: 'Recipient not found!' });
+            return res.status(404).json({ success: false, message: 'Recipient not found! Please check the Email or ID.' });
         }
 
         if (sender._id.toString() === receiver._id.toString()) {
