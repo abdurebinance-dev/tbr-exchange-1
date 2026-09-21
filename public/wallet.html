@@ -734,6 +734,8 @@
             <div class="form-group">
                 <label>Transfer Amount (USDT)</label>
                 <input type="number" id="transfer-amount" class="form-control" placeholder="Enter amount to transfer (Zero Fee)" oninput="checkTransferForm()">
+                <!-- 🚀 ከታች በቀይ ከለር ኤረሩ የሚታይበት ቦታ 🚀 -->
+                <div id="amount-feedback" style="font-size: 11px; margin-top: 4px; color: var(--red-color); display: none;"></div>
             </div>
             
             <!-- 🚀 3. ሳትሞላው Fezez (Disabled) ብሎ ይቀመጣል 🚀 -->
@@ -1263,6 +1265,7 @@
             const amountVal = document.getElementById('transfer-amount').value.trim();
             const amount = parseFloat(amountVal);
             const submitBtn = document.getElementById('transfer-submit-btn');
+            const amountFeedback = document.getElementById('amount-feedback');
 
             let currentBalance = 0;
             try {
@@ -1271,11 +1274,16 @@
                 currentBalance = 0;
             }
 
-            // ሁኔታዎች፡- 
-            // 1. ሬስፒደንት ባዶ መሆን የለበትም
-            // 2. ሬስፒደንቱ በሰርቨር ተረጋግጦ ትክክል መሆን አለበት (isRecipientValid === true)
-            // 3. መጠኑ (amount) ከባዶ መብለጥ አለበት
-            // 4. መጠኑ ካለው ባላንስ (currentBalance) ማነስ ወይም እኩል መሆን አለበት
+            // 🚀 ከባላንስ በላይ ሲሆን በቀይ ከለር ጽሁፉን ማሳየት 🚀
+            if (!isNaN(amount) && amount > currentBalance) {
+                amountFeedback.innerText = `Your available balance is ${currentBalance.toFixed(2)} USDT. Insufficient balance!`;
+                amountFeedback.style.display = 'block';
+            } else {
+                amountFeedback.innerText = '';
+                amountFeedback.style.display = 'none';
+            }
+
+            // ፎርሙ ሙሉ ካልሆነ ወይም ባላንስ ካለፈ Confirm ቆልፉን መዝጋት (Fezez ማድረግ)
             if (!recipient || !isRecipientValid || isNaN(amount) || amount <= 0 || amount > currentBalance) {
                 submitBtn.disabled = true;
                 submitBtn.style.opacity = "0.5";
