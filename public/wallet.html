@@ -1068,6 +1068,10 @@
             statusContainer.style.display = 'block';
             withdrawals.forEach(tx => {
                 const addr = formatAddress(tx.destinationAddress);
+                
+                // 🚀 የ BscScan ሊንክ ማዘጋጃ 🚀 (tx.hash ከዳታቤዝ ከመጣ ሊንኩን ይሰራል)
+                const txLink = tx.hash ? `https://bscscan.com/tx/${tx.hash}` : '#';
+                
                 const html = `
                 <div class="status-item">
                     <div style="display: flex; align-items: center; gap: 12px;">
@@ -1079,7 +1083,7 @@
                     </div>
                     <div style="text-align: right;">
                         <div style="color: var(--green-color); font-size: 12px; font-weight: 600;">Confirmed</div>
-                        <div style="color: var(--green-color); font-size: 11px; margin-top: 2px; cursor: pointer;">Tx <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 10px;"></i></div>
+                        <a href="${txLink}" target="_blank" style="color: var(--green-color); font-size: 11px; margin-top: 2px; cursor: pointer; text-decoration: none; display: inline-block;">Tx <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 10px;"></i></a>
                     </div>
                 </div>`;
                 statusList.insertAdjacentHTML('beforeend', html);
