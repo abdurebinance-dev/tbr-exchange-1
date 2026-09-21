@@ -607,6 +607,20 @@
                     </div>
                 </div>
 
+                <!-- 🚀 አዲሱ የ Daily Limit Progress Bar 🚀 -->
+                <div style="margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">
+                        <span>Daily withdrawal limit</span>
+                        <span id="daily-limit-text" style="color: #fff; font-weight: 500;">0.00 / <span style="color: var(--text-muted);">6,000 USDT</span></span>
+                    </div>
+                    <div style="width: 100%; background: #2b313a; border-radius: 4px; height: 5px; overflow: hidden;">
+                        <div id="daily-limit-bar" style="width: 0%; background: var(--green-color); height: 100%; transition: width 0.3s ease;"></div>
+                    </div>
+                    <div style="text-align: right; font-size: 11px; color: var(--text-muted); margin-top: 6px;">
+                        <span id="daily-remaining-text">6,000.00 USDT remaining today</span>
+                    </div>
+                </div>
+
                 <button class="action-submit-btn btn-disabled" id="withdraw-submit-btn" disabled onclick="initiateWithdrawal()">Submit Withdrawal</button>
             </div>
         </div>
@@ -686,7 +700,7 @@
         </div>
     </div>
 
-    <!-- New Security Verification Modal (Passkey & Email Options) -->
+    <!-- Security Verification Modal (Passkey & Email Options) -->
     <div class="modal-overlay" id="securityModal">
         <div class="modal-content network-modal" style="width: 400px; padding: 25px; border-radius: 16px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -756,10 +770,15 @@
         let userBscAddress = localStorage.getItem("user_bsc_address") || ""; 
         let pendingWithdrawAmount = 0;
         let isNetworkSelected = false;
-        let userHasPasskey = false; // አዲስ: ዩዘሩ Passkey እንዳለው የሚያውቅበት
+        let userHasPasskey = false; 
+        
+        // 🚀 የዕለታዊ ገደብ (Daily Limit) 🚀
+        const DAILY_LIMIT = 6000;
+        let dailyWithdrawn = parseFloat(localStorage.getItem("daily_withdrawn") || 0);
 
         document.addEventListener("DOMContentLoaded", () => {
             updateBalanceDisplay();
+            updateDailyLimitUI(); // 🚀 ፕሮግረስ ባሩን ማስተካከያ
             
             if (userBscAddress) {
                 document.getElementById('dep-address').value = userBscAddress;
@@ -782,6 +801,31 @@
             
             loadUserData();
         });
+
+        // 🚀 የዕለታዊ ፕሮግረስ ባር አፕዴት ማድረጊያ 🚀
+        function updateDailyLimitUI() {
+            const limitText = document.getElementById('daily-limit-text');
+            const limitBar = document.getElementById('daily-limit-bar');
+            const remainingText = document.getElementById('daily-remaining-text');
+            
+            if(!limitText) return;
+
+            let remaining = DAILY_LIMIT - dailyWithdrawn;
+            if (remaining < 0) remaining = 0;
+
+            let percent = (dailyWithdrawn / DAILY_LIMIT) * 100;
+            if (percent > 100) percent = 100;
+
+            if (percent > 85) {
+                limitBar.style.background = "var(--red-color)";
+            } else {
+                limitBar.style.background = "var(--green-color)";
+            }
+
+            limitText.innerHTML = `${dailyWithdrawn.toFixed(2)} / <span style="color: var(--text-muted);">6,000 USDT</span>`;
+            limitBar.style.width = `${percent}%`;
+            remainingText.innerText = `${remaining.toFixed(2)} USDT remaining today`;
+        }
 
         function selectNetwork(shortName, longName, elementId) {
             closeNetworkModal();
@@ -829,14 +873,13 @@
         async function loadUserData() {
             await fetchUserProfile();
             fetchTransactions(); 
-            checkUserPasskeys(); // ዩዘሩ አሻራ እንዳለው ያጣራል
+            checkUserPasskeys(); 
             if (userBscAddress) {
                 checkDepositSilently();
                 setInterval(checkDepositSilently, 15000);
             }
         }
 
-        // ዩዘሩ Passkey እንዳለው በድብቅ ያጣራል
         async function checkUserPasskeys() {
             const token = localStorage.getItem("token") || localStorage.getItem("authToken");
             if (!token) return;
@@ -983,6 +1026,7 @@
             }
         }
 
+        // 🚀 የዕለታዊ ገደብ ህግ ማረጋገጫ (Validation) 🚀
         function validateWithdrawForm() {
             if (!isNetworkSelected) return; 
 
@@ -1006,6 +1050,12 @@
                     isValid = false;
                 } else if (val > maxVal) {
                     errorText.innerText = `Exceeds available balance (${maxVal.toFixed(2)} USDT)`;
+                    errorContainer.style.display = "flex";
+                    amountInput.classList.add('input-error');
+                    isValid = false;
+                } else if (val + dailyWithdrawn > DAILY_LIMIT) {
+                    // አዲስ፡ ከ6000 በላይ ከሆነ ያግደዋል
+                    errorText.innerText = `Exceeds daily withdrawal limit of 6,000 USDT`;
                     errorContainer.style.display = "flex";
                     amountInput.classList.add('input-error');
                     isValid = false;
@@ -1045,7 +1095,6 @@
             validateWithdrawForm();
         }
 
-        // 🚀 ዊዝድሮዋል ሲነካ ፖፕ-አፑን ያመጣል እንጂ አውቶማቲክ ኢሜል አይልክም 🚀
         async function initiateWithdrawal() {
             const address = document.getElementById('withdraw-address').value.trim();
             const amount = document.getElementById('withdraw-amount').value;
@@ -1057,12 +1106,9 @@
             pendingWithdrawAmount = parseFloat(amount);
 
             if (userHasPasskey) {
-                // Passkey ካለው መምረጫውን ያምጣል
                 document.getElementById('securityModal').style.display = 'flex';
             } else {
-                // Passkey ከሌለው የኢሜል ኮድ መሙያውን ያምጣል
                 document.getElementById('otpModal').style.display = 'flex';
-                // በተኑን ሪሴት ያደርጋል
                 document.getElementById('sendEmailCodeBtn').innerText = "Send Code";
                 document.getElementById('sendEmailCodeBtn').disabled = false;
             }
@@ -1072,7 +1118,6 @@
             document.getElementById('securityModal').style.display = 'none';
         }
 
-        // 🚀 ዩዘሩ 'Email Code' የሚለውን ታብ ሲነካ 🚀
         function switchToEmailOTP() {
             closeSecurityModal(); 
             document.getElementById('otpModal').style.display = 'flex'; 
@@ -1080,7 +1125,6 @@
             document.getElementById('sendEmailCodeBtn').disabled = false;
         }
 
-        // 🚀 'Send Code' በተኑ ሲነካ ብቻ ኢሜሉ ይላካል 🚀
         async function triggerEmailOTP() {
             const address = document.getElementById('withdraw-address').value.trim();
             const token = localStorage.getItem('token') || localStorage.getItem('authToken');
@@ -1143,7 +1187,6 @@
             return buffer;
         }
 
-        // 🚀 የጣት አሻራውን ሲነካ ማረጋገጫ 🚀
         async function verifyWithdrawalPasskey() {
             try {
                 const token = localStorage.getItem('token') || localStorage.getItem('authToken');
@@ -1183,6 +1226,11 @@
 
                 const data = await withdrawRes.json();
                 if (data.success) {
+                    // 🚀 ሲሳካ የዕለታዊ ገደቡን መጨመር 🚀
+                    dailyWithdrawn += pendingWithdrawAmount;
+                    localStorage.setItem("daily_withdrawn", dailyWithdrawn);
+                    updateDailyLimitUI();
+
                     closeSecurityModal();
                     showToast(data.message);
                     document.getElementById('withdraw-amount').value = "";
@@ -1221,6 +1269,11 @@
 
                 const data = await res.json();
                 if (data.success) {
+                    // 🚀 ሲሳካ የዕለታዊ ገደቡን መጨመር 🚀
+                    dailyWithdrawn += pendingWithdrawAmount;
+                    localStorage.setItem("daily_withdrawn", dailyWithdrawn);
+                    updateDailyLimitUI();
+
                     showToast(data.message);
                     closeOtpModal();
                     await fetchUserProfile(); 
