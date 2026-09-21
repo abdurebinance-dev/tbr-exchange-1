@@ -952,17 +952,24 @@
                 document.getElementById('deposit-section').style.display = 'none';
                 document.getElementById('withdraw-section').style.display = 'none';
                 document.getElementById('transfer-section').style.display = 'none';
+                
+                // 🚀 የ Recent Activity ሳጥንን መቆጣጠሪያ 🚀
+                const activitySection = document.querySelector('.activity-section');
 
                 if (actionType === 'Deposit') {
                     document.getElementById('deposit-section').style.display = 'block';
                     document.getElementById('network-container').style.display = 'block';
+                    if(activitySection) activitySection.style.display = 'block';
                 } else if (actionType === 'Withdraw') {
                     document.getElementById('withdraw-section').style.display = 'block';
                     document.getElementById('network-container').style.display = 'block';
+                    if(activitySection) activitySection.style.display = 'block';
                     if (isNetworkSelected) validateWithdrawForm();
                 } else if (actionType === 'Transfer') {
                     document.getElementById('transfer-section').style.display = 'block';
                     document.getElementById('network-container').style.display = 'none';
+                    // 🚀 Transfer ላይ ሲሆን Recent Activity-ን ይደብቀዋል 🚀
+                    if(activitySection) activitySection.style.display = 'none';
                 }
                 
                 const url = new URL(window.location.href);
