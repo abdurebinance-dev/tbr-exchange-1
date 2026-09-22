@@ -49,6 +49,7 @@
             margin: 0;
         }
 
+        /* 🚀 ቆንጆ የተስተካከሉ በተኖች 🚀 */
         .btn-primary {
             background-color: var(--green-color);
             color: #000;
@@ -65,6 +66,14 @@
         }
 
         .btn-primary:hover { background-color: var(--green-hover); }
+
+        /* ልክ እንደ ሁለተኛው ፎቶ ክብ (Pill) ቅርፅ ያለው በተን */
+        .btn-pill {
+            border-radius: 20px !important;
+            padding: 8px 24px !important;
+            font-size: 13px !important;
+            font-weight: 600 !important;
+        }
 
         .btn-outline {
             background: transparent;
@@ -115,7 +124,7 @@
         }
         .empty-state i { font-size: 40px; color: #2b313a; margin-bottom: 20px; }
         .empty-state h3 { margin: 0 0 10px 0; font-size: 16px; color: #fff; }
-        .empty-state p { color: var(--text-muted); font-size: 14px; margin-bottom: 25px; }
+        .empty-state p { color: var(--text-muted); font-size: 13px; margin-bottom: 20px; }
 
         /* =========================================
            VIEW 2: KYC Required Block
@@ -156,7 +165,7 @@
            ========================================= */
         #view-post-ad { display: none; animation: fadeIn 0.3s ease; max-width: 800px; margin: 0 auto; padding-bottom: 50px;}
 
-        /* 🚀 Buy/Sell Toggle Buttons Styles 🚀 */
+        /* Buy/Sell Toggle Buttons Styles */
         .trade-type-toggle {
             display: flex;
             gap: 15px;
@@ -255,7 +264,8 @@
     <div class="container" id="view-main-ads">
         <div class="top-bar">
             <h1>Your Ads</h1>
-            <button class="btn-primary" onclick="handleNewAdClick()">
+            <!-- 🚀 Top Right Button (Pill Shaped) 🚀 -->
+            <button class="btn-primary btn-pill" onclick="handleNewAdClick()">
                 <i class="fa-solid fa-plus"></i> New Ad
             </button>
         </div>
@@ -276,8 +286,8 @@
             <i class="fa-regular fa-clipboard"></i>
             <h3>No ads yet</h3>
             <p>Post your first P2P trade offer</p>
-            <!-- 🚀 1. በትክክል ያነሰው Post an Ad በተን 🚀 -->
-            <button class="btn-primary" style="padding: 8px 20px; font-size: 13px; margin-top: 10px;" onclick="handleNewAdClick()">
+            <!-- 🚀 Center Empty State Button (Pill Shaped) 🚀 -->
+            <button class="btn-primary btn-pill" onclick="handleNewAdClick()">
                 <i class="fa-solid fa-plus"></i> Post an Ad
             </button>
         </div>
@@ -366,7 +376,6 @@
             <p>Set your rate, limits, and payment methods</p>
         </div>
 
-        <!-- 🚀 Buy and Sell Toggle Buttons 🚀 -->
         <div class="trade-type-toggle">
             <button class="toggle-btn btn-buy active" onclick="setTradeType('buy', this)">
                 <i class="fa-solid fa-arrow-down"></i> Buy USDT
@@ -440,7 +449,6 @@
                 </div>
             </div>
             
-            <!-- Dynamic Payment Methods Container -->
             <div id="ad-payment-methods-container">
                 <!-- Data loaded from localStorage -->
             </div>
@@ -508,43 +516,31 @@
     </div>
 
     <script>
-        // 🚀 1. "New Ad" ሲነካ KYC ቼክ የሚያደርገው ሎጂክ
         function handleNewAdClick() {
-            // ከስቶሬጅ kycStatus ያነባል (በ Settings ላይ ሴቭ ይደረጋል)
             const kycStatus = localStorage.getItem('kycStatus') || 'unverified';
-            
-            // የድሮውን ዝርዝር ገጽ መደበቅ
             document.getElementById('view-main-ads').style.display = 'none';
 
-            // 'approved' ወይም 'verified' ከሆነ ወደ ፎርሙ ማሳለፍ
             if (kycStatus.toLowerCase() === 'approved' || kycStatus.toLowerCase() === 'verified') {
                 document.getElementById('view-post-ad').style.display = 'block';
-                loadPaymentMethodsForAd(); // የባንክ አካውንቶችን ሎድ ማድረግ
+                loadPaymentMethodsForAd();
             } else {
-                // ካልሆነ Blocked ፔጁን ማሳየት
                 document.getElementById('view-kyc-required').style.display = 'block';
             }
         }
 
-        // 🚀 ወደ ኋላ (Back) መመለሻ
         function goBackToAds() {
             document.getElementById('view-main-ads').style.display = 'block';
             document.getElementById('view-kyc-required').style.display = 'none';
             document.getElementById('view-post-ad').style.display = 'none';
         }
 
-        // 🚀 2. Buy/Sell Toggle Button Logic 🚀
-        let currentTradeType = 'buy'; // Default
+        let currentTradeType = 'buy';
 
         function setTradeType(type, element) {
             currentTradeType = type;
-            
-            // ከሁሉም በተኖች ላይ active ክላስን ማንሳት
             document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
-            // በተነካው በተን ላይ active ማድረቅ
             element.classList.add('active');
             
-            // ከስር ያለውን 'Review Order' በተን እንደ ምርጫው ከለሩን እንቀይረዋለን
             const reviewBtn = document.getElementById('review-order-btn');
             if (type === 'sell') {
                 reviewBtn.style.backgroundColor = 'var(--red-color)';
@@ -555,7 +551,6 @@
             }
         }
 
-        // 🚀 የ Payment Methods ማምጫና መደርደሪያ
         function loadPaymentMethodsForAd() {
             const container = document.getElementById('ad-payment-methods-container');
             container.innerHTML = ''; 
