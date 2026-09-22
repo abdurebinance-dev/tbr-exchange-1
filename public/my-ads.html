@@ -13,10 +13,10 @@
             --text-color: #ffffff;
             --text-muted: #848e9c;
             --border-color: #2b313a;
-            --accent-color: #f3ba2f; /* ለዋና በተኖች (Yellow) */
+            --accent-color: #f3ba2f;
             --accent-hover: #e0ac2b;
-            --green-color: #0ecb81; /* ለ Buy እና Review Order */
-            --red-color: #f6465d;   /* ለ Sell */
+            --green-color: #0ecb81;
+            --red-color: #f6465d;  
         }
 
         body {
@@ -141,9 +141,6 @@
         .empty-state h3 { margin: 0 0 10px 0; font-size: 16px; color: #fff; }
         .empty-state p { color: var(--text-muted); font-size: 13px; margin-bottom: 20px; }
 
-        /* ---------------------------------------------------
-           FULL POST ORDER FORM STYLES
-           --------------------------------------------------- */
         .form-container { max-width: 800px; margin: 0 auto; padding-bottom: 50px; }
         
         .trade-type-toggle { display: flex; gap: 15px; margin-bottom: 30px; }
@@ -174,14 +171,12 @@
         .two-cols { display: flex; gap: 15px; }
         .two-cols > div { flex: 1; }
 
-        /* Payment Method Cards */
         .pm-card {
             background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px;
             padding: 15px; margin-bottom: 10px; display: flex; align-items: flex-start; gap: 12px; cursor: pointer;
         }
         .pm-card input[type="radio"], .pm-card input[type="checkbox"] { margin-top: 3px; accent-color: var(--green-color); width: 14px; height: 14px; }
         
-        /* Add Payment Method Button */
         .pm-add-btn {
             background: transparent;
             border: 1px dashed var(--border-color);
@@ -207,7 +202,6 @@
             background: rgba(14, 203, 129, 0.05);
         }
 
-        /* Trader Requirement Pills */
         .pill-group { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
         .pill-option {
             background: transparent; border: 1px solid var(--border-color); color: #fff;
@@ -216,7 +210,6 @@
         }
         .pill-option.active { border-color: var(--green-color); color: var(--green-color); }
 
-        /* Review Order Button */
         .btn-review {
             width: 100%; background-color: var(--green-color); color: #000; border: none;
             padding: 16px; border-radius: 8px; font-weight: 700; font-size: 15px; cursor: pointer;
@@ -228,7 +221,6 @@
 </head>
 <body>
 
-    <!-- ================= VIEW 1: YOUR ADS ================= -->
     <div class="container view-section active" id="view-main-ads">
         <div class="top-navigation-bar">
             <button class="btn-outline" onclick="window.location.href='dashboard.html'">
@@ -265,7 +257,6 @@
         </div>
     </div>
 
-    <!-- ================= VIEW 2: FULL POST ORDER FORM ================= -->
     <div class="container view-section" id="view-post-order">
         <div class="top-navigation-bar" style="margin-top: 15px;">
             <button class="btn-outline" onclick="closePostOrderForm()">
@@ -286,7 +277,6 @@
                 </button>
             </div>
 
-            <!-- 1. Pricing & Supply -->
             <div class="form-section">
                 <h3>Pricing & Supply</h3>
                 <p class="section-sub">Set your ETB rate per USDT and total supply</p>
@@ -313,7 +303,6 @@
                 </div>
             </div>
 
-            <!-- 2. Trade Limits -->
             <div class="form-section">
                 <h3>Trade Limits</h3>
                 <p class="section-sub">Min and max ETB per individual trade</p>
@@ -331,7 +320,6 @@
                 </div>
             </div>
 
-            <!-- 3. Payment Methods -->
             <div class="form-section">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
                     <h3>Payment Methods</h3>
@@ -341,24 +329,19 @@
                 </div>
                 <p class="section-sub">Select all methods you accept</p>
 
-                <!-- 🚀 ዳይናሚክ የሆነ የክፍያ መንገዶች ማሳያ ቦታ 🚀 -->
                 <div id="payment-methods-list"></div>
 
-                <!-- 🚀 ምንም የክፍያ መንገድ ከሌለ የሚመጣው በተን 🚀 -->
                 <div id="no-payment-methods" style="display: none;">
                     <div class="pm-add-btn" onclick="window.location.href='settings.html'">
                         <i class="fa-solid fa-circle-plus"></i> Please add payment method
                     </div>
                 </div>
-
             </div>
 
-            <!-- 4. Trader Requirements -->
             <div class="form-section">
                 <h3>Trader Requirements</h3>
                 <p class="section-sub">Restrict who can trade with this order</p>
                 
-                <!-- Verification Level -->
                 <label style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 10px;">Verification Level</label>
                 <div class="two-cols" style="margin-bottom: 20px;">
                     <label class="pm-card" style="margin: 0;">
@@ -381,7 +364,6 @@
                     </label>
                 </div>
 
-                <!-- Account Age -->
                 <label style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 10px;">Account Age</label>
                 <div class="pill-group">
                     <div class="pill-option active"><i class="fa-regular fa-square-check" style="margin-right: 4px;"></i> Any</div>
@@ -391,7 +373,6 @@
                     <div class="pill-option">30+ days</div>
                 </div>
 
-                <!-- Min Completed Trades -->
                 <label style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 10px;">Min. Completed Trades</label>
                 <div class="pill-group">
                     <div class="pill-option active"><i class="fa-regular fa-square-check" style="margin-right: 4px;"></i> Any</div>
@@ -401,7 +382,6 @@
                     <div class="pill-option">50+</div>
                 </div>
 
-                <!-- Min Completion Rate -->
                 <label style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 10px;">Min. Completion Rate</label>
                 <div class="pill-group">
                     <div class="pill-option active"><i class="fa-regular fa-square-check" style="margin-right: 4px;"></i> Any</div>
@@ -412,7 +392,6 @@
                 </div>
             </div>
 
-            <!-- 5. Terms & Conditions -->
             <div class="form-section">
                 <h3>Terms & Conditions</h3>
                 <p class="section-sub">Optional — specific rules for this trade</p>
@@ -438,7 +417,7 @@
             switchView('view-post-order');
             history.pushState({view: 'post'}, '', '?action=create');
             validatePrice(); 
-            renderPaymentMethods(); // ፎርሙ ሲከፈት ዳታዎችን ያመጣል
+            renderPaymentMethods(); 
         }
 
         function closePostOrderForm() {
@@ -497,41 +476,36 @@
             }
         }
 
-        // 🚀 ዳይናሚክ የክፍያ መንገዶች ሎጂክ (Dynamic Payment Methods) 🚀
-        // ይሄን Array ባዶ በማድረግ (ለምሳሌ const userPaymentMethods = []; ብለህ) Please add payment method የሚለውን ዲዛይን ማየት ትችላለህ።
+        // 🚀 ከ Settings ገጽህ ጋር አንድ አይነት የሆነው ትክክለኛው ዳታ 🚀
         const userPaymentMethods = [
-            { type: "Telebirr", name: "Abdurahman ashebir", account: "0981329334", isDefault: false },
-            { type: "Bank of Abyssinia", name: "Abdurahman ashebir", account: "172779198", isDefault: false },
-            { type: "Commercial Bank of Ethiopia", name: "Abdurahman ashebir", account: "1000693723863", isDefault: true }
+            { type: "Commercial Bank of Ethiopia", name: "abdurehman ashebir", account: "1000571253945", isDefault: true },
+            { type: "Telebirr", name: "abdurahman ashebir", account: "0913836444", isDefault: false }
         ];
 
         function renderPaymentMethods() {
             const listContainer = document.getElementById('payment-methods-list');
             const noPaymentDiv = document.getElementById('no-payment-methods');
             
-            // የነበረውን ያጠፋል
             listContainer.innerHTML = '';
 
-            // ምንም የክፍያ መንገድ ከሌለ
             if (userPaymentMethods.length === 0) {
                 listContainer.style.display = 'none';
                 noPaymentDiv.style.display = 'block';
                 return;
             }
 
-            // የክፍያ መንገዶች ካሉ
             listContainer.style.display = 'block';
             noPaymentDiv.style.display = 'none';
 
             userPaymentMethods.forEach((method, index) => {
-                const isChecked = index === 0 ? 'checked' : ''; // የመጀመሪያው ቼክድ እንዲሆን
-                const defaultBadge = method.isDefault ? `<span style="background: rgba(14, 203, 129, 0.15); color: var(--green-color); font-size: 10px; padding: 2px 6px; border-radius: 4px;">Default</span>` : '';
+                const isChecked = index === 0 ? 'checked' : ''; 
+                const defaultBadge = method.isDefault ? `<span style="background: rgba(14, 203, 129, 0.15); color: var(--green-color); font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">Default</span>` : '';
                 
                 const cardHTML = `
                     <label class="pm-card">
                         <input type="radio" name="payment_method" ${isChecked}>
                         <div>
-                            <div style="font-size: 14px; font-weight: 700; margin-bottom: 4px; color: #fff; display: flex; align-items: center; gap: 8px;">
+                            <div style="font-size: 14px; font-weight: 700; margin-bottom: 4px; color: #fff; display: flex; align-items: center;">
                                 ${method.type} ${defaultBadge}
                             </div>
                             <div style="font-size: 12px; color: var(--text-muted);">${method.name}</div>
@@ -551,7 +525,7 @@
             } else {
                 switchView('view-main-ads');
             }
-            renderPaymentMethods(); // መጀመሪያ ሲከፈት እንዲያመጣቸው
+            renderPaymentMethods(); 
         });
     </script>
 </body>
