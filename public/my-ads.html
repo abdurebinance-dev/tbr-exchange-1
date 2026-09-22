@@ -13,10 +13,10 @@
             --text-color: #ffffff;
             --text-muted: #848e9c;
             --border-color: #2b313a;
-            --accent-color: #f3ba2f; /* ለዋና በተኖች (Yellow) */
+            --accent-color: #f3ba2f; 
             --accent-hover: #e0ac2b;
-            --green-color: #0ecb81; /* ለ Buy እና Review Order */
-            --red-color: #f6465d;   /* ለ Sell */
+            --green-color: #0ecb81; 
+            --red-color: #f6465d;   
         }
 
         body {
@@ -178,29 +178,11 @@
         .pm-card input[type="radio"], .pm-card input[type="checkbox"] { margin-top: 3px; accent-color: var(--green-color); width: 14px; height: 14px; }
         
         .pm-add-btn {
-            background: transparent;
-            border: 1px dashed var(--border-color);
-            color: var(--text-muted);
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-            transition: 0.2s;
-            width: 100%;
-            margin-bottom: 10px;
-            box-sizing: border-box;
+            background: transparent; border: 1px dashed var(--border-color); color: var(--text-muted);
+            padding: 15px; border-radius: 8px; text-align: center; font-size: 13px; font-weight: 600;
+            cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; transition: 0.2s; width: 100%; box-sizing: border-box;
         }
-        .pm-add-btn:hover {
-            border-color: var(--green-color);
-            color: var(--green-color);
-            background: rgba(14, 203, 129, 0.05);
-        }
+        .pm-add-btn:hover { border-color: var(--green-color); color: var(--green-color); background: rgba(14, 203, 129, 0.05); }
 
         .pill-group { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
         .pill-option {
@@ -332,9 +314,9 @@
                 <div id="payment-methods-list"></div>
 
                 <div id="no-payment-methods" style="display: none;">
-                    <div class="pm-add-btn" onclick="window.location.href='settings.html'">
+                    <button class="pm-add-btn" onclick="window.location.href='settings.html'">
                         <i class="fa-solid fa-circle-plus"></i> Please add payment method
-                    </div>
+                    </button>
                 </div>
             </div>
 
@@ -476,24 +458,38 @@
             }
         }
 
-        // 🚀 ልክ Settings ላይ እንዳለው CBE እና Telebirr ብቻ ያመጣል 🚀
-        const userPaymentMethods = [
-            { type: "Commercial Bank of Ethiopia", name: "abdurehman ashebir", account: "1000571253945", isDefault: true },
-            { type: "Telebirr", name: "abdurahman ashebir", account: "0913836444", isDefault: false }
-        ];
+        // 🚀 Dynamic Logic: Reads exact data saved from settings.html via LocalStorage 🚀
+        function getSavedPaymentMethods() {
+            // ብራውዘሩ ላይ ሴቭ የተደረገ ክፍያ ካለ ፈልጎ ያመጣል
+            const storedData = localStorage.getItem('user_payment_methods');
+            if (storedData) {
+                try {
+                    return JSON.parse(storedData);
+                } catch(e) {
+                    return [];
+                }
+            }
+            // ምንም ከሌለ ባዶ ያደርገዋል (Please add payment method የሚለውን ለማምጣት)
+            return []; 
+        }
 
         function renderPaymentMethods() {
             const listContainer = document.getElementById('payment-methods-list');
             const noPaymentDiv = document.getElementById('no-payment-methods');
             
+            // የ getSavedPaymentMethods ፎንክሽንን በመጥራት ዳታውን ያመጣል
+            const userPaymentMethods = getSavedPaymentMethods();
+            
             listContainer.innerHTML = '';
 
-            if (userPaymentMethods.length === 0) {
+            // ተጠቃሚው Payment Method ካላስገባ ወይንም ገና አዲስ ከሆነ
+            if (!userPaymentMethods || userPaymentMethods.length === 0) {
                 listContainer.style.display = 'none';
                 noPaymentDiv.style.display = 'block';
                 return;
             }
 
+            // ተጠቃሚው Payment Method ካስገባ
             listContainer.style.display = 'block';
             noPaymentDiv.style.display = 'none';
 
@@ -501,15 +497,20 @@
                 const isChecked = index === 0 ? 'checked' : ''; 
                 const defaultBadge = method.isDefault ? `<span style="background: rgba(14, 203, 129, 0.15); color: var(--green-color); font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">Default</span>` : '';
                 
+                // የተለያየ ኪይ (Key) ቢጠቀሙ እንኳን እንዳይበላሽ የተሰራ
+                const bankName = method.bankName || method.type || "Bank";
+                const accountName = method.fullName || method.name || "Account Name";
+                const accNumber = method.accountNumber || method.account || method.number || "00000";
+
                 const cardHTML = `
                     <label class="pm-card">
                         <input type="radio" name="payment_method" ${isChecked}>
                         <div>
                             <div style="font-size: 14px; font-weight: 700; margin-bottom: 4px; color: #fff; display: flex; align-items: center;">
-                                ${method.type} ${defaultBadge}
+                                ${bankName} ${defaultBadge}
                             </div>
-                            <div style="font-size: 12px; color: var(--text-muted);">${method.name}</div>
-                            <div style="font-size: 12px; color: var(--text-muted);">${method.account}</div>
+                            <div style="font-size: 12px; color: var(--text-muted);">${accountName}</div>
+                            <div style="font-size: 12px; color: var(--text-muted);">${accNumber}</div>
                         </div>
                     </label>
                 `;
