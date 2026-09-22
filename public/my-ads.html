@@ -49,7 +49,6 @@
             margin: 0;
         }
 
-        /* 🚀 ቆንጆ የተስተካከሉ በተኖች 🚀 */
         .btn-primary {
             background-color: var(--green-color);
             color: #000;
@@ -66,14 +65,6 @@
         }
 
         .btn-primary:hover { background-color: var(--green-hover); }
-
-        /* ልክ እንደ ሁለተኛው ፎቶ ክብ (Pill) ቅርፅ ያለው በተን */
-        .btn-pill {
-            border-radius: 20px !important;
-            padding: 8px 24px !important;
-            font-size: 13px !important;
-            font-weight: 600 !important;
-        }
 
         .btn-outline {
             background: transparent;
@@ -125,6 +116,43 @@
         .empty-state i { font-size: 40px; color: #2b313a; margin-bottom: 20px; }
         .empty-state h3 { margin: 0 0 10px 0; font-size: 16px; color: #fff; }
         .empty-state p { color: var(--text-muted); font-size: 13px; margin-bottom: 20px; }
+
+        /* 🚀 Exact Match Button 🚀 */
+        .btn-post-ad {
+            background-color: var(--green-color);
+            color: #000;
+            border: none;
+            padding: 8px 24px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: 0.2s;
+            margin-top: 5px;
+        }
+        .btn-post-ad:hover { 
+            background-color: var(--green-hover); 
+            transform: scale(0.95); 
+        }
+
+        .btn-new-ad-top {
+            background-color: var(--green-color);
+            color: #000;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: 0.2s;
+        }
+        .btn-new-ad-top:hover { background-color: var(--green-hover); }
 
         /* =========================================
            VIEW 2: KYC Required Block
@@ -264,8 +292,7 @@
     <div class="container" id="view-main-ads">
         <div class="top-bar">
             <h1>Your Ads</h1>
-            <!-- 🚀 Top Right Button (Pill Shaped) 🚀 -->
-            <button class="btn-primary btn-pill" onclick="handleNewAdClick()">
+            <button class="btn-new-ad-top" onclick="handleNewAdClick()">
                 <i class="fa-solid fa-plus"></i> New Ad
             </button>
         </div>
@@ -286,8 +313,7 @@
             <i class="fa-regular fa-clipboard"></i>
             <h3>No ads yet</h3>
             <p>Post your first P2P trade offer</p>
-            <!-- 🚀 Center Empty State Button (Pill Shaped) 🚀 -->
-            <button class="btn-primary btn-pill" onclick="handleNewAdClick()">
+            <button class="btn-post-ad" onclick="handleNewAdClick()">
                 <i class="fa-solid fa-plus"></i> Post an Ad
             </button>
         </div>
@@ -322,7 +348,6 @@
                 </div>
             </div>
 
-            <!-- Email Verified -->
             <div class="kyc-status-row">
                 <div style="display: flex; gap: 15px; align-items: center;">
                     <div style="width: 35px; height: 35px; border-radius: 50%; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; background: var(--bg-color);">
@@ -337,7 +362,6 @@
                 </div>
             </div>
 
-            <!-- KYC Rejected/Unverified -->
             <div class="kyc-status-row">
                 <div style="display: flex; gap: 15px; align-items: center;">
                     <div style="width: 35px; height: 35px; border-radius: 50%; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; background: var(--bg-color);">
@@ -385,7 +409,6 @@
             </button>
         </div>
 
-        <!-- Form Elements -->
         <div class="form-section">
             <h4>Price per USDT</h4>
             <div class="input-group">
