@@ -156,6 +156,47 @@
            ========================================= */
         #view-post-ad { display: none; animation: fadeIn 0.3s ease; max-width: 800px; margin: 0 auto; padding-bottom: 50px;}
 
+        /* 🚀 Buy/Sell Toggle Buttons Styles 🚀 */
+        .trade-type-toggle {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .toggle-btn {
+            flex: 1;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toggle-btn:hover {
+            border-color: #444;
+            color: #fff;
+        }
+
+        .toggle-btn.btn-buy.active {
+            border-color: var(--green-color);
+            color: var(--green-color);
+            background: rgba(14, 203, 129, 0.05);
+        }
+
+        .toggle-btn.btn-sell.active {
+            border-color: var(--red-color);
+            color: var(--red-color);
+            background: rgba(246, 70, 93, 0.05);
+        }
+
         .form-section { margin-bottom: 30px; }
         .form-section h4 { font-size: 15px; font-weight: 600; margin: 0 0 15px 0; color: #fff; }
         .form-section p.sub { font-size: 12px; color: var(--text-muted); margin: -10px 0 15px 0;}
@@ -235,7 +276,8 @@
             <i class="fa-regular fa-clipboard"></i>
             <h3>No ads yet</h3>
             <p>Post your first P2P trade offer</p>
-            <button class="btn-primary" onclick="handleNewAdClick()">
+            <!-- 🚀 1. በትክክል ያነሰው Post an Ad በተን 🚀 -->
+            <button class="btn-primary" style="padding: 8px 20px; font-size: 13px; margin-top: 10px;" onclick="handleNewAdClick()">
                 <i class="fa-solid fa-plus"></i> Post an Ad
             </button>
         </div>
@@ -322,6 +364,16 @@
                 Post Order
             </h2>
             <p>Set your rate, limits, and payment methods</p>
+        </div>
+
+        <!-- 🚀 Buy and Sell Toggle Buttons 🚀 -->
+        <div class="trade-type-toggle">
+            <button class="toggle-btn btn-buy active" onclick="setTradeType('buy', this)">
+                <i class="fa-solid fa-arrow-down"></i> Buy USDT
+            </button>
+            <button class="toggle-btn btn-sell" onclick="setTradeType('sell', this)">
+                <i class="fa-solid fa-arrow-up"></i> Sell USDT
+            </button>
         </div>
 
         <!-- Form Elements -->
@@ -449,14 +501,14 @@
             </div>
         </div>
 
-        <button class="btn-primary" style="width: 100%; justify-content: center; padding: 18px; font-size: 16px;">
+        <button id="review-order-btn" class="btn-primary" style="width: 100%; justify-content: center; padding: 18px; font-size: 16px;">
             <i class="fa-solid fa-eye"></i> Review Order
         </button>
 
     </div>
 
     <script>
-        // 🚀 1. "New Ad" ሲነካ KYC ቼክ የሚያደርገው ሎጂክ 🚀
+        // 🚀 1. "New Ad" ሲነካ KYC ቼክ የሚያደርገው ሎጂክ
         function handleNewAdClick() {
             // ከስቶሬጅ kycStatus ያነባል (በ Settings ላይ ሴቭ ይደረጋል)
             const kycStatus = localStorage.getItem('kycStatus') || 'unverified';
@@ -464,27 +516,49 @@
             // የድሮውን ዝርዝር ገጽ መደበቅ
             document.getElementById('view-main-ads').style.display = 'none';
 
-            // 'approved' ወይም 'verified' ከሆነ ወደ ፎርሙ ማሳለፍ (ፎቶ 3)
+            // 'approved' ወይም 'verified' ከሆነ ወደ ፎርሙ ማሳለፍ
             if (kycStatus.toLowerCase() === 'approved' || kycStatus.toLowerCase() === 'verified') {
                 document.getElementById('view-post-ad').style.display = 'block';
                 loadPaymentMethodsForAd(); // የባንክ አካውንቶችን ሎድ ማድረግ
             } else {
-                // ካልሆነ Blocked ፔጁን ማሳየት (ፎቶ 2)
+                // ካልሆነ Blocked ፔጁን ማሳየት
                 document.getElementById('view-kyc-required').style.display = 'block';
             }
         }
 
-        // 🚀 2. ወደ ኋላ (Back) መመለሻ 🚀
+        // 🚀 ወደ ኋላ (Back) መመለሻ
         function goBackToAds() {
             document.getElementById('view-main-ads').style.display = 'block';
             document.getElementById('view-kyc-required').style.display = 'none';
             document.getElementById('view-post-ad').style.display = 'none';
         }
 
-        // 🚀 3. የ Payment Methods ማምጫና መደርደሪያ (ለ Post Ad ፎርም) 🚀
+        // 🚀 2. Buy/Sell Toggle Button Logic 🚀
+        let currentTradeType = 'buy'; // Default
+
+        function setTradeType(type, element) {
+            currentTradeType = type;
+            
+            // ከሁሉም በተኖች ላይ active ክላስን ማንሳት
+            document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
+            // በተነካው በተን ላይ active ማድረቅ
+            element.classList.add('active');
+            
+            // ከስር ያለውን 'Review Order' በተን እንደ ምርጫው ከለሩን እንቀይረዋለን
+            const reviewBtn = document.getElementById('review-order-btn');
+            if (type === 'sell') {
+                reviewBtn.style.backgroundColor = 'var(--red-color)';
+                reviewBtn.style.color = '#fff';
+            } else {
+                reviewBtn.style.backgroundColor = 'var(--green-color)';
+                reviewBtn.style.color = '#000';
+            }
+        }
+
+        // 🚀 የ Payment Methods ማምጫና መደርደሪያ
         function loadPaymentMethodsForAd() {
             const container = document.getElementById('ad-payment-methods-container');
-            container.innerHTML = ''; // ማጽዳት
+            container.innerHTML = ''; 
 
             const stored = localStorage.getItem("user_payment_methods");
             let pms = [];
@@ -495,7 +569,7 @@
             if (pms.length === 0) {
                 container.innerHTML = `
                     <div style="text-align: center; padding: 20px; border: 1px dashed var(--border-color); border-radius: 8px; color: var(--text-muted); font-size: 13px;">
-                        No payment methods found. <a href="settings.html?tab=payments" style="color: var(--green-color); text-decoration: none;">Add one in Settings</a>
+                        No payment methods found. <a href="settings.html" style="color: var(--green-color); text-decoration: none;">Add one in Settings</a>
                     </div>`;
                 return;
             }
@@ -519,10 +593,8 @@
             });
         }
 
-        // ዲዛይን ለመቀየር (ክሊክ ሲደረግ አረንጓዴ ቦርደር እንዲያመጣ)
         function selectPaymentCard(element) {
             const checkbox = element.querySelector('.pm-radio');
-            // ቼክቦክሱ ከተመረጠ ክላሱን ይጨምራል
             setTimeout(() => {
                 if(checkbox.checked) {
                     element.classList.add('active');
