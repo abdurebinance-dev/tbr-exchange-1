@@ -262,84 +262,6 @@
             text-decoration: underline;
         }
 
-        .custom-modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            display: none;
-        }
-
-        .custom-modal {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            width: 350px;
-            padding: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-
-        .custom-modal h3 {
-            margin-top: 0;
-            font-size: 16px;
-            color: var(--text-color);
-            margin-bottom: 12px;
-        }
-
-        .custom-modal input {
-            width: 100%;
-            padding: 10px;
-            background: #1a1a1a;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            color: #fff;
-            font-size: 14px;
-            margin-bottom: 15px;
-            box-sizing: border-box;
-            outline: none;
-        }
-
-        .custom-modal input:focus {
-            border-color: var(--accent-color);
-        }
-
-        .modal-buttons {
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-        }
-
-        .modal-btn {
-            padding: 6px 14px;
-            border-radius: 5px;
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            border: none;
-            transition: transform 0.08s ease;
-        }
-
-        .modal-btn:active {
-            transform: scale(0.92);
-        }
-
-        .btn-cancel {
-            background: #222;
-            color: var(--text-muted);
-        }
-
-        .btn-confirm {
-            background: var(--accent-color);
-            color: #000;
-            font-weight: 600;
-        }
-
         /* 🚀 💳 Payment Methods Styles 🚀 */
         .pm-card {
             background-color: var(--card-bg);
@@ -519,6 +441,209 @@
             color: var(--text-muted);
         }
 
+        /* 🚀 Payment Method Card List Item 🚀 */
+        .pm-item-box {
+            background-color: #16181d;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .pm-item-type {
+            font-size: 15px;
+            font-weight: 700;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .pm-default-badge {
+            background: rgba(14, 203, 129, 0.15);
+            color: var(--green-color);
+            border: 1px solid rgba(14, 203, 129, 0.3);
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+
+        .pm-item-holder {
+            font-size: 13px;
+            color: #848e9c;
+            margin: 6px 0;
+        }
+
+        .pm-item-number {
+            font-size: 13px;
+            color: #a0a6b2;
+            letter-spacing: 0.5px;
+        }
+
+        .pm-item-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .pm-set-default-btn {
+            background: none;
+            border: none;
+            color: #848e9c;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 500;
+        }
+
+        .pm-set-default-btn:hover {
+            color: #fff;
+        }
+
+        /* 🚀 Center Notification Modal 🚀 */
+        #centerNotifyModal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+        }
+
+        .center-notify-card {
+            background: #181a20;
+            border: 1px solid #2b313a;
+            border-radius: 14px;
+            width: 90%;
+            max-width: 420px;
+            padding: 24px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            text-align: center;
+            animation: fadeIn 0.2s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .center-notify-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+
+        .center-notify-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+
+        .center-notify-desc {
+            font-size: 13px;
+            color: #848e9c;
+            line-height: 1.5;
+            margin-bottom: 20px;
+            word-break: break-word;
+        }
+
+        .center-notify-ok-btn {
+            background: var(--accent-color);
+            color: #000;
+            border: none;
+            padding: 10px 30px;
+            border-radius: 20px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .custom-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            display: none;
+        }
+
+        .custom-modal {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            width: 350px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .custom-modal h3 {
+            margin-top: 0;
+            font-size: 16px;
+            color: var(--text-color);
+            margin-bottom: 12px;
+        }
+
+        .custom-modal input {
+            width: 100%;
+            padding: 10px;
+            background: #1a1a1a;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 14px;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        .custom-modal input:focus {
+            border-color: var(--accent-color);
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .modal-btn {
+            padding: 6px 14px;
+            border-radius: 5px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: transform 0.08s ease;
+        }
+
+        .modal-btn:active {
+            transform: scale(0.92);
+        }
+
+        .btn-cancel {
+            background: #222;
+            color: var(--text-muted);
+        }
+
+        .btn-confirm {
+            background: var(--accent-color);
+            color: #000;
+            font-weight: 600;
+        }
+
         /* Toast Notification Styles */
         #toastNotification {
             position: fixed;
@@ -670,7 +795,6 @@
         </div>
 
         <!-- 3. Payments Content -->
-        <!-- 💳 PAYMENTS TAB 🚀 id changed to payments-section -->
         <div id="payments-section" class="content-section" style="display: none;">
             <div class="pm-card">
                 <!-- Header Section -->
@@ -730,7 +854,7 @@
                     <p>Add a payment method — Telebirr, M-Pesa, CBE Birr, CBE, Bank of Abyssinia, Dashen Bank, or Awash Bank — to start trading</p>
                 </div>
 
-                <!-- List State (Hidden initially) -->
+                <!-- 🚀 Saved Payment Methods List (Will show cards) 🚀 -->
                 <div id="pm-list" style="display: none; flex-direction: column; gap: 15px;">
                     <!-- Saved payment methods will appear here -->
                 </div>
@@ -751,6 +875,16 @@
                 <h3>Trade Preferences</h3>
                 <p style="color: var(--text-muted); font-size: 13px;">Manage your trading configurations and history settings here.</p>
             </div>
+        </div>
+    </div>
+
+    <!-- 🚀 1. ቆንጆ የመሃል Notification Modal 🚀 -->
+    <div id="centerNotifyModal">
+        <div class="center-notify-card">
+            <div class="center-notify-icon" id="notifyIcon"></div>
+            <div class="center-notify-title" id="notifyTitle">Notification</div>
+            <div class="center-notify-desc" id="notifyDesc">Message details...</div>
+            <button class="center-notify-ok-btn" onclick="closeCenterNotification()">OK</button>
         </div>
     </div>
 
@@ -775,6 +909,31 @@
         const API_BASE_URL = '';
 
         let currentField = "";
+        let paymentMethods = [];
+        let editingPaymentId = null;
+
+        // 🚀 Notification Modal Helper 🚀
+        function showCenterNotification(title, message, isSuccess = true) {
+            const modal = document.getElementById('centerNotifyModal');
+            const icon = document.getElementById('notifyIcon');
+            const titleEl = document.getElementById('notifyTitle');
+            const descEl = document.getElementById('notifyDesc');
+
+            titleEl.innerText = title;
+            descEl.innerHTML = message;
+
+            if (isSuccess) {
+                icon.innerHTML = '<i class="fa-solid fa-circle-check" style="color: var(--green-color);"></i>';
+            } else {
+                icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color: var(--red-color);"></i>';
+            }
+
+            modal.style.display = 'flex';
+        }
+
+        function closeCenterNotification() {
+            document.getElementById('centerNotifyModal').style.display = 'none';
+        }
 
         // 🛠️ Helpers for Passkey Base64URL Conversion
         function base64urlToBuffer(base64url) {
@@ -810,6 +969,9 @@
             // 🔴 ፔጁ እንደተከፈተ ሎካል ስቶሬጁን አውጥቶ ይለጥፋል
             loadFromLocalStorageFallback();
             loadUserPasskeys();
+            
+            // 🚀 ክፍያዎችን መጫን 🚀
+            loadPaymentMethods();
 
             try {
                 const token = localStorage.getItem("token") || 
@@ -935,6 +1097,184 @@
 
             updateUI({ username, email, tbrId, phone, traderHandle, kycStatus, avatar });
         }
+
+        // ==========================================
+        // 🚀 2. PAYMENT METHODS LOGIC (SAVE & DISPLAY) 🚀
+        // ==========================================
+        function loadPaymentMethods() {
+            const stored = localStorage.getItem("user_payment_methods");
+            if (stored) {
+                try {
+                    paymentMethods = JSON.parse(stored);
+                } catch(e) {
+                    paymentMethods = [];
+                }
+            }
+            renderPaymentMethods();
+        }
+
+        function renderPaymentMethods() {
+            const listEl = document.getElementById('pm-list');
+            const emptyEl = document.getElementById('pm-empty-state');
+            const formEl = document.getElementById('pm-add-form');
+
+            if (!paymentMethods || paymentMethods.length === 0) {
+                listEl.style.display = 'none';
+                if (formEl.style.display === 'none') {
+                    emptyEl.style.display = 'block';
+                }
+                return;
+            }
+
+            emptyEl.style.display = 'none';
+            listEl.style.display = 'flex';
+            listEl.innerHTML = '';
+
+            paymentMethods.forEach((pm, index) => {
+                const isDefault = pm.isDefault ? true : false;
+                const html = `
+                <div class="pm-item-box">
+                    <div>
+                        <div class="pm-item-type">
+                            ${pm.type}
+                            ${isDefault ? '<span class="pm-default-badge"><i class="fa-regular fa-star"></i> Default</span>' : ''}
+                        </div>
+                        <div class="pm-item-holder">${pm.name}</div>
+                        <div class="pm-item-number">${pm.account}</div>
+                    </div>
+                    <div class="pm-item-actions">
+                        ${!isDefault ? `
+                            <button class="pm-set-default-btn" onclick="setDefaultPaymentMethod(${index})">
+                                <i class="fa-regular fa-circle-check"></i> Set default
+                            </button>
+                        ` : ''}
+                        <i class="fa-solid fa-pen" style="color: #848e9c; cursor: pointer; font-size: 14px;" title="Edit" onclick="editPaymentMethod(${index})"></i>
+                        <i class="fa-solid fa-trash" style="color: var(--red-color); cursor: pointer; font-size: 14px;" title="Delete" onclick="deletePaymentMethod(${index})"></i>
+                    </div>
+                </div>`;
+                listEl.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        // 🚀 የ Payment ፎርሙን መክፈቻ እና መዝጊያ 🚀
+        function toggleAddPaymentForm() {
+            const form = document.getElementById('pm-add-form');
+            const emptyState = document.getElementById('pm-empty-state');
+            const addBtn = document.getElementById('pm-add-btn');
+
+            if (form.style.display === 'none') {
+                // ፎርሙን መክፈት
+                form.style.display = 'block';
+                emptyState.style.display = 'none';
+                addBtn.style.display = 'none';
+            } else {
+                // ፎርሙን መዝጋት
+                form.style.display = 'none';
+                addBtn.style.display = 'flex';
+                
+                // ሳጥኖቹን ባዶ ማድረግ
+                document.getElementById('pm-type').value = "";
+                document.getElementById('pm-account-name').value = "";
+                document.getElementById('pm-account-number').value = "";
+                document.getElementById('pm-account-number-group').style.display = 'none';
+                editingPaymentId = null;
+                renderPaymentMethods(); // ዳታ ካለ ዝርዝሩን ያሳያል፣ ከሌለ Empty state-ን ያሳያል
+            }
+        }
+
+        // 🚀 የተመረጠው ባንክ ሲቀየር የአካውንት ቁጥር ሳጥኑን ማውጣት 🚀
+        function handlePaymentTypeChange() {
+            const type = document.getElementById('pm-type').value;
+            const accountGroup = document.getElementById('pm-account-number-group');
+            const accountLabel = document.getElementById('pm-account-number-label');
+            const accountInput = document.getElementById('pm-account-number');
+
+            if (type) {
+                accountGroup.style.display = 'block';
+                
+                if (type === 'Telebirr' || type === 'M-Pesa' || type === 'CBE Birr') {
+                    accountLabel.innerText = "Phone Number";
+                    accountInput.placeholder = "Enter registered phone number";
+                } else {
+                    accountLabel.innerText = "Account Number";
+                    accountInput.placeholder = "Enter bank account number";
+                }
+            } else {
+                accountGroup.style.display = 'none';
+            }
+        }
+
+        // 🚀 ሴቭ የሚደረግበት ቦታ 🚀
+        function savePaymentMethod() {
+            const type = document.getElementById('pm-type').value;
+            const name = document.getElementById('pm-account-name').value.trim();
+            const account = document.getElementById('pm-account-number').value.trim();
+
+            if (!type || !name || !account) {
+                showCenterNotification("Missing Details", "Please select payment type and fill in both account name and account number.", false);
+                return;
+            }
+
+            if (editingPaymentId !== null) {
+                paymentMethods[editingPaymentId] = {
+                    ...paymentMethods[editingPaymentId],
+                    type,
+                    name,
+                    account
+                };
+                editingPaymentId = null;
+                showCenterNotification("Updated", `Payment method <strong>${type}</strong> updated successfully!`);
+            } else {
+                const isFirst = paymentMethods.length === 0;
+                paymentMethods.push({
+                    id: Date.now().toString(),
+                    type,
+                    name,
+                    account,
+                    isDefault: isFirst
+                });
+                showCenterNotification("Success", `Payment method <strong>${type}</strong> added successfully!`);
+            }
+
+            localStorage.setItem("user_payment_methods", JSON.stringify(paymentMethods));
+            toggleAddPaymentForm();
+            renderPaymentMethods();
+        }
+
+        function setDefaultPaymentMethod(index) {
+            paymentMethods.forEach((pm, i) => {
+                pm.isDefault = (i === index);
+            });
+            localStorage.setItem("user_payment_methods", JSON.stringify(paymentMethods));
+            renderPaymentMethods();
+            showCenterNotification("Default Changed", `Default payment method changed to <strong>${paymentMethods[index].type}</strong>`);
+        }
+
+        function deletePaymentMethod(index) {
+            const removed = paymentMethods.splice(index, 1);
+            if (removed[0].isDefault && paymentMethods.length > 0) {
+                paymentMethods[0].isDefault = true;
+            }
+            localStorage.setItem("user_payment_methods", JSON.stringify(paymentMethods));
+            renderPaymentMethods();
+            showCenterNotification("Deleted", "Payment method has been removed successfully.");
+        }
+
+        function editPaymentMethod(index) {
+            const pm = paymentMethods[index];
+            editingPaymentId = index;
+
+            document.getElementById('pm-type').value = pm.type;
+            handlePaymentTypeChange();
+            document.getElementById('pm-account-name').value = pm.name;
+            document.getElementById('pm-account-number').value = pm.account;
+
+            const form = document.getElementById('pm-add-form');
+            form.style.display = 'block';
+            document.getElementById('pm-empty-state').style.display = 'none';
+            document.getElementById('pm-add-btn').style.display = 'none';
+        }
+
 
         function triggerImageUpload() {
             const fileInput = document.getElementById("profileImageInput");
@@ -1240,72 +1580,6 @@
             setTimeout(() => {
                 toast.classList.remove("show");
             }, 2500);
-        }
-
-        // 🚀 የ Payment ፎርሙን መክፈቻ እና መዝጊያ 🚀
-        function toggleAddPaymentForm() {
-            const form = document.getElementById('pm-add-form');
-            const emptyState = document.getElementById('pm-empty-state');
-            const addBtn = document.getElementById('pm-add-btn');
-
-            if (form.style.display === 'none') {
-                // ፎርሙን መክፈት
-                form.style.display = 'block';
-                emptyState.style.display = 'none';
-                addBtn.style.display = 'none';
-            } else {
-                // ፎርሙን መዝጋት
-                form.style.display = 'none';
-                emptyState.style.display = 'block'; // ዳታ ከሌለ ብቻ (በኋላ በ ዳታቤዝ ይቆጣጠራል)
-                addBtn.style.display = 'flex';
-                
-                // ሳጥኖቹን ባዶ ማድረግ
-                document.getElementById('pm-type').value = "";
-                document.getElementById('pm-account-name').value = "";
-                document.getElementById('pm-account-number').value = "";
-                document.getElementById('pm-account-number-group').style.display = 'none';
-            }
-        }
-
-        // 🚀 የተመረጠው ባንክ ሲቀየር የአካውንት ቁጥር ሳጥኑን ማውጣት 🚀
-        function handlePaymentTypeChange() {
-            const type = document.getElementById('pm-type').value;
-            const accountGroup = document.getElementById('pm-account-number-group');
-            const accountLabel = document.getElementById('pm-account-number-label');
-            const accountInput = document.getElementById('pm-account-number');
-
-            if (type) {
-                accountGroup.style.display = 'block';
-                
-                // ስልክ ቁጥር የሚፈልጉ ከሆኑ ቴክስቱን መቀየር
-                if (type === 'Telebirr' || type === 'M-Pesa' || type === 'CBE Birr') {
-                    accountLabel.innerText = "Phone Number";
-                    accountInput.placeholder = "Enter registered phone number";
-                } else {
-                    accountLabel.innerText = "Account Number";
-                    accountInput.placeholder = "Enter bank account number";
-                }
-            } else {
-                accountGroup.style.display = 'none';
-            }
-        }
-
-        // 🚀 ሴቭ የሚደረግበት ቦታ (ለወደፊት ከባክኤንድ ጋር የምናገናኘው) 🚀
-        function savePaymentMethod() {
-            const type = document.getElementById('pm-type').value;
-            const name = document.getElementById('pm-account-name').value.trim();
-            const account = document.getElementById('pm-account-number').value.trim();
-
-            if (!type || !name || !account) {
-                alert("Please fill in all payment method details.");
-                return;
-            }
-
-            // ለጊዜው በ Alert እናሳየዋለን
-            alert(`Payment Method Ready to Save:\nType: ${type}\nName: ${name}\nAccount: ${account}`);
-            
-            // ከሴቭ በኋላ ፎርሙን ይዘጋዋል
-            toggleAddPaymentForm();
         }
 
         // 🚀 Tab Switcher 🚀
