@@ -577,6 +577,16 @@
             color: var(--green-color);
             font-size: 16px;
         }
+
+        /* 🚀 4. የቁጥር ሳጥን ቀስቶችን (Spinners) ማጥፊያ 🚀 */
+        #transfer-section input[type=number]::-webkit-inner-spin-button, 
+        #transfer-section input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        #transfer-section input[type=number] {
+            -moz-appearance: textfield;
+        }
     </style>
 </head>
 <body>
@@ -696,7 +706,7 @@
 
                 <button class="action-submit-btn btn-disabled" id="withdraw-submit-btn" disabled onclick="initiateWithdrawal()">Submit Withdrawal</button>
 
-                <!-- 🚀 Withdrawal Status (ከ Submit በታች፣ ከ Recent Activity በላይ ተዛውሯል) 🚀 -->
+                <!-- 🚀 Withdrawal Status 🚀 -->
                 <div id="withdrawal-status-container" style="display: none; margin-top: 15px;">
                     <div class="section-header" style="border-bottom: none; margin-bottom: 8px; padding-bottom: 0;">
                         <span style="font-size: 14px; font-weight: 600; color: #fff;"><i class="fa-regular fa-clock" style="margin-right: 6px; color: var(--accent-color);"></i> Withdrawal Status</span>
@@ -707,18 +717,6 @@
                 </div>
             </div>
         </div>
-
-       <style>
-    /* 🚀 4. የቁጥር ሳጥን ቀስቶችን (Spinners) ማጥፊያ 🚀 */
-    #transfer-section input[type=number]::-webkit-inner-spin-button, 
-    #transfer-section input[type=number]::-webkit-outer-spin-button { 
-        -webkit-appearance: none; 
-        margin: 0; 
-    }
-    #transfer-section input[type=number] {
-        -moz-appearance: textfield;
-    }
-</style>
 
         <!-- 3. TRANSFER SECTION -->
         <div id="transfer-section" class="tab-section" style="display: none;">
@@ -814,7 +812,7 @@
                 <i class="fa-solid fa-xmark" style="cursor: pointer; color: #888; font-size: 18px;" onclick="closeSecurityModal()"></i>
             </div>
 
-            <p style="font-size: 13px; color: #888; margin-bottom: 20px;">Confirm your identity to complete: <strong style="color: #fff;">Withdrawal</strong></p>
+            <p style="font-size: 13px; color: #888; margin-bottom: 20px;">Confirm your identity to complete: <strong id="securityModalActionName" style="color: #fff;">Withdrawal</strong></p>
 
             <!-- Tabs -->
             <div style="display: flex; background: #1a1c22; border-radius: 8px; padding: 4px; margin-bottom: 20px;">
@@ -856,7 +854,7 @@
                 <input type="text" class="form-control" id="otpCodeInput" placeholder="Enter 6-digit OTP" maxlength="6" style="text-align: center; font-size: 18px; letter-spacing: 5px; padding-right: 110px;">
                 <button id="sendEmailCodeBtn" onclick="triggerEmailOTP()" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: #2b313a; border: none; color: var(--accent-color); padding: 8px 12px; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer;">Send Code</button>
             </div>
-            <button class="action-submit-btn" onclick="verifyAndCompleteWithdrawal()">Verify & Withdraw</button>
+            <button class="action-submit-btn" onclick="verifyAndCompleteWithdrawal()">Verify & Confirm</button>
         </div>
     </div>
 
@@ -888,6 +886,11 @@
 
     <script>
         const API_BASE_URL = ''; 
+
+        // 🚀 የደህንነት ማረጋገጫዎች የትኛውን ስራ እንደሚሰሩ የምንለይበት መያዣዎች 🚀
+        let pendingActionType = ""; 
+        let pendingTransferRecipient = "";
+        let pendingTransferAmount = 0;
 
         let isBalanceVisible = true;
         let userRawBalance = localStorage.getItem("user_balance_val") || "0.00";
@@ -974,7 +977,6 @@
                 document.getElementById('withdraw-section').style.display = 'none';
                 document.getElementById('transfer-section').style.display = 'none';
                 
-                // 🚀 የ Recent Activity ሳጥንን መቆጣጠሪያ 🚀
                 const activitySection = document.querySelector('.activity-section');
 
                 if (actionType === 'Deposit') {
@@ -989,7 +991,6 @@
                 } else if (actionType === 'Transfer') {
                     document.getElementById('transfer-section').style.display = 'block';
                     document.getElementById('network-container').style.display = 'none';
-                    // 🚀 Transfer ላይ ሲሆን Recent Activity-ን ይደብቀዋል 🚀
                     if(activitySection) activitySection.style.display = 'none';
                 }
                 
@@ -1055,7 +1056,6 @@
                 const data = await res.json();
 
                 if (data.success && data.transactions) {
-                    // 🚀 Lokhu kususa wonke ama-transaction e-"sweep" 🚀
                     allTransactions = data.transactions.filter(tx => !(tx.type || '').toLowerCase().includes('sweep'));
                     
                     renderRecentActivity();
@@ -1098,8 +1098,6 @@
             statusContainer.style.display = 'block';
             withdrawals.forEach(tx => {
                 const addr = formatAddress(tx.destinationAddress);
-                
-                // 🚀 የ 0x ማጣሪያው ተመልሷል 🚀
                 const hash = tx.transactionHash || tx.txHash || tx.hash || tx.txId || ''; 
                 const isValidHash = hash && String(hash).startsWith('0x');
                 const onClickAction = isValidHash ? `window.open('https://bscscan.com/tx/${hash}', '_blank')` : `showToast('Transaction hash processing...')`;
@@ -1257,9 +1255,8 @@
         }
 
         let recipientCheckTimer = null;
-        let isRecipientValid = false; // 🚀 ተቀባዩ ትክክል መሆኑን የሚይዝ ተለዋዋጭ (Variable)
+        let isRecipientValid = false;
 
-        // 🚀 2. ሰሚት ቤተኑን ሁኔታ በሁኔታዎች የሚቆጣጠረው ዋናው ፈንክሽን 🚀
         function checkTransferForm() {
             const recipient = document.getElementById('transfer-recipient').value.trim();
             const amountVal = document.getElementById('transfer-amount').value.trim();
@@ -1274,7 +1271,6 @@
                 currentBalance = 0;
             }
 
-            // 🚀 ከባላንስ በላይ ሲሆን በቀይ ከለር ጽሁፉን ማሳየት 🚀
             if (!isNaN(amount) && amount > currentBalance) {
                 amountFeedback.innerText = `Your available balance is ${currentBalance.toFixed(2)} USDT. Insufficient balance!`;
                 amountFeedback.style.display = 'block';
@@ -1283,7 +1279,6 @@
                 amountFeedback.style.display = 'none';
             }
 
-            // ፎርሙ ሙሉ ካልሆነ ወይም ባላንስ ካለፈ Confirm ቆልፉን መዝጋት (Fezez ማድረግ)
             if (!recipient || !isRecipientValid || isNaN(amount) || amount <= 0 || amount > currentBalance) {
                 submitBtn.disabled = true;
                 submitBtn.style.opacity = "0.5";
@@ -1295,7 +1290,6 @@
             }
         }
 
-        // 🚀 1. ዩዘር ሲጽፍ ሪስፒደንቱን በሰርቨር ማረጋገጥ 🚀
         function debouncedCheckRecipient() {
             clearTimeout(recipientCheckTimer);
             const recipient = document.getElementById('transfer-recipient').value.trim();
@@ -1310,7 +1304,7 @@
 
             iconEl.style.display = 'inline-block';
             iconEl.className = "fa-solid fa-spinner fa-spin";
-            iconEl.style.color = "#f0b90b"; // ሎዲንግ ከለር
+            iconEl.style.color = "#f0b90b"; 
             isRecipientValid = false;
             checkTransferForm();
 
@@ -1324,22 +1318,24 @@
 
                     if (data.success) {
                         iconEl.className = "fa-solid fa-circle-check";
-                        iconEl.style.color = "var(--green-color)"; // አረንጓዴ ትክክል ምልክት
+                        iconEl.style.color = "var(--green-color)"; 
                         isRecipientValid = true;
                     } else {
                         iconEl.className = "fa-solid fa-circle-xmark";
-                        iconEl.style.color = "var(--red-color)"; // ቀይ ስህተት ምልክት
+                        iconEl.style.color = "var(--red-color)"; 
                         isRecipientValid = false;
                     }
                 } catch (err) {
                     iconEl.style.display = 'none';
                     isRecipientValid = false;
                 }
-                checkTransferForm(); // 🚀 ሁኔታዎችን እንደገና ማጣራት
+                checkTransferForm(); 
             }, 500);
         }
 
-        // 🚀 Confirm Transfer ሲነካ ልክ እንደ Withdraw የደህንነት ማረጋገጫ (Passkey/Email OTP) ሞዳል መክፈት 🚀
+        // =========================================================
+        // 🚀 1. TRANSFER ACTION: የደህንነት ሞዳል ይከፍታል
+        // =========================================================
         async function initiateTransfer() {
             const recipient = document.getElementById('transfer-recipient').value.trim();
             const amount = parseFloat(document.getElementById('transfer-amount').value);
@@ -1361,21 +1357,24 @@
                 return;
             }
 
-            // 🚀 የ Withdrawal Confirmation Modal-ን መጠቀም (Passkey እና Email OTP እንዲኖረው) 🚀
-            if (typeof openWithdrawalConfirmModal === 'function') {
-                openWithdrawalConfirmModal({
-                    type: 'Transfer',
-                    recipient: recipient,
-                    amount: amount
-                });
-                return;
+            // የትራንስፈር መረጃውን ወደ ተለዋዋጭ ማስገባት
+            pendingActionType = "Transfer";
+            pendingTransferRecipient = recipient;
+            pendingTransferAmount = amount;
+
+            // የሞዳሉን ጽሁፍ ወደ Transfer መቀየር
+            const actionLabel = document.getElementById("securityModalActionName");
+            if (actionLabel) actionLabel.innerText = "Transfer";
+
+            if (userHasPasskey) {
+                document.getElementById('securityModal').style.display = 'flex';
             } else {
-                // ሞዳሉ ከሌለ በቀጥታ ይልካል (Fallback)
-                executeTransferAPI(recipient, amount);
+                document.getElementById('otpModal').style.display = 'flex';
+                document.getElementById('sendEmailCodeBtn').innerText = "Send Code";
+                document.getElementById('sendEmailCodeBtn').disabled = false;
             }
         }
 
-        // 🚀 ትክክለኛውን የትራንስፈር API ጥሪ የሚያደርገው (ማረጋገጫው ካለፈ በኋላ በ ሞዳሉ ይጠራል) 🚀
         async function executeTransferAPI(recipient, amount, verificationCode = '', authType = '') {
             const btn = document.getElementById('transfer-submit-btn');
             if (btn) {
@@ -1427,6 +1426,7 @@
                 checkTransferForm();
             }
         }
+
         function updateBalanceDisplay() {
             if (isBalanceVisible) {
                 document.getElementById("user-balance").innerText = userRawBalance;
@@ -1504,6 +1504,9 @@
             validateWithdrawForm();
         }
 
+        // =========================================================
+        // 🚀 2. WITHDRAW ACTION: የደህንነት ሞዳል ይከፍታል
+        // =========================================================
         async function initiateWithdrawal() {
             const address = document.getElementById('withdraw-address').value.trim();
             const amount = document.getElementById('withdraw-amount').value;
@@ -1512,7 +1515,12 @@
                 return;
             }
 
+            pendingActionType = "Withdraw";
             pendingWithdrawAmount = parseFloat(amount);
+
+            // የሞዳሉን ጽሁፍ ወደ Withdrawal መቀየር
+            const actionLabel = document.getElementById("securityModalActionName");
+            if (actionLabel) actionLabel.innerText = "Withdrawal";
 
             if (userHasPasskey) {
                 document.getElementById('securityModal').style.display = 'flex';
@@ -1534,13 +1542,18 @@
             document.getElementById('sendEmailCodeBtn').disabled = false;
         }
 
+        // =========================================================
+        // 🚀 3. EMAIL OTP: ለጋራ የሚሰራ
+        // =========================================================
         async function triggerEmailOTP() {
-            const address = document.getElementById('withdraw-address').value.trim();
             const token = localStorage.getItem('token') || localStorage.getItem('authToken');
             const sendBtn = document.getElementById('sendEmailCodeBtn');
             
             sendBtn.disabled = true;
             sendBtn.innerText = "Sending...";
+
+            const reqAmount = pendingActionType === "Transfer" ? pendingTransferAmount : pendingWithdrawAmount;
+            const reqAddress = pendingActionType === "Transfer" ? pendingTransferRecipient : document.getElementById('withdraw-address').value.trim();
 
             try {
                 const res = await fetch(`${API_BASE_URL}/api/withdraw/request`, {
@@ -1549,7 +1562,7 @@
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify({ amount: pendingWithdrawAmount, destinationAddress: address, useEmailFallback: true, passkeyVerified: false })
+                    body: JSON.stringify({ amount: reqAmount, destinationAddress: reqAddress, useEmailFallback: true, passkeyVerified: false })
                 });
 
                 const data = await res.json();
@@ -1596,6 +1609,9 @@
             return buffer;
         }
 
+        // =========================================================
+        // 🚀 4. PASSKEY VERIFICATION: ለጋራ የሚሰራ
+        // =========================================================
         async function verifyWithdrawalPasskey() {
             try {
                 const token = localStorage.getItem('token') || localStorage.getItem('authToken');
@@ -1623,6 +1639,14 @@
                     showToast("Passkey verification cancelled."); return;
                 }
 
+                // 🚀 Transfer ከሆነ ወደ Transfer API ያልፋል 🚀
+                if (pendingActionType === "Transfer") {
+                    closeSecurityModal();
+                    executeTransferAPI(pendingTransferRecipient, pendingTransferAmount, '', 'passkey');
+                    return;
+                }
+
+                // ለ Withdraw ከሆነ
                 const address = document.getElementById('withdraw-address').value.trim();
                 const withdrawRes = await fetch(`${API_BASE_URL}/api/withdraw/request`, {
                     method: 'POST',
@@ -1647,7 +1671,7 @@
                     await fetchUserProfile();
                     fetchTransactions();
                 } else {
-                    showToast(data.message || "Passkey withdrawal failed.");
+                    showToast(data.message || "Passkey failed.");
                 }
 
             } catch (err) {
@@ -1656,59 +1680,9 @@
             }
         }
 
-       async function initiateTransfer() {
-            const recipient = document.getElementById('transfer-recipient').value.trim();
-            const amount = parseFloat(document.getElementById('transfer-amount').value);
-            const btn = document.getElementById('transfer-submit-btn');
-
-            if (!recipient || isNaN(amount) || amount <= 0) {
-                showToast("Please enter a valid recipient and amount.", true);
-                return;
-            }
-            if (amount > parseFloat(userRawBalance)) {
-                showToast("Insufficient balance.", true);
-                return;
-            }
-
-            btn.disabled = true;
-            btn.innerText = "Processing...";
-
-            try {
-                const token = localStorage.getItem("token") || localStorage.getItem("authToken");
-                const res = await fetch(`${API_BASE_URL}/api/transfer`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ recipient, amount })
-                });
-
-                const data = await res.json();
-                
-                if (data.success) {
-                    showToast(data.message, false);
-                    document.getElementById('transfer-recipient').value = "";
-                    document.getElementById('transfer-amount').value = "";
-                    
-                    // 🚀 ብሩን ወዲያውኑ ፊትለፊትህ ላይ ይቀንሰዋል 🚀
-                    userRawBalance = (parseFloat(userRawBalance) - amount).toFixed(2);
-                    localStorage.setItem("user_balance_val", userRawBalance);
-                    updateBalanceDisplay();
-                    fetchTransactions(); 
-                } else {
-                    // 🚀 የተሳሳተ ሰው ሲሆን እዚህ ጋር ኤረሩን ያወጣል 🚀
-                    showToast(data.message || "Transfer failed.", true);
-                }
-            } catch (err) {
-                console.error("Transfer error:", err);
-                showToast("Server error during transfer.", true);
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "Confirm Transfer";
-            }
-        }
-
+        // =========================================================
+        // 🚀 5. EMAIL OTP VERIFICATION: ለጋራ የሚሰራ
+        // =========================================================
         async function verifyAndCompleteWithdrawal() {
             const otp = document.getElementById('otpCodeInput').value.trim();
             if (!otp || otp.length !== 6) {
@@ -1716,6 +1690,15 @@
                 return;
             }
 
+            // 🚀 Transfer ከሆነ ወደ Transfer API ያልፋል 🚀
+            if (pendingActionType === "Transfer") {
+                closeOtpModal();
+                executeTransferAPI(pendingTransferRecipient, pendingTransferAmount, otp, 'email');
+                document.getElementById('otpCodeInput').value = "";
+                return;
+            }
+
+            // ለ Withdraw ከሆነ
             const address = document.getElementById('withdraw-address').value.trim();
             const token = localStorage.getItem('token') || localStorage.getItem('authToken');
             try {
@@ -1814,7 +1797,6 @@
             
             if (msgEl) msgEl.innerText = message;
             
-            // 🚀 ኤረር ከሆነ ቀይ ያደርገዋል 🚀
             if (isError) {
                 iconEl.className = "fa-solid fa-circle-xmark";
                 iconEl.style.color = "var(--red-color)";
