@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TBR Exchange - My Ads</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #080808;
+            --card-bg: #16181d;
+            --card-darker: #121418;
+            --text-color: #ffffff;
+            --text-muted: #848e9c;
+            --border-color: #2b313a;
+            --green-color: #0ecb81;
+            --green-hover: #0b9e65;
+            --red-color: #f6465d;
+            --warning-color: #f0b90b;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+
+        .top-bar h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .btn-primary {
+            background-color: var(--green-color);
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: 0.2s;
+        }
+
+        .btn-primary:hover { background-color: var(--green-hover); }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-outline:hover { color: #fff; border-color: var(--text-muted); }
+
+        /* =========================================
+           VIEW 1: Main Ads List
+           ========================================= */
+        #view-main-ads { display: block; animation: fadeIn 0.3s ease; }
+
+        .ads-tabs-wrapper {
+            background: #0b0e11;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .ads-tab {
+            flex: 1; text-align: center; padding: 12px; color: var(--text-muted);
+            font-size: 14px; font-weight: 600; cursor: pointer; border-right: 1px solid var(--border-color);
+        }
+        .ads-tab:last-child { border-right: none; }
+        .ads-tab.active { color: #fff; background: var(--card-bg); border-radius: 8px; }
+
+        .ads-sub-tabs {
+            display: flex; background: #0b0e11; border: 1px solid var(--border-color);
+            border-radius: 8px; margin-bottom: 20px;
+        }
+        .sub-tab {
+            flex: 1; text-align: center; padding: 10px; font-size: 13px; color: var(--text-muted);
+            cursor: pointer;
+        }
+        .sub-tab.active { color: #fff; border-bottom: 2px solid var(--green-color); }
+
+        .empty-state {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 80px 20px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }
+        .empty-state i { font-size: 40px; color: #2b313a; margin-bottom: 20px; }
+        .empty-state h3 { margin: 0 0 10px 0; font-size: 16px; color: #fff; }
+        .empty-state p { color: var(--text-muted); font-size: 14px; margin-bottom: 25px; }
+
+        /* =========================================
+           VIEW 2: KYC Required Block
+           ========================================= */
+        #view-kyc-required { display: none; animation: fadeIn 0.3s ease; max-width: 800px; margin: 0 auto; }
+        
+        .page-header { margin-bottom: 25px; }
+        .page-header h2 { font-size: 22px; margin: 0 0 8px 0; display: flex; align-items: center; gap: 10px; }
+        .page-header p { color: var(--text-muted); font-size: 14px; margin: 0; }
+
+        .kyc-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 30px;
+        }
+        .kyc-top {
+            display: flex; align-items: flex-start; gap: 15px; margin-bottom: 30px;
+        }
+        .kyc-icon-box {
+            width: 45px; height: 45px; border-radius: 10px; background: rgba(14, 203, 129, 0.1);
+            color: var(--green-color); display: flex; justify-content: center; align-items: center; font-size: 20px; border: 1px solid rgba(14, 203, 129, 0.2);
+        }
+        .kyc-status-row {
+            background: var(--card-darker); border: 1px solid var(--border-color);
+            border-radius: 10px; padding: 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;
+        }
+        .kyc-badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;}
+        .badge-green { background: rgba(14, 203, 129, 0.1); color: var(--green-color); border: 1px solid rgba(14, 203, 129, 0.3); }
+        .badge-red { background: rgba(246, 70, 93, 0.1); color: var(--red-color); border: 1px solid rgba(246, 70, 93, 0.3); }
+
+        .verify-center-btn {
+            width: 100%; background: var(--green-color); color: #000; padding: 15px; border-radius: 8px; font-weight: 700; border: none; font-size: 15px; cursor: pointer; margin-top: 10px;
+        }
+
+        /* =========================================
+           VIEW 3: Post Ad Form
+           ========================================= */
+        #view-post-ad { display: none; animation: fadeIn 0.3s ease; max-width: 800px; margin: 0 auto; padding-bottom: 50px;}
+
+        .form-section { margin-bottom: 30px; }
+        .form-section h4 { font-size: 15px; font-weight: 600; margin: 0 0 15px 0; color: #fff; }
+        .form-section p.sub { font-size: 12px; color: var(--text-muted); margin: -10px 0 15px 0;}
+        
+        .input-group { position: relative; margin-bottom: 20px; }
+        .input-group label { display: block; font-size: 13px; color: #fff; font-weight: 600; margin-bottom: 8px; }
+        .input-group input, .input-group textarea {
+            width: 100%; background: var(--bg-color); border: 1px solid var(--border-color);
+            color: #fff; padding: 14px 15px; border-radius: 8px; box-sizing: border-box; font-size: 14px; outline: none; transition: 0.2s;
+        }
+        .input-group input:focus, .input-group textarea:focus { border-color: var(--green-color); }
+        .suffix { position: absolute; right: 15px; top: 38px; color: var(--text-muted); font-size: 13px; font-weight: 600;}
+
+        .market-avg-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+        .range-bar-container { width: 100%; height: 4px; background: linear-gradient(90deg, var(--warning-color) 0%, var(--green-color) 30%, var(--green-color) 70%, var(--warning-color) 100%); border-radius: 4px; margin-bottom: 8px; }
+        .range-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 600; }
+
+        .two-cols { display: flex; gap: 20px; }
+        .two-cols > div { flex: 1; }
+
+        /* Payment Methods List in Form */
+        .pm-select-card {
+            background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px;
+            display: flex; align-items: flex-start; gap: 15px; margin-bottom: 10px; cursor: pointer; transition: 0.2s;
+        }
+        .pm-select-card:hover { border-color: #444; }
+        .pm-select-card.active { border-color: var(--green-color); background: rgba(14, 203, 129, 0.05); }
+        .pm-radio { margin-top: 4px; accent-color: var(--green-color); width: 16px; height: 16px; }
+
+        /* Requirements Pills */
+        .pill-group { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; }
+        .pill-group label {
+            background: var(--bg-color); border: 1px solid var(--border-color); color: var(--text-muted);
+            padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.2s;
+            display: flex; align-items: center; gap: 8px; flex: 1; min-width: 120px; justify-content: center;
+        }
+        .pill-group input[type="radio"] { display: none; }
+        .pill-group input[type="radio"]:checked + label {
+            background: rgba(14, 203, 129, 0.1); border-color: var(--green-color); color: var(--green-color);
+        }
+        .pill-group input[type="radio"]:checked + label::before {
+            content: '\f058'; font-family: 'Font Awesome 6 Free'; font-weight: 900;
+        }
+        .pill-group label::before {
+            content: '\f111'; font-family: 'Font Awesome 6 Free'; font-weight: 400; font-size: 14px;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <!-- =========================================
+         VIEW 1: YOUR ADS (List View)
+         ========================================= -->
+    <div class="container" id="view-main-ads">
+        <div class="top-bar">
+            <h1>Your Ads</h1>
+            <button class="btn-primary" onclick="handleNewAdClick()">
+                <i class="fa-solid fa-plus"></i> New Ad
+            </button>
+        </div>
+
+        <div class="ads-tabs-wrapper">
+            <div class="ads-tab active"><i class="fa-regular fa-file-lines"></i> Ads</div>
+            <div class="ads-tab"><i class="fa-solid fa-bolt"></i> Boost History</div>
+        </div>
+
+        <div class="ads-sub-tabs">
+            <div class="sub-tab active">All</div>
+            <div class="sub-tab">Active</div>
+            <div class="sub-tab">Paused</div>
+            <div class="sub-tab">Cancelled</div>
+        </div>
+
+        <div class="empty-state">
+            <i class="fa-regular fa-clipboard"></i>
+            <h3>No ads yet</h3>
+            <p>Post your first P2P trade offer</p>
+            <button class="btn-primary" onclick="handleNewAdClick()">
+                <i class="fa-solid fa-plus"></i> Post an Ad
+            </button>
+        </div>
+    </div>
+
+    <!-- =========================================
+         VIEW 2: KYC BLOCKED STATE
+         ========================================= -->
+    <div class="container" id="view-kyc-required">
+        <div class="page-header">
+            <h2>
+                <button class="btn-outline" style="padding: 5px 10px; border:none; margin-right: 10px;" onclick="goBackToAds()">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                Post Order
+            </h2>
+            <p>Set your rate, limits, and payment methods</p>
+        </div>
+
+        <div class="kyc-card">
+            <div class="kyc-top">
+                <div class="kyc-icon-box"><i class="fa-solid fa-lock"></i></div>
+                <div>
+                    <h3 style="margin: 0 0 5px 0; color: #fff; font-size: 18px;">Identity verification (KYC) Required</h3>
+                    <p style="margin: 0; color: var(--text-muted); font-size: 13px;">Needed to access posting advertisements</p>
+                </div>
+                <div style="margin-left: auto; text-align: right;">
+                    <div style="width: 50px; height: 6px; background: #2b313a; border-radius: 4px; display: inline-block; overflow:hidden;">
+                        <div style="width: 50%; background: var(--green-color); height: 100%;"></div>
+                    </div>
+                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Tier 1 / 2 needed</div>
+                </div>
+            </div>
+
+            <!-- Email Verified -->
+            <div class="kyc-status-row">
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    <div style="width: 35px; height: 35px; border-radius: 50%; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; background: var(--bg-color);">
+                        <i class="fa-solid fa-envelope" style="color: var(--text-muted);"></i>
+                    </div>
+                    <div>
+                        <div style="font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+                            Email Verification <span class="kyc-badge badge-green"><i class="fa-solid fa-check"></i> Verified</span>
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Verify your email address to unlock basic trading access.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KYC Rejected/Unverified -->
+            <div class="kyc-status-row">
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    <div style="width: 35px; height: 35px; border-radius: 50%; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; background: var(--bg-color);">
+                        <i class="fa-solid fa-id-card" style="color: var(--text-muted);"></i>
+                    </div>
+                    <div>
+                        <div style="font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+                            Identity Verification (KYC) <span class="kyc-badge badge-red"><i class="fa-solid fa-xmark"></i> Unverified</span>
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Your KYC submission is required. Please submit clear documents.</div>
+                    </div>
+                </div>
+                <button class="btn-primary" style="padding: 8px 16px; font-size: 13px;" onclick="window.location.href='settings.html'">Resubmit <i class="fa-solid fa-arrow-right"></i></button>
+            </div>
+
+            <button class="verify-center-btn" onclick="window.location.href='settings.html'">
+                <i class="fa-solid fa-shield-halved"></i> View Verification Center
+            </button>
+            <p style="text-align: center; color: var(--text-muted); font-size: 11px; margin-top: 15px;">
+                <i class="fa-solid fa-circle-check"></i> TBR uses a tiered verification system to comply with financial regulations and protect your funds.
+            </p>
+        </div>
+    </div>
+
+    <!-- =========================================
+         VIEW 3: POST AD FORM (Verified Users)
+         ========================================= -->
+    <div class="container" id="view-post-ad">
+        <div class="page-header">
+            <h2>
+                <button class="btn-outline" style="padding: 5px 10px; border:none; margin-right: 10px;" onclick="goBackToAds()">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                Post Order
+            </h2>
+            <p>Set your rate, limits, and payment methods</p>
+        </div>
+
+        <!-- Form Elements -->
+        <div class="form-section">
+            <h4>Price per USDT</h4>
+            <div class="input-group">
+                <input type="number" placeholder="e.g. 125.50" value="125.50">
+                <span class="suffix">ETB</span>
+            </div>
+            
+            <div class="market-avg-row">
+                <span><i class="fa-solid fa-circle-info"></i> Market avg: <b>125.00 ETB</b> (93 TBR market orders)</span>
+                <span style="color: var(--green-color);"><i class="fa-solid fa-rotate"></i> Use 125.00</span>
+            </div>
+            
+            <div class="range-labels" style="margin-bottom: 5px;">
+                <span style="color: var(--warning-color);">115.00</span>
+                <span style="color: var(--text-muted);">allowed range</span>
+                <span style="color: var(--warning-color);">135.00</span>
+            </div>
+            <div class="range-bar-container"></div>
+            <div class="range-labels">
+                <span style="color: var(--warning-color);">Caution</span>
+                <span style="color: var(--green-color);">Best</span>
+                <span style="color: var(--warning-color);">Caution</span>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h4>Total Amount</h4>
+            <div class="input-group">
+                <input type="number" placeholder="e.g. 500">
+                <span class="suffix">USDT</span>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h4>Trade Limits</h4>
+            <p class="sub">Min and max ETB per individual trade</p>
+            <div class="two-cols">
+                <div class="input-group">
+                    <label>Minimum (ETB)</label>
+                    <input type="number" placeholder="Min. 500">
+                    <span class="suffix">ETB</span>
+                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 5px;">Floor: 500 ETB</div>
+                </div>
+                <div class="input-group">
+                    <label>Maximum (ETB)</label>
+                    <input type="number" placeholder="e.g. 50,000">
+                    <span class="suffix">ETB</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <div>
+                    <h4 style="margin:0;">Payment Methods</h4>
+                    <p class="sub" style="margin-top: 5px;">Select all methods you accept</p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-muted);">
+                    <i class="fa-regular fa-clock"></i> 
+                    <span style="background: var(--bg-color); border: 1px solid var(--border-color); padding: 4px 8px; border-radius: 4px; color: #fff; font-weight: bold;">15</span> min
+                </div>
+            </div>
+            
+            <!-- Dynamic Payment Methods Container -->
+            <div id="ad-payment-methods-container">
+                <!-- Data loaded from localStorage -->
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h4>Trader Requirements</h4>
+            <p class="sub">Restrict who can trade with this order</p>
+            
+            <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 8px; font-weight: 600;">VERIFICATION LEVEL</label>
+            <div class="pill-group">
+                <input type="radio" id="req-v1" name="req_verify" checked>
+                <label for="req-v1"><div><div style="color:#fff;">Anyone</div><div style="font-size: 11px; font-weight: 400;">No restriction</div></div></label>
+                
+                <input type="radio" id="req-v2" name="req_verify">
+                <label for="req-v2"><div><div style="color:#fff;">Basic+</div><div style="font-size: 11px; font-weight: 400;">Email verified</div></div></label>
+                
+                <input type="radio" id="req-v3" name="req_verify">
+                <label for="req-v3"><div><div style="color:#fff;">Verified+</div><div style="font-size: 11px; font-weight: 400;">KYC approved</div></div></label>
+
+                <input type="radio" id="req-v4" name="req_verify">
+                <label for="req-v4"><div><div style="color:#fff;">Merchant+</div><div style="font-size: 11px; font-weight: 400;">Merchant only</div></div></label>
+            </div>
+
+            <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 8px; font-weight: 600; margin-top: 20px;">ACCOUNT AGE</label>
+            <div class="pill-group" style="gap: 5px;">
+                <input type="radio" id="age-1" name="req_age" checked><label for="age-1" style="min-width: 0;">Any</label>
+                <input type="radio" id="age-2" name="req_age"><label for="age-2" style="min-width: 0;">3+ days</label>
+                <input type="radio" id="age-3" name="req_age"><label for="age-3" style="min-width: 0;">7+ days</label>
+                <input type="radio" id="age-4" name="req_age"><label for="age-4" style="min-width: 0;">14+ days</label>
+                <input type="radio" id="age-5" name="req_age"><label for="age-5" style="min-width: 0;">30+ days</label>
+            </div>
+
+            <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 8px; font-weight: 600; margin-top: 20px;">MIN. COMPLETED TRADES</label>
+            <div class="pill-group" style="gap: 5px;">
+                <input type="radio" id="trade-1" name="req_trades" checked><label for="trade-1" style="min-width: 0;">Any</label>
+                <input type="radio" id="trade-2" name="req_trades"><label for="trade-2" style="min-width: 0;">5+</label>
+                <input type="radio" id="trade-3" name="req_trades"><label for="trade-3" style="min-width: 0;">10+</label>
+                <input type="radio" id="trade-4" name="req_trades"><label for="trade-4" style="min-width: 0;">25+</label>
+                <input type="radio" id="trade-5" name="req_trades"><label for="trade-5" style="min-width: 0;">50+</label>
+            </div>
+
+            <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 8px; font-weight: 600; margin-top: 20px;">MIN. COMPLETION RATE</label>
+            <div class="pill-group" style="gap: 5px;">
+                <input type="radio" id="rate-1" name="req_rate" checked><label for="rate-1" style="min-width: 0;">Any</label>
+                <input type="radio" id="rate-2" name="req_rate"><label for="rate-2" style="min-width: 0;">≥70%</label>
+                <input type="radio" id="rate-3" name="req_rate"><label for="rate-3" style="min-width: 0;">≥80%</label>
+                <input type="radio" id="rate-4" name="req_rate"><label for="rate-4" style="min-width: 0;">≥90%</label>
+                <input type="radio" id="rate-5" name="req_rate"><label for="rate-5" style="min-width: 0;">≥95%</label>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h4>Terms & Conditions</h4>
+            <p class="sub">Optional — specific rules for this trade</p>
+            <div class="input-group">
+                <textarea rows="4" placeholder="e.g. Send exact amount with reference. Minimum 500 ETB per transaction."></textarea>
+            </div>
+        </div>
+
+        <button class="btn-primary" style="width: 100%; justify-content: center; padding: 18px; font-size: 16px;">
+            <i class="fa-solid fa-eye"></i> Review Order
+        </button>
+
+    </div>
+
+    <script>
+        // 🚀 1. "New Ad" ሲነካ KYC ቼክ የሚያደርገው ሎጂክ 🚀
+        function handleNewAdClick() {
+            // ከስቶሬጅ kycStatus ያነባል (በ Settings ላይ ሴቭ ይደረጋል)
+            const kycStatus = localStorage.getItem('kycStatus') || 'unverified';
+            
+            // የድሮውን ዝርዝር ገጽ መደበቅ
+            document.getElementById('view-main-ads').style.display = 'none';
+
+            // 'approved' ወይም 'verified' ከሆነ ወደ ፎርሙ ማሳለፍ (ፎቶ 3)
+            if (kycStatus.toLowerCase() === 'approved' || kycStatus.toLowerCase() === 'verified') {
+                document.getElementById('view-post-ad').style.display = 'block';
+                loadPaymentMethodsForAd(); // የባንክ አካውንቶችን ሎድ ማድረግ
+            } else {
+                // ካልሆነ Blocked ፔጁን ማሳየት (ፎቶ 2)
+                document.getElementById('view-kyc-required').style.display = 'block';
+            }
+        }
+
+        // 🚀 2. ወደ ኋላ (Back) መመለሻ 🚀
+        function goBackToAds() {
+            document.getElementById('view-main-ads').style.display = 'block';
+            document.getElementById('view-kyc-required').style.display = 'none';
+            document.getElementById('view-post-ad').style.display = 'none';
+        }
+
+        // 🚀 3. የ Payment Methods ማምጫና መደርደሪያ (ለ Post Ad ፎርም) 🚀
+        function loadPaymentMethodsForAd() {
+            const container = document.getElementById('ad-payment-methods-container');
+            container.innerHTML = ''; // ማጽዳት
+
+            const stored = localStorage.getItem("user_payment_methods");
+            let pms = [];
+            if (stored) {
+                try { pms = JSON.parse(stored); } catch(e) {}
+            }
+
+            if (pms.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 20px; border: 1px dashed var(--border-color); border-radius: 8px; color: var(--text-muted); font-size: 13px;">
+                        No payment methods found. <a href="settings.html?tab=payments" style="color: var(--green-color); text-decoration: none;">Add one in Settings</a>
+                    </div>`;
+                return;
+            }
+
+            pms.forEach((pm, index) => {
+                const isDefault = pm.isDefault ? '<span style="background: rgba(14, 203, 129, 0.15); color: var(--green-color); font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-left: 8px;">Default</span>' : '';
+                
+                const html = `
+                    <label class="pm-select-card" for="ad-pm-${index}" onclick="selectPaymentCard(this)">
+                        <input type="checkbox" id="ad-pm-${index}" class="pm-radio" checked>
+                        <div>
+                            <div style="font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 4px; display: flex; align-items: center;">
+                                ${pm.type} ${isDefault}
+                            </div>
+                            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 2px;">${pm.name}</div>
+                            <div style="font-size: 12px; color: #555;">${pm.account}</div>
+                        </div>
+                    </label>
+                `;
+                container.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        // ዲዛይን ለመቀየር (ክሊክ ሲደረግ አረንጓዴ ቦርደር እንዲያመጣ)
+        function selectPaymentCard(element) {
+            const checkbox = element.querySelector('.pm-radio');
+            // ቼክቦክሱ ከተመረጠ ክላሱን ይጨምራል
+            setTimeout(() => {
+                if(checkbox.checked) {
+                    element.classList.add('active');
+                } else {
+                    element.classList.remove('active');
+                }
+            }, 10);
+        }
+    </script>
+</body>
+</html>
