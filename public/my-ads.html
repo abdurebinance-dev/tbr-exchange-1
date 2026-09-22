@@ -13,10 +13,10 @@
             --text-color: #ffffff;
             --text-muted: #848e9c;
             --border-color: #2b313a;
-            --accent-color: #f3ba2f; /* ለዋና በተኖች (Yellow) */
+            --accent-color: #f3ba2f;
             --accent-hover: #e0ac2b;
-            --green-color: #0ecb81; /* ለ Buy እና Review Order */
-            --red-color: #f6465d;   /* ለ Sell */
+            --green-color: #0ecb81;
+            --red-color: #f6465d;  
         }
 
         body {
@@ -181,7 +181,7 @@
         }
         .pm-card input[type="radio"], .pm-card input[type="checkbox"] { margin-top: 3px; accent-color: var(--green-color); width: 14px; height: 14px; }
         
-        /* 🚀 አዲሱ የ "Please add payment method" በተን ስታይል 🚀 */
+        /* 🚀 አዲስ CSS: አዲስ የክፍያ መንገድ መጨመሪያ በተን 🚀 */
         .pm-add-btn {
             background: transparent;
             border: 1px dashed var(--border-color);
@@ -198,7 +198,8 @@
             gap: 8px;
             transition: 0.2s;
             width: 100%;
-            margin-top: 10px;
+            margin-bottom: 10px;
+            box-sizing: border-box;
         }
         .pm-add-btn:hover {
             border-color: var(--green-color);
@@ -340,7 +341,7 @@
                 </div>
                 <p class="section-sub">Select all methods you accept</p>
 
-                <!-- 🚀 የተጨመሩ የክፍያ መንገዶች ዝርዝር (ከፎቶው ላይ እንዳለው) 🚀 -->
+                <!-- 🚀 የተመዘገቡ የክፍያ መንገዶች ዝርዝር 🚀 -->
                 <div id="payment-methods-list">
                     <label class="pm-card">
                         <input type="radio" name="payment_method" checked>
@@ -373,10 +374,13 @@
                     </label>
                 </div>
 
-                <!-- 🚀 ምንም የክፍያ መንገድ ከሌለ ወይም አዲስ ለመጨመር የሚያገለግል 🚀 -->
-                <div class="pm-add-btn" onclick="window.location.href='add-payment-method.html'">
-                    <i class="fa-solid fa-circle-plus"></i> Please add payment method
+                <!-- 🚀 ምንም የክፍያ መንገድ ከሌለ የሚመጣው በተን 🚀 -->
+                <div id="no-payment-methods" style="display: none;">
+                    <div class="pm-add-btn" onclick="window.location.href='settings.html'">
+                        <i class="fa-solid fa-circle-plus"></i> Please add payment method
+                    </div>
                 </div>
+
             </div>
 
             <!-- 4. Trader Requirements -->
@@ -464,6 +468,7 @@
             switchView('view-post-order');
             history.pushState({view: 'post'}, '', '?action=create');
             validatePrice(); 
+            checkPaymentMethods();
         }
 
         function closePostOrderForm() {
@@ -522,6 +527,20 @@
             }
         }
 
+        // 🚀 የክፍያ መንገድ መኖር አለመኖሩን ቼክ የሚያደርገው ሎጂክ 🚀
+        // "Add payment method" የሚለውን በተን ለማየት ይሄንን ወደ 'false' ቀይረው
+        let hasPaymentMethods = true; 
+
+        function checkPaymentMethods() {
+            if(hasPaymentMethods) {
+                document.getElementById('payment-methods-list').style.display = 'block';
+                document.getElementById('no-payment-methods').style.display = 'none';
+            } else {
+                document.getElementById('payment-methods-list').style.display = 'none';
+                document.getElementById('no-payment-methods').style.display = 'block';
+            }
+        }
+
         window.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('action') === 'create') {
@@ -530,6 +549,9 @@
             } else {
                 switchView('view-main-ads');
             }
+            
+            // ፎርሙ ሲከፈት ቼክ ያደርጋል
+            checkPaymentMethods(); 
         });
     </script>
 </body>
