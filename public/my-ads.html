@@ -67,7 +67,6 @@
 
         .btn-primary:hover { background-color: var(--accent-hover); }
 
-        /* 🚀 የ empty state በተን (በደንብ አነስ ያለ እና ቆንጆ) 🚀 */
         .btn-small-post {
             background-color: var(--accent-color);
             color: #000;
@@ -96,8 +95,10 @@
         }
         .btn-outline:hover { color: #fff; border-color: var(--text-muted); }
 
-        /* VIEW 1: Main Ads List */
+        /* VIEW CONTAINERS */
         #view-main-ads { display: block; animation: fadeIn 0.3s ease; }
+        #view-kyc-required { display: none; animation: fadeIn 0.3s ease; max-width: 800px; margin: 0 auto; padding-bottom: 50px; }
+        #view-post-ad { display: none; animation: fadeIn 0.3s ease; max-width: 800px; margin: 0 auto; padding-bottom: 50px; }
 
         .ads-tabs-wrapper {
             background: var(--card-bg);
@@ -136,9 +137,38 @@
         .empty-state h3 { margin: 0 0 8px 0; font-size: 15px; color: #fff; }
         .empty-state p { color: var(--text-muted); font-size: 13px; margin-bottom: 15px; }
 
-        /* VIEW 2: Post Ad Form */
-        #view-post-ad { display: none; animation: fadeIn 0.3s ease; max-width: 800px; margin: 0 auto; padding-bottom: 50px;}
+        /* KYC Blocked Card Styles */
+        .kyc-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px;
+        }
+        .kyc-top {
+            display: flex; align-items: flex-start; gap: 15px; margin-bottom: 25px;
+        }
+        .kyc-icon-box {
+            width: 40px; height: 40px; border-radius: 8px; background: rgba(243, 186, 47, 0.1);
+            color: var(--accent-color); display: flex; justify-content: center; align-items: center; font-size: 18px; border: 1px solid rgba(243, 186, 47, 0.2);
+        }
+        .kyc-status-row {
+            background: var(--card-darker); border: 1px solid var(--border-color);
+            border-radius: 8px; padding: 15px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;
+        }
+        .kyc-badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;}
+        .badge-green { background: rgba(14, 203, 129, 0.1); color: var(--green-color); border: 1px solid rgba(14, 203, 129, 0.3); }
+        .badge-red { background: rgba(246, 70, 93, 0.1); color: var(--red-color); border: 1px solid rgba(246, 70, 93, 0.3); }
 
+        .verify-center-btn {
+            width: 100%; background: var(--green-color); color: #000; padding: 14px; border-radius: 8px; font-weight: 700; border: none; font-size: 14px; cursor: pointer; margin-top: 10px; transition: 0.2s;
+        }
+        .verify-center-btn:hover { background: #0b9e65; }
+
+        .page-header { margin-bottom: 25px; }
+        .page-header h2 { font-size: 20px; margin: 0 0 8px 0; display: flex; align-items: center; gap: 10px; }
+        .page-header p { color: var(--text-muted); font-size: 13px; margin: 0; }
+
+        /* Post Form Styles */
         .trade-type-toggle {
             display: flex;
             gap: 15px;
@@ -162,10 +192,7 @@
             gap: 8px;
         }
 
-        .toggle-btn:hover {
-            border-color: var(--text-muted);
-            color: #fff;
-        }
+        .toggle-btn:hover { border-color: var(--text-muted); color: #fff; }
 
         .toggle-btn.btn-buy.active {
             border-color: var(--green-color);
@@ -247,7 +274,6 @@
             <i class="fa-regular fa-clipboard"></i>
             <h3>No ads yet</h3>
             <p>Post your first P2P trade offer</p>
-            <!-- 🚀 በትክክል አነስተኛ መጠን ያለው በተን 🚀 -->
             <button class="btn-small-post" onclick="handleNewAdClick()">
                 <i class="fa-solid fa-plus"></i> Post an Ad
             </button>
@@ -255,7 +281,74 @@
     </div>
 
     <!-- =========================================
-         VIEW 2: POST AD FORM
+         VIEW 2: KYC REQUIRED (Unverified State)
+         ========================================= -->
+    <div class="container" id="view-kyc-required">
+        <div class="page-header" style="display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <h2>Post Order</h2>
+                <p>Set your rate, limits, and payment methods</p>
+            </div>
+            <button class="btn-outline" onclick="goBackToAds()">
+                <i class="fa-solid fa-arrow-left"></i> Back
+            </button>
+        </div>
+
+        <div class="kyc-card">
+            <div class="kyc-top">
+                <div class="kyc-icon-box"><i class="fa-solid fa-lock"></i></div>
+                <div>
+                    <h3 style="margin: 0 0 5px 0; color: #fff; font-size: 16px;">Identity verification (KYC) Required</h3>
+                    <p style="margin: 0; color: var(--text-muted); font-size: 12px;">Needed to access posting advertisements</p>
+                </div>
+                <div style="margin-left: auto; text-align: right;">
+                    <div style="width: 40px; height: 5px; background: #2b313a; border-radius: 3px; display: inline-block; overflow:hidden;">
+                        <div style="width: 50%; background: var(--green-color); height: 100%;"></div>
+                    </div>
+                    <div style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">Tier 1 / 2 needed</div>
+                </div>
+            </div>
+
+            <div class="kyc-status-row">
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    <div style="width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; background: var(--bg-color);">
+                        <i class="fa-solid fa-envelope" style="color: var(--text-muted); font-size: 12px;"></i>
+                    </div>
+                    <div>
+                        <div style="font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 2px; display: flex; align-items: center; gap: 8px;">
+                            Email Verification <span class="kyc-badge badge-green"><i class="fa-solid fa-check"></i> Verified</span>
+                        </div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Verify your email address to unlock basic trading access.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="kyc-status-row">
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    <div style="width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; background: var(--bg-color);">
+                        <i class="fa-solid fa-id-card" style="color: var(--text-muted); font-size: 12px;"></i>
+                    </div>
+                    <div>
+                        <div style="font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 2px; display: flex; align-items: center; gap: 8px;">
+                            Identity Verification (KYC) <span class="kyc-badge badge-red"><i class="fa-solid fa-xmark"></i> Rejected</span>
+                        </div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Your KYC submission was not approved. Please resubmit with clearer documents.</div>
+                    </div>
+                </div>
+                <button class="btn-primary" style="padding: 6px 12px; font-size: 12px;" onclick="window.location.href='settings.html'">Resubmit <i class="fa-solid fa-arrow-right"></i></button>
+            </div>
+
+            <button class="verify-center-btn" onclick="window.location.href='settings.html'">
+                <i class="fa-solid fa-shield-halved"></i> View Verification Center
+            </button>
+            <p style="text-align: center; color: var(--text-muted); font-size: 11px; margin-top: 15px;">
+                <i class="fa-solid fa-circle-check"></i> TBR uses a tiered verification system to comply with financial regulations and protect your funds.
+            </p>
+        </div>
+    </div>
+
+    <!-- =========================================
+         VIEW 3: POST AD FORM (Verified State)
          ========================================= -->
     <div class="container" id="view-post-ad">
         <div class="page-header" style="display: flex; align-items: center; justify-content: space-between;">
@@ -337,14 +430,24 @@
     </div>
 
     <script>
+        // 🚀 የ KYC ቼክ ሎጂክ (Verified vs Unverified) 🚀
         function handleNewAdClick() {
+            const kycStatus = localStorage.getItem('kycStatus') || 'unverified';
             document.getElementById('view-main-ads').style.display = 'none';
-            document.getElementById('view-post-ad').style.display = 'block';
-            loadPaymentMethodsForAd();
+
+            // ዩዘሩ Verified ወይም Approved ከሆነ ወደ ፎርሙ (View 3) ይወስደዋል
+            if (kycStatus.toLowerCase() === 'approved' || kycStatus.toLowerCase() === 'verified' || kycStatus.toLowerCase() === 'true') {
+                document.getElementById('view-post-ad').style.display = 'block';
+                loadPaymentMethodsForAd();
+            } else {
+                // ካልሆነ ወደ KYC Required ፔጅ (View 2) ይወስደዋል
+                document.getElementById('view-kyc-required').style.display = 'block';
+            }
         }
 
         function goBackToAds() {
             document.getElementById('view-main-ads').style.display = 'block';
+            document.getElementById('view-kyc-required').style.display = 'none';
             document.getElementById('view-post-ad').style.display = 'none';
         }
 
