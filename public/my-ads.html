@@ -50,7 +50,6 @@
             margin: 0;
         }
 
-        /* ትክክለኛው የዋናው በተን ዲዛይን (ክብ እና አነስ ያለ) */
         .btn-primary {
             background-color: var(--accent-color);
             color: #000;
@@ -67,6 +66,24 @@
         }
 
         .btn-primary:hover { background-color: var(--accent-hover); }
+
+        /* 🚀 የ empty state በተን (በደንብ አነስ ያለ እና ቆንጆ) 🚀 */
+        .btn-small-post {
+            background-color: var(--accent-color);
+            color: #000;
+            border: none;
+            padding: 5px 14px;
+            border-radius: 16px;
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: 0.2s;
+            margin-top: 5px;
+        }
+        .btn-small-post:hover { background-color: var(--accent-hover); }
 
         .btn-outline {
             background: transparent;
@@ -119,39 +136,8 @@
         .empty-state h3 { margin: 0 0 8px 0; font-size: 15px; color: #fff; }
         .empty-state p { color: var(--text-muted); font-size: 13px; margin-bottom: 15px; }
 
-        /* VIEW 2 & 3 Containers */
-        #view-kyc-required { display: none; animation: fadeIn 0.3s ease; max-width: 800px; margin: 0 auto; }
+        /* VIEW 2: Post Ad Form */
         #view-post-ad { display: none; animation: fadeIn 0.3s ease; max-width: 800px; margin: 0 auto; padding-bottom: 50px;}
-
-        .page-header { margin-bottom: 25px; }
-        .page-header h2 { font-size: 20px; margin: 0 0 8px 0; display: flex; align-items: center; gap: 10px; }
-        .page-header p { color: var(--text-muted); font-size: 13px; margin: 0; }
-
-        .kyc-card {
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 25px;
-        }
-        .kyc-top {
-            display: flex; align-items: flex-start; gap: 15px; margin-bottom: 25px;
-        }
-        .kyc-icon-box {
-            width: 40px; height: 40px; border-radius: 8px; background: rgba(243, 186, 47, 0.1);
-            color: var(--accent-color); display: flex; justify-content: center; align-items: center; font-size: 18px; border: 1px solid rgba(243, 186, 47, 0.2);
-        }
-        .kyc-status-row {
-            background: var(--card-darker); border: 1px solid var(--border-color);
-            border-radius: 8px; padding: 15px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;
-        }
-        .kyc-badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;}
-        .badge-green { background: rgba(14, 203, 129, 0.1); color: var(--green-color); border: 1px solid rgba(14, 203, 129, 0.3); }
-        .badge-red { background: rgba(246, 70, 93, 0.1); color: var(--red-color); border: 1px solid rgba(246, 70, 93, 0.3); }
-
-        .verify-center-btn {
-            width: 100%; background: var(--accent-color); color: #000; padding: 12px; border-radius: 6px; font-weight: 600; border: none; font-size: 14px; cursor: pointer; margin-top: 10px; transition: 0.2s;
-        }
-        .verify-center-btn:hover { background: var(--accent-hover); }
 
         .trade-type-toggle {
             display: flex;
@@ -261,11 +247,12 @@
             <i class="fa-regular fa-clipboard"></i>
             <h3>No ads yet</h3>
             <p>Post your first P2P trade offer</p>
-            <!-- 🚀 ልክ ከላይኛው "+ New Ad" በተን ጋር ፍጹም አንድ አይነት ზომა ያለው በተን 🚀 -->
-            <button class="btn-primary" onclick="handleNewAdClick()">
+            <!-- 🚀 በትክክል አነስተኛ መጠን ያለው በተን 🚀 -->
+            <button class="btn-small-post" onclick="handleNewAdClick()">
                 <i class="fa-solid fa-plus"></i> Post an Ad
             </button>
         </div>
+    </div>
 
     <!-- =========================================
          VIEW 2: POST AD FORM
