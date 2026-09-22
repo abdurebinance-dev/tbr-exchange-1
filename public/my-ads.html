@@ -36,18 +36,32 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             border-bottom: 1px solid var(--border-color);
             padding-bottom: 15px;
         }
 
-        .top-bar h1 {
+        /* 🚀 "Your Ads" የሚገኝበትን ሄደር በትንሹ ወደ ታች አድርገናል 🚀 */
+        .ads-header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            margin-bottom: 25px;
+        }
+
+        .ads-header-section h1 {
             font-size: 24px;
             font-weight: 700;
             margin: 0;
         }
 
-        /* Inkinobho yezulu (Top button) */
+        /* ዳሽቦርድ እና ባክ መመለሻ በተኖች ግሩፕ */
+        .nav-buttons-group {
+            display: flex;
+            gap: 10px;
+        }
+
         .btn-pill {
             background-color: var(--accent-color);
             color: #000;
@@ -65,7 +79,6 @@
         }
         .btn-pill:hover { background-color: var(--accent-hover); }
 
-        /* 🚀 Inkinobho esesifundeni se-empty-state (Encane kakhulu futhi ebunisiwe) 🚀 */
         .btn-small {
             background-color: var(--accent-color);
             color: #000;
@@ -87,9 +100,14 @@
             background: transparent;
             color: var(--text-muted);
             border: 1px solid var(--border-color);
-            padding: 8px 16px;
-            border-radius: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
             cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
             transition: 0.2s;
         }
         .btn-outline:hover { color: #fff; border-color: var(--text-muted); }
@@ -163,11 +181,20 @@
 
     <!-- ================= VIEW 1: YOUR ADS ================= -->
     <div class="container view-section active" id="view-main-ads">
-        <div class="top-bar">
+        <!-- 🚀 ሄደር፡ Your Ads ከነ ተመለሽ/ዳሽቦርድ በተኖች 🚀 -->
+        <div class="ads-header-section">
             <h1>Your Ads</h1>
-            <button class="btn-pill" onclick="openPostOrderForm()">
-                <i class="fa-solid fa-plus"></i> New Ad
-            </button>
+            <div class="nav-buttons-group">
+                <button class="btn-outline" onclick="history.back()">
+                    <i class="fa-solid fa-arrow-left"></i> Back
+                </button>
+                <button class="btn-outline" onclick="window.location.href='dashboard.html'">
+                    <i class="fa-solid fa-house"></i> Dashboard
+                </button>
+                <button class="btn-pill" onclick="openPostOrderForm()">
+                    <i class="fa-solid fa-plus"></i> New Ad
+                </button>
+            </div>
         </div>
 
         <div class="ads-tabs-wrapper">
@@ -186,7 +213,6 @@
             <i class="fa-regular fa-clipboard"></i>
             <h3>No ads yet</h3>
             <p>Post your first P2P trade offer</p>
-            <!-- Inkinobho encane kakhulu esesifundeni se-empty-state -->
             <button class="btn-small" onclick="openPostOrderForm()">
                 <i class="fa-solid fa-plus" style="font-size: 10px;"></i> Post an Ad
             </button>
@@ -195,9 +221,12 @@
 
     <!-- ================= VIEW 2: POST ORDER ================= -->
     <div class="container view-section" id="view-post-order">
-        <div class="top-bar" style="border:none; margin-bottom:15px;">
+        <div class="top-bar" style="border:none; margin-bottom:15px; margin-top: 15px;">
             <button class="btn-outline" onclick="closePostOrderForm()">
-                <i class="fa-solid fa-arrow-left"></i> Back
+                <i class="fa-solid fa-arrow-left"></i> Back to Ads
+            </button>
+            <button class="btn-outline" onclick="window.location.href='dashboard.html'">
+                <i class="fa-solid fa-house"></i> Dashboard
             </button>
         </div>
 
