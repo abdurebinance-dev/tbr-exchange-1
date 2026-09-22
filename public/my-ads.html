@@ -47,25 +47,8 @@
             margin: 0;
         }
 
-        /* የላይኛው '+ New Ad' በተን */
+        /* 🚀 የሁለቱም በተኖች ፍጹም አንድ አይነት አነስተኛ እና ቀጭን መጠን (Exact Size & Padding) 🚀 */
         .btn-pill {
-            background-color: var(--green-color);
-            color: #000;
-            border: none;
-            padding: 8px 20px;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 13px;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            transition: 0.2s;
-        }
-        .btn-pill:hover { background-color: var(--green-hover); }
-
-        /* 🚀 የመሃልኛው 'Post an Ad' በተን (በጣም አነስ ያለ እና ውብ) 🚀 */
-        .btn-pill-small {
             background-color: var(--green-color);
             color: #000;
             border: none;
@@ -76,10 +59,11 @@
             cursor: pointer;
             display: inline-flex;
             align-items: center;
-            gap: 5px;
+            gap: 6px;
             transition: 0.2s;
+            line-height: 1.2;
         }
-        .btn-pill-small:hover { background-color: var(--green-hover); }
+        .btn-pill:hover { background-color: var(--green-hover); }
 
         .btn-outline {
             background: transparent;
@@ -166,7 +150,7 @@
     <div class="container view-section active" id="view-main-ads">
         <div class="top-bar">
             <h1>Your Ads</h1>
-            <!-- የላይኛው "+ New Ad" በተን -->
+            <!-- የላይኛው በተን -->
             <button class="btn-pill" onclick="openPostOrderForm()">
                 <i class="fa-solid fa-plus"></i> New Ad
             </button>
@@ -188,8 +172,8 @@
             <i class="fa-regular fa-clipboard"></i>
             <h3>No ads yet</h3>
             <p>Post your first P2P trade offer</p>
-            <!-- 🚀 አነስተኛው (Compact) "Post an Ad" በተን 🚀 -->
-            <button class="btn-pill-small" onclick="openPostOrderForm()">
+            <!-- የመሃልኛው በተን (አሁን ልክ ከላይኛው ጋር ፍጹም አንድ አይነት መጠን አለው) -->
+            <button class="btn-pill" onclick="openPostOrderForm()">
                 <i class="fa-solid fa-plus"></i> Post an Ad
             </button>
         </div>
@@ -232,7 +216,7 @@
                 </div>
             </div>
 
-            <button id="review-order-btn" class="btn-pill" style="width: 100%; justify-content: center; padding: 16px; font-size: 15px; border-radius: 8px;">
+            <button id="review-order-btn" class="btn-pill" style="width: 100%; justify-content: center; padding: 14px; font-size: 14px; border-radius: 8px;">
                 <i class="fa-solid fa-eye"></i> Review Order
             </button>
         </div>
@@ -245,13 +229,11 @@
             window.scrollTo(0, 0);
         }
 
-        // "+ New Ad" ወይም "Post an Ad" ሲጫን ፎርሙን ይከፍታል
         function openPostOrderForm() {
             switchView('view-post-order');
             history.pushState({view: 'post'}, '', '?action=create');
         }
 
-        // "Back" ሲጫን ወደ ዋናው My Ads ገጽ ይመልሳል
         function closePostOrderForm() {
             switchView('view-main-ads');
             history.pushState({view: 'main'}, '', window.location.pathname);
@@ -271,7 +253,6 @@
             }
         }
 
-        // ዌብሳይቱ ሲከፈት ዩአርኤል (URL) በማየት የትኛውን ገጽ ማሳየት እንዳለበት ይወስናል
         window.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('action') === 'create') {
