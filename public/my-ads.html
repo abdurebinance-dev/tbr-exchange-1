@@ -75,14 +75,14 @@
             background-color: var(--accent-color);
             color: #000;
             border: none;
-            padding: 3px 10px;
+            padding: 5px 12px;
             border-radius: 12px;
             font-weight: 600;
-            font-size: 11px;
+            font-size: 12px;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
-            gap: 4px;
+            gap: 5px;
             transition: 0.2s;
             line-height: 1.1;
         }
@@ -154,7 +154,8 @@
             display: flex; justify-content: center; align-items: center; gap: 8px; transition: all 0.2s;
         }
         .toggle-btn:hover { border-color: #444; color: #fff; }
-        .toggle-btn.btn-buy.active { border-color: var(--accent-color); color: var(--accent-color); background: rgba(243, 186, 47, 0.05); }
+        /* 🚀 እዚህ ጋር የ Buy በተን ከለር ወደ አረንጓዴ ተቀይሯል 🚀 */
+        .toggle-btn.btn-buy.active { border-color: var(--green-color); color: var(--green-color); background: rgba(14, 203, 129, 0.05); }
         .toggle-btn.btn-sell.active { border-color: var(--red-color); color: var(--red-color); background: rgba(246, 70, 93, 0.05); }
 
         .form-section { margin-bottom: 30px; }
@@ -205,7 +206,6 @@
 
     <!-- ================= VIEW 1: YOUR ADS ================= -->
     <div class="container view-section active" id="view-main-ads">
-        <!-- 🚀 ከ "Your Ads" በላይ የተቀመጠ የዳሽቦርድ መመለሻ በተን 🚀 -->
         <div class="top-navigation-bar">
             <button class="btn-outline" onclick="window.location.href='dashboard.html'">
                 <i class="fa-solid fa-house"></i> Dashboard
@@ -254,8 +254,9 @@
             <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 25px;">Set your rate, limits, and payment methods</p>
 
             <div class="trade-type-toggle">
+                <!-- 🚀 እዚህ ጋር Buy USDT ቀስት ወደ ላይ (fa-arrow-up) ተቀይሯል 🚀 -->
                 <button class="toggle-btn btn-buy active" onclick="setTradeType('buy', this)">
-                    <i class="fa-solid fa-arrow-down"></i> Buy USDT
+                    <i class="fa-solid fa-arrow-up"></i> Buy USDT
                 </button>
                 <button class="toggle-btn btn-sell" onclick="setTradeType('sell', this)">
                     <i class="fa-solid fa-arrow-up"></i> Sell USDT
@@ -269,17 +270,15 @@
                 
                 <div class="input-group">
                     <label>Price per USDT</label>
-                    <!-- 🚀 ID እና oninput የተጨመረበት Input 🚀 -->
-                    <input type="number" id="price-input" placeholder="e.g. 182.79" value="182.79" oninput="validatePrice()">
+                    <!-- 🚀 እዚህ ጋር Placeholder እና Value ወደ 185.78 ተቀይሯል 🚀 -->
+                    <input type="number" id="price-input" placeholder="e.g. 185.78" value="185.78" oninput="validatePrice()">
                     <span class="suffix">ETB</span>
                 </div>
                 
-                <!-- 🚀 የተጨመረው Error Message 🚀 -->
                 <div id="price-error" style="color: var(--red-color); font-size: 12px; margin-top: -10px; margin-bottom: 10px; display: none; font-weight: 600;">
                     <i class="fa-solid fa-circle-exclamation"></i> Price must be between 170 and 210.
                 </div>
 
-                <!-- 🚀 በተጠየቀው መሰረት የተቀየረው Minimum እና Max 🚀 -->
                 <div class="market-avg-row">
                     <span>Minimum 170</span>
                     <span>Max 210</span>
@@ -435,7 +434,7 @@
         function openPostOrderForm() {
             switchView('view-post-order');
             history.pushState({view: 'post'}, '', '?action=create');
-            validatePrice(); // ሲከፈት ቼክ እንዲያደርግ
+            validatePrice(); 
         }
 
         function closePostOrderForm() {
@@ -448,7 +447,6 @@
             element.classList.add('active');
             
             const reviewBtn = document.getElementById('review-order-btn');
-            // የ Review Order በተን ቀለሙን ከ Buy/Sell ጋር እንዲስማማ ማስተካከል
             if (type === 'sell') {
                 reviewBtn.style.backgroundColor = 'var(--red-color)';
                 reviewBtn.style.color = '#fff';
@@ -458,16 +456,13 @@
             }
         }
 
-        // Pill (Trader Requirements) ክሊክ ሲደረግ አክቲቭ የሚቀይር ስክሪፕት
         document.querySelectorAll('.pill-option').forEach(pill => {
             pill.addEventListener('click', function() {
-                // በተመሳሳይ ግሩፕ ውስጥ ያሉትን ሌሎች አክቲቭ ያጠፋል
                 this.parentElement.querySelectorAll('.pill-option').forEach(p => p.classList.remove('active'));
                 this.classList.add('active');
             });
         });
 
-        // 🚀 የተጨመረው የዋጋ ማጣሪያ (Validation Logic) 🚀
         function validatePrice() {
             const inputField = document.getElementById('price-input');
             const errorMsg = document.getElementById('price-error');
@@ -475,7 +470,6 @@
             
             const enteredValue = parseFloat(inputField.value);
 
-            // ቁጥር ካልገባ ወይም ባዶ ከሆነ
             if (isNaN(enteredValue)) {
                 errorMsg.style.display = 'none';
                 inputField.style.borderColor = 'var(--border-color)';
@@ -484,20 +478,15 @@
                 return;
             }
 
-            // ከ 170 በታች ወይም ከ 210 በላይ ከሆነ Error ያሳያል
             if (enteredValue < 170 || enteredValue > 210) {
                 errorMsg.style.display = 'block';
                 inputField.style.borderColor = 'var(--red-color)';
-                
-                // በተኑን ይቆልፋል (Disable)
                 reviewBtn.disabled = true;
                 reviewBtn.style.opacity = '0.5';
                 reviewBtn.style.cursor = 'not-allowed';
             } else {
                 errorMsg.style.display = 'none';
-                inputField.style.borderColor = 'var(--green-color)'; // ትክክል ሲሆን አረንጓዴ ይሆናል
-                
-                // በተኑን ይከፍታል (Enable)
+                inputField.style.borderColor = 'var(--green-color)'; 
                 reviewBtn.disabled = false;
                 reviewBtn.style.opacity = '1';
                 reviewBtn.style.cursor = 'pointer';
@@ -508,7 +497,7 @@
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('action') === 'create') {
                 switchView('view-post-order');
-                validatePrice(); // ሲከፈት ቼክ እንዲያደርግ
+                validatePrice(); 
             } else {
                 switchView('view-main-ads');
             }
