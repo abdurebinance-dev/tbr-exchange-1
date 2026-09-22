@@ -33,7 +33,6 @@
             padding: 20px;
         }
 
-        /* 🚀 ከ "Your Ads" በላይ የሚገኝ የዳሽቦርድ መመለሻ በተን ፕሌስመንት 🚀 */
         .top-navigation-bar {
             display: flex;
             justify-content: flex-start;
@@ -154,7 +153,6 @@
             display: flex; justify-content: center; align-items: center; gap: 8px; transition: all 0.2s;
         }
         .toggle-btn:hover { border-color: #444; color: #fff; }
-        /* 🚀 እዚህ ጋር የ Buy በተን ከለር ወደ አረንጓዴ ተቀይሯል 🚀 */
         .toggle-btn.btn-buy.active { border-color: var(--green-color); color: var(--green-color); background: rgba(14, 203, 129, 0.05); }
         .toggle-btn.btn-sell.active { border-color: var(--red-color); color: var(--red-color); background: rgba(246, 70, 93, 0.05); }
 
@@ -183,6 +181,31 @@
         }
         .pm-card input[type="radio"], .pm-card input[type="checkbox"] { margin-top: 3px; accent-color: var(--green-color); width: 14px; height: 14px; }
         
+        /* 🚀 አዲሱ የ "Please add payment method" በተን ስታይል 🚀 */
+        .pm-add-btn {
+            background: transparent;
+            border: 1px dashed var(--border-color);
+            color: var(--text-muted);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            transition: 0.2s;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .pm-add-btn:hover {
+            border-color: var(--green-color);
+            color: var(--green-color);
+            background: rgba(14, 203, 129, 0.05);
+        }
+
         /* Trader Requirement Pills */
         .pill-group { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
         .pill-option {
@@ -254,7 +277,6 @@
             <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 25px;">Set your rate, limits, and payment methods</p>
 
             <div class="trade-type-toggle">
-                <!-- 🚀 እዚህ ጋር Buy USDT ቀስት ወደ ላይ (fa-arrow-up) ተቀይሯል 🚀 -->
                 <button class="toggle-btn btn-buy active" onclick="setTradeType('buy', this)">
                     <i class="fa-solid fa-arrow-up"></i> Buy USDT
                 </button>
@@ -270,7 +292,6 @@
                 
                 <div class="input-group">
                     <label>Price per USDT</label>
-                    <!-- 🚀 እዚህ ጋር Placeholder እና Value ወደ 185.78 ተቀይሯል 🚀 -->
                     <input type="number" id="price-input" placeholder="e.g. 185.78" value="185.78" oninput="validatePrice()">
                     <span class="suffix">ETB</span>
                 </div>
@@ -319,35 +340,43 @@
                 </div>
                 <p class="section-sub">Select all methods you accept</p>
 
-                <label class="pm-card">
-                    <input type="radio" name="payment_method" checked>
-                    <div>
-                        <div style="font-size: 14px; font-weight: 700; margin-bottom: 4px; color: #fff;">Telebirr</div>
-                        <div style="font-size: 12px; color: var(--text-muted);">Abdurahman ashebir</div>
-                        <div style="font-size: 12px; color: var(--text-muted);">0981329334</div>
-                    </div>
-                </label>
-
-                <label class="pm-card">
-                    <input type="radio" name="payment_method">
-                    <div>
-                        <div style="font-size: 14px; font-weight: 700; margin-bottom: 4px; color: #fff;">Bank of Abyssinia</div>
-                        <div style="font-size: 12px; color: var(--text-muted);">Abdurahman ashebir</div>
-                        <div style="font-size: 12px; color: var(--text-muted);">172779198</div>
-                    </div>
-                </label>
-
-                <label class="pm-card">
-                    <input type="radio" name="payment_method">
-                    <div>
-                        <div style="font-size: 14px; font-weight: 700; margin-bottom: 4px; color: #fff; display: flex; align-items: center; gap: 8px;">
-                            Commercial Bank of Ethiopia 
-                            <span style="background: rgba(14, 203, 129, 0.15); color: var(--green-color); font-size: 10px; padding: 2px 6px; border-radius: 4px;">Default</span>
+                <!-- 🚀 የተጨመሩ የክፍያ መንገዶች ዝርዝር (ከፎቶው ላይ እንዳለው) 🚀 -->
+                <div id="payment-methods-list">
+                    <label class="pm-card">
+                        <input type="radio" name="payment_method" checked>
+                        <div>
+                            <div style="font-size: 14px; font-weight: 700; margin-bottom: 4px; color: #fff;">Telebirr</div>
+                            <div style="font-size: 12px; color: var(--text-muted);">Abdurahman ashebir</div>
+                            <div style="font-size: 12px; color: var(--text-muted);">0981329334</div>
                         </div>
-                        <div style="font-size: 12px; color: var(--text-muted);">Abdurahman ashebir</div>
-                        <div style="font-size: 12px; color: var(--text-muted);">1000693723863</div>
-                    </div>
-                </label>
+                    </label>
+
+                    <label class="pm-card">
+                        <input type="radio" name="payment_method">
+                        <div>
+                            <div style="font-size: 14px; font-weight: 700; margin-bottom: 4px; color: #fff;">Bank of Abyssinia</div>
+                            <div style="font-size: 12px; color: var(--text-muted);">Abdurahman ashebir</div>
+                            <div style="font-size: 12px; color: var(--text-muted);">172779198</div>
+                        </div>
+                    </label>
+
+                    <label class="pm-card">
+                        <input type="radio" name="payment_method">
+                        <div>
+                            <div style="font-size: 14px; font-weight: 700; margin-bottom: 4px; color: #fff; display: flex; align-items: center; gap: 8px;">
+                                Commercial Bank of Ethiopia 
+                                <span style="background: rgba(14, 203, 129, 0.15); color: var(--green-color); font-size: 10px; padding: 2px 6px; border-radius: 4px;">Default</span>
+                            </div>
+                            <div style="font-size: 12px; color: var(--text-muted);">Abdurahman ashebir</div>
+                            <div style="font-size: 12px; color: var(--text-muted);">1000693723863</div>
+                        </div>
+                    </label>
+                </div>
+
+                <!-- 🚀 ምንም የክፍያ መንገድ ከሌለ ወይም አዲስ ለመጨመር የሚያገለግል 🚀 -->
+                <div class="pm-add-btn" onclick="window.location.href='add-payment-method.html'">
+                    <i class="fa-solid fa-circle-plus"></i> Please add payment method
+                </div>
             </div>
 
             <!-- 4. Trader Requirements -->
