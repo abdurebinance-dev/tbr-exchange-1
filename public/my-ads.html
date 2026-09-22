@@ -13,9 +13,10 @@
             --text-color: #ffffff;
             --text-muted: #848e9c;
             --border-color: #2b313a;
-            --accent-color: #f3ba2f;
+            --accent-color: #f3ba2f; /* ለዋና በተኖች (Yellow) */
             --accent-hover: #e0ac2b;
-            --red-color: #f6465d;
+            --green-color: #0ecb81; /* ለ Buy እና Review Order */
+            --red-color: #f6465d;   /* ለ Sell */
         }
 
         body {
@@ -32,7 +33,6 @@
             padding: 20px;
         }
 
-        /* 🚀 ከ "Your Ads" በላይ የሚገኝ የዳሽቦርድ መመለሻ በተን ፕሌስመንት 🚀 */
         .top-navigation-bar {
             display: flex;
             justify-content: flex-start;
@@ -74,14 +74,14 @@
             background-color: var(--accent-color);
             color: #000;
             border: none;
-            padding: 3px 10px;
+            padding: 5px 12px;
             border-radius: 12px;
             font-weight: 600;
-            font-size: 11px;
+            font-size: 12px;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
-            gap: 4px;
+            gap: 5px;
             transition: 0.2s;
             line-height: 1.1;
         }
@@ -141,6 +141,9 @@
         .empty-state h3 { margin: 0 0 10px 0; font-size: 16px; color: #fff; }
         .empty-state p { color: var(--text-muted); font-size: 13px; margin-bottom: 20px; }
 
+        /* ---------------------------------------------------
+           FULL POST ORDER FORM STYLES
+           --------------------------------------------------- */
         .form-container { max-width: 800px; margin: 0 auto; padding-bottom: 50px; }
         
         .trade-type-toggle { display: flex; gap: 15px; margin-bottom: 30px; }
@@ -150,20 +153,49 @@
             display: flex; justify-content: center; align-items: center; gap: 8px; transition: all 0.2s;
         }
         .toggle-btn:hover { border-color: #444; color: #fff; }
-        .toggle-btn.btn-buy.active { border-color: var(--accent-color); color: var(--accent-color); background: rgba(243, 186, 47, 0.05); }
+        .toggle-btn.btn-buy.active { border-color: var(--green-color); color: var(--green-color); background: rgba(14, 203, 129, 0.05); }
         .toggle-btn.btn-sell.active { border-color: var(--red-color); color: var(--red-color); background: rgba(246, 70, 93, 0.05); }
 
         .form-section { margin-bottom: 30px; }
-        .form-section h4 { font-size: 15px; font-weight: 600; margin: 0 0 15px 0; color: #fff; }
+        .form-section h3 { font-size: 15px; font-weight: 700; margin: 0 0 5px 0; color: #fff; }
+        .form-section p.section-sub { font-size: 12px; color: var(--text-muted); margin-bottom: 15px; }
         
-        .input-group { position: relative; margin-bottom: 20px; }
-        .input-group label { display: block; font-size: 13px; color: #fff; font-weight: 600; margin-bottom: 8px; }
-        .input-group input {
+        .input-group { position: relative; margin-bottom: 15px; }
+        .input-group label { display: block; font-size: 12px; color: #fff; font-weight: 600; margin-bottom: 8px; }
+        .input-group input, .input-group textarea {
             width: 100%; background: var(--bg-color); border: 1px solid var(--border-color);
             color: #fff; padding: 14px 15px; border-radius: 8px; box-sizing: border-box; font-size: 14px; outline: none;
         }
-        .input-group input:focus { border-color: var(--accent-color); }
+        .input-group input:focus, .input-group textarea:focus { border-color: var(--accent-color); }
         .suffix { position: absolute; right: 15px; top: 38px; color: var(--text-muted); font-size: 13px; font-weight: 600; }
+
+        .market-avg-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-top: 8px; padding: 0 5px; }
+        
+        .two-cols { display: flex; gap: 15px; }
+        .two-cols > div { flex: 1; }
+
+        /* Payment Method Cards */
+        .pm-card {
+            background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px;
+            padding: 15px; margin-bottom: 10px; display: flex; align-items: flex-start; gap: 12px; cursor: pointer;
+        }
+        .pm-card input[type="radio"], .pm-card input[type="checkbox"] { margin-top: 3px; accent-color: var(--green-color); width: 14px; height: 14px; }
+        
+        /* Trader Requirement Pills */
+        .pill-group { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+        .pill-option {
+            background: transparent; border: 1px solid var(--border-color); color: #fff;
+            padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; transition: 0.2s;
+        }
+        .pill-option.active { border-color: var(--green-color); color: var(--green-color); }
+
+        /* Review Order Button */
+        .btn-review {
+            width: 100%; background-color: var(--green-color); color: #000; border: none;
+            padding: 16px; border-radius: 8px; font-weight: 700; font-size: 15px; cursor: pointer;
+            display: flex; justify-content: center; align-items: center; gap: 8px; transition: 0.2s;
+        }
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
@@ -172,7 +204,6 @@
 
     <!-- ================= VIEW 1: YOUR ADS ================= -->
     <div class="container view-section active" id="view-main-ads">
-        <!-- 🚀 ከ "Your Ads" በላይ የተቀመጠ የዳሽቦርድ መመለሻ በተን 🚀 -->
         <div class="top-navigation-bar">
             <button class="btn-outline" onclick="window.location.href='dashboard.html'">
                 <i class="fa-solid fa-house"></i> Dashboard
@@ -208,7 +239,7 @@
         </div>
     </div>
 
-    <!-- ================= VIEW 2: POST ORDER ================= -->
+    <!-- ================= VIEW 2: FULL POST ORDER FORM ================= -->
     <div class="container view-section" id="view-post-order">
         <div class="top-navigation-bar" style="margin-top: 15px;">
             <button class="btn-outline" onclick="closePostOrderForm()">
@@ -217,7 +248,7 @@
         </div>
 
         <div class="form-container">
-            <h2 style="font-size: 22px; margin-bottom: 8px;">Post Order</h2>
+            <h2 style="font-size: 24px; margin-bottom: 8px; font-weight: 700;">Post Order</h2>
             <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 25px;">Set your rate, limits, and payment methods</p>
 
             <div class="trade-type-toggle">
@@ -229,24 +260,157 @@
                 </button>
             </div>
 
+            <!-- 1. Pricing & Supply -->
             <div class="form-section">
-                <h4>Price per USDT</h4>
+                <h3>Pricing & Supply</h3>
+                <p class="section-sub">Set your ETB rate per USDT and total supply</p>
+                
                 <div class="input-group">
-                    <input type="number" placeholder="e.g. 125.50" value="125.50">
+                    <label>Price per USDT</label>
+                    <input type="number" placeholder="e.g. 182.79" value="182.79">
                     <span class="suffix">ETB</span>
                 </div>
-            </div>
+                <div class="market-avg-row">
+                    <span>Market avg: <b>182.79 ETB</b> <span style="margin-left:10px; color:#555;">83 EBR market orders</span></span>
+                    <span style="color: var(--green-color); cursor: pointer;"><i class="fa-solid fa-rotate"></i> Use 182.79</span>
+                </div>
 
-            <div class="form-section">
-                <h4>Total Amount</h4>
-                <div class="input-group">
+                <div class="input-group" style="margin-top: 25px;">
+                    <label>Total Amount</label>
                     <input type="number" placeholder="e.g. 500">
                     <span class="suffix">USDT</span>
                 </div>
             </div>
 
-            <button id="review-order-btn" class="btn-pill" style="width: 100%; justify-content: center; padding: 16px; font-size: 15px; border-radius: 8px;">
-                <i class="fa-solid fa-eye"></i> Review Order
+            <!-- 2. Trade Limits -->
+            <div class="form-section">
+                <h3>Trade Limits</h3>
+                <p class="section-sub">Min and max ETB per individual trade</p>
+                <div class="two-cols">
+                    <div class="input-group">
+                        <label>Minimum (ETB)</label>
+                        <input type="number" placeholder="Min. 500">
+                        <span class="suffix">ETB</span>
+                    </div>
+                    <div class="input-group">
+                        <label>Maximum (ETB)</label>
+                        <input type="number" placeholder="e.g. 50,000">
+                        <span class="suffix">ETB</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Payment Methods -->
+            <div class="form-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                    <h3>Payment Methods</h3>
+                    <div style="border: 1px solid var(--border-color); padding: 4px 10px; border-radius: 15px; font-size: 11px; color: #fff;">
+                        <i class="fa-regular fa-clock" style="color: var(--text-muted); margin-right: 5px;"></i> 15 min
+                    </div>
+                </div>
+                <p class="section-sub">Select all methods you accept</p>
+
+                <label class="pm-card">
+                    <input type="radio" name="payment_method" checked>
+                    <div>
+                        <div style="font-size: 14px; font-weight: 700; margin-bottom: 4px; color: #fff;">Telebirr</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Abdurahman ashebir</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">0981329334</div>
+                    </div>
+                </label>
+
+                <label class="pm-card">
+                    <input type="radio" name="payment_method">
+                    <div>
+                        <div style="font-size: 14px; font-weight: 700; margin-bottom: 4px; color: #fff;">Bank of Abyssinia</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Abdurahman ashebir</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">172779198</div>
+                    </div>
+                </label>
+
+                <label class="pm-card">
+                    <input type="radio" name="payment_method">
+                    <div>
+                        <div style="font-size: 14px; font-weight: 700; margin-bottom: 4px; color: #fff; display: flex; align-items: center; gap: 8px;">
+                            Commercial Bank of Ethiopia 
+                            <span style="background: rgba(14, 203, 129, 0.15); color: var(--green-color); font-size: 10px; padding: 2px 6px; border-radius: 4px;">Default</span>
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Abdurahman ashebir</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">1000693723863</div>
+                    </div>
+                </label>
+            </div>
+
+            <!-- 4. Trader Requirements -->
+            <div class="form-section">
+                <h3>Trader Requirements</h3>
+                <p class="section-sub">Restrict who can trade with this order</p>
+                
+                <!-- Verification Level -->
+                <label style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 10px;">Verification Level</label>
+                <div class="two-cols" style="margin-bottom: 20px;">
+                    <label class="pm-card" style="margin: 0;">
+                        <input type="radio" name="ver_level" checked>
+                        <div><div style="font-size: 13px; font-weight: 700; color: #fff; margin-bottom:2px;">Anyone</div><div style="font-size: 11px; color: var(--text-muted);">No restriction</div></div>
+                    </label>
+                    <label class="pm-card" style="margin: 0;">
+                        <input type="radio" name="ver_level">
+                        <div><div style="font-size: 13px; font-weight: 700; color: #fff; margin-bottom:2px;">Basic+</div><div style="font-size: 11px; color: var(--text-muted);">Email verified</div></div>
+                    </label>
+                </div>
+                <div class="two-cols" style="margin-bottom: 25px;">
+                    <label class="pm-card" style="margin: 0;">
+                        <input type="radio" name="ver_level">
+                        <div><div style="font-size: 13px; font-weight: 700; color: #fff; margin-bottom:2px;">Verified+</div><div style="font-size: 11px; color: var(--text-muted);">KYC approved</div></div>
+                    </label>
+                    <label class="pm-card" style="margin: 0;">
+                        <input type="radio" name="ver_level">
+                        <div><div style="font-size: 13px; font-weight: 700; color: #fff; margin-bottom:2px;">Merchant+</div><div style="font-size: 11px; color: var(--text-muted);">Merchant only</div></div>
+                    </label>
+                </div>
+
+                <!-- Account Age -->
+                <label style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 10px;">Account Age</label>
+                <div class="pill-group">
+                    <div class="pill-option active"><i class="fa-regular fa-square-check" style="margin-right: 4px;"></i> Any</div>
+                    <div class="pill-option">3+ days</div>
+                    <div class="pill-option">7+ days</div>
+                    <div class="pill-option">14+ days</div>
+                    <div class="pill-option">30+ days</div>
+                </div>
+
+                <!-- Min Completed Trades -->
+                <label style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 10px;">Min. Completed Trades</label>
+                <div class="pill-group">
+                    <div class="pill-option active"><i class="fa-regular fa-square-check" style="margin-right: 4px;"></i> Any</div>
+                    <div class="pill-option">5+</div>
+                    <div class="pill-option">10+</div>
+                    <div class="pill-option">25+</div>
+                    <div class="pill-option">50+</div>
+                </div>
+
+                <!-- Min Completion Rate -->
+                <label style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 10px;">Min. Completion Rate</label>
+                <div class="pill-group">
+                    <div class="pill-option active"><i class="fa-regular fa-square-check" style="margin-right: 4px;"></i> Any</div>
+                    <div class="pill-option">>70%</div>
+                    <div class="pill-option">>80%</div>
+                    <div class="pill-option">>90%</div>
+                    <div class="pill-option">>95%</div>
+                </div>
+            </div>
+
+            <!-- 5. Terms & Conditions -->
+            <div class="form-section">
+                <h3>Terms & Conditions</h3>
+                <p class="section-sub">Optional — specific rules for this trade</p>
+                <div class="input-group">
+                    <textarea rows="3" placeholder="e.g. Send exact amount with reference. Minimum 500 ETB per transaction."></textarea>
+                </div>
+            </div>
+
+            <button id="review-order-btn" class="btn-review">
+                <i class="fa-regular fa-eye"></i> Review Order
             </button>
         </div>
     </div>
@@ -273,14 +437,24 @@
             element.classList.add('active');
             
             const reviewBtn = document.getElementById('review-order-btn');
+            // የ Review Order በተን ቀለሙን ከ Buy/Sell ጋር እንዲስማማ ማስተካከል
             if (type === 'sell') {
                 reviewBtn.style.backgroundColor = 'var(--red-color)';
                 reviewBtn.style.color = '#fff';
             } else {
-                reviewBtn.style.backgroundColor = 'var(--accent-color)';
+                reviewBtn.style.backgroundColor = 'var(--green-color)';
                 reviewBtn.style.color = '#000';
             }
         }
+
+        // Pill (Trader Requirements) ክሊክ ሲደረግ አክቲቭ የሚቀይር ስክሪፕት
+        document.querySelectorAll('.pill-option').forEach(pill => {
+            pill.addEventListener('click', function() {
+                // በተመሳሳይ ግሩፕ ውስጥ ያሉትን ሌሎች አክቲቭ ያጠፋል
+                this.parentElement.querySelectorAll('.pill-option').forEach(p => p.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
 
         window.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
