@@ -504,3 +504,154 @@ body.light-mode h4,
 body.light-mode a {
     color: inherit;
 }
+
+/* 💳 Payment Methods Styles */
+        .pm-card {
+            background-color: var(--card-bg); /* #121212 */
+            border: 1px solid var(--border-color); /* #2b313a */
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        .pm-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 25px;
+        }
+
+        .pm-title-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 6px;
+        }
+
+        .pm-title-row h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .pm-subtitle {
+            margin: 0;
+            font-size: 13px;
+            color: var(--text-muted); /* #888888 */
+        }
+
+        .pm-add-btn {
+            background-color: #2b313a;
+            color: #fff;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .pm-add-btn:hover {
+            background-color: #3b424d;
+        }
+
+        /* Empty State */
+        .pm-empty-state {
+            text-align: center;
+            padding: 40px 0 20px 0;
+        }
+
+        .pm-empty-state i {
+            font-size: 28px;
+            color: #4a505a;
+            margin-bottom: 15px;
+        }
+
+        .pm-empty-state h5 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            font-weight: 500;
+            color: #848e9c;
+        }
+
+        .pm-empty-state p {
+            margin: 0 auto;
+            font-size: 12px;
+            color: #5b616e;
+            max-width: 600px;
+            line-height: 1.5;
+        }
+
+        /* Add Form */
+        .pm-add-form {
+            background-color: #16181d;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 25px;
+        }
+
+        .pm-add-form h4 {
+            margin: 0 0 20px 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .pm-select {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url('data:image/svg+xml;utf8,<svg fill="%23848e9c" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 10px top 50%;
+            background-color: #080808 !important; /* ጠቆር ያለ የሳጥን ከለር */
+            cursor: pointer;
+        }
+        
+        .pm-add-form .form-control {
+            background-color: #080808;
+            border: 1px solid #2b313a;
+        }
+
+        .pm-actions {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-top: 25px;
+        }
+
+        .pm-submit-btn {
+            background-color: var(--green-color); /* #0ecb81 */
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .pm-submit-btn:hover {
+            background-color: #0b9e65;
+        }
+
+        .pm-cancel-text {
+            color: #fff;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .pm-cancel-text:hover {
+            color: var(--text-muted);
+        }

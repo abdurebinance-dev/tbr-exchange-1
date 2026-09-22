@@ -491,10 +491,70 @@
         </div>
 
         <!-- 3. Payments Content -->
-        <div id="payments-section" class="content-section" style="display: none;">
-            <div class="profile-card">
-                <h3>Payment Methods</h3>
-                <p style="color: var(--text-muted); font-size: 13px;">Manage your payment details here.</p>
+        <!-- 💳 PAYMENTS TAB -->
+        <div id="payments-tab" class="tab-content" style="display: none;">
+            <div class="pm-card">
+                <!-- Header Section -->
+                <div class="pm-header">
+                    <div class="pm-header-left">
+                        <div class="pm-title-row">
+                            <i class="fa-regular fa-credit-card" style="color: var(--green-color); font-size: 16px;"></i>
+                            <h3>Payment Methods</h3>
+                        </div>
+                        <p class="pm-subtitle">Your ETB receiving accounts used in P2P trades</p>
+                    </div>
+                    <button class="pm-add-btn" id="pm-add-btn" onclick="toggleAddPaymentForm()">
+                        <i class="fa-solid fa-plus"></i> Add
+                    </button>
+                </div>
+
+                <!-- 🚀 Add New Payment Form (Hidden by default) 🚀 -->
+                <div class="pm-add-form" id="pm-add-form" style="display: none;">
+                    <h4>Add New Payment Method</h4>
+                    
+                    <div class="form-group">
+                        <label>Payment Type</label>
+                        <select class="form-control pm-select" id="pm-type" onchange="handlePaymentTypeChange()">
+                            <option value="" disabled selected>Select payment method</option>
+                            <option value="Telebirr">Telebirr</option>
+                            <option value="M-Pesa">M-Pesa</option>
+                            <option value="CBE Birr">CBE Birr</option>
+                            <option value="Commercial Bank of Ethiopia">Commercial Bank of Ethiopia</option>
+                            <option value="Bank of Abyssinia">Bank of Abyssinia</option>
+                            <option value="Dashen Bank">Dashen Bank</option>
+                            <option value="Awash Bank">Awash Bank</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Account Holder Name</label>
+                        <input type="text" class="form-control" id="pm-account-name" placeholder="Full name on the account">
+                    </div>
+
+                    <div class="form-group" id="pm-account-number-group" style="display: none;">
+                        <label id="pm-account-number-label">Account Number</label>
+                        <input type="text" class="form-control" id="pm-account-number" placeholder="Enter account details">
+                    </div>
+
+                    <div class="pm-actions">
+                        <button class="pm-submit-btn" onclick="savePaymentMethod()">
+                            <i class="fa-solid fa-plus"></i> Add Payment Method
+                        </button>
+                        <span class="pm-cancel-text" onclick="toggleAddPaymentForm()">Cancel</span>
+                    </div>
+                </div>
+
+                <!-- 🚀 Empty State (Default View) 🚀 -->
+                <div class="pm-empty-state" id="pm-empty-state">
+                    <i class="fa-regular fa-credit-card"></i>
+                    <h5>No payment methods yet</h5>
+                    <p>Add a payment method — Telebirr, M-Pesa, CBE Birr, CBE, Bank of Abyssinia, Dashen Bank, or Awash Bank — to start trading</p>
+                </div>
+
+                <!-- List State (Hidden initially) -->
+                <div id="pm-list" style="display: none; flex-direction: column; gap: 15px;">
+                    <!-- Saved payment methods will appear here -->
+                </div>
             </div>
         </div>
 
@@ -1001,6 +1061,72 @@
             setTimeout(() => {
                 toast.classList.remove("show");
             }, 2500);
+        }
+
+        // 🚀 የ Payment ፎርሙን መክፈቻ እና መዝጊያ 🚀
+        function toggleAddPaymentForm() {
+            const form = document.getElementById('pm-add-form');
+            const emptyState = document.getElementById('pm-empty-state');
+            const addBtn = document.getElementById('pm-add-btn');
+
+            if (form.style.display === 'none') {
+                // ፎርሙን መክፈት
+                form.style.display = 'block';
+                emptyState.style.display = 'none';
+                addBtn.style.display = 'none';
+            } else {
+                // ፎርሙን መዝጋት
+                form.style.display = 'none';
+                emptyState.style.display = 'block'; // ዳታ ከሌለ ብቻ (በኋላ በ ዳታቤዝ ይቆጣጠራል)
+                addBtn.style.display = 'flex';
+                
+                // ሳጥኖቹን ባዶ ማድረግ
+                document.getElementById('pm-type').value = "";
+                document.getElementById('pm-account-name').value = "";
+                document.getElementById('pm-account-number').value = "";
+                document.getElementById('pm-account-number-group').style.display = 'none';
+            }
+        }
+
+        // 🚀 የተመረጠው ባንክ ሲቀየር የአካውንት ቁጥር ሳጥኑን ማውጣት 🚀
+        function handlePaymentTypeChange() {
+            const type = document.getElementById('pm-type').value;
+            const accountGroup = document.getElementById('pm-account-number-group');
+            const accountLabel = document.getElementById('pm-account-number-label');
+            const accountInput = document.getElementById('pm-account-number');
+
+            if (type) {
+                accountGroup.style.display = 'block';
+                
+                // ስልክ ቁጥር የሚፈልጉ ከሆኑ ቴክስቱን መቀየር
+                if (type === 'Telebirr' || type === 'M-Pesa' || type === 'CBE Birr') {
+                    accountLabel.innerText = "Phone Number";
+                    accountInput.placeholder = "Enter registered phone number";
+                } else {
+                    accountLabel.innerText = "Account Number";
+                    accountInput.placeholder = "Enter bank account number";
+                }
+            } else {
+                accountGroup.style.display = 'none';
+            }
+        }
+
+        // 🚀 ሴቭ የሚደረግበት ቦታ (ለወደፊት ከባክኤንድ ጋር የምናገናኘው) 🚀
+        function savePaymentMethod() {
+            const type = document.getElementById('pm-type').value;
+            const name = document.getElementById('pm-account-name').value.trim();
+            const account = document.getElementById('pm-account-number').value.trim();
+
+            if (!type || !name || !account) {
+                alert("Please fill in all payment method details.");
+                return;
+            }
+
+            // ለጊዜው በ Alert እናሳየዋለን
+            alert(`Payment Method Ready to Save:\nType: ${type}\nName: ${name}\nAccount: ${account}`);
+            
+            // ከሴቭ በኋላ ፎርሙን ይዘጋዋል
+            toggleAddPaymentForm();
         }
 
         document.querySelectorAll('.tab-btn').forEach(btn => {
