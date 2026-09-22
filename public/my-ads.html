@@ -78,6 +78,44 @@
         .view-section { display: none; }
         .view-section.active { display: block; animation: fadeIn 0.3s ease; }
 
+        /* ታቦች (Tabs) */
+        .ads-tabs-wrapper {
+            background: #0b0e11;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .ads-tab {
+            flex: 1; text-align: center; padding: 12px; color: var(--text-muted);
+            font-size: 14px; font-weight: 600; cursor: pointer; border-right: 1px solid var(--border-color);
+        }
+        .ads-tab:last-child { border-right: none; }
+        .ads-tab.active { color: #fff; background: var(--card-bg); border-radius: 8px; }
+
+        .ads-sub-tabs {
+            display: flex; background: #0b0e11; border: 1px solid var(--border-color);
+            border-radius: 8px; margin-bottom: 20px;
+        }
+        .sub-tab {
+            flex: 1; text-align: center; padding: 10px; font-size: 13px; color: var(--text-muted);
+            cursor: pointer;
+        }
+        .sub-tab.active { color: #fff; border-bottom: 2px solid var(--green-color); }
+
+        /* ባዶ ቦታ (Empty State) */
+        .empty-state {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 80px 20px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }
+        .empty-state i { font-size: 40px; color: #2b313a; margin-bottom: 20px; }
+        .empty-state h3 { margin: 0 0 10px 0; font-size: 16px; color: #fff; }
+        .empty-state p { color: var(--text-muted); font-size: 13px; margin-bottom: 20px; }
+
+        /* ፖስት ኦርደር ፎርም ገጽ */
         .form-container { max-width: 800px; margin: 0 auto; padding-bottom: 50px; }
         
         .trade-type-toggle { display: flex; gap: 15px; margin-bottom: 30px; }
@@ -107,20 +145,34 @@
 </head>
 <body>
 
-    <!-- ================= VIEW 1: YOUR ADS (ዋናው ዝርዝር ገጽ) ================= -->
+    <!-- ================= VIEW 1: YOUR ADS (ማስታወቂያዎች የሚታዩበት ዋናው ገጽ) ================= -->
     <div class="container view-section active" id="view-main-ads">
         <div class="top-bar">
             <h1>Your Ads</h1>
-            <button class="btn-pill" onclick="switchToPostOrder()">
+            <!-- "+ New Ad" ሲጫን ወደ ፎርም ይወስዳል -->
+            <button class="btn-pill" onclick="openPostOrderForm()">
                 <i class="fa-solid fa-plus"></i> New Ad
             </button>
         </div>
 
-        <div style="background: var(--card-bg); border-radius: 16px; padding: 80px 20px; text-align: center; border: 1px solid var(--border-color);">
-            <i class="fa-regular fa-clipboard" style="font-size: 40px; color: #2b313a; margin-bottom: 20px;"></i>
-            <h3 style="margin: 0 0 10px 0; font-size: 16px; color: #fff;">No ads yet</h3>
-            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">Post your first P2P trade offer</p>
-            <button class="btn-pill" onclick="switchToPostOrder()">
+        <div class="ads-tabs-wrapper">
+            <div class="ads-tab active"><i class="fa-regular fa-file-lines"></i> Ads</div>
+            <div class="ads-tab"><i class="fa-solid fa-bolt"></i> Boost History</div>
+        </div>
+
+        <div class="ads-sub-tabs">
+            <div class="sub-tab active">All</div>
+            <div class="sub-tab">Active</div>
+            <div class="sub-tab">Paused</div>
+            <div class="sub-tab">Cancelled</div>
+        </div>
+
+        <div class="empty-state">
+            <i class="fa-regular fa-clipboard"></i>
+            <h3>No ads yet</h3>
+            <p>Post your first P2P trade offer</p>
+            <!-- "Post an Ad" ሲጫን ወደ ፎርም ይወስዳል -->
+            <button class="btn-pill" onclick="openPostOrderForm()">
                 <i class="fa-solid fa-plus"></i> Post an Ad
             </button>
         </div>
@@ -129,7 +181,7 @@
     <!-- ================= VIEW 2: POST ORDER (ማስታወቂያ መለጠፊያ ፎርም) ================= -->
     <div class="container view-section" id="view-post-order">
         <div class="top-bar" style="border:none; margin-bottom:15px;">
-            <button class="btn-outline" onclick="switchView('view-main-ads')">
+            <button class="btn-outline" onclick="closePostOrderForm()">
                 <i class="fa-solid fa-arrow-left"></i> Back
             </button>
         </div>
@@ -176,9 +228,16 @@
             window.scrollTo(0, 0);
         }
 
-        function switchToPostOrder() {
+        // "+ New Ad" ወይም "Post an Ad" ሲጫን ፎርሙን ከፍቶ URL ያስተካክላል
+        function openPostOrderForm() {
             switchView('view-post-order');
-            history.pushState({}, '', '?action=create');
+            history.pushState({view: 'post'}, '', '?action=create');
+        }
+
+        // "Back" ሲጫን ወደ ዋናው My Ads ገጽ ይመልሳል
+        function closePostOrderForm() {
+            switchView('view-main-ads');
+            history.pushState({view: 'main'}, '', window.location.pathname);
         }
 
         function setTradeType(type, element) {
@@ -195,11 +254,13 @@
             }
         }
 
-        // ዩአርኤል (URL) ላይ ?action=create ሲኖር በቀጥታ ወደ ማስታወቂያ መለጠፊያው ገጽ ይወስዳል
+        // ዌብሳይቱ ሲከፈት ዩአርኤል (URL) በማየት የትኛውን ገጽ ማሳየት እንዳለበት ይወስናል
         window.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('action') === 'create') {
                 switchView('view-post-order');
+            } else {
+                switchView('view-main-ads');
             }
         });
     </script>
