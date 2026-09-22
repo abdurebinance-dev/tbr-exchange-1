@@ -47,7 +47,7 @@
             margin: 0;
         }
 
-        /* ቆንጆ ክብ (Pill-shaped) አረንጓዴ በተን */
+        /* የላይኛው '+ New Ad' በተን */
         .btn-pill {
             background-color: var(--green-color);
             color: #000;
@@ -63,6 +63,23 @@
             transition: 0.2s;
         }
         .btn-pill:hover { background-color: var(--green-hover); }
+
+        /* 🚀 የመሃልኛው 'Post an Ad' በተን (በጣም አነስ ያለ እና ውብ) 🚀 */
+        .btn-pill-small {
+            background-color: var(--green-color);
+            color: #000;
+            border: none;
+            padding: 5px 14px;
+            border-radius: 16px;
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: 0.2s;
+        }
+        .btn-pill-small:hover { background-color: var(--green-hover); }
 
         .btn-outline {
             background: transparent;
@@ -145,11 +162,11 @@
 </head>
 <body>
 
-    <!-- ================= VIEW 1: YOUR ADS (ማስታወቂያዎች የሚታዩበት ዋናው ገጽ) ================= -->
+    <!-- ================= VIEW 1: YOUR ADS ================= -->
     <div class="container view-section active" id="view-main-ads">
         <div class="top-bar">
             <h1>Your Ads</h1>
-            <!-- "+ New Ad" ሲጫን ወደ ፎርም ይወስዳል -->
+            <!-- የላይኛው "+ New Ad" በተን -->
             <button class="btn-pill" onclick="openPostOrderForm()">
                 <i class="fa-solid fa-plus"></i> New Ad
             </button>
@@ -171,8 +188,8 @@
             <i class="fa-regular fa-clipboard"></i>
             <h3>No ads yet</h3>
             <p>Post your first P2P trade offer</p>
-            <!-- "Post an Ad" ሲጫን ወደ ፎርም ይወስዳል -->
-            <button class="btn-pill" onclick="openPostOrderForm()">
+            <!-- 🚀 አነስተኛው (Compact) "Post an Ad" በተን 🚀 -->
+            <button class="btn-pill-small" onclick="openPostOrderForm()">
                 <i class="fa-solid fa-plus"></i> Post an Ad
             </button>
         </div>
@@ -228,7 +245,7 @@
             window.scrollTo(0, 0);
         }
 
-        // "+ New Ad" ወይም "Post an Ad" ሲጫን ፎርሙን ከፍቶ URL ያስተካክላል
+        // "+ New Ad" ወይም "Post an Ad" ሲጫን ፎርሙን ይከፍታል
         function openPostOrderForm() {
             switchView('view-post-order');
             history.pushState({view: 'post'}, '', '?action=create');
