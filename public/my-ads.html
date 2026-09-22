@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TBR Exchange - My Ads</title>
+    <title>TBR Exchange - Post Order</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
             --bg-color: #080808;
-            --card-bg: #16181d;
-            --card-darker: #121418;
+            --card-bg: #121418;
             --text-color: #ffffff;
             --text-muted: #848e9c;
             --border-color: #2b313a;
             --accent-color: #f3ba2f;
-            --accent-hover: #e0ac2b;
+            --green-color: #0ecb81;
+            --green-hover: #0b9e65;
             --red-color: #f6465d;
         }
 
@@ -27,65 +27,17 @@
         }
 
         .container {
-            max-width: 1100px;
+            max-width: 800px;
             margin: 0 auto;
             padding: 20px;
         }
 
-        /* 🚀 ከ "Your Ads" በላይ የሚገኝ የዳሽቦርድ መመለሻ በተን ፕሌስመንት 🚀 */
         .top-navigation-bar {
             display: flex;
             justify-content: flex-start;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             margin-top: 10px;
         }
-
-        .ads-header-section {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-        }
-
-        .ads-header-section h1 {
-            font-size: 24px;
-            font-weight: 700;
-            margin: 0;
-        }
-
-        .btn-pill {
-            background-color: var(--accent-color);
-            color: #000;
-            border: none;
-            padding: 6px 16px;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 13px;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            transition: 0.2s;
-            line-height: 1.2;
-        }
-        .btn-pill:hover { background-color: var(--accent-hover); }
-
-        .btn-small {
-            background-color: var(--accent-color);
-            color: #000;
-            border: none;
-            padding: 3px 10px;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 11px;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            transition: 0.2s;
-            line-height: 1.1;
-        }
-        .btn-small:hover { background-color: var(--accent-hover); }
 
         .btn-outline {
             background: transparent;
@@ -103,193 +55,217 @@
         }
         .btn-outline:hover { color: #fff; border-color: var(--text-muted); }
 
-        .view-section { display: none; }
-        .view-section.active { display: block; animation: fadeIn 0.3s ease; }
+        h2 { font-size: 22px; margin-bottom: 5px; }
+        p.subtitle { color: var(--text-muted); font-size: 13px; margin-bottom: 25px; }
 
-        .ads-tabs-wrapper {
-            background: #0b0e11;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            display: flex;
-            margin-bottom: 20px;
+        .form-section {
+            margin-bottom: 30px;
         }
-        .ads-tab {
-            flex: 1; text-align: center; padding: 12px; color: var(--text-muted);
-            font-size: 14px; font-weight: 600; cursor: pointer; border-right: 1px solid var(--border-color);
+        .form-section h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 5px;
         }
-        .ads-tab:last-child { border-right: none; }
-        .ads-tab.active { color: #fff; background: var(--card-bg); border-radius: 8px; }
+        .form-section p.section-sub {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
 
-        .ads-sub-tabs {
-            display: flex; background: #0b0e11; border: 1px solid var(--border-color);
-            border-radius: 8px; margin-bottom: 20px;
-        }
-        .sub-tab {
-            flex: 1; text-align: center; padding: 10px; font-size: 13px; color: var(--text-muted);
-            cursor: pointer;
-        }
-        .sub-tab.active { color: #fff; border-bottom: 2px solid var(--accent-color); }
-
-        .empty-state {
-            background: var(--card-bg);
-            border-radius: 16px;
-            padding: 80px 20px;
-            text-align: center;
-            border: 1px solid var(--border-color);
-        }
-        .empty-state i { font-size: 40px; color: #2b313a; margin-bottom: 20px; }
-        .empty-state h3 { margin: 0 0 10px 0; font-size: 16px; color: #fff; }
-        .empty-state p { color: var(--text-muted); font-size: 13px; margin-bottom: 20px; }
-
-        .form-container { max-width: 800px; margin: 0 auto; padding-bottom: 50px; }
-        
-        .trade-type-toggle { display: flex; gap: 15px; margin-bottom: 30px; }
+        .trade-type-toggle { display: flex; gap: 15px; margin-bottom: 25px; }
         .toggle-btn {
             flex: 1; background: transparent; border: 1px solid var(--border-color); color: var(--text-muted);
-            padding: 14px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;
+            padding: 12px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;
             display: flex; justify-content: center; align-items: center; gap: 8px; transition: all 0.2s;
         }
-        .toggle-btn:hover { border-color: #444; color: #fff; }
-        .toggle-btn.btn-buy.active { border-color: var(--accent-color); color: var(--accent-color); background: rgba(243, 186, 47, 0.05); }
+        .toggle-btn.btn-buy.active { border-color: var(--green-color); color: var(--green-color); background: rgba(14, 203, 129, 0.05); }
         .toggle-btn.btn-sell.active { border-color: var(--red-color); color: var(--red-color); background: rgba(246, 70, 93, 0.05); }
 
-        .form-section { margin-bottom: 30px; }
-        .form-section h4 { font-size: 15px; font-weight: 600; margin: 0 0 15px 0; color: #fff; }
-        
-        .input-group { position: relative; margin-bottom: 20px; }
-        .input-group label { display: block; font-size: 13px; color: #fff; font-weight: 600; margin-bottom: 8px; }
-        .input-group input {
+        .input-group { position: relative; margin-bottom: 15px; }
+        .input-group label { display: block; font-size: 12px; color: var(--text-muted); font-weight: 600; margin-bottom: 6px; text-transform: uppercase; }
+        .input-group input, .input-group textarea {
             width: 100%; background: var(--bg-color); border: 1px solid var(--border-color);
-            color: #fff; padding: 14px 15px; border-radius: 8px; box-sizing: border-box; font-size: 14px; outline: none;
+            color: #fff; padding: 12px 15px; border-radius: 8px; box-sizing: border-box; font-size: 13px; outline: none;
         }
-        .input-group input:focus { border-color: var(--accent-color); }
-        .suffix { position: absolute; right: 15px; top: 38px; color: var(--text-muted); font-size: 13px; font-weight: 600; }
+        .input-group input:focus, .input-group textarea:focus { border-color: var(--green-color); }
+        .suffix { position: absolute; right: 15px; top: 38px; color: var(--text-muted); font-size: 12px; font-weight: 600; }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .market-avg-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+        
+        .two-cols { display: flex; gap: 15px; }
+        .two-cols > div { flex: 1; }
+
+        /* Payment Methods Cards */
+        .pm-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .pm-card input[type="radio"] { margin-top: 3px; accent-color: var(--green-color); }
+
+        /* Requirement pills */
+        .pill-group { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 15px; }
+        .pill-option {
+            background: var(--bg-color); border: 1px solid var(--border-color); color: var(--text-muted);
+            padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .pill-option.active { border-color: var(--green-color); color: var(--green-color); background: rgba(14, 203, 129, 0.05); }
+
+        .btn-review {
+            width: 100%; background-color: var(--green-color); color: #000; border: none;
+            padding: 14px; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer;
+            display: flex; justify-content: center; align-items: center; gap: 8px; transition: 0.2s;
+        }
+        .btn-review:hover { background-color: var(--green-hover); }
     </style>
 </head>
 <body>
 
-    <!-- ================= VIEW 1: YOUR ADS ================= -->
-    <div class="container view-section active" id="view-main-ads">
-        <!-- 🚀 ከ "Your Ads" በላይ የተቀመጠ የዳሽቦርድ መመለሻ በተን 🚀 -->
+    <div class="container">
         <div class="top-navigation-bar">
             <button class="btn-outline" onclick="window.location.href='dashboard.html'">
                 <i class="fa-solid fa-house"></i> Dashboard
             </button>
         </div>
 
-        <div class="ads-header-section">
-            <h1>Your Ads</h1>
-            <button class="btn-pill" onclick="openPostOrderForm()">
-                <i class="fa-solid fa-plus"></i> New Ad
+        <h2>Post Order</h2>
+        <p class="subtitle">Set your rate, limits, and payment methods</p>
+
+        <div class="trade-type-toggle">
+            <button class="toggle-btn btn-buy active" onclick="setTradeType('buy', this)">
+                <i class="fa-solid fa-arrow-down"></i> Buy USDT
+            </button>
+            <button class="toggle-btn btn-sell" onclick="setTradeType('sell', this)">
+                <i class="fa-solid fa-arrow-up"></i> Sell USDT
             </button>
         </div>
 
-        <div class="ads-tabs-wrapper">
-            <div class="ads-tab active"><i class="fa-regular fa-file-lines"></i> Ads</div>
-            <div class="ads-tab"><i class="fa-solid fa-bolt"></i> Boost History</div>
-        </div>
-
-        <div class="ads-sub-tabs">
-            <div class="sub-tab active">All</div>
-            <div class="sub-tab">Active</div>
-            <div class="sub-tab">Paused</div>
-            <div class="sub-tab">Cancelled</div>
-        </div>
-
-        <div class="empty-state">
-            <i class="fa-regular fa-clipboard"></i>
-            <h3>No ads yet</h3>
-            <p>Post your first P2P trade offer</p>
-            <button class="btn-small" onclick="openPostOrderForm()">
-                <i class="fa-solid fa-plus" style="font-size: 10px;"></i> Post an Ad
-            </button>
-        </div>
-    </div>
-
-    <!-- ================= VIEW 2: POST ORDER ================= -->
-    <div class="container view-section" id="view-post-order">
-        <div class="top-navigation-bar" style="margin-top: 15px;">
-            <button class="btn-outline" onclick="closePostOrderForm()">
-                <i class="fa-solid fa-arrow-left"></i> Back to Ads
-            </button>
-        </div>
-
-        <div class="form-container">
-            <h2 style="font-size: 22px; margin-bottom: 8px;">Post Order</h2>
-            <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 25px;">Set your rate, limits, and payment methods</p>
-
-            <div class="trade-type-toggle">
-                <button class="toggle-btn btn-buy active" onclick="setTradeType('buy', this)">
-                    <i class="fa-solid fa-arrow-down"></i> Buy USDT
-                </button>
-                <button class="toggle-btn btn-sell" onclick="setTradeType('sell', this)">
-                    <i class="fa-solid fa-arrow-up"></i> Sell USDT
-                </button>
+        <!-- Pricing & Supply -->
+        <div class="form-section">
+            <h3>Pricing & Supply</h3>
+            <p class="section-sub">Set your ETB rate per USDT and total supply</p>
+            
+            <div class="input-group" style="margin-top: 10px;">
+                <label>Price per USDT</label>
+                <input type="number" placeholder="e.g. 182.79" value="182.79">
+                <span class="suffix">ETB</span>
             </div>
+            <div class="market-avg-row">
+                <span>Market avg: <b>182.79 ETB</b></span>
+                <span style="color: var(--green-color); cursor: pointer;"><i class="fa-solid fa-rotate"></i> Use 182.79</span>
+            </div>
+        </div>
 
-            <div class="form-section">
-                <h4>Price per USDT</h4>
+        <div class="form-section">
+            <div class="input-group">
+                <label>Total Amount</label>
+                <input type="number" placeholder="e.g. 500">
+                <span class="suffix">USDT</span>
+            </div>
+        </div>
+
+        <!-- Trade Limits -->
+        <div class="form-section">
+            <h3>Trade Limits</h3>
+            <p class="section-sub">Min and max ETB per individual trade</p>
+            <div class="two-cols">
                 <div class="input-group">
-                    <input type="number" placeholder="e.g. 125.50" value="125.50">
+                    <label>Minimum (ETB)</label>
+                    <input type="number" placeholder="Min. 500" value="500">
+                    <span class="suffix">ETB</span>
+                </div>
+                <div class="input-group">
+                    <label>Maximum (ETB)</label>
+                    <input type="number" placeholder="e.g. 50,000">
                     <span class="suffix">ETB</span>
                 </div>
             </div>
+        </div>
 
-            <div class="form-section">
-                <h4>Total Amount</h4>
-                <div class="input-group">
-                    <input type="number" placeholder="e.g. 500">
-                    <span class="suffix">USDT</span>
+        <!-- Payment Methods -->
+        <div class="form-section">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3>Payment Methods</h3>
+                <span style="font-size: 12px; color: var(--text-muted);"><i class="fa-regular fa-clock"></i> <b>15</b> min</span>
+            </div>
+            <p class="section-sub">Select all methods you accept</p>
+
+            <div class="pm-card">
+                <input type="checkbox" checked>
+                <div>
+                    <div style="font-size: 13px; font-weight: 700;">Telebirr</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">Abdurahman ashebir</div>
+                    <div style="font-size: 12px; color: #555;">0981329334</div>
                 </div>
             </div>
 
-            <button id="review-order-btn" class="btn-pill" style="width: 100%; justify-content: center; padding: 16px; font-size: 15px; border-radius: 8px;">
-                <i class="fa-solid fa-eye"></i> Review Order
-            </button>
+            <div class="pm-card">
+                <input type="checkbox" checked>
+                <div>
+                    <div style="font-size: 13px; font-weight: 700;">Bank of Abyssinia</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">Abdurahman ashebir</div>
+                    <div style="font-size: 12px; color: #555;">172779198</div>
+                </div>
+            </div>
+
+            <div class="pm-card">
+                <input type="checkbox" checked>
+                <div>
+                    <div style="font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                        Commercial Bank of Ethiopia 
+                        <span style="background: rgba(14, 203, 129, 0.15); color: var(--green-color); font-size: 10px; padding: 2px 6px; border-radius: 4px;">Default</span>
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-muted);">Abdurahman ashebir</div>
+                    <div style="font-size: 12px; color: #555;">1000693723863</div>
+                </div>
+            </div>
         </div>
+
+        <!-- Trader Requirements -->
+        <div class="form-section">
+            <h3>Trader Requirements</h3>
+            <p class="section-sub">Restrict who can trade with this order</p>
+            
+            <label style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Verification Level</label>
+            <div class="two-cols" style="margin-top: 8px; margin-bottom: 15px;">
+                <div class="pm-card" style="margin: 0;"><input type="radio" name="ver" checked><div><div style="font-size: 13px; font-weight: 600;">Anyone</div><div style="font-size: 11px; color: var(--text-muted);">No restriction</div></div></div>
+                <div class="pm-card" style="margin: 0;"><input type="radio" name="ver"><div><div style="font-size: 13px; font-weight: 600;">Basic+</div><div style="font-size: 11px; color: var(--text-muted);">Email verified</div></div></div>
+            </div>
+        </div>
+
+        <!-- Terms & Conditions -->
+        <div class="form-section">
+            <div class="input-group">
+                <label>Terms & Conditions (Optional)</label>
+                <textarea rows="3" placeholder="e.g. Send exact amount with reference. Minimum 500 ETB per transaction."></textarea>
+            </div>
+        </div>
+
+        <button class="btn-review">
+            <i class="fa-solid fa-eye"></i> Review Order
+        </button>
     </div>
 
     <script>
-        function switchView(viewId) {
-            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-            document.getElementById(viewId).classList.add('active');
-            window.scrollTo(0, 0);
-        }
-
-        function openPostOrderForm() {
-            switchView('view-post-order');
-            history.pushState({view: 'post'}, '', '?action=create');
-        }
-
-        function closePostOrderForm() {
-            switchView('view-main-ads');
-            history.pushState({view: 'main'}, '', window.location.pathname);
-        }
-
         function setTradeType(type, element) {
             document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
             element.classList.add('active');
-            
-            const reviewBtn = document.getElementById('review-order-btn');
+            const reviewBtn = document.querySelector('.btn-review');
             if (type === 'sell') {
                 reviewBtn.style.backgroundColor = 'var(--red-color)';
                 reviewBtn.style.color = '#fff';
             } else {
-                reviewBtn.style.backgroundColor = 'var(--accent-color)';
+                reviewBtn.style.backgroundColor = 'var(--green-color)';
                 reviewBtn.style.color = '#000';
             }
         }
-
-        window.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('action') === 'create') {
-                switchView('view-post-order');
-            } else {
-                switchView('view-main-ads');
-            }
-        });
     </script>
 </body>
 </html>
