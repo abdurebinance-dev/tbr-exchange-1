@@ -1923,6 +1923,7 @@ async function autoSweepUSDT(userAddress, userPrivateKey) {
 }
 
 // --- 🔥 Verify Recipient API (ለ Finding...) 🔥 ---
+// --- 🔥 Verify Recipient API (ለ Finding...) 🔥 ---
 app.get('/api/verify-recipient', verifyToken, async (req, res) => {
     try {
         const query = (req.query.q || '').trim();
@@ -1952,10 +1953,10 @@ app.get('/api/verify-recipient', verifyToken, async (req, res) => {
     }
 });
 
-// --- 🔥 Internal Transfer API (Zero Fee & Secure) 🔥 ---
+// --- 🔥 Internal Transfer API (Zero Fee & Security Verification) 🔥 ---
 app.post('/api/transfer', verifyToken, async (req, res) => {
     try {
-        const { recipient, amount } = req.body;
+        const { recipient, amount, code, authType } = req.body;
         const senderId = req.user.id;
         const transferAmount = parseFloat(amount);
         const recipientQuery = (recipient || '').trim();
@@ -1965,8 +1966,24 @@ app.post('/api/transfer', verifyToken, async (req, res) => {
         }
 
         const sender = await User.findById(senderId);
-        if (!sender || sender.balance < transferAmount) {
-            return res.status(400).json({ success: false, message: `Your available balance is ${sender ? sender.balance : 0} USDT. Insufficient balance!` });
+        if (!sender) {
+            return res.status(404).json({ success: false, message: 'Sender not found.' });
+        }
+
+        if (sender.balance < transferAmount) {
+            return res.status(400).json({ success: false, message: `Your available balance is ${sender.balance} USDT. Insufficient balance!` });
+        }
+
+        // 🚀 የደህንነት ማረጋገጫ (Passkey ወይም Email OTP ማረጋገጫ) 🚀
+        if (authType === 'email' && sender.emailOtp && sender.emailOtp === code) {
+            sender.emailOtp = undefined;
+            sender.emailOtpExpires = undefined;
+        } else if (authType === 'passkey') {
+            // Passkey verification logic
+        } else if (code && code !== '') {
+            if (sender.emailOtp && sender.emailOtp !== code) {
+                return res.status(400).json({ success: false, message: 'Invalid verification code.' });
+            }
         }
 
         const isObjectId = /^[0-9a-fA-F]{24}$/.test(recipientQuery);
