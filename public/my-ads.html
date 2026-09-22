@@ -8,13 +8,13 @@
     <style>
         :root {
             --bg-color: #080808;
-            --card-bg: #121212;
-            --card-darker: #1a1a1a;
+            --card-bg: #16181d;
+            --card-darker: #121418;
             --text-color: #ffffff;
-            --text-muted: #888888;
+            --text-muted: #848e9c;
             --border-color: #2b313a;
-            --accent-color: #0ecb81;
-            --accent-hover: #0b9e65;
+            --green-color: #0ecb81;
+            --green-hover: #0b9e65;
             --red-color: #f6465d;
         }
 
@@ -36,38 +36,39 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 25px;
+            margin-bottom: 30px;
             border-bottom: 1px solid var(--border-color);
             padding-bottom: 15px;
         }
 
         .top-bar h1 {
-            font-size: 20px;
-            font-weight: 600;
+            font-size: 24px;
+            font-weight: 700;
             margin: 0;
         }
 
-        .btn-primary {
-            background-color: var(--accent-color);
+        /* ቆንጆ ክብ (Pill-shaped) አረንጓዴ በተን */
+        .btn-pill {
+            background-color: var(--green-color);
             color: #000;
             border: none;
-            padding: 6px 16px;
+            padding: 8px 20px;
             border-radius: 20px;
             font-weight: 600;
             font-size: 13px;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
             transition: 0.2s;
         }
-        .btn-primary:hover { background-color: var(--accent-hover); }
+        .btn-pill:hover { background-color: var(--green-hover); }
 
         .btn-outline {
             background: transparent;
             color: var(--text-muted);
             border: 1px solid var(--border-color);
-            padding: 6px 12px;
+            padding: 8px 16px;
             border-radius: 6px;
             cursor: pointer;
             transition: 0.2s;
@@ -77,99 +78,55 @@
         .view-section { display: none; }
         .view-section.active { display: block; animation: fadeIn 0.3s ease; }
 
-        .ads-tabs-wrapper {
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            display: flex;
-            margin-bottom: 20px;
-            overflow: hidden;
-        }
-        .ads-tab {
-            flex: 1; text-align: center; padding: 12px; color: var(--text-muted);
-            font-size: 13px; font-weight: 600; cursor: pointer; border-right: 1px solid var(--border-color);
-        }
-        .ads-tab.active { color: #000; background: var(--accent-color); }
-
-        .ads-sub-tabs {
-            display: flex; background: var(--card-bg); border: 1px solid var(--border-color);
-            border-radius: 8px; margin-bottom: 20px; overflow: hidden;
-        }
-        .sub-tab {
-            flex: 1; text-align: center; padding: 10px; font-size: 13px; color: var(--text-muted);
-            cursor: pointer;
-        }
-        .sub-tab.active { color: #fff; border-bottom: 2px solid var(--accent-color); background: rgba(14, 203, 129, 0.05); }
-
-        .empty-state {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 60px 20px;
-            text-align: center;
-            border: 1px solid var(--border-color);
-        }
-        .empty-state i { font-size: 32px; color: #2b313a; margin-bottom: 15px; }
-        .empty-state h3 { margin: 0 0 8px 0; font-size: 15px; color: #fff; }
-        .empty-state p { color: var(--text-muted); font-size: 13px; margin-bottom: 15px; }
-
         .form-container { max-width: 800px; margin: 0 auto; padding-bottom: 50px; }
         
-        .trade-type-toggle { display: flex; gap: 15px; margin-bottom: 25px; }
+        .trade-type-toggle { display: flex; gap: 15px; margin-bottom: 30px; }
         .toggle-btn {
-            flex: 1; background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-muted);
-            padding: 12px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer;
-            display: flex; justify-content: center; align-items: center; gap: 8px; transition: 0.2s;
+            flex: 1; background: transparent; border: 1px solid var(--border-color); color: var(--text-muted);
+            padding: 14px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;
+            display: flex; justify-content: center; align-items: center; gap: 8px; transition: all 0.2s;
         }
-        .toggle-btn.btn-buy.active { border-color: var(--accent-color); color: var(--accent-color); background: rgba(14, 203, 129, 0.05); }
+        .toggle-btn:hover { border-color: #444; color: #fff; }
+        .toggle-btn.btn-buy.active { border-color: var(--green-color); color: var(--green-color); background: rgba(14, 203, 129, 0.05); }
         .toggle-btn.btn-sell.active { border-color: var(--red-color); color: var(--red-color); background: rgba(246, 70, 93, 0.05); }
 
-        .form-section { margin-bottom: 25px; background: var(--card-bg); border: 1px solid var(--border-color); padding: 20px; border-radius: 10px; }
-        .form-section h4 { font-size: 14px; font-weight: 600; margin: 0 0 10px 0; color: #fff; }
+        .form-section { margin-bottom: 30px; }
+        .form-section h4 { font-size: 15px; font-weight: 600; margin: 0 0 15px 0; color: #fff; }
         
-        .input-group { position: relative; margin-bottom: 15px; }
-        .input-group label { display: block; font-size: 12px; color: var(--text-muted); font-weight: 600; margin-bottom: 8px; text-transform: uppercase; }
+        .input-group { position: relative; margin-bottom: 20px; }
+        .input-group label { display: block; font-size: 13px; color: #fff; font-weight: 600; margin-bottom: 8px; }
         .input-group input {
             width: 100%; background: var(--bg-color); border: 1px solid var(--border-color);
-            color: #fff; padding: 12px 15px; border-radius: 6px; box-sizing: border-box; font-size: 13px; outline: none;
+            color: #fff; padding: 14px 15px; border-radius: 8px; box-sizing: border-box; font-size: 14px; outline: none;
         }
-        .input-group input:focus { border-color: var(--accent-color); }
-        .suffix { position: absolute; right: 15px; top: 32px; color: var(--text-muted); font-size: 12px; font-weight: 600; }
+        .input-group input:focus { border-color: var(--green-color); }
+        .suffix { position: absolute; right: 15px; top: 38px; color: var(--text-muted); font-size: 13px; font-weight: 600; }
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
 
+    <!-- ================= VIEW 1: YOUR ADS (ዋናው ዝርዝር ገጽ) ================= -->
     <div class="container view-section active" id="view-main-ads">
         <div class="top-bar">
             <h1>Your Ads</h1>
-            <button class="btn-primary" onclick="switchView('view-post-order')">
+            <button class="btn-pill" onclick="switchToPostOrder()">
                 <i class="fa-solid fa-plus"></i> New Ad
             </button>
         </div>
 
-        <div class="ads-tabs-wrapper">
-            <div class="ads-tab active"><i class="fa-regular fa-file-lines"></i> Ads</div>
-            <div class="ads-tab"><i class="fa-solid fa-bolt"></i> Boost History</div>
-        </div>
-
-        <div class="ads-sub-tabs">
-            <div class="sub-tab active">All</div>
-            <div class="sub-tab">Active</div>
-            <div class="sub-tab">Paused</div>
-            <div class="sub-tab">Cancelled</div>
-        </div>
-
-        <div class="empty-state">
-            <i class="fa-regular fa-clipboard"></i>
-            <h3>No ads yet</h3>
-            <p>Post your first P2P trade offer</p>
-            <button class="btn-primary" onclick="switchView('view-post-order')">
+        <div style="background: var(--card-bg); border-radius: 16px; padding: 80px 20px; text-align: center; border: 1px solid var(--border-color);">
+            <i class="fa-regular fa-clipboard" style="font-size: 40px; color: #2b313a; margin-bottom: 20px;"></i>
+            <h3 style="margin: 0 0 10px 0; font-size: 16px; color: #fff;">No ads yet</h3>
+            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">Post your first P2P trade offer</p>
+            <button class="btn-pill" onclick="switchToPostOrder()">
                 <i class="fa-solid fa-plus"></i> Post an Ad
             </button>
         </div>
     </div>
 
+    <!-- ================= VIEW 2: POST ORDER (ማስታወቂያ መለጠፊያ ፎርም) ================= -->
     <div class="container view-section" id="view-post-order">
         <div class="top-bar" style="border:none; margin-bottom:15px;">
             <button class="btn-outline" onclick="switchView('view-main-ads')">
@@ -178,8 +135,8 @@
         </div>
 
         <div class="form-container">
-            <h2 style="font-size: 20px; margin-bottom: 5px;">Post Order</h2>
-            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">Set your rate, limits, and payment methods</p>
+            <h2 style="font-size: 22px; margin-bottom: 8px;">Post Order</h2>
+            <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 25px;">Set your rate, limits, and payment methods</p>
 
             <div class="trade-type-toggle">
                 <button class="toggle-btn btn-buy active" onclick="setTradeType('buy', this)">
@@ -206,7 +163,7 @@
                 </div>
             </div>
 
-            <button id="review-order-btn" class="btn-primary" style="width: 100%; justify-content: center; padding: 14px; font-size: 14px; border-radius: 8px;">
+            <button id="review-order-btn" class="btn-pill" style="width: 100%; justify-content: center; padding: 16px; font-size: 15px; border-radius: 8px;">
                 <i class="fa-solid fa-eye"></i> Review Order
             </button>
         </div>
@@ -219,6 +176,11 @@
             window.scrollTo(0, 0);
         }
 
+        function switchToPostOrder() {
+            switchView('view-post-order');
+            history.pushState({}, '', '?action=create');
+        }
+
         function setTradeType(type, element) {
             document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
             element.classList.add('active');
@@ -228,10 +190,18 @@
                 reviewBtn.style.backgroundColor = 'var(--red-color)';
                 reviewBtn.style.color = '#fff';
             } else {
-                reviewBtn.style.backgroundColor = 'var(--accent-color)';
+                reviewBtn.style.backgroundColor = 'var(--green-color)';
                 reviewBtn.style.color = '#000';
             }
         }
+
+        // ዩአርኤል (URL) ላይ ?action=create ሲኖር በቀጥታ ወደ ማስታወቂያ መለጠፊያው ገጽ ይወስዳል
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('action') === 'create') {
+                switchView('view-post-order');
+            }
+        });
     </script>
 </body>
 </html>
