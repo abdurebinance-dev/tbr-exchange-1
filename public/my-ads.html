@@ -13,9 +13,8 @@
             --text-color: #ffffff;
             --text-muted: #888888;
             --border-color: #2b313a;
-            --accent-color: #f3ba2f; /* የሰጠኸው የወርቃማው/የአክሰንት ከለር ስታይል */
-            --accent-hover: #e0ac2b;
-            --green-color: #0ecb81;
+            --accent-color: #0ecb81;
+            --accent-hover: #0b9e65;
             --red-color: #f6465d;
         }
 
@@ -33,7 +32,6 @@
             padding: 20px;
         }
 
-        /* ቱፕ ባር ዲዛይን */
         .top-bar {
             display: flex;
             justify-content: space-between;
@@ -49,7 +47,6 @@
             margin: 0;
         }
 
-        /* ፕራይማሪ በተን (በስታይሉ መሰረት) */
         .btn-primary {
             background-color: var(--accent-color);
             color: #000;
@@ -77,11 +74,9 @@
         }
         .btn-outline:hover { color: #fff; border-color: var(--text-muted); }
 
-        /* እይታዎች መቆጣጠሪያ */
         .view-section { display: none; }
         .view-section.active { display: block; animation: fadeIn 0.3s ease; }
 
-        /* ታቦች */
         .ads-tabs-wrapper {
             background: var(--card-bg);
             border: 1px solid var(--border-color);
@@ -104,9 +99,8 @@
             flex: 1; text-align: center; padding: 10px; font-size: 13px; color: var(--text-muted);
             cursor: pointer;
         }
-        .sub-tab.active { color: #fff; border-bottom: 2px solid var(--accent-color); background: rgba(243, 186, 47, 0.05); }
+        .sub-tab.active { color: #fff; border-bottom: 2px solid var(--accent-color); background: rgba(14, 203, 129, 0.05); }
 
-        /* ባዶ ቦታ (Empty State) */
         .empty-state {
             background: var(--card-bg);
             border-radius: 12px;
@@ -118,7 +112,6 @@
         .empty-state h3 { margin: 0 0 8px 0; font-size: 15px; color: #fff; }
         .empty-state p { color: var(--text-muted); font-size: 13px; margin-bottom: 15px; }
 
-        /* ፎርም እና ፖስት ኦርደር ገጽ ስታይል */
         .form-container { max-width: 800px; margin: 0 auto; padding-bottom: 50px; }
         
         .trade-type-toggle { display: flex; gap: 15px; margin-bottom: 25px; }
@@ -127,12 +120,11 @@
             padding: 12px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer;
             display: flex; justify-content: center; align-items: center; gap: 8px; transition: 0.2s;
         }
-        .toggle-btn.btn-buy.active { border-color: var(--green-color); color: var(--green-color); background: rgba(14, 203, 129, 0.05); }
+        .toggle-btn.btn-buy.active { border-color: var(--accent-color); color: var(--accent-color); background: rgba(14, 203, 129, 0.05); }
         .toggle-btn.btn-sell.active { border-color: var(--red-color); color: var(--red-color); background: rgba(246, 70, 93, 0.05); }
 
         .form-section { margin-bottom: 25px; background: var(--card-bg); border: 1px solid var(--border-color); padding: 20px; border-radius: 10px; }
         .form-section h4 { font-size: 14px; font-weight: 600; margin: 0 0 10px 0; color: #fff; }
-        .form-section p.sub { font-size: 12px; color: var(--text-muted); margin: -5px 0 15px 0; }
         
         .input-group { position: relative; margin-bottom: 15px; }
         .input-group label { display: block; font-size: 12px; color: var(--text-muted); font-weight: 600; margin-bottom: 8px; text-transform: uppercase; }
@@ -148,11 +140,10 @@
 </head>
 <body>
 
-    <!-- ================= VIEW 1: MAIN ADS LIST ================= -->
     <div class="container view-section active" id="view-main-ads">
         <div class="top-bar">
             <h1>Your Ads</h1>
-            <button class="btn-primary" onclick="openPostOrder()">
+            <button class="btn-primary" onclick="switchView('view-post-order')">
                 <i class="fa-solid fa-plus"></i> New Ad
             </button>
         </div>
@@ -173,13 +164,12 @@
             <i class="fa-regular fa-clipboard"></i>
             <h3>No ads yet</h3>
             <p>Post your first P2P trade offer</p>
-            <button class="btn-primary" onclick="openPostOrder()">
+            <button class="btn-primary" onclick="switchView('view-post-order')">
                 <i class="fa-solid fa-plus"></i> Post an Ad
             </button>
         </div>
     </div>
 
-    <!-- ================= VIEW 2: POST ORDER (Buy/Sell Form) ================= -->
     <div class="container view-section" id="view-post-order">
         <div class="top-bar" style="border:none; margin-bottom:15px;">
             <button class="btn-outline" onclick="switchView('view-main-ads')">
@@ -227,11 +217,6 @@
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
             document.getElementById(viewId).classList.add('active');
             window.scrollTo(0, 0);
-        }
-
-        // New Ad ሲጫን ቀጥታ ወደሚፈልጉት የ Buy/Sell ስታይል ገጽ ይወስዳል
-        function openPostOrder() {
-            switchView('view-post-order');
         }
 
         function setTradeType(type, element) {
