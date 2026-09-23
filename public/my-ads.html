@@ -250,7 +250,7 @@
         </div>
     </div>
 
-    <!-- 🚀 Akapande Akapya aka KYC Verification 🚀 -->
+    <!-- 🚀 የ Unverified አባላት View 🚀 -->
     <div class="container view-section" id="view-verification-required">
         <div class="top-navigation-bar">
             <button class="btn-outline" onclick="switchView('view-main-ads')">
@@ -263,6 +263,23 @@
             <p>Please verify your identity to start posting P2P trade offers.</p>
             <button class="btn-pill" onclick="window.location.href='profile.html'">
                 <i class="fa-solid fa-user-check"></i> Verify Account
+            </button>
+        </div>
+    </div>
+
+    <!-- 🚀 የ Pending/Under Review አባላት View 🚀 -->
+    <div class="container view-section" id="view-under-review">
+        <div class="top-navigation-bar">
+            <button class="btn-outline" onclick="switchView('view-main-ads')">
+                <i class="fa-solid fa-arrow-left"></i> Back to Ads
+            </button>
+        </div>
+        <div class="empty-state" style="margin-top: 40px;">
+            <i class="fa-solid fa-hourglass-half" style="color: var(--accent-color);"></i>
+            <h3>You are under review</h3>
+            <p>Please wait till we verify your account.</p>
+            <button class="btn-pill" onclick="window.location.href='dashboard.html'">
+                <i class="fa-solid fa-house"></i> Go to Dashboard
             </button>
         </div>
     </div>
@@ -442,7 +459,7 @@
         let userPaymentMethods = [];
         
         let userAvailableBalance = 0;
-        let userKycStatus = 'unverified'; // 🚀 KYC Status Variable 🚀
+        let userKycStatus = 'unverified';
         let currentTradeType = 'buy';
         let calculatedMaxEtb = 0; 
 
@@ -452,9 +469,12 @@
             window.scrollTo(0, 0);
         }
 
+        // 🚀 የ KYC ማጣሪያ እና አቅጣጫ መቀየሪያ (Routing) 🚀
         function openPostOrderForm() {
-            // 🚀 KYC Verification Check 🚀
-            if (userKycStatus !== 'verified') {
+            if (userKycStatus === 'pending' || userKycStatus === 'under_review') {
+                switchView('view-under-review');
+                return;
+            } else if (userKycStatus !== 'verified') {
                 switchView('view-verification-required');
                 return;
             }
@@ -660,7 +680,6 @@
             }
         }
 
-        // 🚀 Fetch Profile ONCE on Initialization 🚀
         async function initPage() {
             const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
             if (token) {
