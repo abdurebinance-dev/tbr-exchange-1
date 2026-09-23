@@ -166,6 +166,16 @@
         .input-group input:focus, .input-group textarea:focus { border-color: var(--accent-color); }
         .suffix { position: absolute; right: 15px; top: 38px; color: var(--text-muted); font-size: 13px; font-weight: 600; }
 
+        /* 🚀 Pang-ikkat kadagiti up/down arrows iti number inputs 🚀 */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield; /* Para iti Firefox */
+        }
+
         .market-avg-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-top: 8px; padding: 0 5px; }
         
         .two-cols { display: flex; gap: 15px; }
@@ -278,7 +288,6 @@
                     <span>Max 210</span>
                 </div>
 
-                <!-- 🚀 Available Balance UI Update 🚀 -->
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 25px; margin-bottom: 8px;">
                     <label style="margin-bottom: 0; font-size: 12px; color: #fff; font-weight: 600;">Total Amount</label>
                     <span id="available-balance-display" style="font-size: 11px; color: var(--green-color); display: none; font-weight: 600;">Available: 0.00 USDT</span>
@@ -289,7 +298,6 @@
                     <span class="suffix">USDT</span>
                 </div>
 
-                <!-- 🚀 Balance Error Validation UI 🚀 -->
                 <div id="amount-error" style="color: var(--red-color); font-size: 12px; margin-top: -10px; margin-bottom: 10px; display: none; font-weight: 600;">
                     <i class="fa-solid fa-circle-exclamation"></i> Your available balance is <span id="error-balance-amount">0.00</span> USDT.
                 </div>
@@ -402,7 +410,6 @@
         const API_BASE_URL = ''; 
         let userPaymentMethods = [];
         
-        // 🚀 Navigation Variables 🚀
         let userAvailableBalance = 0;
         let currentTradeType = 'buy';
         let isPriceValid = true;
@@ -429,7 +436,7 @@
         function setTradeType(type, element) {
             document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
             element.classList.add('active');
-            currentTradeType = type; // Track trade type for validation
+            currentTradeType = type; 
             
             const reviewBtn = document.getElementById('review-order-btn');
             if (type === 'sell') {
@@ -444,7 +451,6 @@
             validateAmount();
         }
 
-        // 🚀 Available Balance Update UI 🚀
         function updateBalanceDisplay() {
             const balanceDisplay = document.getElementById('available-balance-display');
             const errorBalanceAmount = document.getElementById('error-balance-amount');
@@ -465,7 +471,6 @@
             });
         });
 
-        // 🚀 Validation Helpers 🚀
         function validatePrice() {
             const inputField = document.getElementById('price-input');
             const errorMsg = document.getElementById('price-error');
@@ -525,11 +530,9 @@
             }
         }
 
-        // 🚀 API Load Methods 🚀
         async function loadPaymentMethods() {
             const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
             
-            // 🚀 Fecthing User Profile to get Balance 🚀
             if (token) {
                 fetch(`${API_BASE_URL}/api/user/profile?t=${new Date().getTime()}`, {
                     method: "GET",
