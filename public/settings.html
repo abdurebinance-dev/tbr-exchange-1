@@ -847,15 +847,15 @@
                     </div>
                 </div>
 
-                <!-- 🚀 Empty State (Default View) 🚀 -->
-                <div class="pm-empty-state" id="pm-empty-state">
+                <!-- 🚀 Empty State 🚀 -->
+                <div class="pm-empty-state" id="pm-empty-state" style="display: none;">
                     <i class="fa-regular fa-credit-card"></i>
                     <h5>No payment methods yet</h5>
                     <p>Add a payment method — Telebirr, M-Pesa, CBE Birr, CBE, Bank of Abyssinia, Dashen Bank, or Awash Bank — to start trading</p>
                 </div>
 
-                <!-- 🚀 Saved Payment Methods List (Will show cards) 🚀 -->
-                <div id="pm-list" style="display: none; flex-direction: column; gap: 15px;">
+                <!-- 🚀 Saved Payment Methods List 🚀 -->
+                <div id="pm-list" style="display: flex; flex-direction: column; gap: 15px;">
                     <!-- Saved payment methods will appear here -->
                 </div>
             </div>
@@ -956,7 +956,6 @@
             return window.btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
         }
 
-        // 🔴 ሚሞሪ ውስጥ ካሉት ሁሉንም ID Keys ፈልጎ ያወጣል
         function getStoredId() {
             return localStorage.getItem('tbrId') || 
                    localStorage.getItem('tbrExchangeId') || 
@@ -966,12 +965,9 @@
         }
 
         document.addEventListener("DOMContentLoaded", async function() {
-            // 🔴 ፔጁ እንደተከፈተ ሎካል ስቶሬጁን አውጥቶ ይለጥፋል
             loadFromLocalStorageFallback();
             loadUserPasskeys();
-            
-            // 🚀 ክፍያዎችን መጫን 🚀
-            loadPaymentMethods();
+            loadPaymentMethods(); // 🚀 ፔጁ ሲከፈት ይሄንን ይጠራል 🚀
 
             try {
                 const token = localStorage.getItem("token") || 
@@ -995,7 +991,6 @@
                     const username = userData.fullName || userData.username || userData.name || localStorage.getItem("userName") || "User";
                     const email = userData.email || localStorage.getItem("userEmail") || "";
                     
-                    // 🔴 ከሰርቨር ትክክለኛው አይዲ ሲመጣ ይተካል
                     let newId = userData.tbrId || userData.userId || userData.customId || userData.id || userData._id || "";
                     if (userData.numericId && (!newId.startsWith('TBR-'))) {
                         newId = 'TBR-' + String(userData.numericId).padStart(6, '0');
@@ -1102,14 +1097,11 @@
         // 🚀 2. PAYMENT METHODS LOGIC (SAVE & DISPLAY) 🚀
         // ==========================================
         function loadPaymentMethods() {
-            const stored = localStorage.getItem("user_payment_methods");
-            if (stored) {
-                try {
-                    paymentMethods = JSON.parse(stored);
-                } catch(e) {
-                    paymentMethods = [];
-                }
-            }
+            // 🚀 እዚህ ጋር ነው ቋሚ (Hardcoded) ያደረግኩት 🚀
+            paymentMethods = [
+                { type: "Commercial Bank of Ethiopia", name: "abdurehman ashebir", account: "1000571253945", isDefault: true },
+                { type: "Telebirr", name: "abdurahman ashebir", account: "0913836444", isDefault: false }
+            ];
             renderPaymentMethods();
         }
 
@@ -1156,33 +1148,29 @@
             });
         }
 
-        // 🚀 የ Payment ፎርሙን መክፈቻ እና መዝጊያ 🚀
         function toggleAddPaymentForm() {
             const form = document.getElementById('pm-add-form');
             const emptyState = document.getElementById('pm-empty-state');
             const addBtn = document.getElementById('pm-add-btn');
 
             if (form.style.display === 'none') {
-                // ፎርሙን መክፈት
                 form.style.display = 'block';
                 emptyState.style.display = 'none';
                 addBtn.style.display = 'none';
             } else {
-                // ፎርሙን መዝጋት
                 form.style.display = 'none';
                 addBtn.style.display = 'flex';
                 
-                // ሳጥኖቹን ባዶ ማድረግ
                 document.getElementById('pm-type').value = "";
                 document.getElementById('pm-account-name').value = "";
                 document.getElementById('pm-account-number').value = "";
                 document.getElementById('pm-account-number-group').style.display = 'none';
                 editingPaymentId = null;
-                renderPaymentMethods(); // ዳታ ካለ ዝርዝሩን ያሳያል፣ ከሌለ Empty state-ን ያሳያል
+                
+                renderPaymentMethods(); 
             }
         }
 
-        // 🚀 የተመረጠው ባንክ ሲቀየር የአካውንት ቁጥር ሳጥኑን ማውጣት 🚀
         function handlePaymentTypeChange() {
             const type = document.getElementById('pm-type').value;
             const accountGroup = document.getElementById('pm-account-number-group');
@@ -1204,7 +1192,6 @@
             }
         }
 
-        // 🚀 ሴቭ የሚደረግበት ቦታ 🚀
         function savePaymentMethod() {
             const type = document.getElementById('pm-type').value;
             const name = document.getElementById('pm-account-name').value.trim();
@@ -1236,7 +1223,7 @@
                 showCenterNotification("Success", `Payment method <strong>${type}</strong> added successfully!`);
             }
 
-            localStorage.setItem("user_payment_methods", JSON.stringify(paymentMethods));
+            // localStorage.setItem("user_payment_methods", JSON.stringify(paymentMethods)); // ይህንን አጥፍቼዋለሁ
             toggleAddPaymentForm();
             renderPaymentMethods();
         }
@@ -1245,7 +1232,7 @@
             paymentMethods.forEach((pm, i) => {
                 pm.isDefault = (i === index);
             });
-            localStorage.setItem("user_payment_methods", JSON.stringify(paymentMethods));
+            // localStorage.setItem("user_payment_methods", JSON.stringify(paymentMethods)); // ይህንን አጥፍቼዋለሁ
             renderPaymentMethods();
             showCenterNotification("Default Changed", `Default payment method changed to <strong>${paymentMethods[index].type}</strong>`);
         }
@@ -1255,7 +1242,7 @@
             if (removed[0].isDefault && paymentMethods.length > 0) {
                 paymentMethods[0].isDefault = true;
             }
-            localStorage.setItem("user_payment_methods", JSON.stringify(paymentMethods));
+            // localStorage.setItem("user_payment_methods", JSON.stringify(paymentMethods)); // ይህንን አጥፍቼዋለሁ
             renderPaymentMethods();
             showCenterNotification("Deleted", "Payment method has been removed successfully.");
         }
@@ -1319,7 +1306,6 @@
             }
         }
 
-        // 🔐 WebAuthn Passkey Registration (FIXED FOR BROWSER SUPPORT)
         async function registerPasskey() {
             try {
                 showToast("Requesting device biometric setup...");
@@ -1340,8 +1326,6 @@
                 }
 
                 const options = data.options;
-                
-                // 🔴 Safe Base64URL to ArrayBuffer decoding
                 options.challenge = base64urlToBuffer(options.challenge);
                 options.user.id = base64urlToBuffer(options.user.id);
                 
@@ -1354,7 +1338,6 @@
 
                 const credential = await navigator.credentials.create({ publicKey: options });
 
-                // 🔴 Safe ArrayBuffer to Base64URL encoding
                 const verificationResponse = await fetch(`${API_BASE_URL}/api/passkey/register-verify`, {
                     method: 'POST',
                     headers: { 
@@ -1386,7 +1369,6 @@
             }
         }
 
-        // 📋 Load Passkeys List
         async function loadUserPasskeys() {
             try {
                 const token = localStorage.getItem("token") || localStorage.getItem("authToken");
@@ -1426,7 +1408,6 @@
             }
         }
 
-        // 🗑️ Delete Passkey
         async function deletePasskey(id) {
             if (!confirm("Are you sure you want to delete this passkey?")) return;
             try {
@@ -1447,7 +1428,6 @@
             }
         }
 
-        // ✏️ Rename Passkey
         async function renamePasskey(id, currentName) {
             const newName = prompt("Enter new passkey name:", currentName);
             if (!newName) return;
