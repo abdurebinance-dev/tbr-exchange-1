@@ -13,10 +13,10 @@
             --text-color: #ffffff;
             --text-muted: #848e9c;
             --border-color: #2b313a;
-            --accent-color: #f3ba2f; 
+            --accent-color: #f3ba2f;
             --accent-hover: #e0ac2b;
-            --green-color: #0ecb81; 
-            --red-color: #f6465d;   
+            --green-color: #0ecb81;
+            --red-color: #f6465d;  
         }
 
         body {
@@ -180,7 +180,7 @@
         .pm-add-btn {
             background: transparent; border: 1px dashed var(--border-color); color: var(--text-muted);
             padding: 15px; border-radius: 8px; text-align: center; font-size: 13px; font-weight: 600;
-            cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; transition: 0.2s; width: 100%; box-sizing: border-box;
+            cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; transition: 0.2s; width: 100%; margin-bottom: 10px; box-sizing: border-box;
         }
         .pm-add-btn:hover { border-color: var(--green-color); color: var(--green-color); background: rgba(14, 203, 129, 0.05); }
 
@@ -389,6 +389,10 @@
     </div>
 
     <script>
+        // 🚀 የ API BASE URLህን አስተካክል (ካስፈለገ) 🚀
+        const API_BASE_URL = ''; 
+        let userPaymentMethods = [];
+
         function switchView(viewId) {
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
             document.getElementById(viewId).classList.add('active');
@@ -399,7 +403,7 @@
             switchView('view-post-order');
             history.pushState({view: 'post'}, '', '?action=create');
             validatePrice(); 
-            renderPaymentMethods(); 
+            loadPaymentMethods(); // ፎርሙ ሲከፈት ከዳታቤዝ ክፍያዎችን ይጠራል
         }
 
         function closePostOrderForm() {
@@ -458,53 +462,65 @@
             }
         }
 
-        // 🚀 Dynamic Logic: Reads exact data saved from settings.html via LocalStorage 🚀
-        function getSavedPaymentMethods() {
-            // ብራውዘሩ ላይ ሴቭ የተደረገ ክፍያ ካለ ፈልጎ ያመጣል
-            const storedData = localStorage.getItem('user_payment_methods');
-            if (storedData) {
-                try {
-                    return JSON.parse(storedData);
-                } catch(e) {
-                    return [];
-                }
+        // 🚀 ከ Backend (API) ላይ የክፍያ መንገዶችን የሚያመጣ ሎጂክ 🚀
+        async function loadPaymentMethods() {
+            const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
+            
+            if (!token) {
+                renderPaymentMethods();
+                return;
             }
-            // ምንም ከሌለ ባዶ ያደርገዋል (Please add payment method የሚለውን ለማምጣት)
-            return []; 
+
+            try {
+                // Settings ላይ የሰራነውን API ይጠቀማል
+                const res = await fetch(`${API_BASE_URL}/api/user/payments`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    userPaymentMethods = data.payments || data || []; 
+                } else {
+                    userPaymentMethods = [];
+                }
+            } catch (error) {
+                console.error("Failed to fetch payment methods:", error);
+                userPaymentMethods = [];
+            }
+            renderPaymentMethods();
         }
 
         function renderPaymentMethods() {
             const listContainer = document.getElementById('payment-methods-list');
             const noPaymentDiv = document.getElementById('no-payment-methods');
             
-            // የ getSavedPaymentMethods ፎንክሽንን በመጥራት ዳታውን ያመጣል
-            const userPaymentMethods = getSavedPaymentMethods();
-            
             listContainer.innerHTML = '';
 
-            // ተጠቃሚው Payment Method ካላስገባ ወይንም ገና አዲስ ከሆነ
             if (!userPaymentMethods || userPaymentMethods.length === 0) {
                 listContainer.style.display = 'none';
                 noPaymentDiv.style.display = 'block';
                 return;
             }
 
-            // ተጠቃሚው Payment Method ካስገባ
             listContainer.style.display = 'block';
             noPaymentDiv.style.display = 'none';
 
             userPaymentMethods.forEach((method, index) => {
-                const isChecked = index === 0 ? 'checked' : ''; 
+                // Default ከሆነ ወይም የመጀመሪያው ከሆነ ቼክድ ይሆናል
+                const isChecked = method.isDefault ? 'checked' : (index === 0 ? 'checked' : ''); 
                 const defaultBadge = method.isDefault ? `<span style="background: rgba(14, 203, 129, 0.15); color: var(--green-color); font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">Default</span>` : '';
                 
-                // የተለያየ ኪይ (Key) ቢጠቀሙ እንኳን እንዳይበላሽ የተሰራ
-                const bankName = method.bankName || method.type || "Bank";
-                const accountName = method.fullName || method.name || "Account Name";
-                const accNumber = method.accountNumber || method.account || method.number || "00000";
+                const bankName = method.type || method.bankName || "Bank";
+                const accountName = method.name || method.fullName || "Account Name";
+                const accNumber = method.account || method.accountNumber || "00000";
 
                 const cardHTML = `
-                    <label class="pm-card">
-                        <input type="radio" name="payment_method" ${isChecked}>
+                    <label class="pm-card" style="margin-bottom: 10px; display: flex; align-items: flex-start; gap: 12px; cursor: pointer; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px;">
+                        <input type="radio" name="payment_method" value="${method._id || index}" ${isChecked} style="margin-top: 3px; accent-color: var(--green-color); width: 14px; height: 14px;">
                         <div>
                             <div style="font-size: 14px; font-weight: 700; margin-bottom: 4px; color: #fff; display: flex; align-items: center;">
                                 ${bankName} ${defaultBadge}
@@ -523,10 +539,10 @@
             if (urlParams.get('action') === 'create') {
                 switchView('view-post-order');
                 validatePrice(); 
+                loadPaymentMethods(); // ፎርሙ ቀጥታ ሲከፈት Fetch ያደርጋል
             } else {
                 switchView('view-main-ads');
             }
-            renderPaymentMethods(); 
         });
     </script>
 </body>
