@@ -276,7 +276,8 @@
                 
                 <div class="input-group">
                     <label>Price per USDT</label>
-                    <input type="number" id="price-input" placeholder="e.g. 185.54" value="185.54" oninput="validatePrice(); checkOverallValidity();">
+                    <!-- 🚀 Price ባዶ ሆኖ ይጠብቃል 🚀 -->
+                    <input type="number" id="price-input" placeholder="e.g. 185.54" value="" oninput="validatePrice(); checkOverallValidity();">
                     <span class="suffix">ETB</span>
                 </div>
                 
@@ -505,7 +506,7 @@
             const errorMsg = document.getElementById('price-error');
             const enteredValue = parseFloat(inputField.value);
 
-            if (isNaN(enteredValue)) {
+            if (isNaN(enteredValue) || inputField.value === '') {
                 errorMsg.style.display = 'none';
                 inputField.style.borderColor = 'var(--border-color)';
             } else if (enteredValue < 170 || enteredValue > 210) {
@@ -543,7 +544,6 @@
             checkOverallValidity();
         }
 
-        // 🚀 የ Maximum/Minimum ስህተትን ግልጽ ማድረግ 🚀
         function validateLimits() {
             const minInput = document.getElementById('min-etb-input');
             const maxInput = document.getElementById('max-etb-input');
@@ -556,7 +556,6 @@
             let isMinValid = false;
             let isMaxValid = false;
 
-            // 1. Min Validation
             if (!isNaN(minVal)) {
                 if (minVal < 500) {
                     minError.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Lowest order is 500 ETB.';
@@ -576,14 +575,12 @@
                 minInput.style.borderColor = 'var(--border-color)';
             }
 
-            // 2. Max Validation
             if (!isNaN(maxVal)) {
                 if (calculatedMaxEtb > 0 && maxVal > calculatedMaxEtb) {
                     maxError.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Your maximum ETB is over your balance.';
                     maxError.style.display = 'block';
                     maxInput.style.borderColor = 'var(--red-color)';
                 } else if (!isNaN(minVal) && maxVal < minVal) {
-                    // 🚀 አዲሱ የ Max < Min ኤረር 🚀
                     maxError.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Max cannot be less than Min.';
                     maxError.style.display = 'block';
                     maxInput.style.borderColor = 'var(--red-color)';
