@@ -847,14 +847,14 @@
                     </div>
                 </div>
 
-                <!-- 🚀 Empty State 🚀 -->
+                <!-- 🚀 Empty State (Default View) 🚀 -->
                 <div class="pm-empty-state" id="pm-empty-state" style="display: none;">
                     <i class="fa-regular fa-credit-card"></i>
                     <h5>No payment methods yet</h5>
                     <p>Add a payment method — Telebirr, M-Pesa, CBE Birr, CBE, Bank of Abyssinia, Dashen Bank, or Awash Bank — to start trading</p>
                 </div>
 
-                <!-- 🚀 Saved Payment Methods List 🚀 -->
+                <!-- 🚀 Saved Payment Methods List (Will show cards) 🚀 -->
                 <div id="pm-list" style="display: flex; flex-direction: column; gap: 15px;">
                     <!-- Saved payment methods will appear here -->
                 </div>
@@ -1097,11 +1097,17 @@
         // 🚀 2. PAYMENT METHODS LOGIC (SAVE & DISPLAY) 🚀
         // ==========================================
         function loadPaymentMethods() {
-            // 🚀 እዚህ ጋር ነው ቋሚ (Hardcoded) ያደረግኩት 🚀
-            paymentMethods = [
-                { type: "Commercial Bank of Ethiopia", name: "abdurehman ashebir", account: "1000571253945", isDefault: true },
-                { type: "Telebirr", name: "abdurahman ashebir", account: "0913836444", isDefault: false }
-            ];
+            // 🚀 መረጃውን ከ LocalStorage ያነባል (በቋሚነት Save እንዲሆን) 🚀
+            const stored = localStorage.getItem("user_payment_methods");
+            if (stored) {
+                try {
+                    paymentMethods = JSON.parse(stored);
+                } catch(e) {
+                    paymentMethods = [];
+                }
+            } else {
+                paymentMethods = []; 
+            }
             renderPaymentMethods();
         }
 
@@ -1110,6 +1116,7 @@
             const emptyEl = document.getElementById('pm-empty-state');
             const formEl = document.getElementById('pm-add-form');
 
+            // 🚀 ምንም ዳታ ከሌለ Empty State ያሳያል 🚀
             if (!paymentMethods || paymentMethods.length === 0) {
                 listEl.style.display = 'none';
                 if (formEl.style.display === 'none') {
@@ -1223,7 +1230,8 @@
                 showCenterNotification("Success", `Payment method <strong>${type}</strong> added successfully!`);
             }
 
-            // localStorage.setItem("user_payment_methods", JSON.stringify(paymentMethods)); // ይህንን አጥፍቼዋለሁ
+            // 🚀 መረጃውን ወደ LocalStorage ሴቭ ያደርጋል 🚀
+            localStorage.setItem("user_payment_methods", JSON.stringify(paymentMethods));
             toggleAddPaymentForm();
             renderPaymentMethods();
         }
@@ -1232,7 +1240,8 @@
             paymentMethods.forEach((pm, i) => {
                 pm.isDefault = (i === index);
             });
-            // localStorage.setItem("user_payment_methods", JSON.stringify(paymentMethods)); // ይህንን አጥፍቼዋለሁ
+            // 🚀 Update ሲደረግ ሴቭ ያደርጋል 🚀
+            localStorage.setItem("user_payment_methods", JSON.stringify(paymentMethods));
             renderPaymentMethods();
             showCenterNotification("Default Changed", `Default payment method changed to <strong>${paymentMethods[index].type}</strong>`);
         }
@@ -1242,7 +1251,8 @@
             if (removed[0].isDefault && paymentMethods.length > 0) {
                 paymentMethods[0].isDefault = true;
             }
-            // localStorage.setItem("user_payment_methods", JSON.stringify(paymentMethods)); // ይህንን አጥፍቼዋለሁ
+            // 🚀 ዳታ ሲጠፋ ሴቭ ያደርጋል 🚀
+            localStorage.setItem("user_payment_methods", JSON.stringify(paymentMethods));
             renderPaymentMethods();
             showCenterNotification("Deleted", "Payment method has been removed successfully.");
         }
