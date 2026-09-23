@@ -175,7 +175,7 @@
             background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px;
             padding: 15px; margin-bottom: 10px; display: flex; align-items: flex-start; gap: 12px; cursor: pointer;
         }
-        .pm-card input[type="radio"], .pm-card input[type="checkbox"] { margin-top: 3px; accent-color: var(--green-color); width: 14px; height: 14px; }
+        .pm-card input[type="radio"], .pm-card input[type="checkbox"] { margin-top: 3px; accent-color: var(--green-color); width: 14px; height: 14px; cursor: pointer; }
         
         .pm-add-btn {
             background: transparent; border: 1px dashed var(--border-color); color: var(--text-muted);
@@ -526,16 +526,18 @@
             noPaymentDiv.style.display = 'none';
 
             userPaymentMethods.forEach((method, index) => {
-                const isChecked = method.isDefault ? 'checked' : (index === 0 ? 'checked' : ''); 
+                // 🚀 ሁሉም ቼክ (Mark) ተደርገው እንዲጠብቁ "checked" ቋሚ ሆነ 🚀
+                const isChecked = 'checked'; 
                 const defaultBadge = method.isDefault ? `<span style="background: rgba(14, 203, 129, 0.15); color: var(--green-color); font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">Default</span>` : '';
                 
                 const bankName = method.type || method.bankName || "Bank";
                 const accountName = method.name || method.fullName || "Account Name";
                 const accNumber = method.account || method.accountNumber || "00000";
 
+                // 🚀 input type="radio" የነበረው ወደ input type="checkbox" ተቀይሯል 🚀
                 const cardHTML = `
                     <label class="pm-card" style="margin-bottom: 10px; display: flex; align-items: flex-start; gap: 12px; cursor: pointer; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px;">
-                        <input type="radio" name="payment_method" value="${method._id || index}" ${isChecked} style="margin-top: 3px; accent-color: var(--green-color); width: 14px; height: 14px;">
+                        <input type="checkbox" name="payment_methods" value="${method._id || index}" ${isChecked} style="margin-top: 3px; accent-color: var(--green-color); width: 14px; height: 14px; cursor: pointer;">
                         <div>
                             <div style="font-size: 14px; font-weight: 700; margin-bottom: 4px; color: #fff; display: flex; align-items: center;">
                                 ${bankName} ${defaultBadge}
