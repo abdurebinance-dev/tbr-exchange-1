@@ -250,6 +250,23 @@
         </div>
     </div>
 
+    <!-- 🚀 Akapande Akapya aka KYC Verification 🚀 -->
+    <div class="container view-section" id="view-verification-required">
+        <div class="top-navigation-bar">
+            <button class="btn-outline" onclick="switchView('view-main-ads')">
+                <i class="fa-solid fa-arrow-left"></i> Back to Ads
+            </button>
+        </div>
+        <div class="empty-state" style="margin-top: 40px;">
+            <i class="fa-solid fa-shield-halved" style="color: var(--accent-color);"></i>
+            <h3>Posting ads requires verification</h3>
+            <p>Please verify your identity to start posting P2P trade offers.</p>
+            <button class="btn-pill" onclick="window.location.href='profile.html'">
+                <i class="fa-solid fa-user-check"></i> Verify Account
+            </button>
+        </div>
+    </div>
+
     <div class="container view-section" id="view-post-order">
         <div class="top-navigation-bar" style="margin-top: 15px;">
             <button class="btn-outline" onclick="closePostOrderForm()">
@@ -276,7 +293,6 @@
                 
                 <div class="input-group">
                     <label>Price per USDT</label>
-                    <!-- 🚀 Price ባዶ ሆኖ ይጠብቃል 🚀 -->
                     <input type="number" id="price-input" placeholder="e.g. 185.54" value="" oninput="validatePrice(); checkOverallValidity();">
                     <span class="suffix">ETB</span>
                 </div>
@@ -426,6 +442,7 @@
         let userPaymentMethods = [];
         
         let userAvailableBalance = 0;
+        let userKycStatus = 'unverified'; // 🚀 KYC Status Variable 🚀
         let currentTradeType = 'buy';
         let calculatedMaxEtb = 0; 
 
@@ -436,11 +453,17 @@
         }
 
         function openPostOrderForm() {
+            // 🚀 KYC Verification Check 🚀
+            if (userKycStatus !== 'verified') {
+                switchView('view-verification-required');
+                return;
+            }
+
             switchView('view-post-order');
             history.pushState({view: 'post'}, '', '?action=create');
             validatePrice(); 
-            loadPaymentMethods(); 
             checkOverallValidity();
+            updateBalanceDisplay();
         }
 
         function closePostOrderForm() {
@@ -637,27 +660,36 @@
             }
         }
 
+        // 🚀 Fetch Profile ONCE on Initialization 🚀
+        async function initPage() {
+            const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
+            if (token) {
+                try {
+                    const res = await fetch(`${API_BASE_URL}/api/user/profile?t=${new Date().getTime()}`, {
+                        headers: { "Authorization": `Bearer ${token}` }
+                    });
+                    if (res.ok) {
+                        const result = await res.json();
+                        const userData = result.user || result;
+                        userAvailableBalance = userData.balance || 0;
+                        userKycStatus = userData.kycStatus || 'unverified';
+                    }
+                } catch(e) { console.error(e); }
+            }
+            
+            await loadPaymentMethods();
+
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('action') === 'create') {
+                openPostOrderForm();
+            } else {
+                switchView('view-main-ads');
+            }
+        }
+
         async function loadPaymentMethods() {
             const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
             
-            if (token) {
-                fetch(`${API_BASE_URL}/api/user/profile?t=${new Date().getTime()}`, {
-                    method: "GET",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${token}`
-                    }
-                })
-                .then(res => res.json())
-                .then(result => {
-                    const userData = result.user || result;
-                    userAvailableBalance = userData.balance || 0;
-                    updateBalanceDisplay();
-                    checkOverallValidity();
-                })
-                .catch(e => console.error(e));
-            }
-
             if (!token) {
                 fallbackToLocalStorage();
                 return;
@@ -746,16 +778,7 @@
             checkOverallValidity();
         }
 
-        window.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('action') === 'create') {
-                switchView('view-post-order');
-                validatePrice(); 
-                loadPaymentMethods(); 
-            } else {
-                switchView('view-main-ads');
-            }
-        });
+        window.addEventListener('DOMContentLoaded', initPage);
     </script>
 </body>
 </html>
