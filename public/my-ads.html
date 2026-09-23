@@ -276,7 +276,7 @@
                 
                 <div class="input-group">
                     <label>Price per USDT</label>
-                    <input type="number" id="price-input" placeholder="e.g. 185.78" value="185.78" oninput="validatePrice(); checkOverallValidity();">
+                    <input type="number" id="price-input" placeholder="e.g. 185.78" value="185.78" oninput="validatePrice()">
                     <span class="suffix">ETB</span>
                 </div>
                 
@@ -294,7 +294,7 @@
                         <label style="margin-bottom: 0;">Total Amount</label>
                         <span id="available-balance-display" style="font-size: 11px; color: var(--green-color); display: none; font-weight: 600;">Available: 0.00 USDT</span>
                     </div>
-                    <input type="number" id="total-amount-input" placeholder="e.g. 500" oninput="validateAmount(); checkOverallValidity();">
+                    <input type="number" id="total-amount-input" placeholder="e.g. 500" oninput="validateAmount()">
                     <span class="suffix">USDT</span>
                 </div>
 
@@ -307,15 +307,31 @@
                 <h3>Trade Limits</h3>
                 <p class="section-sub">Min and max ETB per individual trade</p>
                 <div class="two-cols">
-                    <div class="input-group">
-                        <label>Minimum (ETB)</label>
-                        <input type="number" id="min-etb-input" placeholder="Min. 500" oninput="checkOverallValidity();">
-                        <span class="suffix">ETB</span>
+                    <!-- 🚀 Minimum ETB Error 🚀 -->
+                    <div>
+                        <div class="input-group" style="margin-bottom: 5px;">
+                            <label>Minimum (ETB)</label>
+                            <input type="number" id="min-etb-input" placeholder="Min. 500" oninput="validateLimits(); checkOverallValidity();">
+                            <span class="suffix">ETB</span>
+                        </div>
+                        <div id="min-limit-error" style="color: var(--red-color); font-size: 11px; margin-bottom: 10px; display: none; font-weight: 600;">
+                            <i class="fa-solid fa-circle-exclamation"></i> Lowest order is 500 ETB.
+                        </div>
                     </div>
-                    <div class="input-group">
-                        <label>Maximum (ETB)</label>
-                        <input type="number" id="max-etb-input" placeholder="e.g. 50,000" oninput="checkOverallValidity();">
-                        <span class="suffix">ETB</span>
+
+                    <!-- 🚀 Maximum ETB Error and Calculator 🚀 -->
+                    <div>
+                        <div class="input-group" style="margin-bottom: 5px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <label style="margin-bottom: 0;">Maximum (ETB)</label>
+                                <span id="use-max-display" onclick="applyMaxEtb()" style="font-size: 11px; color: var(--accent-color); display: none; font-weight: 600; cursor: pointer; transition: 0.2s;">Use max: 0 ETB</span>
+                            </div>
+                            <input type="number" id="max-etb-input" placeholder="e.g. 50,000" oninput="validateLimits(); checkOverallValidity();">
+                            <span class="suffix">ETB</span>
+                        </div>
+                        <div id="max-limit-error" style="color: var(--red-color); font-size: 11px; margin-bottom: 10px; display: none; font-weight: 600;">
+                            <i class="fa-solid fa-circle-exclamation"></i> Your maximum ETB is over your balance.
+                        </div>
                     </div>
                 </div>
             </div>
@@ -412,6 +428,7 @@
         
         let userAvailableBalance = 0;
         let currentTradeType = 'buy';
+        let calculatedMaxEtb = 0; // 🚀 Yia na fɔ mɔltiplay di pɔyin 🚀
 
         function switchView(viewId) {
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
@@ -462,6 +479,30 @@
             });
         });
 
+        // 🚀 Fɔnkshɔn fɔ Mɔltiplay Price x Amount 🚀
+        function updateCalculatedMax() {
+            const price = parseFloat(document.getElementById('price-input').value) || 0;
+            const amount = parseFloat(document.getElementById('total-amount-input').value) || 0;
+            calculatedMaxEtb = price * amount;
+
+            const useMaxDisplay = document.getElementById('use-max-display');
+            if (price > 0 && amount > 0) {
+                useMaxDisplay.style.display = 'block';
+                useMaxDisplay.innerText = `Use max: ${calculatedMaxEtb.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ETB`;
+            } else {
+                useMaxDisplay.style.display = 'none';
+            }
+            validateLimits(); 
+        }
+
+        function applyMaxEtb() {
+            if (calculatedMaxEtb > 0) {
+                document.getElementById('max-etb-input').value = calculatedMaxEtb.toFixed(2);
+                validateLimits();
+                checkOverallValidity();
+            }
+        }
+
         function validatePrice() {
             const inputField = document.getElementById('price-input');
             const errorMsg = document.getElementById('price-error');
@@ -477,6 +518,8 @@
                 errorMsg.style.display = 'none';
                 inputField.style.borderColor = 'var(--green-color)'; 
             }
+            updateCalculatedMax();
+            checkOverallValidity();
         }
 
         function validateAmount() {
@@ -499,6 +542,55 @@
                 errorMsg.style.display = 'none';
                 inputField.style.borderColor = 'var(--border-color)';
             }
+            updateCalculatedMax();
+            checkOverallValidity();
+        }
+
+        // 🚀 Fɔnkshɔn fɔ chɛk Min ɛn Max ETB 🚀
+        function validateLimits() {
+            const minInput = document.getElementById('min-etb-input');
+            const maxInput = document.getElementById('max-etb-input');
+            const minError = document.getElementById('min-limit-error');
+            const maxError = document.getElementById('max-limit-error');
+
+            const minVal = parseFloat(minInput.value);
+            const maxVal = parseFloat(maxInput.value);
+
+            let isMinValid = false;
+            let isMaxValid = false;
+
+            // 1. Chɛk if Minimum dɔŋ pas 500
+            if (!isNaN(minVal)) {
+                if (minVal < 500) {
+                    minError.style.display = 'block';
+                    minInput.style.borderColor = 'var(--red-color)';
+                } else {
+                    minError.style.display = 'none';
+                    minInput.style.borderColor = 'var(--green-color)';
+                    isMinValid = true;
+                }
+            } else {
+                minError.style.display = 'none';
+                minInput.style.borderColor = 'var(--border-color)';
+            }
+
+            // 2. Chɛk if Maximum nɔ pas di mɔltiplay result
+            if (!isNaN(maxVal)) {
+                if (calculatedMaxEtb > 0 && maxVal > calculatedMaxEtb) {
+                    maxError.style.display = 'block';
+                    maxInput.style.borderColor = 'var(--red-color)';
+                } else {
+                    maxError.style.display = 'none';
+                    maxInput.style.borderColor = 'var(--green-color)';
+                    isMaxValid = true;
+                }
+            } else {
+                maxError.style.display = 'none';
+                maxInput.style.borderColor = 'var(--border-color)';
+            }
+
+            const logicalMaxValid = isMaxValid && (!isNaN(minVal) ? maxVal >= minVal : true);
+            return isMinValid && logicalMaxValid;
         }
 
         function checkOverallValidity() {
@@ -517,12 +609,8 @@
                 isAmountValid = amount <= userAvailableBalance;
             }
 
-            // 3. 🚀 አዲሱ የ Limits ሎጂክ (Minimum 500 መሆን አለበት) 🚀
-            const minInput = document.getElementById('min-etb-input');
-            const maxInput = document.getElementById('max-etb-input');
-            const minVal = parseFloat(minInput.value);
-            const maxVal = parseFloat(maxInput.value);
-            const isLimitsValid = !isNaN(minVal) && !isNaN(maxVal) && minVal >= 500 && maxVal >= minVal;
+            // 3. Chɛk Limits
+            const isLimitsValid = validateLimits();
 
             // 4. Chɛk Payment Methods
             const checkedPayments = document.querySelectorAll('input[name="payment_methods"]:checked');
