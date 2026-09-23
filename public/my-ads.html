@@ -205,6 +205,8 @@
             width: 100%; background-color: var(--green-color); color: #000; border: none;
             padding: 16px; border-radius: 8px; font-weight: 700; font-size: 15px; cursor: pointer;
             display: flex; justify-content: center; align-items: center; gap: 8px; transition: 0.2s;
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
@@ -274,7 +276,7 @@
                 
                 <div class="input-group">
                     <label>Price per USDT</label>
-                    <input type="number" id="price-input" placeholder="e.g. 185.78" value="185.78" oninput="validatePrice()">
+                    <input type="number" id="price-input" placeholder="e.g. 185.78" value="185.78" oninput="validatePrice(); checkOverallValidity();">
                     <span class="suffix">ETB</span>
                 </div>
                 
@@ -287,13 +289,12 @@
                     <span>Max 210</span>
                 </div>
 
-                <!-- 🚀 Kulungiswe isikhundla se "USDT" 🚀 -->
                 <div class="input-group" style="margin-top: 25px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                         <label style="margin-bottom: 0;">Total Amount</label>
                         <span id="available-balance-display" style="font-size: 11px; color: var(--green-color); display: none; font-weight: 600;">Available: 0.00 USDT</span>
                     </div>
-                    <input type="number" id="total-amount-input" placeholder="e.g. 500" oninput="validateAmount()">
+                    <input type="number" id="total-amount-input" placeholder="e.g. 500" oninput="validateAmount(); checkOverallValidity();">
                     <span class="suffix">USDT</span>
                 </div>
 
@@ -308,12 +309,12 @@
                 <div class="two-cols">
                     <div class="input-group">
                         <label>Minimum (ETB)</label>
-                        <input type="number" placeholder="Min. 500">
+                        <input type="number" id="min-etb-input" placeholder="Min. 500" oninput="checkOverallValidity();">
                         <span class="suffix">ETB</span>
                     </div>
                     <div class="input-group">
                         <label>Maximum (ETB)</label>
-                        <input type="number" placeholder="e.g. 50,000">
+                        <input type="number" id="max-etb-input" placeholder="e.g. 50,000" oninput="checkOverallValidity();">
                         <span class="suffix">ETB</span>
                     </div>
                 </div>
@@ -399,7 +400,7 @@
                 </div>
             </div>
 
-            <button id="review-order-btn" class="btn-review">
+            <button id="review-order-btn" class="btn-review" disabled>
                 <i class="fa-regular fa-eye"></i> Review Order
             </button>
         </div>
@@ -411,8 +412,6 @@
         
         let userAvailableBalance = 0;
         let currentTradeType = 'buy';
-        let isPriceValid = true;
-        let isAmountValid = true;
 
         function switchView(viewId) {
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
@@ -425,6 +424,7 @@
             history.pushState({view: 'post'}, '', '?action=create');
             validatePrice(); 
             loadPaymentMethods(); 
+            checkOverallValidity();
         }
 
         function closePostOrderForm() {
@@ -437,17 +437,9 @@
             element.classList.add('active');
             currentTradeType = type; 
             
-            const reviewBtn = document.getElementById('review-order-btn');
-            if (type === 'sell') {
-                reviewBtn.style.backgroundColor = 'var(--red-color)';
-                reviewBtn.style.color = '#fff';
-            } else {
-                reviewBtn.style.backgroundColor = 'var(--green-color)';
-                reviewBtn.style.color = '#000';
-            }
-            
             updateBalanceDisplay();
             validateAmount();
+            checkOverallValidity();
         }
 
         function updateBalanceDisplay() {
@@ -473,59 +465,88 @@
         function validatePrice() {
             const inputField = document.getElementById('price-input');
             const errorMsg = document.getElementById('price-error');
-            
             const enteredValue = parseFloat(inputField.value);
 
             if (isNaN(enteredValue)) {
                 errorMsg.style.display = 'none';
                 inputField.style.borderColor = 'var(--border-color)';
-                isPriceValid = true;
             } else if (enteredValue < 170 || enteredValue > 210) {
                 errorMsg.style.display = 'block';
                 inputField.style.borderColor = 'var(--red-color)';
-                isPriceValid = false;
             } else {
                 errorMsg.style.display = 'none';
                 inputField.style.borderColor = 'var(--green-color)'; 
-                isPriceValid = true;
             }
-            checkOverallValidity();
         }
 
         function validateAmount() {
             const inputField = document.getElementById('total-amount-input');
             const errorMsg = document.getElementById('amount-error');
-            
             const enteredAmount = parseFloat(inputField.value);
 
             if (currentTradeType === 'sell' && !isNaN(enteredAmount)) {
                 if (enteredAmount > userAvailableBalance) {
                     errorMsg.style.display = 'block';
                     inputField.style.borderColor = 'var(--red-color)';
-                    isAmountValid = false;
                 } else {
                     errorMsg.style.display = 'none';
                     inputField.style.borderColor = 'var(--green-color)';
-                    isAmountValid = true;
                 }
+            } else if (!isNaN(enteredAmount) && enteredAmount > 0) {
+                errorMsg.style.display = 'none';
+                inputField.style.borderColor = 'var(--green-color)';
             } else {
                 errorMsg.style.display = 'none';
                 inputField.style.borderColor = 'var(--border-color)';
-                isAmountValid = true;
             }
-            checkOverallValidity();
         }
 
         function checkOverallValidity() {
             const reviewBtn = document.getElementById('review-order-btn');
-            if (isPriceValid && isAmountValid) {
+
+            // 1. Chɛk Price
+            const priceInput = document.getElementById('price-input');
+            const price = parseFloat(priceInput.value);
+            const isPriceValid = !isNaN(price) && price >= 170 && price <= 210;
+
+            // 2. Chɛk Amount
+            const amountInput = document.getElementById('total-amount-input');
+            const amount = parseFloat(amountInput.value);
+            let isAmountValid = !isNaN(amount) && amount > 0;
+            if (currentTradeType === 'sell' && isAmountValid) {
+                isAmountValid = amount <= userAvailableBalance;
+            }
+
+            // 3. 🚀 አዲሱ የ Limits ሎጂክ (Minimum 500 መሆን አለበት) 🚀
+            const minInput = document.getElementById('min-etb-input');
+            const maxInput = document.getElementById('max-etb-input');
+            const minVal = parseFloat(minInput.value);
+            const maxVal = parseFloat(maxInput.value);
+            const isLimitsValid = !isNaN(minVal) && !isNaN(maxVal) && minVal >= 500 && maxVal >= minVal;
+
+            // 4. Chɛk Payment Methods
+            const checkedPayments = document.querySelectorAll('input[name="payment_methods"]:checked');
+            const isPaymentValid = checkedPayments.length > 0;
+
+            // Opdet di Bɔtin
+            if (isPriceValid && isAmountValid && isLimitsValid && isPaymentValid) {
                 reviewBtn.disabled = false;
                 reviewBtn.style.opacity = '1';
                 reviewBtn.style.cursor = 'pointer';
+                
+                if (currentTradeType === 'sell') {
+                    reviewBtn.style.backgroundColor = 'var(--red-color)';
+                    reviewBtn.style.color = '#fff';
+                } else {
+                    reviewBtn.style.backgroundColor = 'var(--green-color)';
+                    reviewBtn.style.color = '#000';
+                }
             } else {
                 reviewBtn.disabled = true;
                 reviewBtn.style.opacity = '0.5';
                 reviewBtn.style.cursor = 'not-allowed';
+                reviewBtn.style.backgroundColor = 'var(--green-color)';
+                reviewBtn.style.color = '#000';
             }
         }
 
@@ -545,6 +566,7 @@
                     const userData = result.user || result;
                     userAvailableBalance = userData.balance || 0;
                     updateBalanceDisplay();
+                    checkOverallValidity();
                 })
                 .catch(e => console.error(e));
             }
@@ -604,6 +626,7 @@
             if (!userPaymentMethods || userPaymentMethods.length === 0) {
                 listContainer.style.display = 'none';
                 noPaymentDiv.style.display = 'block';
+                checkOverallValidity();
                 return;
             }
 
@@ -620,7 +643,7 @@
 
                 const cardHTML = `
                     <label class="pm-card" style="margin-bottom: 10px; display: flex; align-items: flex-start; gap: 12px; cursor: pointer; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px;">
-                        <input type="checkbox" name="payment_methods" value="${method._id || index}" ${isChecked} style="margin-top: 3px; accent-color: var(--green-color); width: 14px; height: 14px; cursor: pointer;">
+                        <input type="checkbox" name="payment_methods" value="${method._id || index}" ${isChecked} onchange="checkOverallValidity()" style="margin-top: 3px; accent-color: var(--green-color); width: 14px; height: 14px; cursor: pointer;">
                         <div>
                             <div style="font-size: 14px; font-weight: 700; margin-bottom: 4px; color: #fff; display: flex; align-items: center;">
                                 ${bankName} ${defaultBadge}
@@ -632,6 +655,8 @@
                 `;
                 listContainer.innerHTML += cardHTML;
             });
+            
+            checkOverallValidity();
         }
 
         window.addEventListener('DOMContentLoaded', () => {
