@@ -389,7 +389,6 @@
     </div>
 
     <script>
-        // 🚀 የ API BASE URLህን አስተካክል (ካስፈለገ) 🚀
         const API_BASE_URL = ''; 
         let userPaymentMethods = [];
 
@@ -403,7 +402,7 @@
             switchView('view-post-order');
             history.pushState({view: 'post'}, '', '?action=create');
             validatePrice(); 
-            loadPaymentMethods(); // ፎርሙ ሲከፈት ከዳታቤዝ ክፍያዎችን ይጠራል
+            loadPaymentMethods(); 
         }
 
         function closePostOrderForm() {
@@ -462,17 +461,15 @@
             }
         }
 
-        // 🚀 ከ Backend (API) ላይ የክፍያ መንገዶችን የሚያመጣ ሎጂክ 🚀
         async function loadPaymentMethods() {
             const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
             
             if (!token) {
-                renderPaymentMethods();
+                fallbackToLocalStorage();
                 return;
             }
 
             try {
-                // Settings ላይ የሰራነውን API ይጠቀማል
                 const res = await fetch(`${API_BASE_URL}/api/user/payments`, {
                     method: 'GET',
                     headers: {
@@ -484,11 +481,30 @@
                 if (res.ok) {
                     const data = await res.json();
                     userPaymentMethods = data.payments || data || []; 
+                    
+                    if(userPaymentMethods.length === 0) {
+                        fallbackToLocalStorage();
+                    } else {
+                        renderPaymentMethods();
+                    }
                 } else {
-                    userPaymentMethods = [];
+                    fallbackToLocalStorage();
                 }
             } catch (error) {
                 console.error("Failed to fetch payment methods:", error);
+                fallbackToLocalStorage();
+            }
+        }
+
+        function fallbackToLocalStorage() {
+            const stored = localStorage.getItem("user_payment_methods");
+            if (stored) {
+                try {
+                    userPaymentMethods = JSON.parse(stored);
+                } catch(e) {
+                    userPaymentMethods = [];
+                }
+            } else {
                 userPaymentMethods = [];
             }
             renderPaymentMethods();
@@ -510,7 +526,6 @@
             noPaymentDiv.style.display = 'none';
 
             userPaymentMethods.forEach((method, index) => {
-                // Default ከሆነ ወይም የመጀመሪያው ከሆነ ቼክድ ይሆናል
                 const isChecked = method.isDefault ? 'checked' : (index === 0 ? 'checked' : ''); 
                 const defaultBadge = method.isDefault ? `<span style="background: rgba(14, 203, 129, 0.15); color: var(--green-color); font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">Default</span>` : '';
                 
@@ -539,7 +554,7 @@
             if (urlParams.get('action') === 'create') {
                 switchView('view-post-order');
                 validatePrice(); 
-                loadPaymentMethods(); // ፎርሙ ቀጥታ ሲከፈት Fetch ያደርጋል
+                loadPaymentMethods(); 
             } else {
                 switchView('view-main-ads');
             }
