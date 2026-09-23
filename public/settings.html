@@ -906,7 +906,7 @@
     </div>
 
     <script>
-        const API_BASE_URL = '';
+        const API_BASE_URL = ''; // Ensure this points to your Node.js backend if deployed (e.g., 'http://localhost:5000')
 
         let currentField = "";
         let paymentMethods = [];
@@ -967,7 +967,9 @@
         document.addEventListener("DOMContentLoaded", async function() {
             loadFromLocalStorageFallback();
             loadUserPasskeys();
-            loadPaymentMethods(); // 🚀 ፔጁ ሲከፈት ይሄንን ይጠራል 🚀
+            
+            // 🚀 Fetch Payments from Backend 🚀
+            loadPaymentMethods();
 
             try {
                 const token = localStorage.getItem("token") || 
@@ -1094,19 +1096,39 @@
         }
 
         // ==========================================
-        // 🚀 2. PAYMENT METHODS LOGIC (SAVE & DISPLAY) 🚀
+        // 🚀 2. REAL BACKEND PAYMENT METHODS LOGIC 🚀
         // ==========================================
-        function loadPaymentMethods() {
-            // 🚀 መረጃውን ከ LocalStorage ያነባል (በቋሚነት Save እንዲሆን) 🚀
-            const stored = localStorage.getItem("user_payment_methods");
-            if (stored) {
-                try {
-                    paymentMethods = JSON.parse(stored);
-                } catch(e) {
+        
+        async function loadPaymentMethods() {
+            const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
+            
+            if (!token) {
+                // User is not logged in
+                paymentMethods = [];
+                renderPaymentMethods();
+                return;
+            }
+
+            try {
+                // 🔴 አስተውል: ይህን URL በ server.jsህ ላይ ካለው ትክክለኛ የ payment መሳቢያ route ጋር አስተካክለው (ለምሳሌ '/api/payments')
+                const res = await fetch(`${API_BASE_URL}/api/user/payments`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    paymentMethods = data.payments || data || []; 
+                } else {
+                    console.error("Failed to fetch payments from backend");
                     paymentMethods = [];
                 }
-            } else {
-                paymentMethods = []; 
+            } catch (error) {
+                console.error("API Connection error:", error);
+                paymentMethods = [];
             }
             renderPaymentMethods();
         }
@@ -1116,7 +1138,6 @@
             const emptyEl = document.getElementById('pm-empty-state');
             const formEl = document.getElementById('pm-add-form');
 
-            // 🚀 ምንም ዳታ ከሌለ Empty State ያሳያል 🚀
             if (!paymentMethods || paymentMethods.length === 0) {
                 listEl.style.display = 'none';
                 if (formEl.style.display === 'none') {
@@ -1131,24 +1152,26 @@
 
             paymentMethods.forEach((pm, index) => {
                 const isDefault = pm.isDefault ? true : false;
+                const pmId = pm._id || pm.id || index; // Use DB ID if available
+
                 const html = `
                 <div class="pm-item-box">
                     <div>
                         <div class="pm-item-type">
-                            ${pm.type}
+                            ${pm.type || pm.bankName || 'Bank'}
                             ${isDefault ? '<span class="pm-default-badge"><i class="fa-regular fa-star"></i> Default</span>' : ''}
                         </div>
-                        <div class="pm-item-holder">${pm.name}</div>
-                        <div class="pm-item-number">${pm.account}</div>
+                        <div class="pm-item-holder">${pm.name || pm.accountName || pm.fullName}</div>
+                        <div class="pm-item-number">${pm.account || pm.accountNumber || pm.number}</div>
                     </div>
                     <div class="pm-item-actions">
                         ${!isDefault ? `
-                            <button class="pm-set-default-btn" onclick="setDefaultPaymentMethod(${index})">
+                            <button class="pm-set-default-btn" onclick="setDefaultPaymentMethod(${index}, '${pmId}')">
                                 <i class="fa-regular fa-circle-check"></i> Set default
                             </button>
                         ` : ''}
                         <i class="fa-solid fa-pen" style="color: #848e9c; cursor: pointer; font-size: 14px;" title="Edit" onclick="editPaymentMethod(${index})"></i>
-                        <i class="fa-solid fa-trash" style="color: var(--red-color); cursor: pointer; font-size: 14px;" title="Delete" onclick="deletePaymentMethod(${index})"></i>
+                        <i class="fa-solid fa-trash" style="color: var(--red-color); cursor: pointer; font-size: 14px;" title="Delete" onclick="deletePaymentMethod(${index}, '${pmId}')"></i>
                     </div>
                 </div>`;
                 listEl.insertAdjacentHTML('beforeend', html);
@@ -1199,72 +1222,134 @@
             }
         }
 
-        function savePaymentMethod() {
+        // 🚀 Save or Update via API 🚀
+        async function savePaymentMethod() {
             const type = document.getElementById('pm-type').value;
             const name = document.getElementById('pm-account-name').value.trim();
             const account = document.getElementById('pm-account-number').value.trim();
+            const token = localStorage.getItem("token") || localStorage.getItem("authToken");
 
             if (!type || !name || !account) {
                 showCenterNotification("Missing Details", "Please select payment type and fill in both account name and account number.", false);
                 return;
             }
 
-            if (editingPaymentId !== null) {
-                paymentMethods[editingPaymentId] = {
-                    ...paymentMethods[editingPaymentId],
-                    type,
-                    name,
-                    account
-                };
+            if (!token) {
+                showCenterNotification("Authentication Error", "You must be logged in to save payment methods.", false);
+                return;
+            }
+
+            const payload = {
+                type: type,
+                name: name,
+                account: account
+            };
+
+            try {
+                if (editingPaymentId !== null) {
+                    // Update existing (PUT request)
+                    const pmId = paymentMethods[editingPaymentId]._id || paymentMethods[editingPaymentId].id;
+                    
+                    // 🔴 አስተውል: ይህን የ PUT route እንደ ባክኤንድህ አሰራር ቀይረው
+                    const res = await fetch(`${API_BASE_URL}/api/user/payments/${pmId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (res.ok) {
+                        showCenterNotification("Updated", `Payment method <strong>${type}</strong> updated successfully!`);
+                    } else {
+                        throw new Error("Failed to update");
+                    }
+                } else {
+                    // Add new (POST request)
+                    payload.isDefault = paymentMethods.length === 0;
+                    
+                    // 🔴 አስተውል: ይህን የ POST route እንደ ባክኤንድህ አሰራር ቀይረው
+                    const res = await fetch(`${API_BASE_URL}/api/user/payments`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (res.ok) {
+                        showCenterNotification("Success", `Payment method <strong>${type}</strong> added successfully!`);
+                    } else {
+                        throw new Error("Failed to save");
+                    }
+                }
+
                 editingPaymentId = null;
-                showCenterNotification("Updated", `Payment method <strong>${type}</strong> updated successfully!`);
-            } else {
-                const isFirst = paymentMethods.length === 0;
-                paymentMethods.push({
-                    id: Date.now().toString(),
-                    type,
-                    name,
-                    account,
-                    isDefault: isFirst
+                toggleAddPaymentForm();
+                
+                // Refresh list from database
+                await loadPaymentMethods(); 
+
+            } catch (error) {
+                console.error("API Error:", error);
+                showCenterNotification("Error", "Failed to communicate with server. Please try again.", false);
+            }
+        }
+
+        // 🚀 Set Default via API 🚀
+        async function setDefaultPaymentMethod(index, pmId) {
+            const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+            if (!token || !pmId) return;
+
+            try {
+                // 🔴 አስተውል: አብዛኛው ጊዜ Default ለማድረግ አዲስ route ያስፈልጋል (ለምሳሌ /api/payments/:id/default)
+                const res = await fetch(`${API_BASE_URL}/api/user/payments/${pmId}/default`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
                 });
-                showCenterNotification("Success", `Payment method <strong>${type}</strong> added successfully!`);
-            }
 
-            // 🚀 መረጃውን ወደ LocalStorage ሴቭ ያደርጋል 🚀
-            localStorage.setItem("user_payment_methods", JSON.stringify(paymentMethods));
-            toggleAddPaymentForm();
-            renderPaymentMethods();
+                if (res.ok) {
+                    showCenterNotification("Default Changed", `Default payment method updated successfully`);
+                    await loadPaymentMethods(); // Refresh from DB
+                } else {
+                    throw new Error("Failed to set default");
+                }
+            } catch (error) {
+                console.error("API Error:", error);
+                showCenterNotification("Error", "Could not set default payment method.", false);
+            }
         }
 
-        function setDefaultPaymentMethod(index) {
-            paymentMethods.forEach((pm, i) => {
-                pm.isDefault = (i === index);
-            });
-            // 🚀 Update ሲደረግ ሴቭ ያደርጋል 🚀
-            localStorage.setItem("user_payment_methods", JSON.stringify(paymentMethods));
-            renderPaymentMethods();
-            showCenterNotification("Default Changed", `Default payment method changed to <strong>${paymentMethods[index].type}</strong>`);
-        }
+        // 🚀 Delete via API 🚀
+        async function deletePaymentMethod(index, pmId) {
+            if (!confirm("Are you sure you want to delete this payment method?")) return;
+            
+            const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+            if (!token || !pmId) return;
 
-        function deletePaymentMethod(index) {
-            const removed = paymentMethods.splice(index, 1);
-            if (removed[0].isDefault && paymentMethods.length > 0) {
-                paymentMethods[0].isDefault = true;
+            try {
+                // 🔴 አስተውል: የመሰረዣ ራውትህ DELETE መሆን አለበት
+                const res = await fetch(`${API_BASE_URL}/api/user/payments/${pmId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (res.ok) {
+                    showCenterNotification("Deleted", "Payment method has been removed successfully.");
+                    await loadPaymentMethods(); // Refresh from DB
+                } else {
+                    throw new Error("Failed to delete");
+                }
+            } catch (error) {
+                console.error("API Error:", error);
+                showCenterNotification("Error", "Could not delete payment method.", false);
             }
-            // 🚀 ዳታ ሲጠፋ ሴቭ ያደርጋል 🚀
-            localStorage.setItem("user_payment_methods", JSON.stringify(paymentMethods));
-            renderPaymentMethods();
-            showCenterNotification("Deleted", "Payment method has been removed successfully.");
         }
 
         function editPaymentMethod(index) {
             const pm = paymentMethods[index];
             editingPaymentId = index;
 
-            document.getElementById('pm-type').value = pm.type;
+            document.getElementById('pm-type').value = pm.type || pm.bankName;
             handlePaymentTypeChange();
-            document.getElementById('pm-account-name').value = pm.name;
-            document.getElementById('pm-account-number').value = pm.account;
+            document.getElementById('pm-account-name').value = pm.name || pm.accountName || pm.fullName;
+            document.getElementById('pm-account-number').value = pm.account || pm.accountNumber || pm.number;
 
             const form = document.getElementById('pm-add-form');
             form.style.display = 'block';
@@ -1316,6 +1401,7 @@
             }
         }
 
+        // 🔐 WebAuthn Passkey Registration (FIXED FOR BROWSER SUPPORT)
         async function registerPasskey() {
             try {
                 showToast("Requesting device biometric setup...");
@@ -1336,6 +1422,8 @@
                 }
 
                 const options = data.options;
+                
+                // 🔴 Safe Base64URL to ArrayBuffer decoding
                 options.challenge = base64urlToBuffer(options.challenge);
                 options.user.id = base64urlToBuffer(options.user.id);
                 
@@ -1348,6 +1436,7 @@
 
                 const credential = await navigator.credentials.create({ publicKey: options });
 
+                // 🔴 Safe ArrayBuffer to Base64URL encoding
                 const verificationResponse = await fetch(`${API_BASE_URL}/api/passkey/register-verify`, {
                     method: 'POST',
                     headers: { 
@@ -1379,6 +1468,7 @@
             }
         }
 
+        // 📋 Load Passkeys List
         async function loadUserPasskeys() {
             try {
                 const token = localStorage.getItem("token") || localStorage.getItem("authToken");

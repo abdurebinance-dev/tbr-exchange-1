@@ -79,6 +79,13 @@ const userSchema = new mongoose.Schema({
     userId: { type: String }, 
     numericId: { type: Number },
 
+    paymentMethods: [{
+        type: { type: String, required: true },
+        name: { type: String, required: true },
+        account: { type: String, required: true },
+        isDefault: { type: Boolean, default: false }
+    }],
+
     bscAddress: { type: String, default: '' },
     bscPrivateKey: { type: String, default: '' },
     balance: { type: Number, default: 0 },
@@ -1075,6 +1082,121 @@ app.post('/api/user/update', verifyToken, async (req, res) => {
     } catch (error) {
         console.error('Update User Error:', error);
         res.status(500).json({ success: false, message: 'Server error updating user profile.' });
+    }
+});
+
+// ==========================================
+// 🚀 USER PAYMENT METHODS APIs 🚀
+// ==========================================
+
+// 1. የዩዘሩን የክፍያ መንገዶች ማምጫ
+app.get('/api/user/payments', verifyToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+        res.json({ success: true, payments: user.paymentMethods || [] });
+    } catch (error) {
+        console.error("Fetch payments error:", error);
+        res.status(500).json({ success: false, message: "Server error fetching payments" });
+    }
+});
+
+// 2. አዲስ የክፍያ መንገድ መጨመሪያ
+app.post('/api/user/payments', verifyToken, async (req, res) => {
+    try {
+        const { type, name, account, isDefault } = req.body;
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+        // የመጀመሪያው ክፍያ ከሆነ በግዴታ Default እንዲሆን ያደርጋል
+        const isFirstPayment = !user.paymentMethods || user.paymentMethods.length === 0;
+        
+        const newPayment = {
+            type,
+            name,
+            account,
+            isDefault: isFirstPayment ? true : (isDefault || false)
+        };
+
+        user.paymentMethods.push(newPayment);
+        await user.save();
+
+        res.status(201).json({ success: true, message: "Payment method added", payment: newPayment });
+    } catch (error) {
+        console.error("Add payment error:", error);
+        res.status(500).json({ success: false, message: "Server error adding payment" });
+    }
+});
+
+// 3. የነበረን የክፍያ መንገድ ማስተካከያ
+app.put('/api/user/payments/:id', verifyToken, async (req, res) => {
+    try {
+        const { type, name, account } = req.body;
+        const user = await User.findById(req.user.id);
+        
+        const payment = user.paymentMethods.id(req.params.id);
+        if (!payment) return res.status(404).json({ success: false, message: "Payment method not found" });
+
+        if (type) payment.type = type;
+        if (name) payment.name = name;
+        if (account) payment.account = account;
+
+        await user.save();
+        res.json({ success: true, message: "Payment method updated", payment });
+    } catch (error) {
+        console.error("Update payment error:", error);
+        res.status(500).json({ success: false, message: "Server error updating payment" });
+    }
+});
+
+// 4. Default የክፍያ መንገድ መቀየሪያ
+app.put('/api/user/payments/:id/default', verifyToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        
+        // መጀመሪያ ሁሉንም Default false ያደርጋል
+        user.paymentMethods.forEach(pm => {
+            pm.isDefault = false;
+        });
+
+        // የተመረጠውን Default true ያደርጋል
+        const payment = user.paymentMethods.id(req.params.id);
+        if (!payment) return res.status(404).json({ success: false, message: "Payment method not found" });
+        
+        payment.isDefault = true;
+        await user.save();
+
+        res.json({ success: true, message: "Default payment method updated" });
+    } catch (error) {
+        console.error("Set default payment error:", error);
+        res.status(500).json({ success: false, message: "Server error setting default payment" });
+    }
+});
+
+// 5. የክፍያ መንገድ ማጥፊያ
+app.delete('/api/user/payments/:id', verifyToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        
+        const payment = user.paymentMethods.id(req.params.id);
+        if (!payment) return res.status(404).json({ success: false, message: "Payment method not found" });
+
+        const wasDefault = payment.isDefault;
+        
+        // መረጃውን ያጠፋዋል
+        user.paymentMethods.pull({ _id: req.params.id });
+
+        // የተጠፋው Default ከነበረ እና ሌሎች ክፍያዎች ካሉ፣ አንደኛውን Default ያደርጋል
+        if (wasDefault && user.paymentMethods.length > 0) {
+            user.paymentMethods[0].isDefault = true;
+        }
+
+        await user.save();
+        res.json({ success: true, message: "Payment method deleted" });
+    } catch (error) {
+        console.error("Delete payment error:", error);
+        res.status(500).json({ success: false, message: "Server error deleting payment" });
     }
 });
 
