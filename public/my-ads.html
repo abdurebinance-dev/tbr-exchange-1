@@ -480,14 +480,11 @@
         function updateCalculatedMax() {
             const price = parseFloat(document.getElementById('price-input').value) || 0;
             const amount = parseFloat(document.getElementById('total-amount-input').value) || 0;
-            
-            // 🚀 Mɔltiplay ɛn mɔv di decimal (santim) wit Math.floor 🚀
             calculatedMaxEtb = Math.floor(price * amount);
 
             const useMaxDisplay = document.getElementById('use-max-display');
             if (price > 0 && amount > 0) {
                 useMaxDisplay.style.display = 'block';
-                // Sho di nɔmba witawt decimal (e.g., 80,475 ETB)
                 useMaxDisplay.innerText = `Use max: ${calculatedMaxEtb.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})} ETB`;
             } else {
                 useMaxDisplay.style.display = 'none';
@@ -497,7 +494,6 @@
 
         function applyMaxEtb() {
             if (calculatedMaxEtb > 0) {
-                // Put di ful nɔmba na di bɔks witawt santim
                 document.getElementById('max-etb-input').value = calculatedMaxEtb;
                 validateLimits();
                 checkOverallValidity();
@@ -559,8 +555,14 @@
             let isMinValid = false;
             let isMaxValid = false;
 
+            // 🚀 የ Minimum Limit ማረጋገጫ 🚀
             if (!isNaN(minVal)) {
                 if (minVal < 500) {
+                    minError.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Lowest order is 500 ETB.';
+                    minError.style.display = 'block';
+                    minInput.style.borderColor = 'var(--red-color)';
+                } else if (calculatedMaxEtb > 0 && minVal > calculatedMaxEtb) {
+                    minError.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Minimum is over your total supply.';
                     minError.style.display = 'block';
                     minInput.style.borderColor = 'var(--red-color)';
                 } else {
@@ -573,6 +575,7 @@
                 minInput.style.borderColor = 'var(--border-color)';
             }
 
+            // 🚀 የ Maximum Limit ማረጋገጫ 🚀
             if (!isNaN(maxVal)) {
                 if (calculatedMaxEtb > 0 && maxVal > calculatedMaxEtb) {
                     maxError.style.display = 'block';
