@@ -276,7 +276,7 @@
                 
                 <div class="input-group">
                     <label>Price per USDT</label>
-                    <input type="number" id="price-input" placeholder="e.g. 185.78" value="185.78" oninput="validatePrice()">
+                    <input type="number" id="price-input" placeholder="e.g. 185.78" value="185.78" oninput="validatePrice(); checkOverallValidity();">
                     <span class="suffix">ETB</span>
                 </div>
                 
@@ -294,7 +294,7 @@
                         <label style="margin-bottom: 0;">Total Amount</label>
                         <span id="available-balance-display" style="font-size: 11px; color: var(--green-color); display: none; font-weight: 600;">Available: 0.00 USDT</span>
                     </div>
-                    <input type="number" id="total-amount-input" placeholder="e.g. 500" oninput="validateAmount()">
+                    <input type="number" id="total-amount-input" placeholder="e.g. 500" oninput="validateAmount(); checkOverallValidity();">
                     <span class="suffix">USDT</span>
                 </div>
 
@@ -307,7 +307,6 @@
                 <h3>Trade Limits</h3>
                 <p class="section-sub">Min and max ETB per individual trade</p>
                 <div class="two-cols">
-                    <!-- 🚀 Minimum ETB Error 🚀 -->
                     <div>
                         <div class="input-group" style="margin-bottom: 5px;">
                             <label>Minimum (ETB)</label>
@@ -319,7 +318,6 @@
                         </div>
                     </div>
 
-                    <!-- 🚀 Maximum ETB Error and Calculator 🚀 -->
                     <div>
                         <div class="input-group" style="margin-bottom: 5px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -428,7 +426,7 @@
         
         let userAvailableBalance = 0;
         let currentTradeType = 'buy';
-        let calculatedMaxEtb = 0; // 🚀 Yia na fɔ mɔltiplay di pɔyin 🚀
+        let calculatedMaxEtb = 0; 
 
         function switchView(viewId) {
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
@@ -479,16 +477,18 @@
             });
         });
 
-        // 🚀 Fɔnkshɔn fɔ Mɔltiplay Price x Amount 🚀
         function updateCalculatedMax() {
             const price = parseFloat(document.getElementById('price-input').value) || 0;
             const amount = parseFloat(document.getElementById('total-amount-input').value) || 0;
-            calculatedMaxEtb = price * amount;
+            
+            // 🚀 Mɔltiplay ɛn mɔv di decimal (santim) wit Math.floor 🚀
+            calculatedMaxEtb = Math.floor(price * amount);
 
             const useMaxDisplay = document.getElementById('use-max-display');
             if (price > 0 && amount > 0) {
                 useMaxDisplay.style.display = 'block';
-                useMaxDisplay.innerText = `Use max: ${calculatedMaxEtb.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ETB`;
+                // Sho di nɔmba witawt decimal (e.g., 80,475 ETB)
+                useMaxDisplay.innerText = `Use max: ${calculatedMaxEtb.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})} ETB`;
             } else {
                 useMaxDisplay.style.display = 'none';
             }
@@ -497,7 +497,8 @@
 
         function applyMaxEtb() {
             if (calculatedMaxEtb > 0) {
-                document.getElementById('max-etb-input').value = calculatedMaxEtb.toFixed(2);
+                // Put di ful nɔmba na di bɔks witawt santim
+                document.getElementById('max-etb-input').value = calculatedMaxEtb;
                 validateLimits();
                 checkOverallValidity();
             }
@@ -546,7 +547,6 @@
             checkOverallValidity();
         }
 
-        // 🚀 Fɔnkshɔn fɔ chɛk Min ɛn Max ETB 🚀
         function validateLimits() {
             const minInput = document.getElementById('min-etb-input');
             const maxInput = document.getElementById('max-etb-input');
@@ -559,7 +559,6 @@
             let isMinValid = false;
             let isMaxValid = false;
 
-            // 1. Chɛk if Minimum dɔŋ pas 500
             if (!isNaN(minVal)) {
                 if (minVal < 500) {
                     minError.style.display = 'block';
@@ -574,7 +573,6 @@
                 minInput.style.borderColor = 'var(--border-color)';
             }
 
-            // 2. Chɛk if Maximum nɔ pas di mɔltiplay result
             if (!isNaN(maxVal)) {
                 if (calculatedMaxEtb > 0 && maxVal > calculatedMaxEtb) {
                     maxError.style.display = 'block';
@@ -596,12 +594,10 @@
         function checkOverallValidity() {
             const reviewBtn = document.getElementById('review-order-btn');
 
-            // 1. Chɛk Price
             const priceInput = document.getElementById('price-input');
             const price = parseFloat(priceInput.value);
             const isPriceValid = !isNaN(price) && price >= 170 && price <= 210;
 
-            // 2. Chɛk Amount
             const amountInput = document.getElementById('total-amount-input');
             const amount = parseFloat(amountInput.value);
             let isAmountValid = !isNaN(amount) && amount > 0;
@@ -609,14 +605,11 @@
                 isAmountValid = amount <= userAvailableBalance;
             }
 
-            // 3. Chɛk Limits
             const isLimitsValid = validateLimits();
 
-            // 4. Chɛk Payment Methods
             const checkedPayments = document.querySelectorAll('input[name="payment_methods"]:checked');
             const isPaymentValid = checkedPayments.length > 0;
 
-            // Opdet di Bɔtin
             if (isPriceValid && isAmountValid && isLimitsValid && isPaymentValid) {
                 reviewBtn.disabled = false;
                 reviewBtn.style.opacity = '1';
