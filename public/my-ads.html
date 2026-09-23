@@ -166,14 +166,13 @@
         .input-group input:focus, .input-group textarea:focus { border-color: var(--accent-color); }
         .suffix { position: absolute; right: 15px; top: 38px; color: var(--text-muted); font-size: 13px; font-weight: 600; }
 
-        /* 🚀 Pang-ikkat kadagiti up/down arrows iti number inputs 🚀 */
         input[type="number"]::-webkit-inner-spin-button,
         input[type="number"]::-webkit-outer-spin-button {
             -webkit-appearance: none;
             margin: 0;
         }
         input[type="number"] {
-            -moz-appearance: textfield; /* Para iti Firefox */
+            -moz-appearance: textfield; 
         }
 
         .market-avg-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-top: 8px; padding: 0 5px; }
@@ -288,12 +287,12 @@
                     <span>Max 210</span>
                 </div>
 
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 25px; margin-bottom: 8px;">
-                    <label style="margin-bottom: 0; font-size: 12px; color: #fff; font-weight: 600;">Total Amount</label>
-                    <span id="available-balance-display" style="font-size: 11px; color: var(--green-color); display: none; font-weight: 600;">Available: 0.00 USDT</span>
-                </div>
-                
-                <div class="input-group" style="margin-top: 0;">
+                <!-- 🚀 Kulungiswe isikhundla se "USDT" 🚀 -->
+                <div class="input-group" style="margin-top: 25px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <label style="margin-bottom: 0;">Total Amount</label>
+                        <span id="available-balance-display" style="font-size: 11px; color: var(--green-color); display: none; font-weight: 600;">Available: 0.00 USDT</span>
+                    </div>
                     <input type="number" id="total-amount-input" placeholder="e.g. 500" oninput="validateAmount()">
                     <span class="suffix">USDT</span>
                 </div>
