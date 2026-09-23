@@ -1222,75 +1222,98 @@
             }
         }
 
-        // 🚀 Save or Update via API 🚀
-        async function savePaymentMethod() {
-            const type = document.getElementById('pm-type').value;
-            const name = document.getElementById('pm-account-name').value.trim();
-            const account = document.getElementById('pm-account-number').value.trim();
-            const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+        // 🚀 ፈጣን ሴቭ (Optimistic UI Update) 🚀
+async function savePaymentMethod() {
+    const type = document.getElementById('pm-type').value;
+    const name = document.getElementById('pm-account-name').value.trim();
+    const account = document.getElementById('pm-account-number').value.trim();
+    const token = localStorage.getItem("token") || localStorage.getItem("authToken");
 
-            if (!type || !name || !account) {
-                showCenterNotification("Missing Details", "Please select payment type and fill in both account name and account number.", false);
-                return;
-            }
+    if (!type || !name || !account) {
+        showCenterNotification("Missing Details", "Please select payment type and fill in both account name and account number.", false);
+        return;
+    }
 
-            if (!token) {
-                showCenterNotification("Authentication Error", "You must be logged in to save payment methods.", false);
-                return;
-            }
+    if (!token) {
+        showCenterNotification("Authentication Error", "You must be logged in to save payment methods.", false);
+        return;
+    }
 
-            const payload = {
-                type: type,
-                name: name,
-                account: account
-            };
+    const payload = {
+        type: type,
+        name: name,
+        account: account
+    };
 
-            try {
-                if (editingPaymentId !== null) {
-                    // Update existing (PUT request)
-                    const pmId = paymentMethods[editingPaymentId]._id || paymentMethods[editingPaymentId].id;
-                    
-                    // 🔴 አስተውል: ይህን የ PUT route እንደ ባክኤንድህ አሰራር ቀይረው
-                    const res = await fetch(`${API_BASE_URL}/api/user/payments/${pmId}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                        body: JSON.stringify(payload)
-                    });
+    // 1. ወዲያውኑ ለዩዘሩ አፕዴት ለማድረግ (ሳይዘገይ) 
+    let tempId = Date.now().toString(); // ጊዜያዊ አይዲ
+    
+    if (editingPaymentId !== null) {
+        // ኤዲት እየተደረገ ከሆነ ሎካል አሬዩን ወዲያውኑ መቀየር
+        paymentMethods[editingPaymentId].type = type;
+        paymentMethods[editingPaymentId].name = name;
+        paymentMethods[editingPaymentId].account = account;
+        showCenterNotification("Updated", `Payment method <strong>${type}</strong> updated successfully!`);
+    } else {
+        // አዲስ እየገባ ከሆነ ሎካል አሬዩ ላይ ወዲያውኑ መጨመር
+        const isFirst = paymentMethods.length === 0;
+        payload.isDefault = isFirst;
+        
+        paymentMethods.push({
+            _id: tempId, // ጊዜያዊ
+            type: type,
+            name: name,
+            account: account,
+            isDefault: isFirst
+        });
+        showCenterNotification("Success", `Payment method <strong>${type}</strong> added successfully!`);
+    }
 
-                    if (res.ok) {
-                        showCenterNotification("Updated", `Payment method <strong>${type}</strong> updated successfully!`);
-                    } else {
-                        throw new Error("Failed to update");
-                    }
-                } else {
-                    // Add new (POST request)
-                    payload.isDefault = paymentMethods.length === 0;
-                    
-                    // 🔴 አስተውል: ይህን የ POST route እንደ ባክኤንድህ አሰራር ቀይረው
-                    const res = await fetch(`${API_BASE_URL}/api/user/payments`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                        body: JSON.stringify(payload)
-                    });
+    // 2. ፎርሙን ወዲያውኑ መዝጋት እና ፔጁን አፕዴት ማድረግ (ዜሮ ሰከንድ መዘግየት)
+    const currentEditId = editingPaymentId; 
+    editingPaymentId = null;
+    toggleAddPaymentForm();
+    renderPaymentMethods();
 
-                    if (res.ok) {
-                        showCenterNotification("Success", `Payment method <strong>${type}</strong> added successfully!`);
-                    } else {
-                        throw new Error("Failed to save");
+    // 3. ከጀርባ (Background) ወደ ዳታቤዝ መላክ
+    try {
+        if (currentEditId !== null) {
+            // Update existing (PUT request)
+            const pmId = paymentMethods[currentEditId]._id || paymentMethods[currentEditId].id;
+            
+            fetch(`${API_BASE_URL}/api/user/payments/${pmId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(payload)
+            }).then(res => {
+                if(!res.ok) throw new Error("Failed to update on server");
+            }).catch(e => console.error("Background sync error:", e));
+            
+        } else {
+            // Add new (POST request)
+            fetch(`${API_BASE_URL}/api/user/payments`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                // ሰርቨሩ ሴቭ አድርጎ ትክክለኛውን አይዲ ሲመልስ፣ ጊዜያዊውን በአዲሱ መተካት
+                if(data.success && data.payment) {
+                    const index = paymentMethods.findIndex(p => p._id === tempId);
+                    if(index !== -1) {
+                        paymentMethods[index]._id = data.payment._id;
+                        // በጸጥታ ሪ-ሬንደር ማድረግ
+                        renderPaymentMethods();
                     }
                 }
-
-                editingPaymentId = null;
-                toggleAddPaymentForm();
-                
-                // Refresh list from database
-                await loadPaymentMethods(); 
-
-            } catch (error) {
-                console.error("API Error:", error);
-                showCenterNotification("Error", "Failed to communicate with server. Please try again.", false);
-            }
+            })
+            .catch(e => console.error("Background sync error:", e));
         }
+    } catch (error) {
+        console.error("API Error:", error);
+    }
+}
 
         // 🚀 Set Default via API 🚀
         async function setDefaultPaymentMethod(index, pmId) {
