@@ -859,7 +859,12 @@
             const terms = document.querySelector('textarea').value;
             const verLevel = document.querySelector('input[name="ver_level"]:checked') ? document.querySelector('input[name="ver_level"]:checked').value : "Anyone (no restriction)";
             
-            const selectedPayments = Array.from(document.querySelectorAll('input[name="payment_methods"]:checked')).map(cb => cb.value);
+            const selectedPayments = Array.from(document.querySelectorAll('input[name="payment_methods"]:checked')).map(cb => {
+        // ከ checkbox አጠገብ ያለውን የባንክ ስም (ለምሳሌ Awash Bank, Telebirr) በግልጽ ይወስዳል
+        const cardLabel = cb.closest('label');
+        const bankTitle = cardLabel.querySelector('div > div:first-child');
+        return bankTitle ? bankTitle.innerText.replace('Default', '').trim() : 'Bank Transfer';
+    });
 
             const adData = {
                 tradeType: currentTradeType, // 'buy' or 'sell'

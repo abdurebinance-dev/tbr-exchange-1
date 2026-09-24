@@ -433,7 +433,6 @@
             const tbody = document.getElementById('p2pOrdersBody');
             const isBuy = currentType === 'buy';
             
-            const basePrice = isBuy ? currentRates.sellRate : currentRates.buyRate;
             const actionLabel = isBuy ? 'Buy' : 'Sell';
             const btnClass = isBuy ? 'order-btn' : 'order-btn sell';
 
@@ -453,17 +452,19 @@
                 if (isBuy) return ad.tradeType === 'sell';
                 else return ad.tradeType === 'buy';
             }).map(ad => {
+                // 🚀 የክፍያ መንገዶችን ስም በትክክል ለማሳየት (IDs ወደ ስም መቀየር ካለብኝም ማስተካከል)
                 let payMethods = ad.paymentMethods || ['Telebirr'];
                 if (typeof payMethods === 'string') {
                     try { payMethods = JSON.parse(payMethods); } catch(e) { payMethods = [payMethods]; }
                 }
                 if (!Array.isArray(payMethods)) payMethods = [payMethods];
 
+                // 🚀 ቁጥሮችን እና የዩዘር መረጃዎችን በትክክል ማስተካከል 
                 return {
                     name: ad.name || 'Trader',
                     verified: true,
-                    orders: 120,
-                    comp: '98%',
+                    orders: ad.ordersCount || 1, // ከሰርቨር የሚመጣ ትክክለኛ ትዕዛዝ ብዛት
+                    comp: ad.completionRate || '100%', // ትክክለኛ የጨረሳ መጠን
                     customPrice: typeof ad.price === 'number' ? ad.price.toFixed(2) : parseFloat(ad.price || 0).toFixed(2),
                     avail: Number(ad.totalAmount || 0).toLocaleString('en-US'),
                     min: Number(ad.minLimit || 0).toLocaleString('en-US'),
@@ -473,19 +474,16 @@
                 };
             });
 
-            // የድሮዎቹ ዱሚ ነጋዴዎች ዝርዝር
-            let dummyTraders = [
-                { name: 'TBR Direct', verified: true, orders: 1540, comp: '99%', priceOffset: 0, avail: '12,500.00', min: '500', max: '2,000,000', pay: ['Telebirr', 'CBE Birr', 'Bank of Abyssinia'] },
-                { name: 'EthioTrader_Pro', verified: true, orders: 840, comp: '97%', priceOffset: 0.20, avail: '3,450.00', min: '1,000', max: '650,000', pay: ['CBE Birr', 'Telebirr'] }
-            ];
-
-            let allTradersList = [...filteredAds, ...dummyTraders];
+            // 🚀 1. የድሮዎቹን አላስፈላጊ (Dummy) ነጋዴዎች ሙሉ በሙሉ አጥፍተናል! 
+            // አሁን የሚታዩት በእውነት ፖስት የተደረጉት (filteredAds) ብቻ ናቸው።
+            let allTradersList = filteredAds;
 
             let html = '';
             allTradersList.forEach(t => {
-                const effectivePrice = t.customPrice ? t.customPrice : (basePrice + t.priceOffset).toFixed(2);
-                const rowHighlight = t.isRealAd ? 'background: rgba(14, 203, 129, 0.04); border-left: 3px solid var(--green);' : '';
+                const effectivePrice = t.customPrice;
+                const rowHighlight = 'background: rgba(14, 203, 129, 0.04); border-left: 3px solid var(--green);';
 
+                // የባንክ ስሞችን በ tags መልክ ማሳየት
                 let payTagsHTML = '';
                 if (Array.isArray(t.pay)) {
                     payTagsHTML = t.pay.map(p => `<span class="pay-tag">${p}</span>`).join('');
@@ -497,7 +495,7 @@
                 <tr style="${rowHighlight}">
                     <td>
                         <div class="advertiser-cell">
-                            <div class="avatar-box">${t.name.charAt(0)}</div>
+                            <div class="avatar-box">${t.name.charAt(0).toUpperCase()}</div>
                             <div>
                                 <div class="adv-name">${t.name} ${t.verified ? '<i class="fa-solid fa-circle-check"></i>' : ''}</div>
                                 <div class="adv-stats">${t.orders} orders &bull; ${t.comp} completion</div>
@@ -524,8 +522,9 @@
                 </tr>`;
             });
 
+            // ማስታወቂያ ከሌለ የሚታይ ጽሁፍ
             if (allTradersList.length === 0) {
-                html = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 40px 0;">No live orders available right now.</td></tr>`;
+                html = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 40px 0;">No active ads found in the market right now.</td></tr>`;
             }
 
             tbody.innerHTML = html;
