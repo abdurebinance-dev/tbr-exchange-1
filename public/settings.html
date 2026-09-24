@@ -676,6 +676,95 @@
             color: var(--green-color);
             font-size: 16px;
         }
+
+        /* 🚀 Merchant Application Styles 🚀 */
+        .merchant-app-card {
+            background: var(--card-bg, #16181d);
+            border: 1px solid var(--border-color, #2b313a);
+            border-radius: 12px;
+            padding: 25px;
+        }
+        .merchant-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 20px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 5px;
+        }
+        .merchant-header i {
+            color: var(--green-color, #0ecb81);
+        }
+        .merchant-sub {
+            color: var(--text-muted, #848e9c);
+            font-size: 14px;
+            margin-bottom: 25px;
+        }
+        .merchant-features-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .feature-card {
+            background: #0b0e11;
+            border: 1px solid var(--border-color, #2b313a);
+            border-radius: 12px;
+            padding: 25px 15px;
+            text-align: center;
+        }
+        .feature-icon-wrapper {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+            margin-bottom: 15px;
+        }
+        .icon-green { background: rgba(14, 203, 129, 0.1); color: #0ecb81; }
+        .icon-yellow { background: rgba(243, 186, 47, 0.1); color: #f3ba2f; }
+        .icon-purple { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
+
+        .feature-title {
+            color: #fff;
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .feature-desc {
+            color: var(--text-muted, #848e9c);
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        .btn-apply-merchant {
+            width: 100%;
+            background-color: var(--green-color, #0ecb81);
+            color: #000;
+            border: none;
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            transition: 0.2s;
+        }
+        .btn-apply-merchant:hover {
+            opacity: 0.9;
+        }
+
+        /* ስልኮች ላይ ሲከፈት ከላይ ወደ ታች እንዲደረደር */
+        @media (max-width: 768px) {
+            .merchant-features-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -862,10 +951,49 @@
         </div>
 
         <!-- 4. Merchant Content -->
-        <div id="merchant-section" class="content-section" style="display: none;">
-            <div class="profile-card">
-                <h3>Merchant Settings</h3>
-                <p style="color: var(--text-muted); font-size: 13px;">Manage your merchant profile and preferences here.</p>
+        <!-- 🚀 አዲሱ የ Merchant Application ዲዛይን 🚀 -->
+        <div id="view-merchant" class="view-section" style="display: none;">
+            <div class="merchant-app-card">
+                <div class="merchant-header">
+                    <i class="fa-solid fa-store"></i> Merchant Application
+                </div>
+                <div class="merchant-sub">
+                    Apply for Merchant (Tier 3) status to unlock the highest trading limits on TBR
+                </div>
+
+                <div class="merchant-features-grid">
+                    <!-- Card 1 -->
+                    <div class="feature-card">
+                        <div class="feature-icon-wrapper icon-green">
+                            <i class="fa-solid fa-arrow-trend-up"></i>
+                        </div>
+                        <div class="feature-title">Higher limits</div>
+                        <div class="feature-desc">Largest trade & withdrawal caps</div>
+                    </div>
+
+                    <!-- Card 2 -->
+                    <div class="feature-card">
+                        <div class="feature-icon-wrapper icon-yellow">
+                            <i class="fa-solid fa-medal"></i>
+                        </div>
+                        <div class="feature-title">Merchant badge</div>
+                        <div class="feature-desc">Visible on your public profile</div>
+                    </div>
+
+                    <!-- Card 3 -->
+                    <div class="feature-card">
+                        <div class="feature-icon-wrapper icon-purple">
+                            <i class="fa-solid fa-layer-group"></i>
+                        </div>
+                        <div class="feature-title">Bigger orders</div>
+                        <div class="feature-desc">Post orders up to the top tier</div>
+                    </div>
+                </div>
+
+                <!-- በተኑ ሲነካ ምን እንዲሰራ እንደምትፈልግ ወደፊት በ onclick መቀየር ትችላለህ -->
+                <button class="btn-apply-merchant" onclick="alert('Merchant application submitted successfully!')">
+                    <i class="fa-solid fa-store"></i> Apply for Merchant Status
+                </button>
             </div>
         </div>
 
