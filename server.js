@@ -2281,6 +2281,17 @@ app.get('/api/ads', async (req, res) => {
     }
 });
 
+// 3. የራሱን (የተ로그 ያደረገውን ዩዘር) ማስታወቂያዎች ብቻ ማምጫ ራውት
+app.get('/api/ads/my', verifyToken, async (req, res) => {
+    try {
+        const myAds = await Ad.find({ userId: req.user.id }).sort({ createdAt: -1 });
+        res.json({ success: true, ads: myAds });
+    } catch (error) {
+        console.error("Fetch My Ads Error:", error);
+        res.status(500).json({ success: false, message: 'Server error fetching user ads.' });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`TBR Exchange Server is running on port ${PORT} 🚀`);
 });

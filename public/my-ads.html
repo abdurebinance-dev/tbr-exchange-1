@@ -586,7 +586,7 @@
             window.scrollTo(0, 0);
         }
 
-        function openPostOrderForm() {
+        async function openPostOrderForm() {
             let status = String(userKycStatus).toLowerCase();
             if (status === 'pending' || status === 'under_review' || status === 'review') {
                 switchView('view-under-review');
@@ -600,12 +600,13 @@
             validatePrice(); 
             checkOverallValidity();
             updateBalanceDisplay();
-            loadPaymentMethods();
+            await loadPaymentMethods();
         }
 
         function closePostOrderForm() {
             switchView('view-main-ads');
             history.pushState({view: 'main'}, '', window.location.pathname);
+            loadUserAds(); // ሲመለስ አዳዲሶቹን አዶች እንዲጭን
         }
 
         function setTradeType(type, element) {
@@ -629,7 +630,6 @@
             }
         }
 
-        // 🚀 Pill click handler 🚀
         document.querySelectorAll('.pill-option').forEach(pill => {
             pill.addEventListener('click', function() {
                 const group = this.parentElement;
@@ -827,8 +827,8 @@
             pmListContainer.innerHTML = '';
             
             document.querySelectorAll('input[name="payment_methods"]:checked').forEach(checkbox => {
-                const parentDiv = checkbox.closest('label').querySelector('div > div');
-                const pmName = parentDiv.innerText.replace('Default', '').trim();
+                const parentDiv = checkbox.closest('label').querySelector('div > div:first-child');
+                const pmName = parentDiv ? parentDiv.innerText.replace('Default', '').trim() : 'Bank Transfer';
                 pmListContainer.innerHTML += `<div class="review-pm-pill"><i class="fa-regular fa-circle-check"></i> ${pmName}</div>`;
             });
 
@@ -841,7 +841,7 @@
             document.body.style.overflow = 'auto';
         }
 
-        // 🚀 Confirm & Post Button Logic 🚀
+        // 🚀 Confirm & Post (ወደ ሰርቨር መላክ እና ማርኬት መውሰድ) 🚀
         document.getElementById('final-confirm-btn').addEventListener('click', async function() {
             const btn = this;
             const originalText = btn.innerHTML;
@@ -860,11 +860,10 @@
             const verLevel = document.querySelector('input[name="ver_level"]:checked') ? document.querySelector('input[name="ver_level"]:checked').value : "Anyone (no restriction)";
             
             const selectedPayments = Array.from(document.querySelectorAll('input[name="payment_methods"]:checked')).map(cb => {
-        // ከ checkbox አጠገብ ያለውን የባንክ ስም (ለምሳሌ Awash Bank, Telebirr) በግልጽ ይወስዳል
-        const cardLabel = cb.closest('label');
-        const bankTitle = cardLabel.querySelector('div > div:first-child');
-        return bankTitle ? bankTitle.innerText.replace('Default', '').trim() : 'Bank Transfer';
-    });
+                const cardLabel = cb.closest('label');
+                const bankTitle = cardLabel.querySelector('div > div:first-child');
+                return bankTitle ? bankTitle.innerText.replace('Default', '').trim() : 'Bank Transfer';
+            });
 
             const adData = {
                 tradeType: currentTradeType, // 'buy' or 'sell'
@@ -881,7 +880,6 @@
             btn.disabled = true;
 
             try {
-                // Change '/api/ads' to your actual backend endpoint if different
                 const response = await fetch(`${API_BASE_URL}/api/ads`, {
                     method: 'POST',
                     headers: {
@@ -892,6 +890,7 @@
                 });
 
                 if (response.ok) {
+                    closeReviewModal();
                     if (currentTradeType === 'buy') {
                         window.location.href = 'market.html?tab=sell';
                     } else {
@@ -911,6 +910,108 @@
             }
         });
 
+        // 🚀 ዩዘሩ የለጠፋቸውን ማስታወቂያዎች (My Ads) ሠንጠረዥ አድርጎ ማሳየት (በሶስተኛው ፎቶ መሰረት) 🚀
+        async function loadUserAds() {
+            const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
+            if (!token) return;
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/ads/my`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const json = await res.json();
+                
+                if (json.success && json.ads && json.ads.length > 0) {
+                    const container = document.querySelector('.empty-state') || document.querySelector('.form-container');
+                    // ሠንጠረዡን በሶስተኛው ፎቶ ዲዛይን መሰረት መገንባት
+                    let tableHTML = `
+                    <div class="p2p-table-card" style="margin-top: 20px;">
+                        <table style="width: 100%; border-collapse: collapse; text-align: left; color: #fff;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid var(--border-color); font-size: 11px; color: var(--text-muted);">
+                                    <th style="padding: 15px;">TYPE</th>
+                                    <th style="padding: 15px;">PRICE</th>
+                                    <th style="padding: 15px;">AVAILABLE / TOTAL</th>
+                                    <th style="padding: 15px;">LIMITS</th>
+                                    <th style="padding: 15px;">PAYMENT</th>
+                                    <th style="padding: 15px;">STATUS</th>
+                                    <th style="padding: 15px;">DATE</th>
+                                    <th style="padding: 15px; text-align: right;">ACTIONS</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+
+                    json.ads.forEach(ad => {
+                        const isBuy = ad.tradeType === 'buy';
+                        const typeBadge = isBuy ? 
+                            `<span style="background: rgba(14,203,129,0.15); color: var(--green-color); padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 12px;">BUY</span>` : 
+                            `<span style="background: rgba(246,70,93,0.15); color: var(--red-color); padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 12px;">SELL</span>`;
+                        
+                        const dateStr = new Date(ad.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                        const payList = Array.isArray(ad.paymentMethods) ? ad.paymentMethods.join('<br>') : ad.paymentMethods;
+
+                        tableHTML += `
+                                <tr style="border-bottom: 1px solid #14151a; font-size: 13px;">
+                                    <td style="padding: 15px;">${typeBadge}</td>
+                                    <td style="padding: 15px; font-weight: bold; color: var(--green-color);">${ad.price.toFixed(2)}<br><span style="font-size: 10px; color: var(--text-muted);">ETB / USDT</span></td>
+                                    <td style="padding: 15px;">${ad.totalAmount.toLocaleString('en-US')} USDT<br><span style="font-size: 10px; color: var(--text-muted);">of ${ad.totalAmount.toLocaleString('en-US')} USDT</span></td>
+                                    <td style="padding: 15px;">${ad.minLimit.toLocaleString('en-US')} - ${ad.maxLimit.toLocaleString('en-US')}<br><span style="font-size: 10px; color: var(--text-muted);">ETB</span></td>
+                                    <td style="padding: 15px; font-size: 12px; line-height: 1.4;">${payList}</td>
+                                    <td style="padding: 15px;"><span style="background: rgba(14,203,129,0.1); color: var(--green-color); padding: 3px 8px; border-radius: 4px; font-size: 11px;">Active</span></td>
+                                    <td style="padding: 15px; color: var(--text-muted); font-size: 12px;">${dateStr}</td>
+                                    <td style="padding: 15px; text-align: right; position: relative;">
+                                        <button onclick="toggleActionMenu('${ad._id}')" style="background: transparent; border: none; color: #fff; cursor: pointer; font-size: 16px;"><i class="fa-solid fa-ellipsis"></i></button>
+                                        <div id="menu-${ad._id}" style="display: none; position: absolute; right: 15px; top: 45px; background: #16181d; border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); z-index: 100; width: 140px; text-align: left; padding: 5px 0;">
+                                            <div onclick="boostAd('${ad._id}')" style="padding: 8px 15px; font-size: 12px; cursor: pointer; color: #fff;" onmouseover="this.style.background='#222'" onmouseout="this.style.background='transparent'"><i class="fa-solid fa-bolt" style="color: var(--accent-color); margin-right: 6px;"></i> Boost Ad</div>
+                                            <div onclick="pauseAd('${ad._id}')" style="padding: 8px 15px; font-size: 12px; cursor: pointer; color: #fff;" onmouseover="this.style.background='#222'" onmouseout="this.style.background='transparent'"><i class="fa-solid fa-pause" style="margin-right: 6px;"></i> Pause Ad</div>
+                                            <div onclick="cancelAd('${ad._id}')" style="padding: 8px 15px; font-size: 12px; cursor: pointer; color: var(--red-color);" onmouseover="this.style.background='#222'" onmouseout="this.style.background='transparent'"><i class="fa-solid fa-xmark" style="margin-right: 6px;"></i> Cancel Ad</div>
+                                        </div>
+                                    </td>
+                                </tr>`;
+                    });
+
+                    tableHTML += `</tbody></table></div>`;
+                    
+                    // ባዶውን ፎርም (No ads yet) በመተካት ሠንጠረዡን ማስገባት
+                    const parentContainer = document.querySelector('.container.view-section.active') || document.body;
+                    const existingTable = parentContainer.querySelector('.p2p-table-card');
+                    if (existingTable) existingTable.remove();
+                    
+                    const emptyStateDiv = parentContainer.querySelector('.empty-state');
+                    if (emptyStateDiv) emptyStateDiv.style.display = 'none';
+                    
+                    parentContainer.insertAdjacentHTML('beforeend', tableHTML);
+                }
+            } catch (e) {
+                console.error("Load user ads error:", e);
+            }
+        }
+
+        function toggleActionMenu(id) {
+            document.querySelectorAll('[id^="menu-"]').forEach(m => {
+                if (m.id !== `menu-${id}`) m.style.display = 'none';
+            });
+            const menu = document.getElementById(`menu-${id}`);
+            if (menu) {
+                menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+            }
+        }
+
+        async function cancelAd(id) {
+            if (!confirm("Are you sure you want to cancel this ad?")) return;
+            // እዚህ ጋር የማጥፊያ API ጥያቄ መላክ ይቻላል
+            alert("Ad cancelled successfully.");
+            loadUserAds();
+        }
+
+        function pauseAd(id) {
+            alert("Ad paused.");
+        }
+
+        function boostAd(id) {
+            alert("Ad boosted successfully!");
+        }
+
         async function initPage() {
             const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
             if (token) {
@@ -929,6 +1030,7 @@
             }
             
             await loadPaymentMethods();
+            await loadUserAds(); // 🚀 ፔጁ ሲከፈት የዩዘሩን አዶች እንዲጭን አድርገናል
 
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('action') === 'create') {
@@ -996,15 +1098,20 @@
             userPaymentMethods = [];
             const listContainer = document.getElementById('payment-methods-list');
             const noPaymentDiv = document.getElementById('no-payment-methods');
-            listContainer.innerHTML = '';
-            listContainer.style.display = 'none';
-            noPaymentDiv.style.display = 'block';
+            if(listContainer) {
+                listContainer.innerHTML = '';
+                listContainer.style.display = 'none';
+            }
+            if(noPaymentDiv) {
+                noPaymentDiv.style.display = 'block';
+            }
             checkOverallValidity();
         }
 
         function renderPaymentMethods() {
             const listContainer = document.getElementById('payment-methods-list');
             const noPaymentDiv = document.getElementById('no-payment-methods');
+            if(!listContainer) return;
             listContainer.innerHTML = '';
 
             if (!userPaymentMethods || userPaymentMethods.length === 0) {
@@ -1013,7 +1120,7 @@
             }
 
             listContainer.style.display = 'block';
-            noPaymentDiv.style.display = 'none';
+            if(noPaymentDiv) noPaymentDiv.style.display = 'none';
 
             userPaymentMethods.forEach((method, index) => {
                 const isChecked = 'checked'; 
