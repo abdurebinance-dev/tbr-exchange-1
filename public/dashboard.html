@@ -234,7 +234,7 @@
             font-size: 36px;
             font-weight: bold;
             color: #fff;
-            margin-bottom: 25px;
+            margin-bottom: 5px; /* 🚀 የተቀነሰ ማርጂን 🚀 */
             display: flex;
             align-items: baseline;
             gap: 10px;
@@ -243,6 +243,26 @@
             font-size: 18px;
             color: #d4af37;
             font-weight: normal;
+        }
+
+        /* 🚀 አዲሱ የ "On Market" ዲዛይን 🚀 */
+        .on-market-label {
+            color: #888;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 5px;
+            margin-bottom: 25px;
+        }
+        .on-market-label span {
+            color: #d4af37;
+            font-weight: 800;
+            background: rgba(212, 175, 55, 0.1);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 13px;
         }
 
         .actions-row {
@@ -565,6 +585,13 @@
                     <span>TOTAL BALANCE <i id="balance-eye-btn" class="fa-regular fa-eye" style="cursor: pointer; margin-left: 5px;"></i></span>
                 </div>
                 <div class="balance-amount"><span id="user-balance" style="color:#fff; font-size:36px; font-weight:bold;">0.00</span> <span style="font-size: 18px; color: #d4af37;">USDT</span></div>
+                
+                <!-- 🚀 New "On Market" Label 🚀 -->
+                <div class="on-market-label" id="on-market-container" style="display: none;">
+                    <i class="fa-solid fa-lock" style="font-size: 11px;"></i> On Market: <span id="display-locked-balance">0.00 USDT</span>
+                </div>
+                <!-- 🚀 Placeholder so layout doesn't jump 🚀 -->
+                <div id="on-market-placeholder" style="height: 38px;"></div> 
 
                 <div class="actions-row">
                     <a href="market.html?type=buy" class="action-btn buy-btn">
@@ -788,6 +815,10 @@
             await syncWithServer();
             checkDepositSilently();
             setInterval(checkDepositSilently, 15000);
+            
+            // 🚀 Fetch Locked Ads Balance 🚀
+            const token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem("jwt");
+            if (token) fetchMyAdsBalance(token);
         }
 
         function updateDashboardUI() {
@@ -849,7 +880,6 @@
                 });
                 
                 if (res.ok) {
-                    // እዚህ ጋር ነበር ስህተቱ (Typo) -> 'res.json()' አድርጌ አስተካክዬዋለሁ!
                     const data = await res.json(); 
                     if (data.success && data.user) {
                         const userObj = data.user;
@@ -871,12 +901,48 @@
                         updateDashboardUI();
                     }
                 } else {
-                    // ቶከን ኤክስፓየር ካደረገ ወደ ሎጊን ይመልሰዋል
                     localStorage.clear();
                     window.location.href = 'signin.html';
                 }
             } catch (e) {
                 console.error('Background sync failed:', e);
+            }
+        }
+
+        // 🚀 Fetch Locked Ads Balance Logic 🚀
+        async function fetchMyAdsBalance(token) {
+            try {
+                const res = await fetch(`${API_BASE}/api/ads/my`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (res.ok) {
+                    const json = await res.json();
+                    let totalLocked = 0;
+                    
+                    if (json.success && json.ads) {
+                        json.ads.forEach(ad => {
+                            if (ad.tradeType === 'sell' && ad.status === 'active') {
+                                totalLocked += Number(ad.totalAmount);
+                            }
+                        });
+                    }
+
+                    const onMarketContainer = document.getElementById('on-market-container');
+                    const onMarketPlaceholder = document.getElementById('on-market-placeholder');
+                    const displayLocked = document.getElementById('display-locked-balance');
+
+                    if (totalLocked > 0) {
+                        displayLocked.innerText = `${totalLocked.toFixed(2)} USDT`;
+                        onMarketContainer.style.display = 'flex';
+                        onMarketPlaceholder.style.display = 'none';
+                    } else {
+                        onMarketContainer.style.display = 'none';
+                        onMarketPlaceholder.style.display = 'block';
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching locked ads balance:", error);
             }
         }
 
@@ -898,7 +964,6 @@
                         finalBal = parseFloat(depositData.transactions[0].value);
                     }
 
-                    // አዲስ ትልቅ ባላንስ ከሰርቨር ከመጣ ብቻ Overwrite ያደርጋል
                     if (finalBal >= parseFloat(actualBalance) && finalBal > 0) {
                         actualBalance = finalBal.toFixed(2);
                         localStorage.setItem("user_balance_val", actualBalance);
@@ -916,22 +981,38 @@
 
         async function loadLiveMarketRates() {
             try {
-                const res = await fetch(`${API_BASE}/api/settings`);
+                const res = await fetch(`${API_BASE}/api/ads`);
                 if (res.ok) {
                     const json = await res.json();
-                    if (json.success && json.data) {
-                        const buyRate = json.data.buyRate;   
-                        const sellRate = json.data.sellRate; 
+                    if (json.success && json.ads && json.ads.length > 0) {
+                        let totalRate = 0;
+                        let count = 0;
+                        let bestBuy = 0; 
+                        let bestSell = 999999; 
                         
-                        const liveRate = ((buyRate + sellRate) / 2).toFixed(2);
-                        
-                        document.getElementById('liveRateValue').innerText = liveRate;
-                        document.getElementById('bestBuyValue').innerText = sellRate.toFixed(2) + ' ETB';
-                        document.getElementById('bestSellValue').innerText = buyRate.toFixed(2) + ' ETB';
+                        json.ads.forEach(ad => {
+                            if (ad.status === 'active') {
+                                totalRate += ad.price;
+                                count++;
+                                
+                                if (ad.tradeType === 'sell') {
+                                    if(ad.price < bestSell) bestSell = ad.price;
+                                } else if (ad.tradeType === 'buy') {
+                                    if(ad.price > bestBuy) bestBuy = ad.price;
+                                }
+                            }
+                        });
+
+                        if (count > 0) {
+                            const avg = totalRate / count;
+                            document.getElementById('liveRateValue').innerText = `${avg.toFixed(2)}`;
+                        }
+                        if (bestBuy > 0) document.getElementById('bestBuyValue').innerText = `${bestBuy.toFixed(2)} ETB`;
+                        if (bestSell < 999999) document.getElementById('bestSellValue').innerText = `${bestSell.toFixed(2)} ETB`;
                     }
                 }
-            } catch (e) {
-                console.error('Error fetching live rates:', e);
+            } catch(e) {
+                console.error("Market rate error:", e);
             }
         }
     </script>
