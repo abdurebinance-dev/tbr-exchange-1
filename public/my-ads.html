@@ -230,7 +230,8 @@
 
         <div class="ads-tabs-wrapper">
             <div class="ads-tab active"><i class="fa-regular fa-file-lines"></i> Ads</div>
-            <div class="ads-tab"><i class="fa-solid fa-bolt"></i> Boost History</div>
+            <!-- 🚀 Boost History yannu Apply for Merchant endu badalayisiddhene 🚀 -->
+            <div class="ads-tab" onclick="window.location.href='merchant.html'"><i class="fa-solid fa-store"></i> Apply for Merchant</div>
         </div>
 
         <div class="ads-sub-tabs">
@@ -250,7 +251,7 @@
         </div>
     </div>
 
-    <!-- 🚀 የ Unverified አባላት View 🚀 -->
+    <!-- 🚀 Unverified View 🚀 -->
     <div class="container view-section" id="view-verification-required">
         <div class="top-navigation-bar">
             <button class="btn-outline" onclick="switchView('view-main-ads')">
@@ -267,7 +268,7 @@
         </div>
     </div>
 
-    <!-- 🚀 የ Pending/Under Review አባላት View 🚀 -->
+    <!-- 🚀 Pending/Under Review View 🚀 -->
     <div class="container view-section" id="view-under-review">
         <div class="top-navigation-bar">
             <button class="btn-outline" onclick="switchView('view-main-ads')">
@@ -459,7 +460,7 @@
         let userPaymentMethods = [];
         
         let userAvailableBalance = 0;
-        let userKycStatus = 'unverified';
+        let userKycStatus = 'unverified'; 
         let currentTradeType = 'buy';
         let calculatedMaxEtb = 0; 
 
@@ -469,7 +470,6 @@
             window.scrollTo(0, 0);
         }
 
-        // 🚀 የ KYC ማጣሪያ እና አቅጣጫ መቀየሪያ (Routing) 🚀
         function openPostOrderForm() {
             if (userKycStatus === 'pending' || userKycStatus === 'under_review') {
                 switchView('view-under-review');
