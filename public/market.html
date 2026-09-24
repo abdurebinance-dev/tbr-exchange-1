@@ -123,21 +123,19 @@
             gap: 8px;
         }
 
-        /* Market Table Styling */
+        /* 🚀 Adaptive Table for PC & Card Layout for Mobile 🚀 */
         .p2p-table-card {
             background: var(--card-bg);
             border-radius: 12px;
             border: 1px solid var(--border-color);
-            overflow-x: auto;
+            overflow: hidden;
         }
         table {
             width: 100%;
             border-collapse: collapse;
             text-align: left;
-            min-width: 1000px;
         }
         
-        /* Exact Padding Match for both th and td to ensure straight alignment */
         th, td {
             padding: 20px 24px;
             border-bottom: 1px solid #14151a;
@@ -157,14 +155,6 @@
             border-bottom: none;
         }
 
-        /* Column Specific Alignments */
-        th:nth-child(1), td:nth-child(1) { width: 280px; text-align: left; }
-        th:nth-child(2), td:nth-child(2) { width: 180px; text-align: left; }
-        th:nth-child(3), td:nth-child(3) { width: 300px; text-align: left; }
-        th:nth-child(4), td:nth-child(4) { width: 280px; text-align: left; }
-        th:nth-child(5), td:nth-child(5) { width: 160px; text-align: right; }
-
-        /* Columns Content */
         .advertiser-cell {
             display: flex;
             align-items: flex-start;
@@ -218,9 +208,6 @@
             color: #848e9c;
         }
 
-        .payment-cell {
-            max-width: 280px;
-        }
         .payment-tags {
             display: flex;
             gap: 6px;
@@ -258,6 +245,38 @@
             opacity: 0.9;
         }
 
+        /* 🚀 Mobile Responsive Card View (ስልክ ላይ ልክ እንዳሳየኸው 3ኛ ፎቶ ይመስላል) 🚀 */
+        @media(max-width: 768px) {
+            .market-container { padding: 15px 10px; }
+            .p2p-table-card { background: transparent; border: none; }
+            table, thead, tbody, th, tr, td { display: block; width: 100%; box-sizing: border-box; }
+            thead { display: none; } /* የሰንጠረዥ ሐዲድ በስልክ ጠፍቷል */
+            
+            tr {
+                background: var(--card-bg);
+                border: 1px solid var(--border-color);
+                border-radius: 12px;
+                margin-bottom: 15px;
+                padding: 16px;
+                position: relative;
+            }
+            td {
+                padding: 8px 0;
+                border-bottom: none;
+                text-align: left !important;
+            }
+            td:nth-child(1) { border-bottom: 1px solid #14151a; padding-bottom: 12px; margin-bottom: 10px; }
+            td:nth-child(2) { display: flex; justify-content: space-between; align-items: center; }
+            td:nth-child(2)::before { content: "Price"; color: var(--text-muted); font-size: 12px; }
+            
+            td:nth-child(3) { display: flex; justify-content: space-between; align-items: center; }
+            td:nth-child(3)::before { content: "Available / Limit"; color: var(--text-muted); font-size: 12px; }
+            
+            td:nth-child(4) { padding-top: 10px; }
+            td:nth-child(5) { text-align: right; padding-top: 12px; border-top: 1px solid #14151a; margin-top: 8px; }
+            .order-btn { width: 100%; text-align: center; padding: 12px; }
+        }
+
         /* Order Modal */
         .modal-overlay {
             position: fixed;
@@ -275,7 +294,8 @@
             background: #16181d;
             border: 1px solid var(--border-color);
             border-radius: 12px;
-            width: 400px;
+            width: 90%;
+            max-width: 400px;
             padding: 24px;
             box-sizing: border-box;
         }
@@ -317,8 +337,7 @@
                 <a href="wallet.html"><i class="fa-solid fa-wallet"></i> Wallet</a>
             </div>
         </div>
-        <div class="nav-right">
-        </div>
+        <div class="nav-right"></div>
     </div>
 
     <!-- Main Market Section -->
@@ -335,7 +354,7 @@
             <button class="filter-btn">Payment Method <i class="fa-solid fa-chevron-down" style="font-size: 10px; margin-left:4px;"></i></button>
         </div>
 
-        <!-- Orders Table -->
+        <!-- Orders Table / Mobile Card Grid -->
         <div class="p2p-table-card">
             <table>
                 <thead>
@@ -383,7 +402,6 @@
         let currentRates = { buyRate: 192.00, sellRate: 195.00 };
 
         document.addEventListener('DOMContentLoaded', () => {
-            // 🚀 ከ my-ads ፔጅ የተላከውን URL Parameter የማንበብ ሎጂክ 🚀
             const urlParams = new URLSearchParams(window.location.search);
             const activeTab = urlParams.get('tab');
             const initialType = urlParams.get('type');
@@ -447,24 +465,21 @@
                 console.error("Error fetching live ads:", err);
             }
 
-            // ማርኬቱ Buy ሲሆን ሰዎቹ የለጠፉት Sell መሆን አለበት (ለተቃራኒውም እንዲሁ)
             let filteredAds = serverAds.filter(ad => {
                 if (isBuy) return ad.tradeType === 'sell';
                 else return ad.tradeType === 'buy';
             }).map(ad => {
-                // 🚀 የክፍያ መንገዶችን ስም በትክክል ለማሳየት (IDs ወደ ስም መቀየር ካለብኝም ማስተካከል)
                 let payMethods = ad.paymentMethods || ['Telebirr'];
                 if (typeof payMethods === 'string') {
                     try { payMethods = JSON.parse(payMethods); } catch(e) { payMethods = [payMethods]; }
                 }
                 if (!Array.isArray(payMethods)) payMethods = [payMethods];
 
-                // 🚀 ቁጥሮችን እና የዩዘር መረጃዎችን በትክክል ማስተካከል 
                 return {
                     name: ad.name || 'Trader',
                     verified: true,
-                    orders: ad.ordersCount || 1, // ከሰርቨር የሚመጣ ትክክለኛ ትዕዛዝ ብዛት
-                    comp: ad.completionRate || '100%', // ትክክለኛ የጨረሳ መጠን
+                    orders: ad.ordersCount || 1,
+                    comp: ad.completionRate || '100%',
                     customPrice: typeof ad.price === 'number' ? ad.price.toFixed(2) : parseFloat(ad.price || 0).toFixed(2),
                     avail: Number(ad.totalAmount || 0).toLocaleString('en-US'),
                     min: Number(ad.minLimit || 0).toLocaleString('en-US'),
@@ -474,16 +489,13 @@
                 };
             });
 
-            // 🚀 1. የድሮዎቹን አላስፈላጊ (Dummy) ነጋዴዎች ሙሉ በሙሉ አጥፍተናል! 
-            // አሁን የሚታዩት በእውነት ፖስት የተደረጉት (filteredAds) ብቻ ናቸው።
             let allTradersList = filteredAds;
-
             let html = '';
+
             allTradersList.forEach(t => {
                 const effectivePrice = t.customPrice;
-                const rowHighlight = 'background: rgba(14, 203, 129, 0.04); border-left: 3px solid var(--green);';
+                const rowHighlight = 'border-left: 3px solid var(--green);';
 
-                // የባንክ ስሞችን በ tags መልክ ማሳየት
                 let payTagsHTML = '';
                 if (Array.isArray(t.pay)) {
                     payTagsHTML = t.pay.map(p => `<span class="pay-tag">${p}</span>`).join('');
@@ -511,7 +523,7 @@
                             <div class="range">Limits: ${t.min} - ${t.max} ETB</div>
                         </div>
                     </td>
-                    <td class="payment-cell">
+                    <td>
                         <div class="payment-tags">
                             ${payTagsHTML}
                         </div>
@@ -522,7 +534,6 @@
                 </tr>`;
             });
 
-            // ማስታወቂያ ከሌለ የሚታይ ጽሁፍ
             if (allTradersList.length === 0) {
                 html = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 40px 0;">No active ads found in the market right now.</td></tr>`;
             }
