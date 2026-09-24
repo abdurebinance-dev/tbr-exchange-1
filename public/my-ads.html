@@ -197,9 +197,10 @@
         .pill-option {
             background: transparent; border: 1px solid var(--border-color); color: #fff;
             padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; transition: 0.2s;
+            display: flex; align-items: center; justify-content: center; transition: 0.2s; gap: 6px;
         }
-        .pill-option.active { border-color: var(--green-color); color: var(--green-color); }
+        /* 🚀 አዲሱ የ Pill ዲዛይን (Active ሲሆን ቲክ ይኖረዋል) 🚀 */
+        .pill-option.active { border-color: var(--green-color); color: var(--green-color); background: rgba(14, 203, 129, 0.05); }
 
         .btn-review {
             width: 100%; background-color: var(--green-color); color: #000; border: none;
@@ -209,7 +210,7 @@
             cursor: not-allowed;
         }
 
-        /* 🚀 አዲሱ የ Review Modal ዲዛይን 🚀 */
+        /* 🚀 አዲሱ የ Review Modal (Full Screen) ዲዛይን 🚀 */
         .review-modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: var(--bg-color); z-index: 1000;
@@ -306,7 +307,7 @@
         </div>
     </div>
 
-    <!-- 🚀 Unverified View 🚀 -->
+    <!-- Unverified View -->
     <div class="container view-section" id="view-verification-required">
         <div class="top-navigation-bar">
             <button class="btn-outline" onclick="switchView('view-main-ads')">
@@ -323,7 +324,7 @@
         </div>
     </div>
 
-    <!-- 🚀 Pending/Under Review View 🚀 -->
+    <!-- Pending/Under Review View -->
     <div class="container view-section" id="view-under-review">
         <div class="top-navigation-bar">
             <button class="btn-outline" onclick="switchView('view-main-ads')">
@@ -467,6 +468,42 @@
                         <div><div style="font-size: 13px; font-weight: 700; color: #fff; margin-bottom:2px;">Merchant+</div><div style="font-size: 11px; color: var(--text-muted);">Merchant only</div></div>
                     </label>
                 </div>
+
+                <!-- 🚀 የአዲሱ ዲዛይን መተግበሪያ - Pills 🚀 -->
+                <label style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 10px;">Account Age</label>
+                <div class="pill-group">
+                    <div class="pill-option active" data-val="Any"><i class="fa-regular fa-circle-check"></i> Any</div>
+                    <div class="pill-option" data-val="3+ days">3+ days</div>
+                    <div class="pill-option" data-val="7+ days">7+ days</div>
+                    <div class="pill-option" data-val="14+ days">14+ days</div>
+                    <div class="pill-option" data-val="30+ days">30+ days</div>
+                </div>
+
+                <label style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 10px;">Min. Completed Trades</label>
+                <div class="pill-group">
+                    <div class="pill-option active" data-val="Any"><i class="fa-regular fa-circle-check"></i> Any</div>
+                    <div class="pill-option" data-val="5+">5+</div>
+                    <div class="pill-option" data-val="10+">10+</div>
+                    <div class="pill-option" data-val="25+">25+</div>
+                    <div class="pill-option" data-val="50+">50+</div>
+                </div>
+
+                <label style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 10px;">Min. Completion Rate</label>
+                <div class="pill-group">
+                    <div class="pill-option active" data-val="Any"><i class="fa-regular fa-circle-check"></i> Any</div>
+                    <div class="pill-option" data-val="≥70%">≥70%</div>
+                    <div class="pill-option" data-val="≥80%">≥80%</div>
+                    <div class="pill-option" data-val="≥90%">≥90%</div>
+                    <div class="pill-option" data-val="≥95%">≥95%</div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h3>Terms & Conditions</h3>
+                <p class="section-sub">Optional — specific rules for this trade</p>
+                <div class="input-group">
+                    <textarea rows="3" placeholder="e.g. Send exact amount with reference. Minimum 500 ETB per transaction."></textarea>
+                </div>
             </div>
 
             <button id="review-order-btn" class="btn-review" disabled onclick="openReviewModal()">
@@ -475,7 +512,7 @@
         </div>
     </div>
 
-    <!-- 🚀 የ Review Order Modal ማሳያ 🚀 -->
+    <!-- 🚀 የ Review Order Modal ማሳያ (ሙሉ ስክሪን የሚሆነው) 🚀 -->
     <div id="review-modal" class="review-modal-overlay">
         <div class="review-container">
             <div class="review-header">
@@ -484,7 +521,7 @@
                     <p>Check the details before posting</p>
                 </div>
                 <div id="rv-trade-badge" class="review-type-badge buy">
-                    <i class="fa-solid fa-arrow-up"></i> Buy USDT
+                    <!-- ይህ በ JS ይሞላል -->
                 </div>
             </div>
 
@@ -515,7 +552,7 @@
             <div class="review-methods-container">
                 <h4>Payment methods</h4>
                 <div class="review-pm-pills" id="rv-pm-list">
-                    <!-- Dynamic Payment Pills Go Here -->
+                    <!-- በJS ይሞላል -->
                 </div>
                 
                 <div class="review-ver-level">
@@ -591,10 +628,19 @@
             }
         }
 
+        // 🚀 አዲሱ የ Pill ክሊክ ማስተካከያ (አዶን ማሳየትና ማጥፋት) 🚀
         document.querySelectorAll('.pill-option').forEach(pill => {
             pill.addEventListener('click', function() {
-                this.parentElement.querySelectorAll('.pill-option').forEach(p => p.classList.remove('active'));
+                const group = this.parentElement;
+                // ከሌሎቹ ቲክ (Icon) እና Active class ማጥፋት
+                group.querySelectorAll('.pill-option').forEach(p => {
+                    p.classList.remove('active');
+                    if (p.querySelector('i')) p.querySelector('i').remove();
+                });
+                
+                // ለተመረጠው Active እና ቲክ መስጠት
                 this.classList.add('active');
+                this.insertAdjacentHTML('afterbegin', '<i class="fa-regular fa-circle-check"></i> ');
             });
         });
 
@@ -606,7 +652,7 @@
             const useMaxDisplay = document.getElementById('use-max-display');
             if (price > 0 && amount > 0) {
                 useMaxDisplay.style.display = 'block';
-                useMaxDisplay.innerText = `Use max: ${calculatedMaxEtb.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})} ETB`;
+                useMaxDisplay.innerText = `Use max: ${calculatedMaxEtb.toLocaleString('en-US')} ETB`;
             } else {
                 useMaxDisplay.style.display = 'none';
             }
@@ -748,9 +794,8 @@
             }
         }
 
-        // 🚀 ሪቪው ለማየት (Open Review Modal) 🚀
+        // 🚀 ሪቪው ለማየት (Open Review Modal) - የ Buy/Sell ዲዛይንን ይወስናል 🚀
         function openReviewModal() {
-            // Get values
             const price = parseFloat(document.getElementById('price-input').value).toFixed(2);
             const amount = parseFloat(document.getElementById('total-amount-input').value).toFixed(2);
             const totalEtb = (price * amount).toLocaleString('en-US');
@@ -758,11 +803,9 @@
             const minLimit = parseFloat(document.getElementById('min-etb-input').value).toLocaleString('en-US');
             const maxLimit = parseFloat(document.getElementById('max-etb-input').value).toLocaleString('en-US');
             
-            // Get selected Verification Level
             const verLevelInput = document.querySelector('input[name="ver_level"]:checked');
             const verLevel = verLevelInput ? verLevelInput.value : "Anyone (no restriction)";
 
-            // Update UI elements in Modal
             document.getElementById('rv-rate').innerText = price;
             document.getElementById('rv-supply').innerText = amount;
             document.getElementById('rv-supply-etb').innerText = `≈ ${totalEtb} ETB`;
@@ -770,7 +813,7 @@
             document.getElementById('rv-limit-max').innerText = maxLimit;
             document.getElementById('rv-verification').innerText = verLevel;
 
-            // Handle Buy/Sell Badge
+            // 🚀 በፎቶው መሰረት Buy / Sell ቀለሙን መቀየር 🚀
             const badge = document.getElementById('rv-trade-badge');
             const confirmBtn = document.getElementById('final-confirm-btn');
             if(currentTradeType === 'buy') {
@@ -779,11 +822,10 @@
                 confirmBtn.style.backgroundColor = 'var(--green-color)';
             } else {
                 badge.className = 'review-type-badge sell';
-                badge.innerHTML = '<i class="fa-solid fa-arrow-down"></i> Sell USDT';
+                badge.innerHTML = '<i class="fa-solid fa-arrow-up"></i> Sell USDT';
                 confirmBtn.style.backgroundColor = 'var(--red-color)';
             }
 
-            // Get selected payment methods and display as pills
             const pmListContainer = document.getElementById('rv-pm-list');
             pmListContainer.innerHTML = '';
             
@@ -793,12 +835,10 @@
                 pmListContainer.innerHTML += `<div class="review-pm-pill"><i class="fa-regular fa-circle-check"></i> ${pmName}</div>`;
             });
 
-            // Show Modal
             document.getElementById('review-modal').style.display = 'block';
-            document.body.style.overflow = 'hidden'; // prevent scrolling background
+            document.body.style.overflow = 'hidden'; 
         }
 
-        // 🚀 ሞዳሉን ለመዝጋት (Close Review Modal) 🚀
         function closeReviewModal() {
             document.getElementById('review-modal').style.display = 'none';
             document.body.style.overflow = 'auto';
