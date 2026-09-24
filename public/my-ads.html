@@ -209,6 +209,62 @@
             cursor: not-allowed;
         }
 
+        /* 🚀 አዲሱ የ Review Modal ዲዛይን 🚀 */
+        .review-modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-color); z-index: 1000;
+            display: none; overflow-y: auto; padding-bottom: 50px;
+        }
+        .review-container {
+            max-width: 800px; margin: 40px auto 0; padding: 20px;
+        }
+        .review-header {
+            display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px;
+        }
+        .review-header h2 { margin: 0 0 5px 0; font-size: 24px; font-weight: 700; }
+        .review-header p { color: var(--text-muted); font-size: 14px; margin: 0; }
+        
+        .review-type-badge {
+            padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600;
+            display: flex; align-items: center; gap: 6px; border: 1px solid transparent;
+        }
+        .review-type-badge.buy { background: rgba(14, 203, 129, 0.1); color: var(--green-color); border-color: rgba(14, 203, 129, 0.2); }
+        .review-type-badge.sell { background: rgba(246, 70, 93, 0.1); color: var(--red-color); border-color: rgba(246, 70, 93, 0.2); }
+
+        .review-details-box {
+            background: #111317; border: 1px solid var(--border-color); border-radius: 12px;
+            margin-bottom: 25px;
+        }
+        .review-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px 20px; border-bottom: 1px solid var(--border-color);
+        }
+        .review-row:last-child { border-bottom: none; }
+        .review-label { color: var(--text-muted); font-size: 14px; }
+        .review-value { color: #fff; font-size: 15px; font-weight: 600; text-align: right; }
+        .review-value span.sub { font-size: 12px; color: var(--text-muted); font-weight: 400; display: block; margin-top: 2px;}
+
+        .review-methods-container { margin-bottom: 30px; }
+        .review-methods-container h4 { margin: 0 0 10px 0; font-size: 14px; font-weight: 600; color: var(--text-muted); }
+        .review-pm-pills { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; }
+        .review-pm-pill {
+            background: transparent; border: 1px solid var(--border-color); color: #fff;
+            padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .review-pm-pill i { color: var(--green-color); }
+        
+        .review-ver-level { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #fff; }
+        .review-ver-level i { color: var(--text-muted); }
+
+        .review-action-btns { display: flex; gap: 15px; margin-top: 20px; }
+        .btn-review-cancel {
+            flex: 1; background: transparent; border: 1px solid var(--border-color); color: #fff;
+            padding: 16px; border-radius: 8px; font-weight: 600; font-size: 15px; cursor: pointer;
+            display: flex; justify-content: center; align-items: center; gap: 8px; transition: 0.2s;
+        }
+        .btn-review-cancel:hover { border-color: #444; background: #16181d; }
+
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
@@ -380,8 +436,8 @@
                 <div id="payment-methods-list"></div>
 
                 <div id="no-payment-methods" style="display: none;">
-                    <button class="pm-add-btn" onclick="window.location.href='settings.html?tab=payments'">
-                        <i class="fa-solid fa-circle-plus"></i> Please add payment method in Settings
+                    <button class="pm-add-btn" onclick="window.location.href='settings.html'">
+                        <i class="fa-solid fa-circle-plus"></i> Please add payment method
                     </button>
                 </div>
             </div>
@@ -393,64 +449,88 @@
                 <label style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 10px;">Verification Level</label>
                 <div class="two-cols" style="margin-bottom: 20px;">
                     <label class="pm-card" style="margin: 0;">
-                        <input type="radio" name="ver_level" checked>
+                        <input type="radio" name="ver_level" value="Anyone (no restriction)" checked>
                         <div><div style="font-size: 13px; font-weight: 700; color: #fff; margin-bottom:2px;">Anyone</div><div style="font-size: 11px; color: var(--text-muted);">No restriction</div></div>
                     </label>
                     <label class="pm-card" style="margin: 0;">
-                        <input type="radio" name="ver_level">
+                        <input type="radio" name="ver_level" value="Basic+ (Email verified)">
                         <div><div style="font-size: 13px; font-weight: 700; color: #fff; margin-bottom:2px;">Basic+</div><div style="font-size: 11px; color: var(--text-muted);">Email verified</div></div>
                     </label>
                 </div>
                 <div class="two-cols" style="margin-bottom: 25px;">
                     <label class="pm-card" style="margin: 0;">
-                        <input type="radio" name="ver_level">
+                        <input type="radio" name="ver_level" value="Verified+ (KYC approved)">
                         <div><div style="font-size: 13px; font-weight: 700; color: #fff; margin-bottom:2px;">Verified+</div><div style="font-size: 11px; color: var(--text-muted);">KYC approved</div></div>
                     </label>
                     <label class="pm-card" style="margin: 0;">
-                        <input type="radio" name="ver_level">
+                        <input type="radio" name="ver_level" value="Merchant+ (Merchant only)">
                         <div><div style="font-size: 13px; font-weight: 700; color: #fff; margin-bottom:2px;">Merchant+</div><div style="font-size: 11px; color: var(--text-muted);">Merchant only</div></div>
                     </label>
                 </div>
-
-                <label style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 10px;">Account Age</label>
-                <div class="pill-group">
-                    <div class="pill-option active"><i class="fa-regular fa-square-check" style="margin-right: 4px;"></i> Any</div>
-                    <div class="pill-option">3+ days</div>
-                    <div class="pill-option">7+ days</div>
-                    <div class="pill-option">14+ days</div>
-                    <div class="pill-option">30+ days</div>
-                </div>
-
-                <label style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 10px;">Min. Completed Trades</label>
-                <div class="pill-group">
-                    <div class="pill-option active"><i class="fa-regular fa-square-check" style="margin-right: 4px;"></i> Any</div>
-                    <div class="pill-option">5+</div>
-                    <div class="pill-option">10+</div>
-                    <div class="pill-option">25+</div>
-                    <div class="pill-option">50+</div>
-                </div>
-
-                <label style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 10px;">Min. Completion Rate</label>
-                <div class="pill-group">
-                    <div class="pill-option active"><i class="fa-regular fa-square-check" style="margin-right: 4px;"></i> Any</div>
-                    <div class="pill-option">>70%</div>
-                    <div class="pill-option">>80%</div>
-                    <div class="pill-option">>90%</div>
-                    <div class="pill-option">>95%</div>
-                </div>
             </div>
 
-            <div class="form-section">
-                <h3>Terms & Conditions</h3>
-                <p class="section-sub">Optional — specific rules for this trade</p>
-                <div class="input-group">
-                    <textarea rows="3" placeholder="e.g. Send exact amount with reference. Minimum 500 ETB per transaction."></textarea>
-                </div>
-            </div>
-
-            <button id="review-order-btn" class="btn-review" disabled>
+            <button id="review-order-btn" class="btn-review" disabled onclick="openReviewModal()">
                 <i class="fa-regular fa-eye"></i> Review Order
             </button>
+        </div>
+    </div>
+
+    <!-- 🚀 የ Review Order Modal ማሳያ 🚀 -->
+    <div id="review-modal" class="review-modal-overlay">
+        <div class="review-container">
+            <div class="review-header">
+                <div>
+                    <h2>Review Order</h2>
+                    <p>Check the details before posting</p>
+                </div>
+                <div id="rv-trade-badge" class="review-type-badge buy">
+                    <i class="fa-solid fa-arrow-down"></i> Buy USDT
+                </div>
+            </div>
+
+            <div class="review-details-box">
+                <div class="review-row">
+                    <div class="review-label">Rate</div>
+                    <div class="review-value"><span id="rv-rate">0.00</span> ETB / <span style="color: var(--text-muted); font-size: 13px;">USDT</span></div>
+                </div>
+                <div class="review-row">
+                    <div class="review-label">Total supply</div>
+                    <div class="review-value">
+                        <span id="rv-supply">0.00</span> USDT
+                        <span class="sub" id="rv-supply-etb">≈ 0.00 ETB</span>
+                    </div>
+                </div>
+                <div class="review-row">
+                    <div class="review-label">Trade limits</div>
+                    <div class="review-value">
+                        <span id="rv-limit-min">0</span> - <span id="rv-limit-max">0</span> ETB
+                    </div>
+                </div>
+                <div class="review-row">
+                    <div class="review-label">Payment window</div>
+                    <div class="review-value">15 minutes</div>
+                </div>
+            </div>
+
+            <div class="review-methods-container">
+                <h4>Payment methods</h4>
+                <div class="review-pm-pills" id="rv-pm-list">
+                    <!-- Dynamic Payment Pills Go Here -->
+                </div>
+                
+                <div class="review-ver-level">
+                    <i class="fa-solid fa-shield-halved"></i> Verification: <strong id="rv-verification">Anyone (no restriction)</strong>
+                </div>
+            </div>
+
+            <div class="review-action-btns">
+                <button class="btn-review-cancel" onclick="closeReviewModal()">
+                    <i class="fa-solid fa-arrow-left"></i> Edit
+                </button>
+                <button class="btn-review" id="final-confirm-btn" style="flex: 2; opacity: 1; cursor: pointer; pointer-events: auto;">
+                    <i class="fa-solid fa-plus"></i> Confirm & Post
+                </button>
+            </div>
         </div>
     </div>
 
@@ -458,7 +538,6 @@
         const API_BASE_URL = ''; 
         let userPaymentMethods = [];
         let userAvailableBalance = 0;
-        // 🚀 ፈጣን እንዲሆን KYC ስታተስ መጀመሪያ ከ LocalStorage ይነበባል 🚀
         let userKycStatus = localStorage.getItem('kycStatus') || 'unverified'; 
         let currentTradeType = 'buy';
         let calculatedMaxEtb = 0; 
@@ -470,9 +549,7 @@
         }
 
         function openPostOrderForm() {
-            // 🚀 'approved' ፣ 'verified' ወይም 'true' ካለ በቀጥታ ይከፍታል 🚀
             let status = String(userKycStatus).toLowerCase();
-
             if (status === 'pending' || status === 'under_review' || status === 'review') {
                 switchView('view-under-review');
                 return;
@@ -480,13 +557,12 @@
                 switchView('view-verification-required');
                 return;
             }
-            
             switchView('view-post-order');
             history.pushState({view: 'post'}, '', '?action=create');
             validatePrice(); 
             checkOverallValidity();
             updateBalanceDisplay();
-            loadPaymentMethods(); // Refresh payments whenever form opens
+            loadPaymentMethods();
         }
 
         function closePostOrderForm() {
@@ -672,6 +748,62 @@
             }
         }
 
+        // 🚀 ሪቪው ለማየት (Open Review Modal) 🚀
+        function openReviewModal() {
+            // Get values
+            const price = parseFloat(document.getElementById('price-input').value).toFixed(2);
+            const amount = parseFloat(document.getElementById('total-amount-input').value).toFixed(2);
+            const totalEtb = (price * amount).toLocaleString('en-US');
+            
+            const minLimit = parseFloat(document.getElementById('min-etb-input').value).toLocaleString('en-US');
+            const maxLimit = parseFloat(document.getElementById('max-etb-input').value).toLocaleString('en-US');
+            
+            // Get selected Verification Level
+            const verLevelInput = document.querySelector('input[name="ver_level"]:checked');
+            const verLevel = verLevelInput ? verLevelInput.value : "Anyone (no restriction)";
+
+            // Update UI elements in Modal
+            document.getElementById('rv-rate').innerText = price;
+            document.getElementById('rv-supply').innerText = amount;
+            document.getElementById('rv-supply-etb').innerText = `≈ ${totalEtb} ETB`;
+            document.getElementById('rv-limit-min').innerText = minLimit;
+            document.getElementById('rv-limit-max').innerText = maxLimit;
+            document.getElementById('rv-verification').innerText = verLevel;
+
+            // Handle Buy/Sell Badge
+            const badge = document.getElementById('rv-trade-badge');
+            const confirmBtn = document.getElementById('final-confirm-btn');
+            if(currentTradeType === 'buy') {
+                badge.className = 'review-type-badge buy';
+                badge.innerHTML = '<i class="fa-solid fa-arrow-down"></i> Buy USDT';
+                confirmBtn.style.backgroundColor = 'var(--green-color)';
+            } else {
+                badge.className = 'review-type-badge sell';
+                badge.innerHTML = '<i class="fa-solid fa-arrow-up"></i> Sell USDT';
+                confirmBtn.style.backgroundColor = 'var(--red-color)';
+            }
+
+            // Get selected payment methods and display as pills
+            const pmListContainer = document.getElementById('rv-pm-list');
+            pmListContainer.innerHTML = '';
+            
+            document.querySelectorAll('input[name="payment_methods"]:checked').forEach(checkbox => {
+                const parentDiv = checkbox.closest('label').querySelector('div > div');
+                const pmName = parentDiv.innerText.replace('Default', '').trim();
+                pmListContainer.innerHTML += `<div class="review-pm-pill"><i class="fa-regular fa-circle-check"></i> ${pmName}</div>`;
+            });
+
+            // Show Modal
+            document.getElementById('review-modal').style.display = 'block';
+            document.body.style.overflow = 'hidden'; // prevent scrolling background
+        }
+
+        // 🚀 ሞዳሉን ለመዝጋት (Close Review Modal) 🚀
+        function closeReviewModal() {
+            document.getElementById('review-modal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
         async function initPage() {
             const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
             if (token) {
@@ -683,8 +815,6 @@
                         const result = await res.json();
                         const userData = result.user || result;
                         userAvailableBalance = userData.balance || 0;
-                        
-                        // 🚀 ከሰርቨር ሲመጣ ሎካል ስቶሬጅን ያዘምናል 🚀
                         userKycStatus = userData.kycStatus || userKycStatus;
                         localStorage.setItem('kycStatus', userKycStatus);
                     }
@@ -720,7 +850,6 @@
                 if (res.ok) {
                     const data = await res.json();
                     userPaymentMethods = data.payments || data || []; 
-                    
                     localStorage.setItem("user_payment_methods", JSON.stringify(userPaymentMethods));
 
                     if(userPaymentMethods.length === 0) {
@@ -780,7 +909,6 @@
             noPaymentDiv.style.display = 'none';
 
             userPaymentMethods.forEach((method, index) => {
-                // 🚀 ይህ መስመር ነው ሁሉንም ቲክ እንዲያደርግ የተቀየረው 🚀
                 const isChecked = 'checked'; 
                 const defaultBadge = method.isDefault ? `<span style="background: rgba(14, 203, 129, 0.15); color: var(--green-color); font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">Default</span>` : '';
                 const bankName = method.type || method.bankName || "Bank";
