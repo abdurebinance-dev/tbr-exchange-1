@@ -106,6 +106,7 @@
         .view-section { display: none; }
         .view-section.active { display: block; animation: fadeIn 0.3s ease; }
 
+        /* 🚀 Main Tabs (Ads / Boosts) 🚀 */
         .ads-tabs-wrapper {
             background: #0b0e11;
             border: 1px solid var(--border-color);
@@ -116,8 +117,10 @@
         .ads-tab {
             flex: 1; text-align: center; padding: 12px; color: var(--text-muted);
             font-size: 14px; font-weight: 600; cursor: pointer; border-right: 1px solid var(--border-color);
+            transition: 0.2s;
         }
         .ads-tab:last-child { border-right: none; }
+        .ads-tab:hover { color: #fff; }
         .ads-tab.active { color: #fff; background: var(--card-bg); border-radius: 8px; }
 
         .ads-sub-tabs {
@@ -314,33 +317,45 @@
         </div>
 
         <div class="ads-header-section">
-            <h1>Your Ads</h1>
-            <button class="btn-pill" onclick="openPostOrderForm()">
+            <h1 id="main-header-title">Your Ads</h1>
+            <button class="btn-pill" id="header-action-btn" onclick="openPostOrderForm()">
                 <i class="fa-solid fa-plus"></i> New Ad
             </button>
         </div>
 
+        <!-- 🚀 Updated Main Tabs (Ads / Boosts) 🚀 -->
         <div class="ads-tabs-wrapper">
-            <div class="ads-tab active"><i class="fa-regular fa-file-lines"></i> Ads</div>
-            <div class="ads-tab" onclick="window.location.href='settings.html?tab=merchant'"><i class="fa-solid fa-store"></i> Apply for Merchant</div>
+            <div class="ads-tab active" id="tab-my-ads" onclick="switchMainTab('ads')"><i class="fa-regular fa-file-lines"></i> Ads</div>
+            <div class="ads-tab" id="tab-boosts" onclick="switchMainTab('boosts')"><i class="fa-solid fa-bolt" style="margin-right: 5px;"></i> Boost History</div>
         </div>
 
-        <!-- 🚀 Filter Tabs with Onclick 🚀 -->
-        <div class="ads-sub-tabs">
-            <div class="sub-tab active" onclick="filterAds('all', this)">All</div>
-            <div class="sub-tab" onclick="filterAds('active', this)">Active</div>
-            <div class="sub-tab" onclick="filterAds('paused', this)">Paused</div>
-            <div class="sub-tab" onclick="filterAds('cancelled', this)">Cancelled</div>
-        </div>
+        <!-- This wrapper holds the content for the "Ads" tab -->
+        <div id="content-my-ads">
+            <div class="ads-sub-tabs">
+                <div class="sub-tab active" onclick="filterAds('all', this)">All</div>
+                <div class="sub-tab" onclick="filterAds('active', this)">Active</div>
+                <div class="sub-tab" onclick="filterAds('paused', this)">Paused</div>
+                <div class="sub-tab" onclick="filterAds('cancelled', this)">Cancelled</div>
+            </div>
 
-        <!-- This container holds both the table and empty state. -->
-        <div id="ads-list-container">
-            <div class="empty-state" id="empty-state-div">
-                <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 30px; margin-bottom: 15px; color: var(--accent-color);"></i>
-                <br>
-                <p style="color: var(--text-muted); font-size: 13px;">Loading your ads...</p>
+            <div id="ads-list-container">
+                <div class="empty-state" id="empty-state-div">
+                    <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 30px; margin-bottom: 15px; color: var(--accent-color);"></i>
+                    <br>
+                    <p style="color: var(--text-muted); font-size: 13px;">Loading your ads...</p>
+                </div>
             </div>
         </div>
+
+        <!-- 🚀 This wrapper holds the content for the "Boosts" tab 🚀 -->
+        <div id="content-boosts" style="display: none;">
+            <div class="empty-state">
+                <i class="fa-solid fa-clock-rotate-left" style="font-size: 40px; color: #2b313a; margin-bottom: 20px;"></i>
+                <h3 style="margin: 0 0 10px 0; font-size: 16px; color: #fff;">No boosts yet</h3>
+                <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">Boost an ad from the Ads tab to appear here.</p>
+            </div>
+        </div>
+
     </div>
 
     <!-- Unverified View -->
@@ -627,9 +642,27 @@
         
         let confirmResolve = null;
         
-        // 🚀 Global Variable for filtering ads 🚀
         let allUserAds = [];
         let currentStatusFilter = 'all';
+
+        // 🚀 New Main Tabs Logic 🚀
+        function switchMainTab(tab) {
+            document.getElementById('tab-my-ads').classList.remove('active');
+            document.getElementById('tab-boosts').classList.remove('active');
+            
+            document.getElementById('content-my-ads').style.display = 'none';
+            document.getElementById('content-boosts').style.display = 'none';
+            
+            if(tab === 'ads') {
+                document.getElementById('tab-my-ads').classList.add('active');
+                document.getElementById('content-my-ads').style.display = 'block';
+                document.getElementById('header-action-btn').style.display = 'inline-flex';
+            } else {
+                document.getElementById('tab-boosts').classList.add('active');
+                document.getElementById('content-boosts').style.display = 'block';
+                document.getElementById('header-action-btn').style.display = 'none'; // Hide "New Ad" button on boosts tab
+            }
+        }
 
         function switchView(viewId) {
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
@@ -961,9 +994,8 @@
             }
         });
 
-        // 🚀 Filter Ads Function 🚀
         function filterAds(status, element) {
-            document.querySelectorAll('.sub-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('#content-my-ads .sub-tab').forEach(tab => tab.classList.remove('active'));
             element.classList.add('active');
             
             currentStatusFilter = status;
@@ -1001,7 +1033,6 @@
             }
         }
 
-        // 🚀 Render Table Logic separated for filtering 🚀
         function renderAdsTable() {
             const container = document.getElementById('ads-list-container');
             const emptyStateDiv = document.getElementById('empty-state-div');
@@ -1133,7 +1164,6 @@
                                 <i class="fa-solid fa-plus" style="font-size: 10px;"></i> Post an Ad
                             </button>`;
                     } else {
-                        // Custom empty state based on tab
                         emptyStateDiv.innerHTML = `
                             <i class="fa-regular fa-folder-open" style="font-size: 40px; color: #2b313a; margin-bottom: 20px;"></i>
                             <h3 style="margin: 0 0 10px 0; font-size: 16px; color: #fff; text-transform: capitalize;">No ${currentStatusFilter} ads</h3>
