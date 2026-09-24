@@ -88,7 +88,7 @@
         .market-container {
             max-width: 1300px;
             margin: 0 auto;
-            padding: 20px 15px;
+            padding: 30px 20px 20px 20px;
         }
 
         /* Buy / Sell Switch Tabs */
@@ -96,12 +96,12 @@
             display: flex;
             align-items: center;
             gap: 12px;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
         .toggle-btn {
-            padding: 8px 30px;
+            padding: 10px 35px;
             border-radius: 8px;
-            font-size: 14px;
+            font-size: 15px;
             font-weight: 700;
             cursor: pointer;
             border: none;
@@ -121,8 +121,8 @@
         /* Filter Controls */
         .filter-row {
             display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
+            gap: 12px;
+            margin-bottom: 25px;
             align-items: center;
             flex-wrap: wrap;
         }
@@ -130,14 +130,14 @@
             background: #181a20;
             border: none;
             color: #848e9c;
-            padding: 6px 14px;
+            padding: 8px 16px;
             border-radius: 6px;
-            font-size: 12px;
+            font-size: 13px;
             font-weight: 600;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
         }
 
         /* Market Table Styling for PC */
@@ -165,6 +165,12 @@
             font-weight: 600;
             letter-spacing: 0.5px;
         }
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+        tr:last-child td {
+            border-bottom: none;
+        }
 
         .advertiser-cell {
             display: flex;
@@ -172,42 +178,99 @@
             gap: 12px;
         }
         .avatar-box {
-            width: 38px; height: 38px; border-radius: 50%;
-            background: #1c2027; display: flex; align-items: center;
-            justify-content: center; color: var(--accent-gold);
-            font-weight: bold; font-size: 14px; border: 1px solid #2b313a;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: #1c2027;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent-gold);
+            font-weight: bold;
+            font-size: 14px;
+            border: 1px solid #2b313a;
         }
         .adv-name {
-            font-weight: 700; font-size: 15px; color: #fff;
-            display: flex; align-items: center; gap: 6px; margin-bottom: 4px;
+            font-weight: 700;
+            font-size: 15px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 4px;
         }
-        .adv-name i { color: var(--accent-gold); font-size: 13px; }
-        .adv-stats { font-size: 12px; color: #848e9c; }
+        .adv-name i {
+            color: var(--accent-gold);
+            font-size: 13px;
+        }
+        .adv-stats {
+            font-size: 12px;
+            color: #848e9c;
+        }
 
-        .price-cell { font-size: 20px; font-weight: 700; color: var(--green); }
-        .limit-cell .available { font-weight: 700; font-size: 14px; color: #fff; margin-bottom: 4px; }
-        .limit-cell .range { font-size: 12px; color: #848e9c; }
+        .price-cell {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--green);
+        }
 
-        .payment-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+        .limit-cell .available {
+            font-weight: 700;
+            font-size: 14px;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+        .limit-cell .range {
+            font-size: 12px;
+            color: #848e9c;
+        }
+
+        .payment-tags {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
         .pay-tag {
-            background: #181a20; color: #848e9c; padding: 6px 12px;
-            border-radius: 16px; font-size: 11px; font-weight: 600; border: 1px solid #2b313a;
+            background: #181a20;
+            color: #848e9c;
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 11px;
+            font-weight: 600;
+            border: 1px solid #2b313a;
         }
 
-        .action-cell { text-align: right; }
+        .action-cell {
+            text-align: right;
+        }
         .order-btn {
-            background: var(--green-btn); color: #000000; padding: 10px 30px;
-            border-radius: 6px; font-weight: 700; font-size: 14px; border: none; cursor: pointer; display: inline-block;
+            background: var(--green-btn);
+            color: #000000;
+            padding: 10px 30px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 14px;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: inline-block;
         }
-        .order-btn.sell { background: var(--red); color: #fff; }
+        .order-btn.sell {
+            background: var(--red);
+            color: #fff;
+        }
+        .order-btn:hover {
+            opacity: 0.9;
+        }
 
+        /* PC / Mobile Display Toggle Classes */
         .mobile-card-row { display: none; }
         .pc-table-row { display: table-row; }
 
-        /* 🚀 Mobile Strict Tight Layout with Zero Margin/Padding Waste 🚀 */
+        /* 🚀 Compact Mobile Card Layout (Strictly Tight & Clean) 🚀 */
         @media(max-width: 768px) {
             body { padding-top: 55px; }
-            .market-container { padding: 6px 8px; }
+            .market-container { padding: 10px 12px; }
             .p2p-table-card { background: transparent; border: none; }
             table, thead, tbody, th, tr, td { display: block; width: 100%; box-sizing: border-box; }
             thead { display: none; }
@@ -219,8 +282,8 @@
                 background: var(--card-bg);
                 border: 1px solid var(--border-color);
                 border-radius: 12px;
-                margin-bottom: 8px;
-                padding: 10px 12px;
+                margin-bottom: 10px;
+                padding: 12px 14px;
                 position: relative;
                 box-sizing: border-box;
             }
@@ -228,46 +291,89 @@
                 display: flex;
                 justify-content: space-between;
                 align-items: flex-start;
-                margin-bottom: 4px;
+                margin-bottom: 6px;
             }
-            .m-user-info { display: flex; align-items: center; gap: 6px; }
+            .m-user-info {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
             .m-avatar {
-                width: 28px; height: 28px; border-radius: 50%;
-                background: #1c2027; display: flex; align-items: center;
-                justify-content: center; color: var(--accent-gold);
-                font-weight: bold; font-size: 11px; border: 1px solid #2b313a;
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                background: #1c2027;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: var(--accent-gold);
+                font-weight: bold;
+                font-size: 12px;
+                border: 1px solid #2b313a;
             }
-            .m-name { font-weight: 700; font-size: 13px; color: #fff; display: flex; align-items: center; gap: 3px; }
-            .m-stats { font-size: 9px; color: #848e9c; }
-            
-            .m-right-side { text-align: right; }
-            .m-price { font-size: 18px; font-weight: 800; line-height: 1; }
-            .m-currency { font-size: 8px; color: #848e9c; text-transform: uppercase; margin-top: 2px; }
-            
-            .m-middle-row {
+            .m-name {
+                font-weight: 700;
+                font-size: 14px;
+                color: #fff;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+            }
+            .m-stats {
                 font-size: 10px;
                 color: #848e9c;
-                margin: 2px 0;
+                margin-top: 1px;
             }
-            .m-middle-row .avail { color: #fff; font-weight: 600; }
-            
+            .m-right-side {
+                text-align: right;
+            }
+            .m-price {
+                font-size: 20px;
+                font-weight: 800;
+                line-height: 1;
+            }
+            .m-currency {
+                font-size: 9px;
+                color: #848e9c;
+                text-transform: uppercase;
+                margin-top: 2px;
+            }
+            .m-middle-row {
+                font-size: 11px;
+                color: #848e9c;
+                margin: 4px 0;
+                line-height: 1.3;
+            }
+            .m-middle-row .avail {
+                color: #fff;
+                font-weight: 600;
+            }
             .m-bottom-row {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                margin-top: 6px;
-                padding-top: 6px;
+                margin-top: 8px;
+                padding-top: 8px;
                 border-top: 1px solid #14151a;
             }
-            .m-payment-tags { display: flex; gap: 3px; flex-wrap: wrap; max-width: 68%; }
+            .m-payment-tags {
+                display: flex;
+                gap: 4px;
+                flex-wrap: wrap;
+                max-width: 65%;
+            }
             .m-pay-tag {
-                background: #14171d; color: #848e9c; padding: 2px 5px;
-                border-radius: 4px; font-size: 9px; border: 1px solid #2b313a;
+                background: #14171d;
+                color: #848e9c;
+                padding: 2px 6px;
+                border-radius: 6px;
+                font-size: 9px;
+                border: 1px solid #2b313a;
             }
             .m-order-btn {
-                padding: 5px 16px;
-                font-size: 11px;
-                border-radius: 5px;
+                padding: 6px 20px;
+                font-size: 12px;
+                border-radius: 6px;
                 font-weight: 700;
                 border: none;
                 cursor: pointer;
@@ -276,29 +382,53 @@
             .m-order-btn.sell { background: var(--red); color: #fff; }
         }
 
+        /* Order Modal */
         .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.85); display: none;
-            align-items: center; justify-content: center; z-index: 2000;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
         }
         .modal-box {
-            background: #16181d; border: 1px solid var(--border-color);
-            border-radius: 12px; width: 90%; max-width: 400px;
-            padding: 24px; box-sizing: border-box;
+            background: #16181d;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            padding: 24px;
+            box-sizing: border-box;
         }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+        }
         .modal-header h3 { margin: 0; font-size: 16px; color: #fff; }
         .modal-header i { cursor: pointer; color: #848e9c; font-size: 18px; }
         .form-group { margin-bottom: 16px; }
         .form-group label { display: block; font-size: 12px; color: #848e9c; margin-bottom: 6px; }
         .input-control {
-            width: 100%; background: #0d0f12; border: 1px solid #2b313a;
-            color: #fff; padding: 12px; border-radius: 8px; font-size: 14px; box-sizing: border-box;
+            width: 100%;
+            background: #0d0f12;
+            border: 1px solid #2b313a;
+            color: #fff;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            box-sizing: border-box;
         }
     </style>
 </head>
 <body>
 
+    <!-- Top Navbar -->
     <div class="navbar">
         <div class="nav-left">
             <div class="logo-container">
@@ -312,6 +442,7 @@
                 <a href="wallet.html"><i class="fa-solid fa-wallet"></i> Wallet</a>
             </div>
         </div>
+        <!-- Dashboard Shortcut Button on Top Right -->
         <div class="nav-right">
             <a href="dashboard.html" class="dashboard-shortcut-btn" title="Go to Dashboard">
                 <i class="fa-solid fa-house"></i>
@@ -319,7 +450,9 @@
         </div>
     </div>
 
+    <!-- Main Market Section -->
     <div class="market-container">
+        
         <div class="trade-toggle-wrap">
             <button id="buyTabBtn" class="toggle-btn active buy-active" onclick="switchTradeType('buy')">Buy</button>
             <button id="sellTabBtn" class="toggle-btn" onclick="switchTradeType('sell')">Sell</button>
@@ -331,6 +464,7 @@
             <button class="filter-btn">Payment Method <i class="fa-solid fa-chevron-down" style="font-size: 10px; margin-left:4px;"></i></button>
         </div>
 
+        <!-- Orders Table / Mobile Card Grid -->
         <div class="p2p-table-card">
             <table>
                 <thead>
@@ -353,6 +487,7 @@
         </div>
     </div>
 
+    <!-- Order Action Modal -->
     <div class="modal-overlay" id="orderModal">
         <div class="modal-box">
             <div class="modal-header">
@@ -377,10 +512,15 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('tab') === 'sell' || urlParams.get('type') === 'sell') {
+            const activeTab = urlParams.get('tab');
+            const initialType = urlParams.get('type');
+
+            if (activeTab === 'sell' || initialType === 'sell') {
                 switchTradeType('sell');
-            } else {
+            } else if (activeTab === 'buy' || initialType === 'buy') {
                 switchTradeType('buy');
+            } else {
+                fetchSettingsAndRender();
             }
         });
 
@@ -388,6 +528,7 @@
             currentType = type;
             const buyBtn = document.getElementById('buyTabBtn');
             const sellBtn = document.getElementById('sellTabBtn');
+
             if (type === 'buy') {
                 buyBtn.className = 'toggle-btn active buy-active';
                 sellBtn.className = 'toggle-btn';
@@ -395,7 +536,8 @@
                 sellBtn.className = 'toggle-btn active sell-active';
                 buyBtn.className = 'toggle-btn';
             }
-            renderOrderBook();
+
+            fetchSettingsAndRender();
         }
 
         async function fetchSettingsAndRender() {
@@ -405,6 +547,7 @@
         async function renderOrderBook() {
             const tbody = document.getElementById('p2pOrdersBody');
             const isBuy = currentType === 'buy';
+            
             const actionLabel = isBuy ? 'Buy' : 'Sell';
             const btnClass = isBuy ? 'order-btn' : 'order-btn sell';
             const mobileBtnClass = isBuy ? 'm-order-btn buy' : 'm-order-btn sell';
@@ -413,9 +556,11 @@
             try {
                 const res = await fetch(`${API_BASE}/api/ads`);
                 const json = await res.json();
-                if (json.success && json.ads) serverAds = json.ads;
+                if (json.success && json.ads) {
+                    serverAds = json.ads;
+                }
             } catch (err) {
-                console.error("Error:", err);
+                console.error("Error fetching live ads:", err);
             }
 
             let filteredAds = serverAds.filter(ad => {
@@ -448,6 +593,7 @@
                 let mPayTagsHTML = t.pay.map(p => `<span class="m-pay-tag">${p}</span>`).join('');
 
                 html += `
+                <!-- PC Table Row View -->
                 <tr class="pc-table-row">
                     <td>
                         <div class="advertiser-cell">
@@ -458,17 +604,26 @@
                             </div>
                         </div>
                     </td>
-                    <td><div class="price-cell" style="color: ${isBuy ? 'var(--green)' : 'var(--red)'};">${effectivePrice} <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">ETB</span></div></td>
+                    <td>
+                        <div class="price-cell" style="color: ${isBuy ? 'var(--green)' : 'var(--red)'};">${effectivePrice} <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">ETB</span></div>
+                    </td>
                     <td>
                         <div class="limit-cell">
                             <div class="available">${t.avail} USDT</div>
                             <div class="range">Limit: ${t.min} - ${t.max} ETB</div>
                         </div>
                     </td>
-                    <td><div class="payment-tags">${payTagsHTML}</div></td>
-                    <td class="action-cell"><button class="${btnClass}" onclick="openOrderModal('${actionLabel}', '${effectivePrice}')">${actionLabel}</button></td>
+                    <td>
+                        <div class="payment-tags">
+                            ${payTagsHTML}
+                        </div>
+                    </td>
+                    <td class="action-cell">
+                        <button class="${btnClass}" onclick="openOrderModal('${actionLabel}', '${effectivePrice}')">${actionLabel}</button>
+                    </td>
                 </tr>
 
+                <!-- Mobile Card View -->
                 <tr class="mobile-card-row">
                     <td>
                         <div class="m-card">
@@ -487,11 +642,13 @@
                             </div>
                             
                             <div class="m-middle-row">
-                                Limit: ${t.min} - ${t.max} ETB &bull; <span class="avail">Avail: ${t.avail} USDT</span>
+                                <div>Limit: ${t.min} - ${t.max} ETB &bull; <span class="avail">Avail: ${t.avail} USDT</span></div>
                             </div>
 
                             <div class="m-bottom-row">
-                                <div class="m-payment-tags">${mPayTagsHTML}</div>
+                                <div class="m-payment-tags">
+                                    ${mPayTagsHTML}
+                                </div>
                                 <button class="${mobileBtnClass}" onclick="openOrderModal('${actionLabel}', '${effectivePrice}')">${actionLabel}</button>
                             </div>
                         </div>
@@ -500,7 +657,7 @@
             });
 
             if (filteredAds.length === 0) {
-                html = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 40px 0;">No active ads found.</td></tr>`;
+                html = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 40px 0;">No active ads found in the market right now.</td></tr>`;
             }
 
             tbody.innerHTML = html;
@@ -509,10 +666,13 @@
         function openOrderModal(action, price) {
             document.getElementById('modalTitle').innerText = `${action} USDT via Escrow`;
             document.getElementById('modalPriceInput').value = `${price} ETB`;
+            document.getElementById('modalConfirmBtn').innerText = `Confirm ${action}`;
             document.getElementById('orderModal').style.display = 'flex';
         }
 
-        function closeOrderModal() { document.getElementById('orderModal').style.display = 'none'; }
+        function closeOrderModal() {
+            document.getElementById('orderModal').style.display = 'none';
+        }
 
         function confirmTrade() {
             const amount = document.getElementById('modalAmountInput').value;
@@ -520,7 +680,7 @@
                 alert('Please enter a valid amount.');
                 return;
             }
-            alert(`Order initiated for ${amount} USDT!`);
+            alert(`Order initiated for ${amount} USDT! Transferring to secure Escrow Trade room...`);
             closeOrderModal();
             window.location.href = 'trades.html';
         }
