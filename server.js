@@ -2292,6 +2292,22 @@ app.get('/api/ads/my', verifyToken, async (req, res) => {
     }
 });
 
+// 4. ማስታወቂያን Cancel ለማድረግ (Status Update)
+app.put('/api/ads/:id/cancel', verifyToken, async (req, res) => {
+    try {
+        const ad = await Ad.findOne({ _id: req.params.id, userId: req.user.id });
+        if (!ad) return res.status(404).json({ success: false, message: 'Ad not found.' });
+        
+        ad.status = 'cancelled';
+        await ad.save();
+        
+        res.json({ success: true, message: 'Ad cancelled successfully.' });
+    } catch (error) {
+        console.error("Cancel Ad Error:", error);
+        res.status(500).json({ success: false, message: 'Server error while canceling ad.' });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`TBR Exchange Server is running on port ${PORT} 🚀`);
 });

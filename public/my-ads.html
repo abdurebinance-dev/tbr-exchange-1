@@ -331,7 +331,6 @@
             <div class="sub-tab">Cancelled</div>
         </div>
 
-        <!-- This container holds both the table and empty state. -->
         <div id="ads-list-container">
             <div class="empty-state" id="empty-state-div">
                 <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 30px; margin-bottom: 15px; color: var(--accent-color);"></i>
@@ -607,7 +606,7 @@
         <div class="custom-confirm-box">
             <i class="fa-solid fa-circle-exclamation confirm-icon"></i>
             <div class="confirm-title">Cancel Ad</div>
-            <div class="confirm-text">Are you sure you want to cancel this ad? This action cannot be undone.</div>
+            <div class="confirm-text">Are you sure you want to cancel this ad? It will be removed from the market.</div>
             <div class="confirm-actions">
                 <button class="btn-confirm-no" onclick="handleConfirmResult(false)">No, Keep it</button>
                 <button class="btn-confirm-yes" onclick="handleConfirmResult(true)">Yes, Cancel Ad</button>
@@ -1005,8 +1004,36 @@
                         if (!Array.isArray(payMethods)) payMethods = [payMethods];
                         const payList = payMethods.join('<br>');
 
+                        // 🚀 Status Badge Logic 🚀
+                        const statusBadge = ad.status === 'cancelled' 
+                            ? `<span style="background: rgba(255,255,255,0.1); color: var(--text-muted); padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">Cancelled</span>`
+                            : `<span style="background: rgba(14,203,129,0.1); color: var(--green-color); padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">Active</span>`;
+
+                        // 🚀 Menu Logic (Hide actions if cancelled) 🚀
+                        let actionMenu = '';
+                        if (ad.status !== 'cancelled') {
+                            actionMenu = `
+                                <div onclick="boostAd('${ad._id}')" style="padding: 10px 16px; font-size: 13px; cursor: pointer; color: #fff; display: flex; align-items: center; transition: 0.2s;" onmouseover="this.style.background='#2b313a'" onmouseout="this.style.background='transparent'">
+                                    <i class="fa-solid fa-bolt" style="color: var(--accent-color); margin-right: 10px; width: 14px; text-align: center;"></i> Boost Ad
+                                </div>
+                                <div style="height: 1px; background: #2b313a; margin: 4px 0;"></div>
+                                <div onclick="pauseAd('${ad._id}')" style="padding: 10px 16px; font-size: 13px; cursor: pointer; color: #fff; display: flex; align-items: center; transition: 0.2s;" onmouseover="this.style.background='#2b313a'" onmouseout="this.style.background='transparent'">
+                                    <i class="fa-solid fa-pause" style="margin-right: 10px; width: 14px; text-align: center; color: var(--text-muted);"></i> Pause Ad
+                                </div>
+                                <div onclick="cancelAd('${ad._id}')" style="padding: 10px 16px; font-size: 13px; cursor: pointer; color: var(--red-color); display: flex; align-items: center; transition: 0.2s;" onmouseover="this.style.background='#2b313a'" onmouseout="this.style.background='transparent'">
+                                    <i class="fa-solid fa-xmark" style="margin-right: 10px; width: 14px; text-align: center;"></i> Cancel Ad
+                                </div>
+                            `;
+                        } else {
+                            actionMenu = `
+                                <div style="padding: 10px 16px; font-size: 13px; color: var(--text-muted); text-align: center;">
+                                    No actions available
+                                </div>
+                            `;
+                        }
+
                         tableHTML += `
-                                <tr style="border-bottom: 1px solid #14151a; font-size: 13px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+                                <tr style="border-bottom: 1px solid #14151a; font-size: 13px; transition: background 0.2s; ${ad.status === 'cancelled' ? 'opacity: 0.5;' : ''}" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
                                     <td style="padding: 20px 15px;">
                                         <span style="color: ${typeColor}; background: ${typeBg}; padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 11px;">${typeText}</span>
                                     </td>
@@ -1026,7 +1053,7 @@
                                         ${payList}
                                     </td>
                                     <td style="padding: 20px 15px;">
-                                        <span style="background: rgba(14,203,129,0.1); color: var(--green-color); padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">Active</span>
+                                        ${statusBadge}
                                     </td>
                                     <td style="padding: 20px 15px; color: var(--text-muted); font-size: 12px;">
                                         ${dateStr}
@@ -1037,16 +1064,7 @@
                                         </button>
                                         
                                         <div id="menu-${ad._id}" class="action-dropdown" style="display: none; position: absolute; right: 15px; top: 55px; background: #181a20; border: 1px solid #2b313a; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); z-index: 100; width: 160px; text-align: left; padding: 8px 0; overflow: hidden;">
-                                            <div onclick="boostAd('${ad._id}')" style="padding: 10px 16px; font-size: 13px; cursor: pointer; color: #fff; display: flex; align-items: center; transition: 0.2s;" onmouseover="this.style.background='#2b313a'" onmouseout="this.style.background='transparent'">
-                                                <i class="fa-solid fa-bolt" style="color: var(--accent-color); margin-right: 10px; width: 14px; text-align: center;"></i> Boost Ad
-                                            </div>
-                                            <div style="height: 1px; background: #2b313a; margin: 4px 0;"></div>
-                                            <div onclick="pauseAd('${ad._id}')" style="padding: 10px 16px; font-size: 13px; cursor: pointer; color: #fff; display: flex; align-items: center; transition: 0.2s;" onmouseover="this.style.background='#2b313a'" onmouseout="this.style.background='transparent'">
-                                                <i class="fa-solid fa-pause" style="margin-right: 10px; width: 14px; text-align: center; color: var(--text-muted);"></i> Pause Ad
-                                            </div>
-                                            <div onclick="cancelAd('${ad._id}')" style="padding: 10px 16px; font-size: 13px; cursor: pointer; color: var(--red-color); display: flex; align-items: center; transition: 0.2s;" onmouseover="this.style.background='#2b313a'" onmouseout="this.style.background='transparent'">
-                                                <i class="fa-solid fa-xmark" style="margin-right: 10px; width: 14px; text-align: center;"></i> Cancel Ad
-                                            </div>
+                                            ${actionMenu}
                                         </div>
                                     </td>
                                 </tr>`;
@@ -1105,16 +1123,25 @@
             }
         }
 
+        // 🚀 API በመጠቀም አዱን Cancel ማድረግ 🚀
         async function cancelAd(id) {
             const confirmed = await showCustomConfirm();
             if (!confirmed) return;
             
-            document.getElementById(`menu-${id}`).closest('tr').remove();
-            
-            const tbody = document.querySelector('.p2p-table-card tbody');
-            if (tbody && tbody.children.length === 0) {
-                document.querySelector('.p2p-table-card').remove();
-                document.getElementById('empty-state-div').style.display = 'block';
+            const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/ads/${id}/cancel`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if(response.ok) {
+                    loadUserAds(); // ሠንጠረዡን አድሶ 'Cancelled' መሆኑን ያሳያል
+                } else {
+                    alert("Failed to cancel ad.");
+                }
+            } catch(e) {
+                console.error("Cancel Error:", e);
             }
         }
 
