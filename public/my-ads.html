@@ -230,7 +230,6 @@
 
         <div class="ads-tabs-wrapper">
             <div class="ads-tab active"><i class="fa-regular fa-file-lines"></i> Ads</div>
-            <!-- 🚀 Boost History yannu Apply for Merchant endu badalayisiddhene 🚀 -->
             <div class="ads-tab" onclick="window.location.href='settings.html?tab=merchant'"><i class="fa-solid fa-store"></i> Apply for Merchant</div>
         </div>
 
@@ -378,11 +377,16 @@
                 </div>
                 <p class="section-sub">Select all methods you accept</p>
 
-                <div id="payment-methods-list"></div>
+                <!-- 🚀 Dynamic Payment Methods List 🚀 -->
+                <div id="payment-methods-list">
+                    <div style="color: var(--text-muted); font-size: 14px; text-align: center; padding: 20px;">
+                        Loading payment methods...
+                    </div>
+                </div>
 
                 <div id="no-payment-methods" style="display: none;">
-                    <button class="pm-add-btn" onclick="window.location.href='settings.html'">
-                        <i class="fa-solid fa-circle-plus"></i> Please add payment method
+                    <button class="pm-add-btn" onclick="window.location.href='settings.html?tab=payments'">
+                        <i class="fa-solid fa-circle-plus"></i> Please add payment method in Settings
                     </button>
                 </div>
             </div>
@@ -706,6 +710,7 @@
             }
         }
 
+        // 🚀 DYNAMIC PAYMENT METHODS LOADER 🚀
         async function loadPaymentMethods() {
             const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
             
@@ -772,7 +777,7 @@
             noPaymentDiv.style.display = 'none';
 
             userPaymentMethods.forEach((method, index) => {
-                const isChecked = 'checked'; 
+                const isChecked = method.isDefault ? 'checked' : ''; 
                 const defaultBadge = method.isDefault ? `<span style="background: rgba(14, 203, 129, 0.15); color: var(--green-color); font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">Default</span>` : '';
                 
                 const bankName = method.type || method.bankName || "Bank";
