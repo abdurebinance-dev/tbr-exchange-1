@@ -250,7 +250,7 @@
         </div>
     </div>
 
-    <!-- 🚀 Unverified View 🚀 -->
+    <!-- Unverified View -->
     <div class="container view-section" id="view-verification-required">
         <div class="top-navigation-bar">
             <button class="btn-outline" onclick="switchView('view-main-ads')">
@@ -267,7 +267,7 @@
         </div>
     </div>
 
-    <!-- 🚀 Pending/Under Review View 🚀 -->
+    <!-- Pending/Under Review View -->
     <div class="container view-section" id="view-under-review">
         <div class="top-navigation-bar">
             <button class="btn-outline" onclick="switchView('view-main-ads')">
@@ -377,16 +377,11 @@
                 </div>
                 <p class="section-sub">Select all methods you accept</p>
 
-                <!-- 🚀 Dynamic Payment Methods List 🚀 -->
-                <div id="payment-methods-list">
-                    <div style="color: var(--text-muted); font-size: 14px; text-align: center; padding: 20px;">
-                        Loading payment methods...
-                    </div>
-                </div>
+                <div id="payment-methods-list"></div>
 
                 <div id="no-payment-methods" style="display: none;">
-                    <button class="pm-add-btn" onclick="window.location.href='settings.html?tab=payments'">
-                        <i class="fa-solid fa-circle-plus"></i> Please add payment method in Settings
+                    <button class="pm-add-btn" onclick="window.location.href='settings.html'">
+                        <i class="fa-solid fa-circle-plus"></i> Please add payment method
                     </button>
                 </div>
             </div>
@@ -462,7 +457,6 @@
     <script>
         const API_BASE_URL = ''; 
         let userPaymentMethods = [];
-        
         let userAvailableBalance = 0;
         let userKycStatus = 'unverified'; 
         let currentTradeType = 'buy';
@@ -482,12 +476,12 @@
                 switchView('view-verification-required');
                 return;
             }
-
             switchView('view-post-order');
             history.pushState({view: 'post'}, '', '?action=create');
             validatePrice(); 
             checkOverallValidity();
             updateBalanceDisplay();
+            loadPaymentMethods(); // 🚀 Refresh payments whenever form opens 🚀
         }
 
         function closePostOrderForm() {
@@ -499,7 +493,6 @@
             document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
             element.classList.add('active');
             currentTradeType = type; 
-            
             updateBalanceDisplay();
             validateAmount();
             checkOverallValidity();
@@ -508,7 +501,6 @@
         function updateBalanceDisplay() {
             const balanceDisplay = document.getElementById('available-balance-display');
             const errorBalanceAmount = document.getElementById('error-balance-amount');
-            
             if (currentTradeType === 'sell') {
                 balanceDisplay.style.display = 'block';
                 balanceDisplay.innerText = `Available: ${userAvailableBalance.toFixed(2)} USDT`;
@@ -599,7 +591,6 @@
 
             const minVal = parseFloat(minInput.value);
             const maxVal = parseFloat(maxInput.value);
-
             let isMinValid = false;
             let isMaxValid = false;
 
@@ -640,26 +631,19 @@
                 maxError.style.display = 'none';
                 maxInput.style.borderColor = 'var(--border-color)';
             }
-
             return isMinValid && isMaxValid;
         }
 
         function checkOverallValidity() {
             const reviewBtn = document.getElementById('review-order-btn');
-
-            const priceInput = document.getElementById('price-input');
-            const price = parseFloat(priceInput.value);
+            const price = parseFloat(document.getElementById('price-input').value);
             const isPriceValid = !isNaN(price) && price >= 170 && price <= 210;
-
-            const amountInput = document.getElementById('total-amount-input');
-            const amount = parseFloat(amountInput.value);
+            const amount = parseFloat(document.getElementById('total-amount-input').value);
             let isAmountValid = !isNaN(amount) && amount > 0;
             if (currentTradeType === 'sell' && isAmountValid) {
                 isAmountValid = amount <= userAvailableBalance;
             }
-
             const isLimitsValid = validateLimits();
-
             const checkedPayments = document.querySelectorAll('input[name="payment_methods"]:checked');
             const isPaymentValid = checkedPayments.length > 0;
 
@@ -667,7 +651,6 @@
                 reviewBtn.disabled = false;
                 reviewBtn.style.opacity = '1';
                 reviewBtn.style.cursor = 'pointer';
-                
                 if (currentTradeType === 'sell') {
                     reviewBtn.style.backgroundColor = 'var(--red-color)';
                     reviewBtn.style.color = '#fff';
@@ -710,17 +693,15 @@
             }
         }
 
-        // 🚀 DYNAMIC PAYMENT METHODS LOADER 🚀
         async function loadPaymentMethods() {
             const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
-            
             if (!token) {
-                fallbackToLocalStorage();
+                renderEmptyPaymentState();
                 return;
             }
 
             try {
-                const res = await fetch(`${API_BASE_URL}/api/user/payments`, {
+                const res = await fetch(`${API_BASE_URL}/api/user/payments?t=${new Date().getTime()}`, {
                     method: 'GET',
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -732,8 +713,11 @@
                     const data = await res.json();
                     userPaymentMethods = data.payments || data || []; 
                     
+                    // 🚀 Sync fetched data to local storage 🚀
+                    localStorage.setItem("user_payment_methods", JSON.stringify(userPaymentMethods));
+
                     if(userPaymentMethods.length === 0) {
-                        fallbackToLocalStorage();
+                        renderEmptyPaymentState();
                     } else {
                         renderPaymentMethods();
                     }
@@ -757,19 +741,31 @@
             } else {
                 userPaymentMethods = [];
             }
-            renderPaymentMethods();
+
+            if (userPaymentMethods.length === 0) {
+                renderEmptyPaymentState();
+            } else {
+                renderPaymentMethods();
+            }
+        }
+
+        function renderEmptyPaymentState() {
+            userPaymentMethods = [];
+            const listContainer = document.getElementById('payment-methods-list');
+            const noPaymentDiv = document.getElementById('no-payment-methods');
+            listContainer.innerHTML = '';
+            listContainer.style.display = 'none';
+            noPaymentDiv.style.display = 'block';
+            checkOverallValidity();
         }
 
         function renderPaymentMethods() {
             const listContainer = document.getElementById('payment-methods-list');
             const noPaymentDiv = document.getElementById('no-payment-methods');
-            
             listContainer.innerHTML = '';
 
             if (!userPaymentMethods || userPaymentMethods.length === 0) {
-                listContainer.style.display = 'none';
-                noPaymentDiv.style.display = 'block';
-                checkOverallValidity();
+                renderEmptyPaymentState();
                 return;
             }
 
@@ -779,7 +775,6 @@
             userPaymentMethods.forEach((method, index) => {
                 const isChecked = method.isDefault ? 'checked' : ''; 
                 const defaultBadge = method.isDefault ? `<span style="background: rgba(14, 203, 129, 0.15); color: var(--green-color); font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">Default</span>` : '';
-                
                 const bankName = method.type || method.bankName || "Bank";
                 const accountName = method.name || method.fullName || "Account Name";
                 const accNumber = method.account || method.accountNumber || "00000";
@@ -798,7 +793,6 @@
                 `;
                 listContainer.innerHTML += cardHTML;
             });
-            
             checkOverallValidity();
         }
 
