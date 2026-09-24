@@ -267,10 +267,10 @@
         .mobile-card-row { display: none; }
         .pc-table-row { display: table-row; }
 
-        /* 🚀 Mobile Card Layout 🚀 */
+        /* 🚀 Perfected Mobile Card Layout with Proper Margins 🚀 */
         @media(max-width: 768px) {
             body { padding-top: 55px; }
-            .market-container { padding: 10px 8px; }
+            .market-container { padding: 12px 14px; } /* በግራና በቀኝ በቂ ክፍተት እንዲኖር ተደርጓል */
             .p2p-table-card { background: transparent; border: none; }
             table, thead, tbody, th, tr, td { display: block; width: 100%; box-sizing: border-box; }
             thead { display: none; }
@@ -283,8 +283,9 @@
                 border: 1px solid var(--border-color);
                 border-radius: 12px;
                 margin-bottom: 12px;
-                padding: 14px;
+                padding: 16px; /* ከውስጥ በቂ ክፍተት (Padding) */
                 position: relative;
+                box-sizing: border-box;
             }
             .m-top-row {
                 display: flex;
@@ -441,7 +442,7 @@
                 <a href="wallet.html"><i class="fa-solid fa-wallet"></i> Wallet</a>
             </div>
         </div>
-        <!-- 🚀 Dashboard Shortcut Button on Top Right 🚀 -->
+        <!-- Dashboard Shortcut Button on Top Right -->
         <div class="nav-right">
             <a href="dashboard.html" class="dashboard-shortcut-btn" title="Go to Dashboard">
                 <i class="fa-solid fa-house"></i>
