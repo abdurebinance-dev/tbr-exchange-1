@@ -383,10 +383,15 @@
         let currentRates = { buyRate: 192.00, sellRate: 195.00 };
 
         document.addEventListener('DOMContentLoaded', () => {
+            // 🚀 ከ my-ads ፔጅ የተላከውን URL Parameter የማንበብ ሎጂክ 🚀
             const urlParams = new URLSearchParams(window.location.search);
+            const activeTab = urlParams.get('tab');
             const initialType = urlParams.get('type');
-            if (initialType === 'sell') {
+
+            if (activeTab === 'sell' || initialType === 'sell') {
                 switchTradeType('sell');
+            } else if (activeTab === 'buy' || initialType === 'buy') {
+                switchTradeType('buy');
             } else {
                 fetchSettingsAndRender();
             }
@@ -427,6 +432,9 @@
         function renderOrderBook() {
             const tbody = document.getElementById('p2pOrdersBody');
             const isBuy = currentType === 'buy';
+            
+            // 🚀 Buy እና Sell በተን ሲለዋወጥ Price እና በተን ቀለም የሚቀያየርበት ኮድ 🚀
+            // ማስታወሻ፡ P2P Market ላይ ተጠቃሚው "Buy" ሲነካ አቅራቢዎቹ የለጠፉትን "Sell" ዋጋ ነው የሚያየው።
             const basePrice = isBuy ? currentRates.sellRate : currentRates.buyRate;
             const actionLabel = isBuy ? 'Buy' : 'Sell';
             const btnClass = isBuy ? 'order-btn' : 'order-btn sell';
@@ -453,7 +461,8 @@
                         </div>
                     </td>
                     <td>
-                        <div class="price-cell">${effectivePrice}</div>
+                        <!-- የ Price ቀለምን እንደታቡ አይነት የሚቀይር ማስተካከያ -->
+                        <div class="price-cell" style="color: ${isBuy ? 'var(--green)' : 'var(--red)'};">${effectivePrice}</div>
                     </td>
                     <td>
                         <div class="limit-cell">
