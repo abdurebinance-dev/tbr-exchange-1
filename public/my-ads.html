@@ -126,9 +126,10 @@
         }
         .sub-tab {
             flex: 1; text-align: center; padding: 10px; font-size: 13px; color: var(--text-muted);
-            cursor: pointer;
+            cursor: pointer; transition: 0.2s;
         }
-        .sub-tab.active { color: #fff; border-bottom: 2px solid var(--accent-color); }
+        .sub-tab:hover { color: #fff; }
+        .sub-tab.active { color: #fff; border-bottom: 2px solid var(--accent-color); font-weight: 600; }
 
         .empty-state {
             background: var(--card-bg);
@@ -324,13 +325,15 @@
             <div class="ads-tab" onclick="window.location.href='settings.html?tab=merchant'"><i class="fa-solid fa-store"></i> Apply for Merchant</div>
         </div>
 
+        <!-- 🚀 Filter Tabs with Onclick 🚀 -->
         <div class="ads-sub-tabs">
-            <div class="sub-tab active">All</div>
-            <div class="sub-tab">Active</div>
-            <div class="sub-tab">Paused</div>
-            <div class="sub-tab">Cancelled</div>
+            <div class="sub-tab active" onclick="filterAds('all', this)">All</div>
+            <div class="sub-tab" onclick="filterAds('active', this)">Active</div>
+            <div class="sub-tab" onclick="filterAds('paused', this)">Paused</div>
+            <div class="sub-tab" onclick="filterAds('cancelled', this)">Cancelled</div>
         </div>
 
+        <!-- This container holds both the table and empty state. -->
         <div id="ads-list-container">
             <div class="empty-state" id="empty-state-div">
                 <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 30px; margin-bottom: 15px; color: var(--accent-color);"></i>
@@ -623,6 +626,10 @@
         let calculatedMaxEtb = 0; 
         
         let confirmResolve = null;
+        
+        // 🚀 Global Variable for filtering ads 🚀
+        let allUserAds = [];
+        let currentStatusFilter = 'all';
 
         function switchView(viewId) {
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
@@ -954,15 +961,24 @@
             }
         });
 
+        // 🚀 Filter Ads Function 🚀
+        function filterAds(status, element) {
+            document.querySelectorAll('.sub-tab').forEach(tab => tab.classList.remove('active'));
+            element.classList.add('active');
+            
+            currentStatusFilter = status;
+            renderAdsTable();
+        }
+
         async function loadUserAds() {
             const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
             if (!token) return;
 
-            const container = document.getElementById('ads-list-container');
             const emptyStateDiv = document.getElementById('empty-state-div');
             
-            if(emptyStateDiv) {
+            if(emptyStateDiv && allUserAds.length === 0) {
                 emptyStateDiv.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin" style="font-size: 30px; margin-bottom: 15px; color: var(--accent-color);"></i><br><p style="color: var(--text-muted); font-size: 13px;">Loading your ads...</p>';
+                emptyStateDiv.style.display = 'block';
             }
 
             try {
@@ -971,111 +987,144 @@
                 });
                 const json = await res.json();
                 
-                if (json.success && json.ads && json.ads.length > 0) {
-                    let tableHTML = `
-                    <div class="p2p-table-card" style="margin-top: 20px; background: transparent; border: none;">
-                        <table style="width: 100%; border-collapse: collapse; text-align: left; color: #fff;">
-                            <thead>
-                                <tr style="border-bottom: 1px solid var(--border-color); font-size: 11px; color: var(--text-muted);">
-                                    <th style="padding: 15px; font-weight: 600;">TYPE</th>
-                                    <th style="padding: 15px; font-weight: 600;">PRICE</th>
-                                    <th style="padding: 15px; font-weight: 600;">AVAILABLE / TOTAL</th>
-                                    <th style="padding: 15px; font-weight: 600;">LIMITS</th>
-                                    <th style="padding: 15px; font-weight: 600;">PAYMENT</th>
-                                    <th style="padding: 15px; font-weight: 600;">STATUS</th>
-                                    <th style="padding: 15px; font-weight: 600;">DATE</th>
-                                    <th style="padding: 15px; text-align: right; font-weight: 600;"></th>
-                                </tr>
-                            </thead>
-                            <tbody>`;
-
-                    json.ads.forEach(ad => {
-                        const isBuy = ad.tradeType === 'buy';
-                        const typeColor = isBuy ? 'var(--green-color)' : 'var(--red-color)';
-                        const typeBg = isBuy ? 'rgba(14,203,129,0.1)' : 'rgba(246,70,93,0.1)';
-                        const typeText = isBuy ? 'BUY' : 'SELL';
-                        
-                        const dateStr = new Date(ad.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                        
-                        let payMethods = ad.paymentMethods || ['Telebirr'];
-                        if (typeof payMethods === 'string') {
-                            try { payMethods = JSON.parse(payMethods); } catch(e) { payMethods = [payMethods]; }
-                        }
-                        if (!Array.isArray(payMethods)) payMethods = [payMethods];
-                        const payList = payMethods.join('<br>');
-
-                        // 🚀 Status Badge Logic 🚀
-                        const statusBadge = ad.status === 'cancelled' 
-                            ? `<span style="background: rgba(255,255,255,0.1); color: var(--text-muted); padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">Cancelled</span>`
-                            : `<span style="background: rgba(14,203,129,0.1); color: var(--green-color); padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">Active</span>`;
-
-                        // 🚀 Menu Logic (Hide actions if cancelled) 🚀
-                        let actionMenu = '';
-                        if (ad.status !== 'cancelled') {
-                            actionMenu = `
-                                <div onclick="boostAd('${ad._id}')" style="padding: 10px 16px; font-size: 13px; cursor: pointer; color: #fff; display: flex; align-items: center; transition: 0.2s;" onmouseover="this.style.background='#2b313a'" onmouseout="this.style.background='transparent'">
-                                    <i class="fa-solid fa-bolt" style="color: var(--accent-color); margin-right: 10px; width: 14px; text-align: center;"></i> Boost Ad
-                                </div>
-                                <div style="height: 1px; background: #2b313a; margin: 4px 0;"></div>
-                                <div onclick="pauseAd('${ad._id}')" style="padding: 10px 16px; font-size: 13px; cursor: pointer; color: #fff; display: flex; align-items: center; transition: 0.2s;" onmouseover="this.style.background='#2b313a'" onmouseout="this.style.background='transparent'">
-                                    <i class="fa-solid fa-pause" style="margin-right: 10px; width: 14px; text-align: center; color: var(--text-muted);"></i> Pause Ad
-                                </div>
-                                <div onclick="cancelAd('${ad._id}')" style="padding: 10px 16px; font-size: 13px; cursor: pointer; color: var(--red-color); display: flex; align-items: center; transition: 0.2s;" onmouseover="this.style.background='#2b313a'" onmouseout="this.style.background='transparent'">
-                                    <i class="fa-solid fa-xmark" style="margin-right: 10px; width: 14px; text-align: center;"></i> Cancel Ad
-                                </div>
-                            `;
-                        } else {
-                            actionMenu = `
-                                <div style="padding: 10px 16px; font-size: 13px; color: var(--text-muted); text-align: center;">
-                                    No actions available
-                                </div>
-                            `;
-                        }
-
-                        tableHTML += `
-                                <tr style="border-bottom: 1px solid #14151a; font-size: 13px; transition: background 0.2s; ${ad.status === 'cancelled' ? 'opacity: 0.5;' : ''}" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
-                                    <td style="padding: 20px 15px;">
-                                        <span style="color: ${typeColor}; background: ${typeBg}; padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 11px;">${typeText}</span>
-                                    </td>
-                                    <td style="padding: 20px 15px; font-weight: 700; color: ${typeColor}; font-size: 15px;">
-                                        ${ad.price.toFixed(2)}<br>
-                                        <span style="font-size: 11px; color: var(--text-muted); font-weight: 400;">ETB / USDT</span>
-                                    </td>
-                                    <td style="padding: 20px 15px; font-weight: 600;">
-                                        ${ad.totalAmount.toLocaleString('en-US')} USDT<br>
-                                        <span style="font-size: 11px; color: var(--text-muted); font-weight: 400;">of ${ad.totalAmount.toLocaleString('en-US')} USDT</span>
-                                    </td>
-                                    <td style="padding: 20px 15px; font-weight: 500;">
-                                        ${ad.minLimit.toLocaleString('en-US')} - ${ad.maxLimit.toLocaleString('en-US')}<br>
-                                        <span style="font-size: 11px; color: var(--text-muted); font-weight: 400;">ETB</span>
-                                    </td>
-                                    <td style="padding: 20px 15px; font-size: 12px; line-height: 1.6; color: #ccc;">
-                                        ${payList}
-                                    </td>
-                                    <td style="padding: 20px 15px;">
-                                        ${statusBadge}
-                                    </td>
-                                    <td style="padding: 20px 15px; color: var(--text-muted); font-size: 12px;">
-                                        ${dateStr}
-                                    </td>
-                                    <td style="padding: 20px 15px; text-align: right; position: relative;">
-                                        <button onclick="toggleActionMenu('${ad._id}', event)" style="background: #1e2026; border: 1px solid var(--border-color); color: #fff; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; float: right; transition: 0.2s;" onmouseover="this.style.background='#2b313a'" onmouseout="this.style.background='#1e2026'">
-                                            <i class="fa-solid fa-ellipsis"></i>
-                                        </button>
-                                        
-                                        <div id="menu-${ad._id}" class="action-dropdown" style="display: none; position: absolute; right: 15px; top: 55px; background: #181a20; border: 1px solid #2b313a; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); z-index: 100; width: 160px; text-align: left; padding: 8px 0; overflow: hidden;">
-                                            ${actionMenu}
-                                        </div>
-                                    </td>
-                                </tr>`;
-                    });
-
-                    tableHTML += `</tbody></table></div>`;
-                    
-                    if (emptyStateDiv) emptyStateDiv.style.display = 'none';
-                    container.innerHTML = tableHTML;
+                if (json.success && json.ads) {
+                    allUserAds = json.ads;
                 } else {
-                    if (emptyStateDiv) {
+                    allUserAds = [];
+                }
+                renderAdsTable();
+            } catch (e) {
+                console.error("Load user ads error:", e);
+                if (emptyStateDiv) {
+                    emptyStateDiv.innerHTML = `<p style="color: var(--red-color);">Error loading ads. Please refresh.</p>`;
+                }
+            }
+        }
+
+        // 🚀 Render Table Logic separated for filtering 🚀
+        function renderAdsTable() {
+            const container = document.getElementById('ads-list-container');
+            const emptyStateDiv = document.getElementById('empty-state-div');
+
+            let adsToRender = allUserAds;
+            if (currentStatusFilter !== 'all') {
+                adsToRender = allUserAds.filter(ad => {
+                    let adStatus = ad.status || 'active';
+                    return adStatus.toLowerCase() === currentStatusFilter.toLowerCase();
+                });
+            }
+
+            if (adsToRender.length > 0) {
+                let tableHTML = `
+                <div class="p2p-table-card" style="margin-top: 20px; background: transparent; border: none;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left; color: #fff;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--border-color); font-size: 11px; color: var(--text-muted);">
+                                <th style="padding: 15px; font-weight: 600;">TYPE</th>
+                                <th style="padding: 15px; font-weight: 600;">PRICE</th>
+                                <th style="padding: 15px; font-weight: 600;">AVAILABLE / TOTAL</th>
+                                <th style="padding: 15px; font-weight: 600;">LIMITS</th>
+                                <th style="padding: 15px; font-weight: 600;">PAYMENT</th>
+                                <th style="padding: 15px; font-weight: 600;">STATUS</th>
+                                <th style="padding: 15px; font-weight: 600;">DATE</th>
+                                <th style="padding: 15px; text-align: right; font-weight: 600;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+                adsToRender.forEach(ad => {
+                    const isBuy = ad.tradeType === 'buy';
+                    const typeColor = isBuy ? 'var(--green-color)' : 'var(--red-color)';
+                    const typeBg = isBuy ? 'rgba(14,203,129,0.1)' : 'rgba(246,70,93,0.1)';
+                    const typeText = isBuy ? 'BUY' : 'SELL';
+                    
+                    const dateStr = new Date(ad.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                    
+                    let payMethods = ad.paymentMethods || ['Telebirr'];
+                    if (typeof payMethods === 'string') {
+                        try { payMethods = JSON.parse(payMethods); } catch(e) { payMethods = [payMethods]; }
+                    }
+                    if (!Array.isArray(payMethods)) payMethods = [payMethods];
+                    const payList = payMethods.join('<br>');
+
+                    const statusBadge = ad.status === 'cancelled' 
+                        ? `<span style="background: rgba(255,255,255,0.1); color: var(--text-muted); padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">Cancelled</span>`
+                        : `<span style="background: rgba(14,203,129,0.1); color: var(--green-color); padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">Active</span>`;
+
+                    let actionMenu = '';
+                    if (ad.status !== 'cancelled') {
+                        actionMenu = `
+                            <div onclick="boostAd('${ad._id}')" style="padding: 10px 16px; font-size: 13px; cursor: pointer; color: #fff; display: flex; align-items: center; transition: 0.2s;" onmouseover="this.style.background='#2b313a'" onmouseout="this.style.background='transparent'">
+                                <i class="fa-solid fa-bolt" style="color: var(--accent-color); margin-right: 10px; width: 14px; text-align: center;"></i> Boost Ad
+                            </div>
+                            <div style="height: 1px; background: #2b313a; margin: 4px 0;"></div>
+                            <div onclick="pauseAd('${ad._id}')" style="padding: 10px 16px; font-size: 13px; cursor: pointer; color: #fff; display: flex; align-items: center; transition: 0.2s;" onmouseover="this.style.background='#2b313a'" onmouseout="this.style.background='transparent'">
+                                <i class="fa-solid fa-pause" style="margin-right: 10px; width: 14px; text-align: center; color: var(--text-muted);"></i> Pause Ad
+                            </div>
+                            <div onclick="cancelAd('${ad._id}')" style="padding: 10px 16px; font-size: 13px; cursor: pointer; color: var(--red-color); display: flex; align-items: center; transition: 0.2s;" onmouseover="this.style.background='#2b313a'" onmouseout="this.style.background='transparent'">
+                                <i class="fa-solid fa-xmark" style="margin-right: 10px; width: 14px; text-align: center;"></i> Cancel Ad
+                            </div>
+                        `;
+                    } else {
+                        actionMenu = `
+                            <div style="padding: 10px 16px; font-size: 13px; color: var(--text-muted); text-align: center;">
+                                No actions available
+                            </div>
+                        `;
+                    }
+
+                    tableHTML += `
+                            <tr style="border-bottom: 1px solid #14151a; font-size: 13px; transition: background 0.2s; ${ad.status === 'cancelled' ? 'opacity: 0.5;' : ''}" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+                                <td style="padding: 20px 15px;">
+                                    <span style="color: ${typeColor}; background: ${typeBg}; padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 11px;">${typeText}</span>
+                                </td>
+                                <td style="padding: 20px 15px; font-weight: 700; color: ${typeColor}; font-size: 15px;">
+                                    ${ad.price.toFixed(2)}<br>
+                                    <span style="font-size: 11px; color: var(--text-muted); font-weight: 400;">ETB / USDT</span>
+                                </td>
+                                <td style="padding: 20px 15px; font-weight: 600;">
+                                    ${ad.totalAmount.toLocaleString('en-US')} USDT<br>
+                                    <span style="font-size: 11px; color: var(--text-muted); font-weight: 400;">of ${ad.totalAmount.toLocaleString('en-US')} USDT</span>
+                                </td>
+                                <td style="padding: 20px 15px; font-weight: 500;">
+                                    ${ad.minLimit.toLocaleString('en-US')} - ${ad.maxLimit.toLocaleString('en-US')}<br>
+                                    <span style="font-size: 11px; color: var(--text-muted); font-weight: 400;">ETB</span>
+                                </td>
+                                <td style="padding: 20px 15px; font-size: 12px; line-height: 1.6; color: #ccc;">
+                                    ${payList}
+                                </td>
+                                <td style="padding: 20px 15px;">
+                                    ${statusBadge}
+                                </td>
+                                <td style="padding: 20px 15px; color: var(--text-muted); font-size: 12px;">
+                                    ${dateStr}
+                                </td>
+                                <td style="padding: 20px 15px; text-align: right; position: relative;">
+                                    <button onclick="toggleActionMenu('${ad._id}', event)" style="background: #1e2026; border: 1px solid var(--border-color); color: #fff; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; float: right; transition: 0.2s;" onmouseover="this.style.background='#2b313a'" onmouseout="this.style.background='#1e2026'">
+                                        <i class="fa-solid fa-ellipsis"></i>
+                                    </button>
+                                    
+                                    <div id="menu-${ad._id}" class="action-dropdown" style="display: none; position: absolute; right: 15px; top: 55px; background: #181a20; border: 1px solid #2b313a; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); z-index: 100; width: 160px; text-align: left; padding: 8px 0; overflow: hidden;">
+                                        ${actionMenu}
+                                    </div>
+                                </td>
+                            </tr>`;
+                });
+
+                tableHTML += `</tbody></table></div>`;
+                
+                const existingTable = container.querySelector('.p2p-table-card');
+                if (existingTable) existingTable.remove();
+                
+                if (emptyStateDiv) emptyStateDiv.style.display = 'none';
+                container.insertAdjacentHTML('beforeend', tableHTML);
+            } else {
+                const existingTable = container.querySelector('.p2p-table-card');
+                if (existingTable) existingTable.remove();
+
+                if (emptyStateDiv) {
+                    emptyStateDiv.style.display = 'block';
+                    if (allUserAds.length === 0) {
                         emptyStateDiv.innerHTML = `
                             <i class="fa-regular fa-clipboard" style="font-size: 40px; color: #2b313a; margin-bottom: 20px;"></i>
                             <h3 style="margin: 0 0 10px 0; font-size: 16px; color: #fff;">No ads yet</h3>
@@ -1083,12 +1132,14 @@
                             <button class="btn-small" onclick="openPostOrderForm()">
                                 <i class="fa-solid fa-plus" style="font-size: 10px;"></i> Post an Ad
                             </button>`;
+                    } else {
+                        // Custom empty state based on tab
+                        emptyStateDiv.innerHTML = `
+                            <i class="fa-regular fa-folder-open" style="font-size: 40px; color: #2b313a; margin-bottom: 20px;"></i>
+                            <h3 style="margin: 0 0 10px 0; font-size: 16px; color: #fff; text-transform: capitalize;">No ${currentStatusFilter} ads</h3>
+                            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">You don't have any ${currentStatusFilter} trade offers right now.</p>
+                        `;
                     }
-                }
-            } catch (e) {
-                console.error("Load user ads error:", e);
-                if (emptyStateDiv) {
-                    emptyStateDiv.innerHTML = `<p style="color: var(--red-color);">Error loading ads. Please refresh.</p>`;
                 }
             }
         }
@@ -1123,7 +1174,6 @@
             }
         }
 
-        // 🚀 API በመጠቀም አዱን Cancel ማድረግ 🚀
         async function cancelAd(id) {
             const confirmed = await showCustomConfirm();
             if (!confirmed) return;
@@ -1136,7 +1186,7 @@
                 });
                 
                 if(response.ok) {
-                    loadUserAds(); // ሠንጠረዡን አድሶ 'Cancelled' መሆኑን ያሳያል
+                    loadUserAds(); 
                 } else {
                     alert("Failed to cancel ad.");
                 }
