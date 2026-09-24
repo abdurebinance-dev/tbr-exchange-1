@@ -14,7 +14,7 @@
             --text-main: #ffffff;
             --text-muted: #848e9c;
             --green: #0ecb81;
-            --green-btn: #1dd79b;
+            --green-btn: #0ecb81;
             --red: #f6465d;
         }
 
@@ -123,7 +123,7 @@
             gap: 8px;
         }
 
-        /* 🚀 Adaptive Table for PC & Card Layout for Mobile 🚀 */
+        /* Market Table Styling */
         .p2p-table-card {
             background: var(--card-bg);
             border-radius: 12px;
@@ -228,7 +228,7 @@
         }
         .order-btn {
             background: var(--green-btn);
-            color: #ffffff;
+            color: #000000;
             padding: 10px 30px;
             border-radius: 6px;
             font-weight: 700;
@@ -240,41 +240,68 @@
         }
         .order-btn.sell {
             background: var(--red);
+            color: #fff;
         }
         .order-btn:hover {
             opacity: 0.9;
         }
 
-        /* 🚀 Mobile Responsive Card View (ስልክ ላይ ልክ እንዳሳየኸው 3ኛ ፎቶ ይመስላል) 🚀 */
+        /* 🚀 Strict Mobile Card Layout Matching Reference 🚀 */
         @media(max-width: 768px) {
-            .market-container { padding: 15px 10px; }
+            body { padding-top: 55px; }
+            .market-container { padding: 10px 8px; }
             .p2p-table-card { background: transparent; border: none; }
             table, thead, tbody, th, tr, td { display: block; width: 100%; box-sizing: border-box; }
-            thead { display: none; } /* የሰንጠረዥ ሐዲድ በስልክ ጠፍቷል */
+            thead { display: none; }
             
             tr {
                 background: var(--card-bg);
                 border: 1px solid var(--border-color);
                 border-radius: 12px;
-                margin-bottom: 15px;
-                padding: 16px;
+                margin-bottom: 12px;
+                padding: 14px;
                 position: relative;
             }
             td {
-                padding: 8px 0;
+                padding: 4px 0;
                 border-bottom: none;
                 text-align: left !important;
             }
-            td:nth-child(1) { border-bottom: 1px solid #14151a; padding-bottom: 12px; margin-bottom: 10px; }
-            td:nth-child(2) { display: flex; justify-content: space-between; align-items: center; }
-            td:nth-child(2)::before { content: "Price"; color: var(--text-muted); font-size: 12px; }
-            
-            td:nth-child(3) { display: flex; justify-content: space-between; align-items: center; }
-            td:nth-child(3)::before { content: "Available / Limit"; color: var(--text-muted); font-size: 12px; }
-            
-            td:nth-child(4) { padding-top: 10px; }
-            td:nth-child(5) { text-align: right; padding-top: 12px; border-top: 1px solid #14151a; margin-top: 8px; }
-            .order-btn { width: 100%; text-align: center; padding: 12px; }
+            .mobile-row-top {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                margin-bottom: 8px;
+            }
+            .mobile-row-middle {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin: 10px 0;
+            }
+            .mobile-row-bottom {
+                border-top: 1px solid #14151a;
+                padding-top: 10px;
+                margin-top: 8px;
+                font-size: 11px;
+                color: #848e9c;
+            }
+            .mobile-price-display {
+                font-size: 22px;
+                font-weight: 800;
+                color: var(--green);
+            }
+            .mobile-price-currency {
+                font-size: 10px;
+                color: var(--text-muted);
+                text-transform: uppercase;
+                display: block;
+                text-align: right;
+            }
+            .order-btn {
+                padding: 8px 24px;
+                font-size: 13px;
+            }
         }
 
         /* Order Modal */
@@ -399,7 +426,6 @@
     <script>
         const API_BASE = 'https://tbr-exchange-backend.onrender.com';
         let currentType = 'buy';
-        let currentRates = { buyRate: 192.00, sellRate: 195.00 };
 
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
@@ -432,18 +458,6 @@
         }
 
         async function fetchSettingsAndRender() {
-            try {
-                const res = await fetch(`${API_BASE}/api/settings`);
-                if (res.ok) {
-                    const json = await res.json();
-                    if (json.success && json.data) {
-                        currentRates.buyRate = json.data.buyRate || 192.00;
-                        currentRates.sellRate = json.data.sellRate || 195.00;
-                    }
-                }
-            } catch (e) {
-                console.error("Rates fetch error:", e);
-            }
             renderOrderBook();
         }
 
@@ -484,43 +498,34 @@
                     avail: Number(ad.totalAmount || 0).toLocaleString('en-US'),
                     min: Number(ad.minLimit || 0).toLocaleString('en-US'),
                     max: Number(ad.maxLimit || 0).toLocaleString('en-US'),
-                    pay: payMethods,
-                    isRealAd: true
+                    pay: payMethods
                 };
             });
 
-            let allTradersList = filteredAds;
             let html = '';
-
-            allTradersList.forEach(t => {
+            filteredAds.forEach(t => {
                 const effectivePrice = t.customPrice;
-                const rowHighlight = 'border-left: 3px solid var(--green);';
+                let payTagsHTML = t.pay.map(p => `<span class="pay-tag">${p}</span>`).join('');
 
-                let payTagsHTML = '';
-                if (Array.isArray(t.pay)) {
-                    payTagsHTML = t.pay.map(p => `<span class="pay-tag">${p}</span>`).join('');
-                } else {
-                    payTagsHTML = `<span class="pay-tag">${t.pay}</span>`;
-                }
-
+                // PC view & Mobile view hybrid rendering inside standard tr/td structure with CSS media queries
                 html += `
-                <tr style="${rowHighlight}">
+                <tr>
                     <td>
                         <div class="advertiser-cell">
                             <div class="avatar-box">${t.name.charAt(0).toUpperCase()}</div>
                             <div>
                                 <div class="adv-name">${t.name} ${t.verified ? '<i class="fa-solid fa-circle-check"></i>' : ''}</div>
-                                <div class="adv-stats">${t.orders} orders &bull; ${t.comp} completion</div>
+                                <div class="adv-stats">${t.orders} trades &bull; ${t.comp}</div>
                             </div>
                         </div>
                     </td>
                     <td>
-                        <div class="price-cell" style="color: ${isBuy ? 'var(--green)' : 'var(--red)'};">${effectivePrice}</div>
+                        <div class="price-cell" style="color: ${isBuy ? 'var(--green)' : 'var(--red)'};">${effectivePrice} <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">ETB</span></div>
                     </td>
                     <td>
                         <div class="limit-cell">
                             <div class="available">${t.avail} USDT</div>
-                            <div class="range">Limits: ${t.min} - ${t.max} ETB</div>
+                            <div class="range">Limit: ${t.min} - ${t.max} ETB</div>
                         </div>
                     </td>
                     <td>
@@ -534,7 +539,7 @@
                 </tr>`;
             });
 
-            if (allTradersList.length === 0) {
+            if (filteredAds.length === 0) {
                 html = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 40px 0;">No active ads found in the market right now.</td></tr>`;
             }
 
