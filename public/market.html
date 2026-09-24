@@ -429,28 +429,72 @@
             renderOrderBook();
         }
 
-        function renderOrderBook() {
+        async function renderOrderBook() {
             const tbody = document.getElementById('p2pOrdersBody');
             const isBuy = currentType === 'buy';
             
-            // 🚀 Buy እና Sell በተን ሲለዋወጥ Price እና በተን ቀለም የሚቀያየርበት ኮድ 🚀
-            // ማስታወሻ፡ P2P Market ላይ ተጠቃሚው "Buy" ሲነካ አቅራቢዎቹ የለጠፉትን "Sell" ዋጋ ነው የሚያየው።
             const basePrice = isBuy ? currentRates.sellRate : currentRates.buyRate;
             const actionLabel = isBuy ? 'Buy' : 'Sell';
             const btnClass = isBuy ? 'order-btn' : 'order-btn sell';
 
-            const sampleTraders = [
+            let serverAds = [];
+            try {
+                const res = await fetch(`${API_BASE}/api/ads`);
+                const json = await res.json();
+                if (json.success && json.ads) {
+                    serverAds = json.ads;
+                }
+            } catch (err) {
+                console.error("Error fetching live ads:", err);
+            }
+
+            // ማርኬቱ Buy ሲሆን ሰዎቹ የለጠፉት Sell መሆን አለበት (ለተቃራኒውም እንዲሁ)
+            let filteredAds = serverAds.filter(ad => {
+                if (isBuy) return ad.tradeType === 'sell';
+                else return ad.tradeType === 'buy';
+            }).map(ad => {
+                let payMethods = ad.paymentMethods || ['Telebirr'];
+                if (typeof payMethods === 'string') {
+                    try { payMethods = JSON.parse(payMethods); } catch(e) { payMethods = [payMethods]; }
+                }
+                if (!Array.isArray(payMethods)) payMethods = [payMethods];
+
+                return {
+                    name: ad.name || 'Trader',
+                    verified: true,
+                    orders: 120,
+                    comp: '98%',
+                    customPrice: typeof ad.price === 'number' ? ad.price.toFixed(2) : parseFloat(ad.price || 0).toFixed(2),
+                    avail: Number(ad.totalAmount || 0).toLocaleString('en-US'),
+                    min: Number(ad.minLimit || 0).toLocaleString('en-US'),
+                    max: Number(ad.maxLimit || 0).toLocaleString('en-US'),
+                    pay: payMethods,
+                    isRealAd: true
+                };
+            });
+
+            // የድሮዎቹ ዱሚ ነጋዴዎች ዝርዝር
+            let dummyTraders = [
                 { name: 'TBR Direct', verified: true, orders: 1540, comp: '99%', priceOffset: 0, avail: '12,500.00', min: '500', max: '2,000,000', pay: ['Telebirr', 'CBE Birr', 'Bank of Abyssinia'] },
-                { name: 'EthioTrader_Pro', verified: true, orders: 840, comp: '97%', priceOffset: 0.20, avail: '3,450.00', min: '1,000', max: '650,000', pay: ['CBE Birr', 'Telebirr'] },
-                { name: 'AddisCrypto_Desk', verified: true, orders: 490, comp: '95%', priceOffset: 0.50, avail: '980.00', min: '500', max: '190,000', pay: ['Telebirr', 'Awash Bank'] },
-                { name: 'Nugget_Exchange', verified: false, orders: 210, comp: '94%', priceOffset: 0.80, avail: '420.00', min: '200', max: '80,000', pay: ['Commercial Bank of Ethiopia'] }
+                { name: 'EthioTrader_Pro', verified: true, orders: 840, comp: '97%', priceOffset: 0.20, avail: '3,450.00', min: '1,000', max: '650,000', pay: ['CBE Birr', 'Telebirr'] }
             ];
 
+            let allTradersList = [...filteredAds, ...dummyTraders];
+
             let html = '';
-            sampleTraders.forEach(t => {
-                const effectivePrice = (basePrice + t.priceOffset).toFixed(2);
+            allTradersList.forEach(t => {
+                const effectivePrice = t.customPrice ? t.customPrice : (basePrice + t.priceOffset).toFixed(2);
+                const rowHighlight = t.isRealAd ? 'background: rgba(14, 203, 129, 0.04); border-left: 3px solid var(--green);' : '';
+
+                let payTagsHTML = '';
+                if (Array.isArray(t.pay)) {
+                    payTagsHTML = t.pay.map(p => `<span class="pay-tag">${p}</span>`).join('');
+                } else {
+                    payTagsHTML = `<span class="pay-tag">${t.pay}</span>`;
+                }
+
                 html += `
-                <tr>
+                <tr style="${rowHighlight}">
                     <td>
                         <div class="advertiser-cell">
                             <div class="avatar-box">${t.name.charAt(0)}</div>
@@ -461,7 +505,6 @@
                         </div>
                     </td>
                     <td>
-                        <!-- የ Price ቀለምን እንደታቡ አይነት የሚቀይር ማስተካከያ -->
                         <div class="price-cell" style="color: ${isBuy ? 'var(--green)' : 'var(--red)'};">${effectivePrice}</div>
                     </td>
                     <td>
@@ -472,7 +515,7 @@
                     </td>
                     <td class="payment-cell">
                         <div class="payment-tags">
-                            ${t.pay.map(p => `<span class="pay-tag">${p}</span>`).join('')}
+                            ${payTagsHTML}
                         </div>
                     </td>
                     <td class="action-cell">
@@ -480,6 +523,10 @@
                     </td>
                 </tr>`;
             });
+
+            if (allTradersList.length === 0) {
+                html = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 40px 0;">No live orders available right now.</td></tr>`;
+            }
 
             tbody.innerHTML = html;
         }

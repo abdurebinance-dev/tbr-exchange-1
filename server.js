@@ -140,6 +140,70 @@ const settingSchema = new mongoose.Schema({
     updatedAt: { type: Date, default: Date.now }
 });
 
+// --- 🔥 P2P Ad Schema & Model 🔥 ---
+const adSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    email: { type: String, required: true },
+    name: { type: String, required: true },
+    tradeType: { type: String, enum: ['buy', 'sell'], required: true },
+    price: { type: Number, required: true },
+    totalAmount: { type: Number, required: true },
+    minLimit: { type: Number, required: true },
+    maxLimit: { type: Number, required: true },
+    paymentMethods: [{ type: String }],
+    verificationLevel: { type: String, default: 'Anyone (no restriction)' },
+    termsConditions: { type: String, default: '' },
+    status: { type: String, default: 'active' },
+    createdAt: { type: Date, default: Date.now }
+});
+
+const Ad = mongoose.models.Ad || mongoose.model('Ad', adSchema);
+
+// --- 🔥 P2P Ad APIs (ለማስታወቂያ መፍጠር እና ለማንበብ) 🔥 ---
+
+// 1. አዲስ ማስታወቂያ ለመፍጠር (Post Ad)
+app.post('/api/ads', verifyToken, async (req, res) => {
+    try {
+        const { tradeType, price, totalAmount, minLimit, maxLimit, paymentMethods, verificationLevel, termsConditions } = req.body;
+        const user = await User.findById(req.user.id);
+        
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
+
+        const newAd = new Ad({
+            userId: user._id,
+            email: user.email,
+            name: user.fullName || user.email.split('@')[0],
+            tradeType,
+            price: Number(price),
+            totalAmount: Number(totalAmount),
+            minLimit: Number(minLimit),
+            maxLimit: Number(maxLimit),
+            paymentMethods: paymentMethods || [],
+            verificationLevel: verificationLevel || 'Anyone (no restriction)',
+            termsConditions: termsConditions || ''
+        });
+
+        await newAd.save();
+        res.status(201).json({ success: true, message: 'Ad posted successfully!', ad: newAd });
+    } catch (error) {
+        console.error("Post Ad Error:", error);
+        res.status(500).json({ success: false, message: 'Server error while posting ad.' });
+    }
+});
+
+// 2. የተፈጠሩ ማስታወቂያዎችን በሙሉ በማርኬት ላይ ለማሳየት (Get All Ads)
+app.get('/api/ads', async (req, res) => {
+    try {
+        const ads = await Ad.find({ status: 'active' }).sort({ createdAt: -1 });
+        res.json({ success: true, ads });
+    } catch (error) {
+        console.error("Fetch Ads Error:", error);
+        res.status(500).json({ success: false, message: 'Server error fetching ads.' });
+    }
+});
+
 const Setting = mongoose.models.Setting || mongoose.model('Setting', settingSchema);
 
 // MongoDB Connection
