@@ -62,7 +62,6 @@
             background: rgba(240, 185, 11, 0.08);
         }
         
-        /* 🚀 Dashboard Icon Button Style 🚀 */
         .nav-right { display: flex; align-items: center; gap: 15px; }
         .dashboard-shortcut-btn {
             background: rgba(240, 185, 11, 0.1);
@@ -79,9 +78,7 @@
             text-decoration: none;
             transition: 0.2s;
         }
-        .dashboard-shortcut-btn:hover {
-            background: rgba(240, 185, 11, 0.2);
-        }
+        .dashboard-shortcut-btn:hover { background: rgba(240, 185, 11, 0.2); }
 
         @media(max-width: 900px) {
             .nav-links { display: none; }
@@ -143,7 +140,7 @@
             gap: 8px;
         }
 
-        /* Market Table Styling */
+        /* 🚀 PC Table Styling (Default for Computers) 🚀 */
         .p2p-table-card {
             background: var(--card-bg);
             border-radius: 12px;
@@ -155,7 +152,6 @@
             border-collapse: collapse;
             text-align: left;
         }
-        
         th, td {
             padding: 20px 24px;
             border-bottom: 1px solid #14151a;
@@ -168,12 +164,8 @@
             font-weight: 600;
             letter-spacing: 0.5px;
         }
-        tr:hover td {
-            background: rgba(255, 255, 255, 0.02);
-        }
-        tr:last-child td {
-            border-bottom: none;
-        }
+        tr:hover td { background: rgba(255, 255, 255, 0.02); }
+        tr:last-child td { border-bottom: none; }
 
         .advertiser-cell {
             display: flex;
@@ -202,37 +194,14 @@
             gap: 6px;
             margin-bottom: 4px;
         }
-        .adv-name i {
-            color: var(--accent-gold);
-            font-size: 13px;
-        }
-        .adv-stats {
-            font-size: 12px;
-            color: #848e9c;
-        }
+        .adv-name i { color: var(--accent-gold); font-size: 13px; }
+        .adv-stats { font-size: 12px; color: #848e9c; }
 
-        .price-cell {
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--green);
-        }
+        .price-cell { font-size: 20px; font-weight: 700; color: var(--green); }
+        .limit-cell .available { font-weight: 700; font-size: 14px; color: #fff; margin-bottom: 4px; }
+        .limit-cell .range { font-size: 12px; color: #848e9c; }
 
-        .limit-cell .available {
-            font-weight: 700;
-            font-size: 14px;
-            color: #fff;
-            margin-bottom: 4px;
-        }
-        .limit-cell .range {
-            font-size: 12px;
-            color: #848e9c;
-        }
-
-        .payment-tags {
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-        }
+        .payment-tags { display: flex; gap: 6px; flex-wrap: wrap; }
         .pay-tag {
             background: #181a20;
             color: #848e9c;
@@ -243,9 +212,7 @@
             border: 1px solid #2b313a;
         }
 
-        .action-cell {
-            text-align: right;
-        }
+        .action-cell { text-align: right; }
         .order-btn {
             background: var(--green-btn);
             color: #000000;
@@ -258,40 +225,30 @@
             transition: background 0.2s;
             display: inline-block;
         }
-        .order-btn.sell {
-            background: var(--red);
-            color: #fff;
-        }
-        .order-btn:hover {
-            opacity: 0.9;
-        }
+        .order-btn.sell { background: var(--red); color: #fff; }
+        .order-btn:hover { opacity: 0.9; }
 
-        /* 🚀 Exact Binance/EBR Style Mobile Card Layout 🚀 */
+        /* Classes for toggling views safely */
+        .mobile-card-wrapper { display: none; }
+        .pc-table-row { display: table-row; }
+
+        /* 🚀 Strict Mobile Card Layout (Only active on screens <= 768px) 🚀 */
         @media(max-width: 768px) {
-            body { padding-top: 50px; }
-            .market-container { padding: 8px; }
+            body { padding-top: 55px; }
+            .market-container { padding: 10px 8px; }
             .p2p-table-card { background: transparent; border: none; }
             table, thead, tbody, th, tr, td { display: block; width: 100%; box-sizing: border-box; }
             thead { display: none; }
             
-            tr {
+            .pc-table-row { display: none !important; }
+            .mobile-card-wrapper { display: block !important; }
+
+            .m-card {
                 background: var(--card-bg);
                 border: 1px solid var(--border-color);
                 border-radius: 12px;
-                margin-bottom: 10px;
+                margin-bottom: 12px;
                 padding: 14px;
-                position: relative;
-            }
-            td {
-                padding: 0;
-                border-bottom: none;
-                text-align: left !important;
-            }
-            .pc-advertiser-col, .pc-price-col, .pc-limit-col, .pc-payment-col, .pc-action-col {
-                display: none !important;
-            }
-            .mobile-card-content {
-                display: block !important;
             }
             .m-top-row {
                 display: flex;
@@ -299,63 +256,22 @@
                 align-items: flex-start;
                 margin-bottom: 10px;
             }
-            .m-user-info {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-            }
+            .m-user-info { display: flex; align-items: center; gap: 10px; }
             .m-avatar {
-                width: 36px;
-                height: 36px;
-                border-radius: 50%;
-                background: #1c2027;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: var(--accent-gold);
-                font-weight: bold;
-                font-size: 13px;
-                border: 1px solid #2b313a;
+                width: 36px; height: 36px; border-radius: 50%;
+                background: #1c2027; display: flex; align-items: center;
+                justify-content: center; color: var(--accent-gold);
+                font-weight: bold; font-size: 13px; border: 1px solid #2b313a;
             }
-            .m-name {
-                font-weight: 700;
-                font-size: 15px;
-                color: #fff;
-                display: flex;
-                align-items: center;
-                gap: 5px;
-            }
-            .m-stats {
-                font-size: 11px;
-                color: #848e9c;
-                margin-top: 2px;
-            }
-            .m-right-side {
-                text-align: right;
-            }
-            .m-price {
-                font-size: 22px;
-                font-weight: 800;
-                line-height: 1;
-            }
-            .m-currency {
-                font-size: 10px;
-                color: #848e9c;
-                text-transform: uppercase;
-                margin-top: 3px;
-            }
-            .m-middle-row {
-                margin: 10px 0;
-            }
-            .m-limits-box {
-                font-size: 12px;
-                color: #848e9c;
-            }
-            .m-limits-box .avail {
-                color: #fff;
-                font-weight: 600;
-                margin-top: 2px;
-            }
+            .m-name { font-weight: 700; font-size: 15px; color: #fff; display: flex; align-items: center; gap: 5px; }
+            .m-stats { font-size: 11px; color: #848e9c; margin-top: 2px; }
+            .m-right-side { text-align: right; }
+            .m-price { font-size: 22px; font-weight: 800; line-height: 1; }
+            .m-currency { font-size: 10px; color: #848e9c; text-transform: uppercase; margin-top: 3px; }
+            
+            .m-middle-row { margin: 10px 0; font-size: 12px; color: #848e9c; }
+            .m-middle-row .avail { color: #fff; font-weight: 600; margin-top: 2px; }
+            
             .m-bottom-row {
                 display: flex;
                 justify-content: space-between;
@@ -364,70 +280,35 @@
                 padding-top: 10px;
                 border-top: 1px solid #14151a;
             }
-            .payment-tags {
-                display: flex;
-                gap: 5px;
-                flex-wrap: wrap;
-                max-width: 70%;
+            .m-payment-tags { display: flex; gap: 5px; flex-wrap: wrap; max-width: 65%; }
+            .m-pay-tag {
+                background: #14171d; color: #848e9c; padding: 3px 8px;
+                border-radius: 8px; font-size: 10px; border: 1px solid #2b313a;
             }
-            .pay-tag {
-                background: #14171d;
-                color: #848e9c;
-                padding: 3px 8px;
-                border-radius: 8px;
-                font-size: 10px;
-                border: 1px solid #2b313a;
-            }
-            .order-btn {
-                padding: 7px 24px;
-                font-size: 13px;
-                border-radius: 6px;
-            }
+            .m-order-btn { padding: 7px 22px; font-size: 13px; border-radius: 6px; font-weight: 700; border: none; cursor: pointer; }
+            .m-order-btn.buy { background: var(--green-btn); color: #000; }
+            .m-order-btn.sell { background: var(--red); color: #fff; }
         }
-        
-        .mobile-card-content { display: none; }
 
         /* Order Modal */
         .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 2000;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85); display: none;
+            align-items: center; justify-content: center; z-index: 2000;
         }
         .modal-box {
-            background: #16181d;
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            width: 90%;
-            max-width: 400px;
-            padding: 24px;
-            box-sizing: border-box;
+            background: #16181d; border: 1px solid var(--border-color);
+            border-radius: 12px; width: 90%; max-width: 400px;
+            padding: 24px; box-sizing: border-box;
         }
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 18px;
-        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
         .modal-header h3 { margin: 0; font-size: 16px; color: #fff; }
         .modal-header i { cursor: pointer; color: #848e9c; font-size: 18px; }
         .form-group { margin-bottom: 16px; }
         .form-group label { display: block; font-size: 12px; color: #848e9c; margin-bottom: 6px; }
         .input-control {
-            width: 100%;
-            background: #0d0f12;
-            border: 1px solid #2b313a;
-            color: #fff;
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 14px;
-            box-sizing: border-box;
+            width: 100%; background: #0d0f12; border: 1px solid #2b313a;
+            color: #fff; padding: 12px; border-radius: 8px; font-size: 14px; box-sizing: border-box;
         }
     </style>
 </head>
@@ -447,7 +328,6 @@
                 <a href="wallet.html"><i class="fa-solid fa-wallet"></i> Wallet</a>
             </div>
         </div>
-        <!-- 🚀 Added Dashboard Shortcut Button on Top Right 🚀 -->
         <div class="nav-right">
             <a href="dashboard.html" class="dashboard-shortcut-btn" title="Go to Dashboard">
                 <i class="fa-solid fa-house"></i>
@@ -555,6 +435,7 @@
             
             const actionLabel = isBuy ? 'Buy' : 'Sell';
             const btnClass = isBuy ? 'order-btn' : 'order-btn sell';
+            const mobileBtnClass = isBuy ? 'm-order-btn buy' : 'm-order-btn sell';
 
             let serverAds = [];
             try {
@@ -594,11 +475,12 @@
             filteredAds.forEach(t => {
                 const effectivePrice = t.customPrice;
                 let payTagsHTML = t.pay.map(p => `<span class="pay-tag">${p}</span>`).join('');
+                let mPayTagsHTML = t.pay.map(p => `<span class="m-pay-tag">${p}</span>`).join('');
 
                 html += `
-                <tr>
-                    <!-- PC View Advertiser Column -->
-                    <td class="pc-advertiser-col">
+                <!-- PC Table Row View -->
+                <tr class="pc-table-row">
+                    <td>
                         <div class="advertiser-cell">
                             <div class="avatar-box">${t.name.charAt(0).toUpperCase()}</div>
                             <div>
@@ -607,10 +489,29 @@
                             </div>
                         </div>
                     </td>
+                    <td>
+                        <div class="price-cell" style="color: ${isBuy ? 'var(--green)' : 'var(--red)'};">${effectivePrice} <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">ETB</span></div>
+                    </td>
+                    <td>
+                        <div class="limit-cell">
+                            <div class="available">${t.avail} USDT</div>
+                            <div class="range">Limit: ${t.min} - ${t.max} ETB</div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="payment-tags">
+                            ${payTagsHTML}
+                        </div>
+                    </td>
+                    <td class="action-cell">
+                        <button class="${btnClass}" onclick="openOrderModal('${actionLabel}', '${effectivePrice}')">${actionLabel}</button>
+                    </td>
+                </tr>
 
-                    <!-- Mobile Card Content Rendered Inside First TD -->
-                    <td colspan="5" style="padding:0; border:none;">
-                        <div class="mobile-card-content">
+                <!-- Mobile Card View -->
+                <tr class="mobile-card-wrapper">
+                    <td>
+                        <div class="m-card">
                             <div class="m-top-row">
                                 <div class="m-user-info">
                                     <div class="m-avatar">${t.name.charAt(0).toUpperCase()}</div>
@@ -626,38 +527,17 @@
                             </div>
                             
                             <div class="m-middle-row">
-                                <div class="m-limits-box">
-                                    <div>Limit: ${t.min} - ${t.max} ETB</div>
-                                    <div class="avail">Avail: ${t.avail} USDT</div>
-                                </div>
+                                <div>Limit: ${t.min} - ${t.max} ETB</div>
+                                <div class="avail">Avail: ${t.avail} USDT</div>
                             </div>
 
                             <div class="m-bottom-row">
-                                <div class="payment-tags">
-                                    ${payTagsHTML}
+                                <div class="m-payment-tags">
+                                    ${mPayTagsHTML}
                                 </div>
-                                <button class="${btnClass}" onclick="openOrderModal('${actionLabel}', '${effectivePrice}')">${actionLabel}</button>
+                                <button class="${mobileBtnClass}" onclick="openOrderModal('${actionLabel}', '${effectivePrice}')">${actionLabel}</button>
                             </div>
                         </div>
-                    </td>
-
-                    <!-- PC View Columns -->
-                    <td class="pc-price-col">
-                        <div class="price-cell" style="color: ${isBuy ? 'var(--green)' : 'var(--red)'};">${effectivePrice} <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">ETB</span></div>
-                    </td>
-                    <td class="pc-limit-col">
-                        <div class="limit-cell">
-                            <div class="available">${t.avail} USDT</div>
-                            <div class="range">Limit: ${t.min} - ${t.max} ETB</div>
-                        </div>
-                    </td>
-                    <td class="pc-payment-col">
-                        <div class="payment-tags">
-                            ${payTagsHTML}
-                        </div>
-                    </td>
-                    <td class="action-cell pc-action-col">
-                        <button class="${btnClass}" onclick="openOrderModal('${actionLabel}', '${effectivePrice}')">${actionLabel}</button>
                     </td>
                 </tr>`;
             });
