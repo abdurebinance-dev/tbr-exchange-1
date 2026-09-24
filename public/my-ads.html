@@ -250,7 +250,7 @@
         </div>
     </div>
 
-    <!-- Unverified View -->
+    <!-- 🚀 Unverified View 🚀 -->
     <div class="container view-section" id="view-verification-required">
         <div class="top-navigation-bar">
             <button class="btn-outline" onclick="switchView('view-main-ads')">
@@ -267,7 +267,7 @@
         </div>
     </div>
 
-    <!-- Pending/Under Review View -->
+    <!-- 🚀 Pending/Under Review View 🚀 -->
     <div class="container view-section" id="view-under-review">
         <div class="top-navigation-bar">
             <button class="btn-outline" onclick="switchView('view-main-ads')">
@@ -380,8 +380,8 @@
                 <div id="payment-methods-list"></div>
 
                 <div id="no-payment-methods" style="display: none;">
-                    <button class="pm-add-btn" onclick="window.location.href='settings.html'">
-                        <i class="fa-solid fa-circle-plus"></i> Please add payment method
+                    <button class="pm-add-btn" onclick="window.location.href='settings.html?tab=payments'">
+                        <i class="fa-solid fa-circle-plus"></i> Please add payment method in Settings
                     </button>
                 </div>
             </div>
@@ -458,7 +458,8 @@
         const API_BASE_URL = ''; 
         let userPaymentMethods = [];
         let userAvailableBalance = 0;
-        let userKycStatus = 'unverified'; 
+        // 🚀 ፈጣን እንዲሆን KYC ስታተስ መጀመሪያ ከ LocalStorage ይነበባል 🚀
+        let userKycStatus = localStorage.getItem('kycStatus') || 'unverified'; 
         let currentTradeType = 'buy';
         let calculatedMaxEtb = 0; 
 
@@ -469,19 +470,23 @@
         }
 
         function openPostOrderForm() {
-            if (userKycStatus === 'pending' || userKycStatus === 'under_review') {
+            // 🚀 'approved' ፣ 'verified' ወይም 'true' ካለ በቀጥታ ይከፍታል 🚀
+            let status = String(userKycStatus).toLowerCase();
+
+            if (status === 'pending' || status === 'under_review' || status === 'review') {
                 switchView('view-under-review');
                 return;
-            } else if (userKycStatus !== 'verified') {
+            } else if (status !== 'verified' && status !== 'approved' && status !== 'true') {
                 switchView('view-verification-required');
                 return;
             }
+            
             switchView('view-post-order');
             history.pushState({view: 'post'}, '', '?action=create');
             validatePrice(); 
             checkOverallValidity();
             updateBalanceDisplay();
-            loadPaymentMethods(); // 🚀 Refresh payments whenever form opens 🚀
+            loadPaymentMethods(); // Refresh payments whenever form opens
         }
 
         function closePostOrderForm() {
@@ -678,7 +683,10 @@
                         const result = await res.json();
                         const userData = result.user || result;
                         userAvailableBalance = userData.balance || 0;
-                        userKycStatus = userData.kycStatus || 'unverified';
+                        
+                        // 🚀 ከሰርቨር ሲመጣ ሎካል ስቶሬጅን ያዘምናል 🚀
+                        userKycStatus = userData.kycStatus || userKycStatus;
+                        localStorage.setItem('kycStatus', userKycStatus);
                     }
                 } catch(e) { console.error(e); }
             }
@@ -713,7 +721,6 @@
                     const data = await res.json();
                     userPaymentMethods = data.payments || data || []; 
                     
-                    // 🚀 Sync fetched data to local storage 🚀
                     localStorage.setItem("user_payment_methods", JSON.stringify(userPaymentMethods));
 
                     if(userPaymentMethods.length === 0) {
