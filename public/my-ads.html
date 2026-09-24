@@ -780,7 +780,8 @@
             noPaymentDiv.style.display = 'none';
 
             userPaymentMethods.forEach((method, index) => {
-                const isChecked = method.isDefault ? 'checked' : ''; 
+                // 🚀 ይህ መስመር ነው ሁሉንም ቲክ እንዲያደርግ የተቀየረው 🚀
+                const isChecked = 'checked'; 
                 const defaultBadge = method.isDefault ? `<span style="background: rgba(14, 203, 129, 0.15); color: var(--green-color); font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">Default</span>` : '';
                 const bankName = method.type || method.bankName || "Bank";
                 const accountName = method.name || method.fullName || "Account Name";
