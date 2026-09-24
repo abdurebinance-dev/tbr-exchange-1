@@ -246,9 +246,9 @@
             opacity: 0.9;
         }
 
-        /* 🚀 Compact Mobile Card Layout (Strictly Matching Reference Photo) 🚀 */
+        /* 🚀 Strict Mobile Card Layout Matching Reference 🚀 */
         @media(max-width: 768px) {
-            body { padding-top: 50px; }
+            body { padding-top: 55px; }
             .market-container { padding: 10px 8px; }
             .p2p-table-card { background: transparent; border: none; }
             table, thead, tbody, th, tr, td { display: block; width: 100%; box-sizing: border-box; }
@@ -258,75 +258,51 @@
                 background: var(--card-bg);
                 border: 1px solid var(--border-color);
                 border-radius: 12px;
-                margin-bottom: 10px;
-                padding: 12px;
+                margin-bottom: 12px;
+                padding: 14px;
                 position: relative;
             }
             td {
-                padding: 3px 0;
+                padding: 4px 0;
                 border-bottom: none;
                 text-align: left !important;
             }
-            /* PC columns ko hide and show via mobile layout trick */
-            .pc-price-col, .pc-limit-col, .pc-payment-col, .pc-action-col {
-                display: none !important;
+            .mobile-row-top {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                margin-bottom: 8px;
             }
-            .mobile-card-content {
-                display: block !important;
-            }
-            .mobile-card-top {
+            .mobile-row-middle {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                margin-bottom: 8px;
+                margin: 10px 0;
             }
-            .mobile-card-middle {
-                display: flex;
-                justify-content: space-between;
-                align-items: flex-end;
-                margin: 8px 0;
+            .mobile-row-bottom {
+                border-top: 1px solid #14151a;
+                padding-top: 10px;
+                margin-top: 8px;
+                font-size: 11px;
+                color: #848e9c;
             }
-            .mobile-price {
+            .mobile-price-display {
                 font-size: 22px;
                 font-weight: 800;
-                line-height: 1;
+                color: var(--green);
             }
-            .mobile-currency {
+            .mobile-price-currency {
                 font-size: 10px;
                 color: var(--text-muted);
                 text-transform: uppercase;
-                margin-top: 3px;
-            }
-            .mobile-limits {
-                font-size: 11px;
-                color: var(--text-muted);
-                margin-top: 6px;
-            }
-            .mobile-available {
-                font-size: 12px;
-                font-weight: 700;
-                color: #fff;
-                margin-top: 2px;
-            }
-            .mobile-payments {
-                display: flex;
-                gap: 4px;
-                flex-wrap: wrap;
-                margin-top: 8px;
-            }
-            .pay-tag {
-                padding: 2px 8px;
-                font-size: 10px;
-                border-radius: 8px;
+                display: block;
+                text-align: right;
             }
             .order-btn {
-                padding: 6px 22px;
-                font-size: 12px;
-                border-radius: 6px;
+                padding: 8px 24px;
+                font-size: 13px;
             }
         }
-        
-        .mobile-card-content { display: none; }
 
         /* Order Modal */
         .modal-overlay {
@@ -531,10 +507,10 @@
                 const effectivePrice = t.customPrice;
                 let payTagsHTML = t.pay.map(p => `<span class="pay-tag">${p}</span>`).join('');
 
+                // PC view & Mobile view hybrid rendering inside standard tr/td structure with CSS media queries
                 html += `
                 <tr>
-                    <!-- PC View Advertiser Column -->
-                    <td class="pc-advertiser-col">
+                    <td>
                         <div class="advertiser-cell">
                             <div class="avatar-box">${t.name.charAt(0).toUpperCase()}</div>
                             <div>
@@ -543,52 +519,21 @@
                             </div>
                         </div>
                     </td>
-
-                    <!-- Mobile Card Content Rendered Inside First TD -->
-                    <td colspan="5" style="padding:0; border:none;" class="mobile-td-wrapper">
-                        <div class="mobile-card-content">
-                            <div class="mobile-card-top">
-                                <div class="advertiser-cell" style="gap:8px;">
-                                    <div class="avatar-box" style="width:30px; height:30px; font-size:11px;">${t.name.charAt(0).toUpperCase()}</div>
-                                    <div>
-                                        <div class="adv-name" style="font-size:13px; margin-bottom:2px;">${t.name} ${t.verified ? '<i class="fa-solid fa-circle-check" style="font-size:11px;"></i>' : ''}</div>
-                                        <div class="adv-stats" style="font-size:10px;">${t.orders} trades &bull; ${t.comp}</div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="mobile-card-middle">
-                                <div class="mobile-price-group">
-                                    <div class="mobile-price" style="color: ${isBuy ? 'var(--green)' : 'var(--red)'};">${effectivePrice}</div>
-                                    <div class="mobile-currency">ETB / USDT</div>
-                                </div>
-                                <button class="${btnClass}" onclick="openOrderModal('${actionLabel}', '${effectivePrice}')">${actionLabel}</button>
-                            </div>
-                            <div class="mobile-limits">
-                                <div>Limit: ${t.min} - ${t.max} ETB</div>
-                                <div class="mobile-available">Avail: ${t.avail} USDT</div>
-                            </div>
-                            <div class="mobile-payments">
-                                ${payTagsHTML}
-                            </div>
-                        </div>
-                    </td>
-
-                    <!-- PC View Columns -->
-                    <td class="pc-price-col">
+                    <td>
                         <div class="price-cell" style="color: ${isBuy ? 'var(--green)' : 'var(--red)'};">${effectivePrice} <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">ETB</span></div>
                     </td>
-                    <td class="pc-limit-col">
+                    <td>
                         <div class="limit-cell">
                             <div class="available">${t.avail} USDT</div>
                             <div class="range">Limit: ${t.min} - ${t.max} ETB</div>
                         </div>
                     </td>
-                    <td class="pc-payment-col">
+                    <td>
                         <div class="payment-tags">
                             ${payTagsHTML}
                         </div>
                     </td>
-                    <td class="action-cell pc-action-col">
+                    <td class="action-cell">
                         <button class="${btnClass}" onclick="openOrderModal('${actionLabel}', '${effectivePrice}')">${actionLabel}</button>
                     </td>
                 </tr>`;
