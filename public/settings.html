@@ -1091,6 +1091,14 @@
         }
 
         document.addEventListener("DOMContentLoaded", async function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const activeTab = urlParams.get('tab');
+            if (activeTab) {
+                const targetBtn = document.querySelector(`.tab-btn[data-tab="${activeTab}"]`);
+                if (targetBtn) {
+                    setTimeout(() => targetBtn.click(), 50);
+                }
+            }
             loadFromLocalStorageFallback();
             loadUserPasskeys();
             
