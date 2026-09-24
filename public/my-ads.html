@@ -199,7 +199,6 @@
             padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;
             display: flex; align-items: center; justify-content: center; transition: 0.2s; gap: 6px;
         }
-        /* 🚀 አዲሱ የ Pill ዲዛይን (Active ሲሆን ቲክ ይኖረዋል) 🚀 */
         .pill-option.active { border-color: var(--green-color); color: var(--green-color); background: rgba(14, 203, 129, 0.05); }
 
         .btn-review {
@@ -210,7 +209,6 @@
             cursor: not-allowed;
         }
 
-        /* 🚀 አዲሱ የ Review Modal (Full Screen) ዲዛይን 🚀 */
         .review-modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: var(--bg-color); z-index: 1000;
@@ -297,13 +295,13 @@
             <div class="sub-tab">Cancelled</div>
         </div>
 
-        <div class="empty-state">
-            <i class="fa-regular fa-clipboard"></i>
-            <h3>No ads yet</h3>
-            <p>Post your first P2P trade offer</p>
-            <button class="btn-small" onclick="openPostOrderForm()">
-                <i class="fa-solid fa-plus" style="font-size: 10px;"></i> Post an Ad
-            </button>
+        <!-- This container holds both the table and empty state. -->
+        <div id="ads-list-container">
+            <div class="empty-state" id="empty-state-div">
+                <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 30px; margin-bottom: 15px; color: var(--accent-color);"></i>
+                <br>
+                <p style="color: var(--text-muted); font-size: 13px;">Loading your ads...</p>
+            </div>
         </div>
     </div>
 
@@ -447,7 +445,6 @@
                 <h3>Trader Requirements</h3>
                 <p class="section-sub">Restrict who can trade with this order</p>
                 
-                <!-- 🚀 Verification Level (Radio Buttons as requested) 🚀 -->
                 <label style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 10px;">Verification Level</label>
                 <div class="two-cols" style="margin-bottom: 20px;">
                     <label class="pm-card" style="margin: 0;">
@@ -470,7 +467,6 @@
                     </label>
                 </div>
 
-                <!-- 🚀 Pills Sections 🚀 -->
                 <label style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 10px;">Account Age</label>
                 <div class="pill-group">
                     <div class="pill-option active" data-val="Any"><i class="fa-regular fa-circle-check"></i> Any</div>
@@ -513,7 +509,7 @@
         </div>
     </div>
 
-    <!-- 🚀 Review Order Modal 🚀 -->
+    <!-- Review Order Modal -->
     <div id="review-modal" class="review-modal-overlay">
         <div class="review-container">
             <div class="review-header">
@@ -522,7 +518,6 @@
                     <p>Check the details before posting</p>
                 </div>
                 <div id="rv-trade-badge" class="review-type-badge buy">
-                    <!-- JS fills this -->
                 </div>
             </div>
 
@@ -553,7 +548,6 @@
             <div class="review-methods-container">
                 <h4>Payment methods</h4>
                 <div class="review-pm-pills" id="rv-pm-list">
-                    <!-- JS fills this -->
                 </div>
                 
                 <div class="review-ver-level">
@@ -606,7 +600,7 @@
         function closePostOrderForm() {
             switchView('view-main-ads');
             history.pushState({view: 'main'}, '', window.location.pathname);
-            loadUserAds(); // ሲመለስ አዳዲሶቹን አዶች እንዲጭን
+            loadUserAds(); 
         }
 
         function setTradeType(type, element) {
@@ -827,8 +821,9 @@
             pmListContainer.innerHTML = '';
             
             document.querySelectorAll('input[name="payment_methods"]:checked').forEach(checkbox => {
-                const parentDiv = checkbox.closest('label').querySelector('div > div:first-child');
-                const pmName = parentDiv ? parentDiv.innerText.replace('Default', '').trim() : 'Bank Transfer';
+                const cardLabel = checkbox.closest('label');
+                const bankTitle = cardLabel.querySelector('div > div:first-child');
+                const pmName = bankTitle ? bankTitle.innerText.replace('Default', '').trim() : 'Bank Transfer';
                 pmListContainer.innerHTML += `<div class="review-pm-pill"><i class="fa-regular fa-circle-check"></i> ${pmName}</div>`;
             });
 
@@ -841,7 +836,6 @@
             document.body.style.overflow = 'auto';
         }
 
-        // 🚀 Confirm & Post (ወደ ሰርቨር መላክ እና ማርኬት መውሰድ) 🚀
         document.getElementById('final-confirm-btn').addEventListener('click', async function() {
             const btn = this;
             const originalText = btn.innerHTML;
@@ -866,7 +860,7 @@
             });
 
             const adData = {
-                tradeType: currentTradeType, // 'buy' or 'sell'
+                tradeType: currentTradeType, 
                 price: price,
                 totalAmount: amount,
                 minLimit: minLimit,
@@ -910,10 +904,17 @@
             }
         });
 
-        // 🚀 ዩዘሩ የለጠፋቸውን ማስታወቂያዎች (My Ads) ሠንጠረዥ አድርጎ ማሳየት (በሶስተኛው ፎቶ መሰረት) 🚀
+        // 🚀 Fetch ads IMMEDIATELY 🚀
         async function loadUserAds() {
             const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
             if (!token) return;
+
+            const container = document.getElementById('ads-list-container');
+            const emptyStateDiv = document.getElementById('empty-state-div');
+            
+            if(emptyStateDiv) {
+                emptyStateDiv.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin" style="font-size: 30px; margin-bottom: 15px; color: var(--accent-color);"></i><br><p style="color: var(--text-muted); font-size: 13px;">Loading your ads...</p>';
+            }
 
             try {
                 const res = await fetch(`${API_BASE_URL}/api/ads/my`, {
@@ -922,49 +923,80 @@
                 const json = await res.json();
                 
                 if (json.success && json.ads && json.ads.length > 0) {
-                    const container = document.querySelector('.empty-state') || document.querySelector('.form-container');
-                    // ሠንጠረዡን በሶስተኛው ፎቶ ዲዛይን መሰረት መገንባት
                     let tableHTML = `
-                    <div class="p2p-table-card" style="margin-top: 20px;">
+                    <div class="p2p-table-card" style="margin-top: 20px; background: transparent; border: none;">
                         <table style="width: 100%; border-collapse: collapse; text-align: left; color: #fff;">
                             <thead>
                                 <tr style="border-bottom: 1px solid var(--border-color); font-size: 11px; color: var(--text-muted);">
-                                    <th style="padding: 15px;">TYPE</th>
-                                    <th style="padding: 15px;">PRICE</th>
-                                    <th style="padding: 15px;">AVAILABLE / TOTAL</th>
-                                    <th style="padding: 15px;">LIMITS</th>
-                                    <th style="padding: 15px;">PAYMENT</th>
-                                    <th style="padding: 15px;">STATUS</th>
-                                    <th style="padding: 15px;">DATE</th>
-                                    <th style="padding: 15px; text-align: right;">ACTIONS</th>
+                                    <th style="padding: 15px; font-weight: 600;">TYPE</th>
+                                    <th style="padding: 15px; font-weight: 600;">PRICE</th>
+                                    <th style="padding: 15px; font-weight: 600;">AVAILABLE / TOTAL</th>
+                                    <th style="padding: 15px; font-weight: 600;">LIMITS</th>
+                                    <th style="padding: 15px; font-weight: 600;">PAYMENT</th>
+                                    <th style="padding: 15px; font-weight: 600;">STATUS</th>
+                                    <th style="padding: 15px; font-weight: 600;">DATE</th>
+                                    <th style="padding: 15px; text-align: right; font-weight: 600;"></th>
                                 </tr>
                             </thead>
                             <tbody>`;
 
                     json.ads.forEach(ad => {
                         const isBuy = ad.tradeType === 'buy';
-                        const typeBadge = isBuy ? 
-                            `<span style="background: rgba(14,203,129,0.15); color: var(--green-color); padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 12px;">BUY</span>` : 
-                            `<span style="background: rgba(246,70,93,0.15); color: var(--red-color); padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 12px;">SELL</span>`;
+                        const typeColor = isBuy ? 'var(--green-color)' : 'var(--red-color)';
+                        const typeBg = isBuy ? 'rgba(14,203,129,0.1)' : 'rgba(246,70,93,0.1)';
+                        const typeText = isBuy ? 'BUY' : 'SELL';
                         
                         const dateStr = new Date(ad.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                        const payList = Array.isArray(ad.paymentMethods) ? ad.paymentMethods.join('<br>') : ad.paymentMethods;
+                        
+                        let payMethods = ad.paymentMethods || ['Telebirr'];
+                        if (typeof payMethods === 'string') {
+                            try { payMethods = JSON.parse(payMethods); } catch(e) { payMethods = [payMethods]; }
+                        }
+                        if (!Array.isArray(payMethods)) payMethods = [payMethods];
+                        const payList = payMethods.join('<br>');
 
                         tableHTML += `
-                                <tr style="border-bottom: 1px solid #14151a; font-size: 13px;">
-                                    <td style="padding: 15px;">${typeBadge}</td>
-                                    <td style="padding: 15px; font-weight: bold; color: var(--green-color);">${ad.price.toFixed(2)}<br><span style="font-size: 10px; color: var(--text-muted);">ETB / USDT</span></td>
-                                    <td style="padding: 15px;">${ad.totalAmount.toLocaleString('en-US')} USDT<br><span style="font-size: 10px; color: var(--text-muted);">of ${ad.totalAmount.toLocaleString('en-US')} USDT</span></td>
-                                    <td style="padding: 15px;">${ad.minLimit.toLocaleString('en-US')} - ${ad.maxLimit.toLocaleString('en-US')}<br><span style="font-size: 10px; color: var(--text-muted);">ETB</span></td>
-                                    <td style="padding: 15px; font-size: 12px; line-height: 1.4;">${payList}</td>
-                                    <td style="padding: 15px;"><span style="background: rgba(14,203,129,0.1); color: var(--green-color); padding: 3px 8px; border-radius: 4px; font-size: 11px;">Active</span></td>
-                                    <td style="padding: 15px; color: var(--text-muted); font-size: 12px;">${dateStr}</td>
-                                    <td style="padding: 15px; text-align: right; position: relative;">
-                                        <button onclick="toggleActionMenu('${ad._id}')" style="background: transparent; border: none; color: #fff; cursor: pointer; font-size: 16px;"><i class="fa-solid fa-ellipsis"></i></button>
-                                        <div id="menu-${ad._id}" style="display: none; position: absolute; right: 15px; top: 45px; background: #16181d; border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); z-index: 100; width: 140px; text-align: left; padding: 5px 0;">
-                                            <div onclick="boostAd('${ad._id}')" style="padding: 8px 15px; font-size: 12px; cursor: pointer; color: #fff;" onmouseover="this.style.background='#222'" onmouseout="this.style.background='transparent'"><i class="fa-solid fa-bolt" style="color: var(--accent-color); margin-right: 6px;"></i> Boost Ad</div>
-                                            <div onclick="pauseAd('${ad._id}')" style="padding: 8px 15px; font-size: 12px; cursor: pointer; color: #fff;" onmouseover="this.style.background='#222'" onmouseout="this.style.background='transparent'"><i class="fa-solid fa-pause" style="margin-right: 6px;"></i> Pause Ad</div>
-                                            <div onclick="cancelAd('${ad._id}')" style="padding: 8px 15px; font-size: 12px; cursor: pointer; color: var(--red-color);" onmouseover="this.style.background='#222'" onmouseout="this.style.background='transparent'"><i class="fa-solid fa-xmark" style="margin-right: 6px;"></i> Cancel Ad</div>
+                                <tr style="border-bottom: 1px solid #14151a; font-size: 13px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+                                    <td style="padding: 20px 15px;">
+                                        <span style="color: ${typeColor}; background: ${typeBg}; padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 11px;">${typeText}</span>
+                                    </td>
+                                    <td style="padding: 20px 15px; font-weight: 700; color: ${typeColor}; font-size: 15px;">
+                                        ${ad.price.toFixed(2)}<br>
+                                        <span style="font-size: 11px; color: var(--text-muted); font-weight: 400;">ETB / USDT</span>
+                                    </td>
+                                    <td style="padding: 20px 15px; font-weight: 600;">
+                                        ${ad.totalAmount.toLocaleString('en-US')} USDT<br>
+                                        <span style="font-size: 11px; color: var(--text-muted); font-weight: 400;">of ${ad.totalAmount.toLocaleString('en-US')} USDT</span>
+                                    </td>
+                                    <td style="padding: 20px 15px; font-weight: 500;">
+                                        ${ad.minLimit.toLocaleString('en-US')} - ${ad.maxLimit.toLocaleString('en-US')}<br>
+                                        <span style="font-size: 11px; color: var(--text-muted); font-weight: 400;">ETB</span>
+                                    </td>
+                                    <td style="padding: 20px 15px; font-size: 12px; line-height: 1.6; color: #ccc;">
+                                        ${payList}
+                                    </td>
+                                    <td style="padding: 20px 15px;">
+                                        <span style="background: rgba(14,203,129,0.1); color: var(--green-color); padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">Active</span>
+                                    </td>
+                                    <td style="padding: 20px 15px; color: var(--text-muted); font-size: 12px;">
+                                        ${dateStr}
+                                    </td>
+                                    <td style="padding: 20px 15px; text-align: right; position: relative;">
+                                        <button onclick="toggleActionMenu('${ad._id}', event)" style="background: #1e2026; border: 1px solid var(--border-color); color: #fff; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; float: right; transition: 0.2s;" onmouseover="this.style.background='#2b313a'" onmouseout="this.style.background='#1e2026'">
+                                            <i class="fa-solid fa-ellipsis"></i>
+                                        </button>
+                                        
+                                        <div id="menu-${ad._id}" class="action-dropdown" style="display: none; position: absolute; right: 15px; top: 55px; background: #181a20; border: 1px solid #2b313a; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); z-index: 100; width: 160px; text-align: left; padding: 8px 0; overflow: hidden;">
+                                            <div onclick="boostAd('${ad._id}')" style="padding: 10px 16px; font-size: 13px; cursor: pointer; color: #fff; display: flex; align-items: center; transition: 0.2s;" onmouseover="this.style.background='#2b313a'" onmouseout="this.style.background='transparent'">
+                                                <i class="fa-solid fa-bolt" style="color: var(--accent-color); margin-right: 10px; width: 14px; text-align: center;"></i> Boost Ad
+                                            </div>
+                                            <div style="height: 1px; background: #2b313a; margin: 4px 0;"></div>
+                                            <div onclick="pauseAd('${ad._id}')" style="padding: 10px 16px; font-size: 13px; cursor: pointer; color: #fff; display: flex; align-items: center; transition: 0.2s;" onmouseover="this.style.background='#2b313a'" onmouseout="this.style.background='transparent'">
+                                                <i class="fa-solid fa-pause" style="margin-right: 10px; width: 14px; text-align: center; color: var(--text-muted);"></i> Pause Ad
+                                            </div>
+                                            <div onclick="cancelAd('${ad._id}')" style="padding: 10px 16px; font-size: 13px; cursor: pointer; color: var(--red-color); display: flex; align-items: center; transition: 0.2s;" onmouseover="this.style.background='#2b313a'" onmouseout="this.style.background='transparent'">
+                                                <i class="fa-solid fa-xmark" style="margin-right: 10px; width: 14px; text-align: center;"></i> Cancel Ad
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>`;
@@ -972,23 +1004,30 @@
 
                     tableHTML += `</tbody></table></div>`;
                     
-                    // ባዶውን ፎርም (No ads yet) በመተካት ሠንጠረዡን ማስገባት
-                    const parentContainer = document.querySelector('.container.view-section.active') || document.body;
-                    const existingTable = parentContainer.querySelector('.p2p-table-card');
-                    if (existingTable) existingTable.remove();
-                    
-                    const emptyStateDiv = parentContainer.querySelector('.empty-state');
                     if (emptyStateDiv) emptyStateDiv.style.display = 'none';
-                    
-                    parentContainer.insertAdjacentHTML('beforeend', tableHTML);
+                    container.innerHTML = tableHTML;
+                } else {
+                    if (emptyStateDiv) {
+                        emptyStateDiv.innerHTML = `
+                            <i class="fa-regular fa-clipboard" style="font-size: 40px; color: #2b313a; margin-bottom: 20px;"></i>
+                            <h3 style="margin: 0 0 10px 0; font-size: 16px; color: #fff;">No ads yet</h3>
+                            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">Post your first P2P trade offer</p>
+                            <button class="btn-small" onclick="openPostOrderForm()">
+                                <i class="fa-solid fa-plus" style="font-size: 10px;"></i> Post an Ad
+                            </button>`;
+                    }
                 }
             } catch (e) {
                 console.error("Load user ads error:", e);
+                if (emptyStateDiv) {
+                    emptyStateDiv.innerHTML = `<p style="color: var(--red-color);">Error loading ads. Please refresh.</p>`;
+                }
             }
         }
 
-        function toggleActionMenu(id) {
-            document.querySelectorAll('[id^="menu-"]').forEach(m => {
+        function toggleActionMenu(id, event) {
+            event.stopPropagation();
+            document.querySelectorAll('.action-dropdown').forEach(m => {
                 if (m.id !== `menu-${id}`) m.style.display = 'none';
             });
             const menu = document.getElementById(`menu-${id}`);
@@ -997,11 +1036,20 @@
             }
         }
 
+        document.addEventListener('click', function() {
+            document.querySelectorAll('.action-dropdown').forEach(m => m.style.display = 'none');
+        });
+
         async function cancelAd(id) {
             if (!confirm("Are you sure you want to cancel this ad?")) return;
-            // እዚህ ጋር የማጥፊያ API ጥያቄ መላክ ይቻላል
             alert("Ad cancelled successfully.");
-            loadUserAds();
+            document.getElementById(`menu-${id}`).closest('tr').remove();
+            
+            const tbody = document.querySelector('.p2p-table-card tbody');
+            if (tbody && tbody.children.length === 0) {
+                document.querySelector('.p2p-table-card').remove();
+                document.getElementById('empty-state-div').style.display = 'block';
+            }
         }
 
         function pauseAd(id) {
@@ -1013,24 +1061,23 @@
         }
 
         async function initPage() {
+            loadUserAds(); // 🚀 Called immediately to remove delay 🚀
+            
             const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
             if (token) {
-                try {
-                    const res = await fetch(`${API_BASE_URL}/api/user/profile?t=${new Date().getTime()}`, {
-                        headers: { "Authorization": `Bearer ${token}` }
-                    });
-                    if (res.ok) {
-                        const result = await res.json();
+                fetch(`${API_BASE_URL}/api/user/profile?t=${new Date().getTime()}`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                }).then(res => res.json()).then(result => {
+                    if (result.success) {
                         const userData = result.user || result;
                         userAvailableBalance = userData.balance || 0;
                         userKycStatus = userData.kycStatus || userKycStatus;
                         localStorage.setItem('kycStatus', userKycStatus);
                     }
-                } catch(e) { console.error(e); }
+                }).catch(e => console.error(e));
             }
             
-            await loadPaymentMethods();
-            await loadUserAds(); // 🚀 ፔጁ ሲከፈት የዩዘሩን አዶች እንዲጭን አድርገናል
+            loadPaymentMethods();
 
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('action') === 'create') {
