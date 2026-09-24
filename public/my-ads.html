@@ -264,7 +264,7 @@
         }
         .btn-review-cancel:hover { border-color: #444; background: #16181d; }
 
-        /* 🚀 አዲሱ የ Cancel Confirmation Modal ዲዛይን 🚀 */
+        /* Custom Confirm Modal Styles */
         .custom-confirm-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.85); z-index: 3000;
@@ -602,7 +602,7 @@
         </div>
     </div>
 
-    <!-- 🚀 Custom Cancel Confirmation Modal 🚀 -->
+    <!-- Custom Confirm Modal -->
     <div id="custom-confirm-modal" class="custom-confirm-overlay">
         <div class="custom-confirm-box">
             <i class="fa-solid fa-circle-exclamation confirm-icon"></i>
@@ -623,7 +623,7 @@
         let currentTradeType = 'buy';
         let calculatedMaxEtb = 0; 
         
-        let confirmResolve = null; // ለ Custom Modal ሎጂክ
+        let confirmResolve = null;
 
         function switchView(viewId) {
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
@@ -1054,9 +1054,6 @@
 
                     tableHTML += `</tbody></table></div>`;
                     
-                    const existingTable = parentContainer.querySelector('.p2p-table-card');
-                    if (existingTable) existingTable.remove();
-                    
                     if (emptyStateDiv) emptyStateDiv.style.display = 'none';
                     container.innerHTML = tableHTML;
                 } else {
@@ -1093,7 +1090,6 @@
             document.querySelectorAll('.action-dropdown').forEach(m => m.style.display = 'none');
         });
 
-        // 🚀 Custom Confirm Logic 🚀
         function showCustomConfirm() {
             document.getElementById('custom-confirm-modal').classList.add('show');
             return new Promise((resolve) => {
@@ -1113,7 +1109,6 @@
             const confirmed = await showCustomConfirm();
             if (!confirmed) return;
             
-            // የድሮውን አስቀያሚ alert አጥፍተነዋል፣ በቀጥታ ሠንጠረዡ ላይ ይጠፋል!
             document.getElementById(`menu-${id}`).closest('tr').remove();
             
             const tbody = document.querySelector('.p2p-table-card tbody');
