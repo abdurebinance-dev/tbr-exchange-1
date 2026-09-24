@@ -267,10 +267,10 @@
         .mobile-card-row { display: none; }
         .pc-table-row { display: table-row; }
 
-        /* 🚀 Perfected Mobile Card Layout with Proper Margins 🚀 */
+        /* 🚀 Compact Mobile Card Layout (Strictly Tight & Clean) 🚀 */
         @media(max-width: 768px) {
             body { padding-top: 55px; }
-            .market-container { padding: 12px 14px; } /* በግራና በቀኝ በቂ ክፍተት እንዲኖር ተደርጓል */
+            .market-container { padding: 10px 12px; }
             .p2p-table-card { background: transparent; border: none; }
             table, thead, tbody, th, tr, td { display: block; width: 100%; box-sizing: border-box; }
             thead { display: none; }
@@ -282,8 +282,8 @@
                 background: var(--card-bg);
                 border: 1px solid var(--border-color);
                 border-radius: 12px;
-                margin-bottom: 12px;
-                padding: 16px; /* ከውስጥ በቂ ክፍተት (Padding) */
+                margin-bottom: 10px;
+                padding: 12px 14px;
                 position: relative;
                 box-sizing: border-box;
             }
@@ -291,16 +291,16 @@
                 display: flex;
                 justify-content: space-between;
                 align-items: flex-start;
-                margin-bottom: 10px;
+                margin-bottom: 6px;
             }
             .m-user-info {
                 display: flex;
                 align-items: center;
-                gap: 10px;
+                gap: 8px;
             }
             .m-avatar {
-                width: 36px;
-                height: 36px;
+                width: 32px;
+                height: 32px;
                 border-radius: 50%;
                 background: #1c2027;
                 display: flex;
@@ -308,71 +308,71 @@
                 justify-content: center;
                 color: var(--accent-gold);
                 font-weight: bold;
-                font-size: 13px;
+                font-size: 12px;
                 border: 1px solid #2b313a;
             }
             .m-name {
                 font-weight: 700;
-                font-size: 15px;
+                font-size: 14px;
                 color: #fff;
                 display: flex;
                 align-items: center;
-                gap: 5px;
+                gap: 4px;
             }
             .m-stats {
-                font-size: 11px;
+                font-size: 10px;
                 color: #848e9c;
-                margin-top: 2px;
+                margin-top: 1px;
             }
             .m-right-side {
                 text-align: right;
             }
             .m-price {
-                font-size: 22px;
+                font-size: 20px;
                 font-weight: 800;
                 line-height: 1;
             }
             .m-currency {
-                font-size: 10px;
+                font-size: 9px;
                 color: #848e9c;
                 text-transform: uppercase;
-                margin-top: 3px;
+                margin-top: 2px;
             }
             .m-middle-row {
-                margin: 10px 0;
-                font-size: 12px;
+                font-size: 11px;
                 color: #848e9c;
+                margin: 4px 0;
+                line-height: 1.3;
             }
             .m-middle-row .avail {
                 color: #fff;
                 font-weight: 600;
-                margin-top: 2px;
             }
             .m-bottom-row {
                 display: flex;
                 justify-content: space-between;
-                align-items: flex-end;
-                margin-top: 10px;
-                padding-top: 10px;
+                align-items: center;
+                margin-top: 8px;
+                padding-top: 8px;
                 border-top: 1px solid #14151a;
             }
             .m-payment-tags {
                 display: flex;
-                gap: 5px;
+                gap: 4px;
                 flex-wrap: wrap;
                 max-width: 65%;
             }
             .m-pay-tag {
                 background: #14171d;
                 color: #848e9c;
-                padding: 3px 8px;
-                border-radius: 8px;
-                font-size: 10px;
+                padding: 2px 6px;
+                border-radius: 6px;
+                font-size: 9px;
                 border: 1px solid #2b313a;
             }
             .m-order-btn {
-                padding: 7px 24px;
-                font-size: 13px;
+                padding: 6px 20px;
+                font-size: 12px;
                 border-radius: 6px;
                 font-weight: 700;
                 border: none;
@@ -631,7 +631,7 @@
                                 <div class="m-user-info">
                                     <div class="m-avatar">${t.name.charAt(0).toUpperCase()}</div>
                                     <div>
-                                        <div class="m-name">${t.name} ${t.verified ? '<i class="fa-solid fa-circle-check" style="font-size:12px; color:var(--accent-gold);"></i>' : ''}</div>
+                                        <div class="m-name">${t.name} ${t.verified ? '<i class="fa-solid fa-circle-check" style="font-size:11px; color:var(--accent-gold);"></i>' : ''}</div>
                                         <div class="m-stats">${t.orders} trades &bull; ${t.comp}</div>
                                     </div>
                                 </div>
@@ -642,8 +642,7 @@
                             </div>
                             
                             <div class="m-middle-row">
-                                <div>Limit: ${t.min} - ${t.max} ETB</div>
-                                <div class="avail">Avail: ${t.avail} USDT</div>
+                                <div>Limit: ${t.min} - ${t.max} ETB &bull; <span class="avail">Avail: ${t.avail} USDT</span></div>
                             </div>
 
                             <div class="m-bottom-row">
