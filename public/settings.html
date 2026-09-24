@@ -950,53 +950,51 @@
             </div>
         </div>
 
-      <!-- 🚀 የ Merchant ታብ ዋና መያዣ 🚀 -->
-    <!-- ማሳሰቢያ፡ id="merchant" የሚለው ከላይ ታቡን ስትነካ ከሚጠራው switchView('...') ስም ጋር በትክክል መመሳሰል አለበት -->
-    <div id="merchant" class="view-section">
-        
-        <div class="merchant-app-card">
-            <div class="merchant-header">
-                <i class="fa-solid fa-store"></i> Merchant Application
-            </div>
-            <div class="merchant-sub">
-                Apply for Merchant (Tier 3) status to unlock the highest trading limits on TBR
-            </div>
-
-            <div class="merchant-features-grid">
-                <!-- Card 1 -->
-                <div class="feature-card">
-                    <div class="feature-icon-wrapper icon-green">
-                        <i class="fa-solid fa-arrow-trend-up"></i>
-                    </div>
-                    <div class="feature-title">Higher limits</div>
-                    <div class="feature-desc">Largest trade & withdrawal caps</div>
+      <!-- 🚀 Merchant Tab Container (Kani wuxuu xaqiijinayaa inuu ka muuqdo kaliya Merchant tab) 🚀 -->
+        <!-- Hubi in id="merchant" uu la mid yahay kan ku jira batoonkaaga (onclick="switchView('merchant')") -->
+        <div id="merchant" class="view-section">
+            <div class="merchant-app-card">
+                <div class="merchant-header">
+                    <i class="fa-solid fa-store"></i> Merchant Application
+                </div>
+                <div class="merchant-sub">
+                    Apply for Merchant (Tier 3) status to unlock the highest trading limits on TBR
                 </div>
 
-                <!-- Card 2 -->
-                <div class="feature-card">
-                    <div class="feature-icon-wrapper icon-yellow">
-                        <i class="fa-solid fa-medal"></i>
+                <div class="merchant-features-grid">
+                    <!-- Card 1 -->
+                    <div class="feature-card">
+                        <div class="feature-icon-wrapper icon-green">
+                            <i class="fa-solid fa-arrow-trend-up"></i>
+                        </div>
+                        <div class="feature-title">Higher limits</div>
+                        <div class="feature-desc">Largest trade & withdrawal caps</div>
                     </div>
-                    <div class="feature-title">Merchant badge</div>
-                    <div class="feature-desc">Visible on your public profile</div>
+
+                    <!-- Card 2 -->
+                    <div class="feature-card">
+                        <div class="feature-icon-wrapper icon-yellow">
+                            <i class="fa-solid fa-medal"></i>
+                        </div>
+                        <div class="feature-title">Merchant badge</div>
+                        <div class="feature-desc">Visible on your public profile</div>
+                    </div>
+
+                    <!-- Card 3 -->
+                    <div class="feature-card">
+                        <div class="feature-icon-wrapper icon-purple">
+                            <i class="fa-solid fa-layer-group"></i>
+                        </div>
+                        <div class="feature-title">Bigger orders</div>
+                        <div class="feature-desc">Post orders up to the top tier</div>
+                    </div>
                 </div>
 
-                <!-- Card 3 -->
-                <div class="feature-card">
-                    <div class="feature-icon-wrapper icon-purple">
-                        <i class="fa-solid fa-layer-group"></i>
-                    </div>
-                    <div class="feature-title">Bigger orders</div>
-                    <div class="feature-desc">Post orders up to the top tier</div>
-                </div>
+                <button class="btn-apply-merchant" onclick="alert('Merchant application submitted successfully!')">
+                    <i class="fa-solid fa-store"></i> Apply for Merchant Status
+                </button>
             </div>
-
-            <button class="btn-apply-merchant" onclick="alert('Merchant application submitted successfully!')">
-                <i class="fa-solid fa-store"></i> Apply for Merchant Status
-            </button>
         </div>
-
-    </div>
 
         <!-- 5. Trades Content -->
         <div id="trades-section" class="content-section" style="display: none;">
