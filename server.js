@@ -2194,7 +2194,9 @@ const adSchema = new mongoose.Schema({
 
 const Ad = mongoose.models.Ad || mongoose.model('Ad', adSchema);
 
-// --- 🔥 P2P Ad APIs (Post & Get Ads) 🔥 ---
+// --- 🔥 P2P Ad APIs 🔥 ---
+
+// 1. አዲስ ማስታወቂያ ለመፍጠር (Post Ad & Lock Funds)
 app.post('/api/ads', verifyToken, async (req, res) => {
     try {
         const { tradeType, price, totalAmount, minLimit, maxLimit, paymentMethods, verificationLevel, termsConditions } = req.body;
@@ -2204,18 +2206,33 @@ app.post('/api/ads', verifyToken, async (req, res) => {
             return res.status(404).json({ success: false, message: 'User not found.' });
         }
 
+        const amountNum = Number(totalAmount);
+
+        // 🚀 SELL ትዕዛዝ ከሆነ ዩዘሩ በቂ ብር እንዳለው አረጋግጦ ብሩን መቆለፍ (Lock Balance) 🚀
+        if (tradeType === 'sell') {
+            if (!user.balance || user.balance < amountNum) {
+                return res.status(400).json({ success: false, message: 'Insufficient balance to post this sell ad.' });
+            }
+            
+            // ከሚንቀሳቀሰው ባላንስ ቀንሶ ወደታገደው ያዞረዋል
+            user.balance -= amountNum;
+            user.lockedBalance = (user.lockedBalance || 0) + amountNum;
+            await user.save();
+        }
+
         const newAd = new Ad({
             userId: user._id,
             email: user.email,
             name: user.fullName || user.email.split('@')[0],
             tradeType,
             price: Number(price),
-            totalAmount: Number(totalAmount),
+            totalAmount: amountNum,
             minLimit: Number(minLimit),
             maxLimit: Number(maxLimit),
             paymentMethods: paymentMethods || [],
             verificationLevel: verificationLevel || 'Anyone (no restriction)',
-            termsConditions: termsConditions || ''
+            termsConditions: termsConditions || '',
+            status: 'active'
         });
 
         await newAd.save();
@@ -2226,51 +2243,7 @@ app.post('/api/ads', verifyToken, async (req, res) => {
     }
 });
 
-app.get('/api/ads', async (req, res) => {
-    try {
-        const ads = await Ad.find({ status: 'active' }).sort({ createdAt: -1 });
-        res.json({ success: true, ads });
-    } catch (error) {
-        console.error("Fetch Ads Error:", error);
-        res.status(500).json({ success: false, message: 'Server error fetching ads.' });
-    }
-});
-
-// --- 🔥 P2P Ad APIs (verifyToken ከተገለጸ በኋላ ይቀመጥ) 🔥 ---
-
-// 1. አዲስ ማስታወቂያ ለመፍጠር (Post Ad)
-app.post('/api/ads', verifyToken, async (req, res) => {
-    try {
-        const { tradeType, price, totalAmount, minLimit, maxLimit, paymentMethods, verificationLevel, termsConditions } = req.body;
-        const user = await User.findById(req.user.id);
-        
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found.' });
-        }
-
-        const newAd = new Ad({
-            userId: user._id,
-            email: user.email,
-            name: user.fullName || user.email.split('@')[0],
-            tradeType,
-            price: Number(price),
-            totalAmount: Number(totalAmount),
-            minLimit: Number(minLimit),
-            maxLimit: Number(maxLimit),
-            paymentMethods: paymentMethods || [],
-            verificationLevel: verificationLevel || 'Anyone (no restriction)',
-            termsConditions: termsConditions || ''
-        });
-
-        await newAd.save();
-        res.status(201).json({ success: true, message: 'Ad posted successfully!', ad: newAd });
-    } catch (error) {
-        console.error("Post Ad Error:", error);
-        res.status(500).json({ success: false, message: 'Server error while posting ad.' });
-    }
-});
-
-// 2. የተፈጠሩ ማስታወቂያዎችን በሙሉ በማርኬት ላይ ለማሳየት (Get All Ads)
+// 2. የተፈጠሩ ማስታወቂያዎችን በሙሉ በማርኬት ላይ ለማሳየት (Get All Active Ads)
 app.get('/api/ads', async (req, res) => {
     try {
         const ads = await Ad.find({ status: 'active' }).sort({ createdAt: -1 });
@@ -2292,16 +2265,32 @@ app.get('/api/ads/my', verifyToken, async (req, res) => {
     }
 });
 
-// 4. ማስታወቂያን Cancel ለማድረግ (Status Update)
+// 4. ማስታወቂያን Cancel ለማድረግ እና ብር ለመመለስ (Refund Locked Funds)
 app.put('/api/ads/:id/cancel', verifyToken, async (req, res) => {
     try {
         const ad = await Ad.findOne({ _id: req.params.id, userId: req.user.id });
         if (!ad) return res.status(404).json({ success: false, message: 'Ad not found.' });
         
-        ad.status = 'cancelled';
-        await ad.save();
+        // ማስታወቂያው ቀድሞ Cancel ካልተደረገ ብቻ
+        if (ad.status !== 'cancelled') {
+            ad.status = 'cancelled';
+            
+            // 🚀 SELL አድ ከነበረ፣ የተቆለፈውን ብር ወደ ዋናው ባላንስ መመለስ (Refund) 🚀
+            if (ad.tradeType === 'sell') {
+                const user = await User.findById(req.user.id);
+                if (user) {
+                    user.balance += ad.totalAmount; // ወደ ዋናው ይመለሳል
+                    user.lockedBalance -= ad.totalAmount; // ከተቆለፈው ይቀነሳል
+                    // lockedBalance ከ 0 በታች እንዳይወርድ መከላከል
+                    if (user.lockedBalance < 0) user.lockedBalance = 0; 
+                    await user.save();
+                }
+            }
+            
+            await ad.save();
+        }
         
-        res.json({ success: true, message: 'Ad cancelled successfully.' });
+        res.json({ success: true, message: 'Ad cancelled and funds refunded successfully.' });
     } catch (error) {
         console.error("Cancel Ad Error:", error);
         res.status(500).json({ success: false, message: 'Server error while canceling ad.' });
