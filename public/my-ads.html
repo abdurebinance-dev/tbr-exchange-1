@@ -447,6 +447,7 @@
                 <h3>Trader Requirements</h3>
                 <p class="section-sub">Restrict who can trade with this order</p>
                 
+                <!-- 🚀 Verification Level (Radio Buttons as requested) 🚀 -->
                 <label style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 10px;">Verification Level</label>
                 <div class="two-cols" style="margin-bottom: 20px;">
                     <label class="pm-card" style="margin: 0;">
@@ -469,7 +470,7 @@
                     </label>
                 </div>
 
-                <!-- 🚀 የአዲሱ ዲዛይን መተግበሪያ - Pills 🚀 -->
+                <!-- 🚀 Pills Sections 🚀 -->
                 <label style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 10px;">Account Age</label>
                 <div class="pill-group">
                     <div class="pill-option active" data-val="Any"><i class="fa-regular fa-circle-check"></i> Any</div>
@@ -512,7 +513,7 @@
         </div>
     </div>
 
-    <!-- 🚀 የ Review Order Modal ማሳያ (ሙሉ ስክሪን የሚሆነው) 🚀 -->
+    <!-- 🚀 Review Order Modal 🚀 -->
     <div id="review-modal" class="review-modal-overlay">
         <div class="review-container">
             <div class="review-header">
@@ -521,7 +522,7 @@
                     <p>Check the details before posting</p>
                 </div>
                 <div id="rv-trade-badge" class="review-type-badge buy">
-                    <!-- ይህ በ JS ይሞላል -->
+                    <!-- JS fills this -->
                 </div>
             </div>
 
@@ -552,7 +553,7 @@
             <div class="review-methods-container">
                 <h4>Payment methods</h4>
                 <div class="review-pm-pills" id="rv-pm-list">
-                    <!-- በJS ይሞላል -->
+                    <!-- JS fills this -->
                 </div>
                 
                 <div class="review-ver-level">
@@ -628,17 +629,15 @@
             }
         }
 
-        // 🚀 አዲሱ የ Pill ክሊክ ማስተካከያ (አዶን ማሳየትና ማጥፋት) 🚀
+        // 🚀 Pill click handler 🚀
         document.querySelectorAll('.pill-option').forEach(pill => {
             pill.addEventListener('click', function() {
                 const group = this.parentElement;
-                // ከሌሎቹ ቲክ (Icon) እና Active class ማጥፋት
                 group.querySelectorAll('.pill-option').forEach(p => {
                     p.classList.remove('active');
                     if (p.querySelector('i')) p.querySelector('i').remove();
                 });
                 
-                // ለተመረጠው Active እና ቲክ መስጠት
                 this.classList.add('active');
                 this.insertAdjacentHTML('afterbegin', '<i class="fa-regular fa-circle-check"></i> ');
             });
@@ -794,7 +793,6 @@
             }
         }
 
-        // 🚀 ሪቪው ለማየት (Open Review Modal) - የ Buy/Sell ዲዛይንን ይወስናል 🚀
         function openReviewModal() {
             const price = parseFloat(document.getElementById('price-input').value).toFixed(2);
             const amount = parseFloat(document.getElementById('total-amount-input').value).toFixed(2);
@@ -813,7 +811,6 @@
             document.getElementById('rv-limit-max').innerText = maxLimit;
             document.getElementById('rv-verification').innerText = verLevel;
 
-            // 🚀 በፎቶው መሰረት Buy / Sell ቀለሙን መቀየር 🚀
             const badge = document.getElementById('rv-trade-badge');
             const confirmBtn = document.getElementById('final-confirm-btn');
             if(currentTradeType === 'buy') {
@@ -843,6 +840,71 @@
             document.getElementById('review-modal').style.display = 'none';
             document.body.style.overflow = 'auto';
         }
+
+        // 🚀 Confirm & Post Button Logic 🚀
+        document.getElementById('final-confirm-btn').addEventListener('click', async function() {
+            const btn = this;
+            const originalText = btn.innerHTML;
+            
+            const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
+            if (!token) {
+                alert("Please login first.");
+                return;
+            }
+
+            const price = parseFloat(document.getElementById('price-input').value);
+            const amount = parseFloat(document.getElementById('total-amount-input').value);
+            const minLimit = parseFloat(document.getElementById('min-etb-input').value);
+            const maxLimit = parseFloat(document.getElementById('max-etb-input').value);
+            const terms = document.querySelector('textarea').value;
+            const verLevel = document.querySelector('input[name="ver_level"]:checked') ? document.querySelector('input[name="ver_level"]:checked').value : "Anyone (no restriction)";
+            
+            const selectedPayments = Array.from(document.querySelectorAll('input[name="payment_methods"]:checked')).map(cb => cb.value);
+
+            const adData = {
+                tradeType: currentTradeType, // 'buy' or 'sell'
+                price: price,
+                totalAmount: amount,
+                minLimit: minLimit,
+                maxLimit: maxLimit,
+                paymentMethods: selectedPayments,
+                verificationLevel: verLevel,
+                termsConditions: terms
+            };
+
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Posting...';
+            btn.disabled = true;
+
+            try {
+                // Change '/api/ads' to your actual backend endpoint if different
+                const response = await fetch(`${API_BASE_URL}/api/ads`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(adData)
+                });
+
+                if (response.ok) {
+                    if (currentTradeType === 'buy') {
+                        window.location.href = 'market.html?tab=sell';
+                    } else {
+                        window.location.href = 'market.html?tab=buy';
+                    }
+                } else {
+                    const errData = await response.json();
+                    alert("Error posting ad: " + (errData.message || "Please try again."));
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                console.error("Post Ad Error:", error);
+                alert("Network error. Please check your connection.");
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        });
 
         async function initPage() {
             const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
