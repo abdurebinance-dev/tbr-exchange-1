@@ -172,12 +172,12 @@
             border-bottom: none;
         }
 
-        /* PC Column Widths */
-        .pc-table-row td:nth-child(1), thead th:nth-child(1) { width: 280px; }
-        .pc-table-row td:nth-child(2), thead th:nth-child(2) { width: 180px; }
-        .pc-table-row td:nth-child(3), thead th:nth-child(3) { width: 280px; }
-        .pc-table-row td:nth-child(4), thead th:nth-child(4) { width: 280px; }
-        .pc-table-row td:nth-child(5), thead th:nth-child(5) { width: 160px; text-align: right; }
+        /* 🚀 PC Column Widths: Wider gap after Advertiser, other columns pushed right 🚀 */
+        .pc-table-row td:nth-child(1), thead th:nth-child(1) { width: 38%; }
+        .pc-table-row td:nth-child(2), thead th:nth-child(2) { width: 14%; }
+        .pc-table-row td:nth-child(3), thead th:nth-child(3) { width: 17%; }
+        .pc-table-row td:nth-child(4), thead th:nth-child(4) { width: 21%; }
+        .pc-table-row td:nth-child(5), thead th:nth-child(5) { width: 10%; text-align: right; }
 
         .advertiser-cell {
             display: flex;
@@ -246,6 +246,7 @@
             font-size: 11px;
             font-weight: 600;
             border: 1px solid #2b313a;
+            white-space: nowrap;
         }
 
         .action-cell {
