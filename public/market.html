@@ -889,7 +889,7 @@
         const ADS_CACHE_KEY = 'tbr_market_ads_v1';
         let currentType = 'buy';
 
-        // 🚀 In-Memory Ads Store for 0ms Instant Tab/Filter Switching 🚀
+        // In-Memory Ads Store for 0ms Instant Tab/Filter Switching
         let allServerAds = [];
         let hasLoadedAdsOnce = false;
         let isFetchingAds = false;
@@ -900,7 +900,6 @@
         let filterPaymentMethod = 'All Methods';
         let tempSelectedPayment = 'All Methods';
 
-        // Non-blocking background heartbeat
         function sendHeartbeat() {
             const token = localStorage.getItem('token') || localStorage.getItem('jwtToken') || localStorage.getItem('authToken');
             if (!token) return;
@@ -921,7 +920,7 @@
                 document.getElementById('buyTabBtn').className = 'toggle-btn';
             }
 
-            // 1. ወዲያውኑ (0ms) ከ Cache ላይ ማሳየት (ሰው ሲገባ ምንም እንዳይጠብቅ)
+            // 1. Instant 0ms render from cache
             try {
                 const cached = sessionStorage.getItem(ADS_CACHE_KEY) || localStorage.getItem(ADS_CACHE_KEY);
                 if (cached) {
@@ -934,16 +933,15 @@
                 }
             } catch (e) {}
 
-            // 2. ወዲያውኑ አዲሱን ዳታ ከሰርቨር ማምጣት (ምንም ነገር ሳይጠብቅ በቀጥታ)
+            // 2. Fetch fresh live ads
             fetchLiveAdsFromServer();
 
-            // 3. Heartbeat ከጀርባ (ሳያዘገይ) መላክ እና በየ 15 ሰከንዱ ማደስ
+            // 3. Background heartbeat & periodic sync
             sendHeartbeat();
             setInterval(sendHeartbeat, 30000);
             setInterval(fetchLiveAdsFromServer, 15000);
         });
 
-        // 🚀 ከ Buy ወደ Sell እና ከ Sell ወደ Buy በ 0ms (በቅጽበት) መቀየር 🚀
         function switchTradeType(type) {
             if (currentType === type && hasLoadedAdsOnce) return;
             currentType = type;
@@ -958,10 +956,7 @@
                 buyBtn.className = 'toggle-btn';
             }
 
-            // ሰርቨር ሳይጠብቅ ወዲያውኑ በሜሞሪ ካለው ዳታ ያሳያል!
             renderOrderBook();
-
-            // ከጀርባ በድምጽ አልባ አዲስ ነገር ካለ ያድሳል
             fetchLiveAdsFromServer();
         }
 
@@ -976,7 +971,6 @@
                     hasLoadedAdsOnce = true;
                     renderOrderBook();
 
-                    // ለቀጣይ ጊዜ በፍጥነት እንዲከፍት Cache ማድረግ
                     try {
                         const cachePayload = JSON.stringify(json.ads);
                         sessionStorage.setItem(ADS_CACHE_KEY, cachePayload);
@@ -1190,7 +1184,20 @@
             };
         }
 
-        // 🚀 Synchronous 0ms Renderer from In-Memory Ads 🚀
+        // ማስታወቂያው የተለጠፈበትን ትክክለኛ ሰዓት (Timestamp) ማውጫ
+        function getAdCreatedTimestamp(ad) {
+            if (ad.createdAt) {
+                const t = new Date(ad.createdAt).getTime();
+                if (!isNaN(t)) return t;
+            }
+            if (ad._id && typeof ad._id === 'string' && ad._id.length >= 8) {
+                const sec = parseInt(ad._id.substring(0, 8), 16);
+                if (!isNaN(sec)) return sec * 1000;
+            }
+            return 0;
+        }
+
+        // 🚀 Synchronous 0ms Renderer with Price & First-Posted Sorting 🚀
         function renderOrderBook() {
             const tbody = document.getElementById('p2pOrdersBody');
             if (!hasLoadedAdsOnce && allServerAds.length === 0) {
@@ -1223,6 +1230,7 @@
                 const numericAvail = Number(ad.totalAmount || 0);
                 const numericMin = Number(ad.minLimit || 0);
                 const numericMax = Number(ad.maxLimit || 0);
+                const createdTime = getAdCreatedTimestamp(ad);
 
                 return {
                     name: traderInfo.displayName,
@@ -1235,6 +1243,7 @@
                     numericAvail,
                     numericMin,
                     numericMax,
+                    createdTime,
                     customPrice: numericPrice.toFixed(2),
                     avail: numericAvail.toLocaleString('en-US'),
                     min: numericMin.toLocaleString('en-US'),
@@ -1260,6 +1269,14 @@
                     }
                 }
                 return true;
+            }).sort((a, b) => {
+                // 1. Buy ላይ ከዝቅተኛ ዋጋ ወደ ከፍተኛ፣ Sell ላይ ከከፍተኛ ዋጋ ወደ ዝቅተኛ
+                const priceDiff = isBuy ? (a.numericPrice - b.numericPrice) : (b.numericPrice - a.numericPrice);
+                if (Math.abs(priceDiff) > 0.00001) {
+                    return priceDiff;
+                }
+                // 2. ዋጋቸው እኩል ከሆነ መጀመሪያ (ቀድሞ) የለጠፈው ሰው ከላይ ይቀድማል
+                return a.createdTime - b.createdTime;
             });
 
             let html = '';
