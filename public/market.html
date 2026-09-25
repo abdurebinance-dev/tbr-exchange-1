@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TBR Exchange - P2P Marketplace | Buy & Sell USDT</title>
+    <link rel="preconnect" href="https://tbr-exchange-backend.onrender.com" crossorigin>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -107,7 +108,7 @@
             border: none;
             background: #181a20;
             color: #848e9c;
-            transition: all 0.2s ease;
+            transition: all 0.12s ease;
         }
         .toggle-btn.active.buy-active {
             background: var(--green);
@@ -138,7 +139,7 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            transition: all 0.2s;
+            transition: all 0.15s;
         }
         .filter-btn:hover {
             color: #fff;
@@ -321,7 +322,7 @@
         .mobile-card-row { display: none; }
         .pc-table-row { display: table-row; }
 
-        /* 🚀 Bottom Sheet Filter Modals (Amount & Payment Method) 🚀 */
+        /* Bottom Sheet Filter Modals (Amount & Payment Method) */
         .sheet-overlay {
             position: fixed;
             inset: 0;
@@ -339,7 +340,7 @@
             max-width: 100%;
             padding: 14px 24px 28px 24px;
             box-sizing: border-box;
-            animation: slideUpSheet 0.2s ease-out;
+            animation: slideUpSheet 0.16s ease-out;
         }
         @keyframes slideUpSheet {
             from { transform: translateY(100%); }
@@ -504,7 +505,7 @@
             opacity: 0.92;
         }
 
-        /* 🚀 Mobile Edge-to-Edge Zero-Gap Card Layout 🚀 */
+        /* Mobile Edge-to-Edge Zero-Gap Card Layout */
         @media(max-width: 768px) {
             body {
                 padding-top: 56px;
@@ -809,7 +810,7 @@
         </div>
     </div>
 
-    <!-- 🚀 Amount Filter Bottom Sheet Modal 🚀 -->
+    <!-- Amount Filter Bottom Sheet Modal -->
     <div class="sheet-overlay" id="amountSheetModal" onclick="if(event.target === this) closeAmountModal()">
         <div class="sheet-box">
             <div class="sheet-handle"></div>
@@ -835,7 +836,7 @@
         </div>
     </div>
 
-    <!-- 🚀 Payment Method Filter Bottom Sheet Modal 🚀 -->
+    <!-- Payment Method Filter Bottom Sheet Modal -->
     <div class="sheet-overlay" id="paymentSheetModal" onclick="if(event.target === this) closePaymentModal()">
         <div class="sheet-box">
             <div class="sheet-handle"></div>
@@ -885,44 +886,66 @@
 
     <script>
         const API_BASE = 'https://tbr-exchange-backend.onrender.com';
+        const ADS_CACHE_KEY = 'tbr_market_ads_v1';
         let currentType = 'buy';
-        let currentRates = { buyRate: 192.00, sellRate: 195.00 };
 
-        // 🚀 Active Filter States 🚀
+        // 🚀 In-Memory Ads Store for 0ms Instant Tab/Filter Switching 🚀
+        let allServerAds = [];
+        let hasLoadedAdsOnce = false;
+        let isFetchingAds = false;
+
+        // Active Filter States
         let filterOnlineOnly = false;
         let filterAmountETB = null;
         let filterPaymentMethod = 'All Methods';
         let tempSelectedPayment = 'All Methods';
 
-        async function sendHeartbeat() {
+        // Non-blocking background heartbeat
+        function sendHeartbeat() {
             const token = localStorage.getItem('token') || localStorage.getItem('jwtToken') || localStorage.getItem('authToken');
             if (!token) return;
-            try {
-                await fetch(`${API_BASE}/api/user/heartbeat`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
-                });
-            } catch (e) {}
+            fetch(`${API_BASE}/api/user/heartbeat`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+            }).catch(() => {});
         }
 
-        document.addEventListener('DOMContentLoaded', async () => {
-            await sendHeartbeat();
-            setInterval(sendHeartbeat, 30000);
-
+        document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const activeTab = urlParams.get('tab');
             const initialType = urlParams.get('type');
 
             if (activeTab === 'sell' || initialType === 'sell') {
-                switchTradeType('sell');
-            } else if (activeTab === 'buy' || initialType === 'buy') {
-                switchTradeType('buy');
-            } else {
-                fetchSettingsAndRender();
+                currentType = 'sell';
+                document.getElementById('sellTabBtn').className = 'toggle-btn active sell-active';
+                document.getElementById('buyTabBtn').className = 'toggle-btn';
             }
+
+            // 1. ወዲያውኑ (0ms) ከ Cache ላይ ማሳየት (ሰው ሲገባ ምንም እንዳይጠብቅ)
+            try {
+                const cached = sessionStorage.getItem(ADS_CACHE_KEY) || localStorage.getItem(ADS_CACHE_KEY);
+                if (cached) {
+                    const parsed = JSON.parse(cached);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        allServerAds = parsed;
+                        hasLoadedAdsOnce = true;
+                        renderOrderBook();
+                    }
+                }
+            } catch (e) {}
+
+            // 2. ወዲያውኑ አዲሱን ዳታ ከሰርቨር ማምጣት (ምንም ነገር ሳይጠብቅ በቀጥታ)
+            fetchLiveAdsFromServer();
+
+            // 3. Heartbeat ከጀርባ (ሳያዘገይ) መላክ እና በየ 15 ሰከንዱ ማደስ
+            sendHeartbeat();
+            setInterval(sendHeartbeat, 30000);
+            setInterval(fetchLiveAdsFromServer, 15000);
         });
 
+        // 🚀 ከ Buy ወደ Sell እና ከ Sell ወደ Buy በ 0ms (በቅጽበት) መቀየር 🚀
         function switchTradeType(type) {
+            if (currentType === type && hasLoadedAdsOnce) return;
             currentType = type;
             const buyBtn = document.getElementById('buyTabBtn');
             const sellBtn = document.getElementById('sellTabBtn');
@@ -935,11 +958,44 @@
                 buyBtn.className = 'toggle-btn';
             }
 
-            fetchSettingsAndRender();
+            // ሰርቨር ሳይጠብቅ ወዲያውኑ በሜሞሪ ካለው ዳታ ያሳያል!
+            renderOrderBook();
+
+            // ከጀርባ በድምጽ አልባ አዲስ ነገር ካለ ያድሳል
+            fetchLiveAdsFromServer();
+        }
+
+        async function fetchLiveAdsFromServer() {
+            if (isFetchingAds) return;
+            isFetchingAds = true;
+            try {
+                const res = await fetch(`${API_BASE}/api/ads`);
+                const json = await res.json();
+                if (json && json.success && Array.isArray(json.ads)) {
+                    allServerAds = json.ads;
+                    hasLoadedAdsOnce = true;
+                    renderOrderBook();
+
+                    // ለቀጣይ ጊዜ በፍጥነት እንዲከፍት Cache ማድረግ
+                    try {
+                        const cachePayload = JSON.stringify(json.ads);
+                        sessionStorage.setItem(ADS_CACHE_KEY, cachePayload);
+                        localStorage.setItem(ADS_CACHE_KEY, cachePayload);
+                    } catch (storageErr) {}
+                }
+            } catch (err) {
+                console.error("Error fetching live ads:", err);
+                if (!hasLoadedAdsOnce) {
+                    hasLoadedAdsOnce = true;
+                    renderOrderBook();
+                }
+            } finally {
+                isFetchingAds = false;
+            }
         }
 
         // ==========================================
-        // 🚀 FILTER MODAL FUNCTIONS (Online, Amount, Payment) 🚀
+        // FILTER MODAL FUNCTIONS (Online, Amount, Payment)
         // ==========================================
 
         function toggleOnlineFilter() {
@@ -953,7 +1009,6 @@
             renderOrderBook();
         }
 
-        // --- Amount Filter Modal ---
         function openAmountModal() {
             const titleEl = document.getElementById('amountSheetTitle');
             titleEl.innerText = currentType === 'buy' ? 'I Want to Buy' : 'I Want to Sell';
@@ -1005,7 +1060,6 @@
             renderOrderBook();
         }
 
-        // --- Payment Method Filter Modal ---
         function openPaymentModal() {
             tempSelectedPayment = filterPaymentMethod || 'All Methods';
             document.getElementById('paymentSearchInput').value = '';
@@ -1083,22 +1137,6 @@
             }
         }
 
-        async function fetchSettingsAndRender() {
-            try {
-                const res = await fetch(`${API_BASE}/api/settings`);
-                if (res.ok) {
-                    const json = await res.json();
-                    if (json.success && json.data) {
-                        currentRates.buyRate = json.data.buyRate || 192.00;
-                        currentRates.sellRate = json.data.sellRate || 195.00;
-                    }
-                }
-            } catch (e) {
-                console.error("Rates fetch error:", e);
-            }
-            renderOrderBook();
-        }
-
         function resolveTraderDisplay(ad, localUser) {
             const isCurrentUser = Boolean(localUser && (
                 (ad.email && localUser.email && ad.email.toLowerCase() === localUser.email.toLowerCase()) ||
@@ -1152,10 +1190,14 @@
             };
         }
 
-        async function renderOrderBook() {
+        // 🚀 Synchronous 0ms Renderer from In-Memory Ads 🚀
+        function renderOrderBook() {
             const tbody = document.getElementById('p2pOrdersBody');
+            if (!hasLoadedAdsOnce && allServerAds.length === 0) {
+                return;
+            }
+
             const isBuy = currentType === 'buy';
-            
             const actionLabel = isBuy ? 'Buy' : 'Sell';
             const btnClass = isBuy ? 'order-btn' : 'order-btn sell';
             const mobileBtnClass = isBuy ? 'm-order-btn buy' : 'm-order-btn sell';
@@ -1166,18 +1208,7 @@
                 if (storedUser) localUser = JSON.parse(storedUser);
             } catch (e) {}
 
-            let serverAds = [];
-            try {
-                const res = await fetch(`${API_BASE}/api/ads`);
-                const json = await res.json();
-                if (json.success && json.ads) {
-                    serverAds = json.ads;
-                }
-            } catch (err) {
-                console.error("Error fetching live ads:", err);
-            }
-
-            let filteredAds = serverAds.filter(ad => {
+            const filteredAds = allServerAds.filter(ad => {
                 if (isBuy) return ad.tradeType === 'sell';
                 else return ad.tradeType === 'buy';
             }).map(ad => {
@@ -1211,12 +1242,9 @@
                     pay: payMethods
                 };
             }).filter(t => {
-                // 1. Online Filter
                 if (filterOnlineOnly && !t.isOnline) {
                     return false;
                 }
-
-                // 2. Amount (ETB) Filter: በነጋዴው minLimit እና maxLimit ውስጥ የሚገባና በቂ USDT ያለው ብቻ
                 if (filterAmountETB && filterAmountETB > 0) {
                     const maxPossibleETB = t.numericAvail * t.numericPrice;
                     const effectiveMaxETB = t.numericMax > 0 ? Math.min(t.numericMax, maxPossibleETB || t.numericMax) : maxPossibleETB;
@@ -1224,8 +1252,6 @@
                         return false;
                     }
                 }
-
-                // 3. Payment Method Filter: የተመረጠውን የክፍያ ዘዴ የሚቀበል ብቻ
                 if (filterPaymentMethod && filterPaymentMethod !== 'All Methods') {
                     const targetMethod = filterPaymentMethod.toLowerCase().trim();
                     const hasMethod = t.pay.some(p => String(p).toLowerCase().trim() === targetMethod);
@@ -1233,7 +1259,6 @@
                         return false;
                     }
                 }
-
                 return true;
             });
 
@@ -1245,7 +1270,7 @@
                 const firstLetter = (t.name || 'T').replace(/^@/, '').charAt(0).toUpperCase();
 
                 const avatarContent = t.avatarUrl
-                    ? `<img src="${t.avatarUrl}" alt="${t.name}" onerror="this.outerHTML='${firstLetter}'">`
+                    ? `<img src="${t.avatarUrl}" alt="${t.name}" loading="lazy" onerror="this.outerHTML='${firstLetter}'">`
                     : firstLetter;
 
                 const statusClass = t.isOnline ? 'online' : 'offline';
