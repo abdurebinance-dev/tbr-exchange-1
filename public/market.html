@@ -128,16 +128,26 @@
         }
         .filter-btn {
             background: #181a20;
-            border: none;
+            border: 1px solid transparent;
             color: #848e9c;
             padding: 6px 12px;
-            border-radius: 5px;
+            border-radius: 6px;
             font-size: 11px;
             font-weight: 600;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
             gap: 6px;
+            transition: all 0.2s;
+        }
+        .filter-btn:hover {
+            color: #fff;
+            border-color: #2b313a;
+        }
+        .filter-btn.active-filter {
+            background: rgba(14, 203, 129, 0.12);
+            color: var(--green);
+            border: 1px solid rgba(14, 203, 129, 0.4);
         }
 
         /* Compact Market Table Styling for PC */
@@ -186,7 +196,7 @@
             gap: 10px;
         }
 
-        /* 🚀 Avatar Wrapper & Online/Offline Status Dot 🚀 */
+        /* Avatar Wrapper & Smaller Online/Offline Status Dot */
         .avatar-wrap {
             position: relative;
             width: 34px;
@@ -227,10 +237,10 @@
             box-sizing: content-box;
         }
         .status-dot.online {
-            background-color: #0ecb81; /* Online: አረንጓዴ */
+            background-color: #0ecb81;
         }
         .status-dot.offline {
-            background-color: #23272f; /* Offline: በጣም ፈዛዛ ጥቁር */
+            background-color: #23272f;
         }
 
         .adv-name {
@@ -310,6 +320,189 @@
         /* PC / Mobile Toggle */
         .mobile-card-row { display: none; }
         .pc-table-row { display: table-row; }
+
+        /* 🚀 Bottom Sheet Filter Modals (Amount & Payment Method) 🚀 */
+        .sheet-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.78);
+            display: none;
+            align-items: flex-end;
+            justify-content: center;
+            z-index: 2500;
+        }
+        .sheet-box {
+            background: #0b0d10;
+            border-top: 1px solid #1e2229;
+            border-radius: 20px 20px 0 0;
+            width: 100%;
+            max-width: 100%;
+            padding: 14px 24px 28px 24px;
+            box-sizing: border-box;
+            animation: slideUpSheet 0.2s ease-out;
+        }
+        @keyframes slideUpSheet {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        .sheet-handle {
+            width: 42px;
+            height: 4px;
+            background: #2b3139;
+            border-radius: 4px;
+            margin: 0 auto 14px auto;
+        }
+        .sheet-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+        .sheet-header h2 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 800;
+            color: #ffffff;
+        }
+        .sheet-close-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 1px solid var(--green);
+            background: transparent;
+            color: var(--green);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .sheet-input-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+            background: #0d1015;
+            border: 1px solid #22262f;
+            border-radius: 10px;
+            padding: 0 16px;
+            margin-bottom: 18px;
+        }
+        .sheet-input-wrap:focus-within {
+            border-color: var(--green);
+        }
+        .sheet-input-wrap i.search-icon {
+            color: #6c7583;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        .sheet-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            padding: 14px 0;
+            font-size: 14px;
+            outline: none;
+        }
+        .sheet-input::placeholder {
+            color: #6c7583;
+        }
+        .sheet-suffix {
+            color: #848e9c;
+            font-size: 13px;
+            font-weight: 700;
+            margin-left: 10px;
+        }
+
+        /* Quick Amount Pills Grid */
+        .amount-pills-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 22px;
+        }
+        .amount-pill {
+            background: #1a1e24;
+            border: 1px solid #252a32;
+            color: #ffffff;
+            padding: 14px 10px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            text-align: center;
+            transition: 0.15s;
+        }
+        .amount-pill:hover, .amount-pill.selected {
+            background: rgba(14, 203, 129, 0.12);
+            border-color: var(--green);
+            color: var(--green);
+        }
+
+        /* Payment Methods 2-Column Grid */
+        .payment-methods-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 22px;
+            max-height: 320px;
+            overflow-y: auto;
+        }
+        .pay-method-option {
+            background: #1a1e24;
+            border: 1px solid #252a32;
+            color: #ffffff;
+            padding: 15px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            text-align: center;
+            transition: 0.15s;
+        }
+        .pay-method-option:hover {
+            border-color: #3a414d;
+        }
+        .pay-method-option.selected {
+            background: rgba(14, 203, 129, 0.12);
+            border-color: var(--green);
+            color: var(--green);
+        }
+
+        /* Sheet Action Buttons (Reset & Confirm) */
+        .sheet-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+        .sheet-reset-btn {
+            background: #090b0d;
+            border: 1px solid #22262f;
+            color: #ffffff;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .sheet-reset-btn:hover {
+            background: #14171c;
+        }
+        .sheet-confirm-btn {
+            background: var(--green);
+            border: none;
+            color: #000000;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .sheet-confirm-btn:hover {
+            opacity: 0.92;
+        }
 
         /* 🚀 Mobile Edge-to-Edge Zero-Gap Card Layout 🚀 */
         @media(max-width: 768px) {
@@ -488,6 +681,22 @@
             }
             .m-order-btn.buy { background: var(--green-btn); color: #000; }
             .m-order-btn.sell { background: var(--red); color: #fff; }
+
+            .sheet-box {
+                padding: 12px 14px 22px 14px;
+            }
+            .amount-pills-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+            }
+            .payment-methods-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+            .pay-method-option {
+                padding: 12px 8px;
+                font-size: 12px;
+            }
         }
 
         /* Order Modal */
@@ -566,9 +775,15 @@
         </div>
 
         <div class="filter-row">
-            <button class="filter-btn"><i class="fa-solid fa-circle" style="font-size: 5px; color: var(--green);"></i> Online</button>
-            <button class="filter-btn">Amount <i class="fa-solid fa-chevron-down" style="font-size: 9px; margin-left:3px;"></i></button>
-            <button class="filter-btn">Payment Method <i class="fa-solid fa-chevron-down" style="font-size: 9px; margin-left:3px;"></i></button>
+            <button id="onlineFilterBtn" class="filter-btn" onclick="toggleOnlineFilter()">
+                <i class="fa-solid fa-circle" style="font-size: 6px; color: var(--green);"></i> Online
+            </button>
+            <button id="amountFilterBtn" class="filter-btn" onclick="openAmountModal()">
+                <span id="amountFilterLabel">Amount</span> <i class="fa-solid fa-chevron-down" style="font-size: 9px; margin-left:3px;"></i>
+            </button>
+            <button id="paymentFilterBtn" class="filter-btn" onclick="openPaymentModal()">
+                <span id="paymentFilterLabel">Payment Method</span> <i class="fa-solid fa-chevron-down" style="font-size: 9px; margin-left:3px;"></i>
+            </button>
         </div>
 
         <!-- Orders Table / Mobile Card Grid -->
@@ -591,6 +806,61 @@
                     </tr>
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <!-- 🚀 Amount Filter Bottom Sheet Modal 🚀 -->
+    <div class="sheet-overlay" id="amountSheetModal" onclick="if(event.target === this) closeAmountModal()">
+        <div class="sheet-box">
+            <div class="sheet-handle"></div>
+            <div class="sheet-header">
+                <h2 id="amountSheetTitle">I Want to Buy</h2>
+                <button class="sheet-close-btn" onclick="closeAmountModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="sheet-input-wrap">
+                <input type="number" id="amountFilterInput" class="sheet-input" placeholder="Enter total amount" oninput="syncAmountPills(this.value)">
+                <span class="sheet-suffix">ETB</span>
+            </div>
+            <div class="amount-pills-grid">
+                <button type="button" class="amount-pill" data-val="500" onclick="selectAmountPill(500)">500</button>
+                <button type="button" class="amount-pill" data-val="1000" onclick="selectAmountPill(1000)">1K</button>
+                <button type="button" class="amount-pill" data-val="10000" onclick="selectAmountPill(10000)">10K</button>
+                <button type="button" class="amount-pill" data-val="20000" onclick="selectAmountPill(20000)">20K</button>
+                <button type="button" class="amount-pill" data-val="50000" onclick="selectAmountPill(50000)">50K</button>
+            </div>
+            <div class="sheet-actions">
+                <button type="button" class="sheet-reset-btn" onclick="resetAmountFilter()">Reset</button>
+                <button type="button" class="sheet-confirm-btn" onclick="confirmAmountFilter()">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🚀 Payment Method Filter Bottom Sheet Modal 🚀 -->
+    <div class="sheet-overlay" id="paymentSheetModal" onclick="if(event.target === this) closePaymentModal()">
+        <div class="sheet-box">
+            <div class="sheet-handle"></div>
+            <div class="sheet-header">
+                <h2 id="paymentSheetTitle">Pay With</h2>
+                <button class="sheet-close-btn" onclick="closePaymentModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="sheet-input-wrap">
+                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                <input type="text" id="paymentSearchInput" class="sheet-input" placeholder="Search" oninput="filterPaymentMethodButtons(this.value)">
+            </div>
+            <div class="payment-methods-grid" id="paymentMethodsGrid">
+                <button type="button" class="pay-method-option selected" data-method="All Methods" onclick="selectPaymentOption('All Methods')">All Methods</button>
+                <button type="button" class="pay-method-option" data-method="Telebirr" onclick="selectPaymentOption('Telebirr')">Telebirr</button>
+                <button type="button" class="pay-method-option" data-method="M-Pesa" onclick="selectPaymentOption('M-Pesa')">M-Pesa</button>
+                <button type="button" class="pay-method-option" data-method="CBE Birr" onclick="selectPaymentOption('CBE Birr')">CBE Birr</button>
+                <button type="button" class="pay-method-option" data-method="Commercial Bank of Ethiopia" onclick="selectPaymentOption('Commercial Bank of Ethiopia')">Commercial Bank of Ethiopia</button>
+                <button type="button" class="pay-method-option" data-method="Bank of Abyssinia" onclick="selectPaymentOption('Bank of Abyssinia')">Bank of Abyssinia</button>
+                <button type="button" class="pay-method-option" data-method="Dashen Bank" onclick="selectPaymentOption('Dashen Bank')">Dashen Bank</button>
+                <button type="button" class="pay-method-option" data-method="Awash Bank" onclick="selectPaymentOption('Awash Bank')">Awash Bank</button>
+            </div>
+            <div class="sheet-actions">
+                <button type="button" class="sheet-reset-btn" onclick="resetPaymentFilter()">Reset</button>
+                <button type="button" class="sheet-confirm-btn" onclick="confirmPaymentFilter()">Confirm</button>
+            </div>
         </div>
     </div>
 
@@ -618,7 +888,12 @@
         let currentType = 'buy';
         let currentRates = { buyRate: 192.00, sellRate: 195.00 };
 
-        // የተጠቃሚውን Online Status በየ 30 ሰከንዱ ለሰርቨሩ ያሳውቃል
+        // 🚀 Active Filter States 🚀
+        let filterOnlineOnly = false;
+        let filterAmountETB = null;
+        let filterPaymentMethod = 'All Methods';
+        let tempSelectedPayment = 'All Methods';
+
         async function sendHeartbeat() {
             const token = localStorage.getItem('token') || localStorage.getItem('jwtToken') || localStorage.getItem('authToken');
             if (!token) return;
@@ -661,6 +936,151 @@
             }
 
             fetchSettingsAndRender();
+        }
+
+        // ==========================================
+        // 🚀 FILTER MODAL FUNCTIONS (Online, Amount, Payment) 🚀
+        // ==========================================
+
+        function toggleOnlineFilter() {
+            filterOnlineOnly = !filterOnlineOnly;
+            const btn = document.getElementById('onlineFilterBtn');
+            if (filterOnlineOnly) {
+                btn.classList.add('active-filter');
+            } else {
+                btn.classList.remove('active-filter');
+            }
+            renderOrderBook();
+        }
+
+        // --- Amount Filter Modal ---
+        function openAmountModal() {
+            const titleEl = document.getElementById('amountSheetTitle');
+            titleEl.innerText = currentType === 'buy' ? 'I Want to Buy' : 'I Want to Sell';
+            const input = document.getElementById('amountFilterInput');
+            input.value = filterAmountETB ? filterAmountETB : '';
+            syncAmountPills(input.value);
+            document.getElementById('amountSheetModal').style.display = 'flex';
+        }
+
+        function closeAmountModal() {
+            document.getElementById('amountSheetModal').style.display = 'none';
+        }
+
+        function selectAmountPill(val) {
+            const input = document.getElementById('amountFilterInput');
+            input.value = val;
+            syncAmountPills(val);
+        }
+
+        function syncAmountPills(val) {
+            const numVal = Number(val);
+            document.querySelectorAll('.amount-pill').forEach(btn => {
+                if (Number(btn.getAttribute('data-val')) === numVal) {
+                    btn.classList.add('selected');
+                } else {
+                    btn.classList.remove('selected');
+                }
+            });
+        }
+
+        function resetAmountFilter() {
+            filterAmountETB = null;
+            document.getElementById('amountFilterInput').value = '';
+            syncAmountPills('');
+            updateFilterButtonLabels();
+            closeAmountModal();
+            renderOrderBook();
+        }
+
+        function confirmAmountFilter() {
+            const rawVal = parseFloat(document.getElementById('amountFilterInput').value);
+            if (!isNaN(rawVal) && rawVal > 0) {
+                filterAmountETB = rawVal;
+            } else {
+                filterAmountETB = null;
+            }
+            updateFilterButtonLabels();
+            closeAmountModal();
+            renderOrderBook();
+        }
+
+        // --- Payment Method Filter Modal ---
+        function openPaymentModal() {
+            tempSelectedPayment = filterPaymentMethod || 'All Methods';
+            document.getElementById('paymentSearchInput').value = '';
+            filterPaymentMethodButtons('');
+            highlightSelectedPaymentOption(tempSelectedPayment);
+            document.getElementById('paymentSheetModal').style.display = 'flex';
+        }
+
+        function closePaymentModal() {
+            document.getElementById('paymentSheetModal').style.display = 'none';
+        }
+
+        function selectPaymentOption(method) {
+            tempSelectedPayment = method;
+            highlightSelectedPaymentOption(method);
+        }
+
+        function highlightSelectedPaymentOption(method) {
+            document.querySelectorAll('.pay-method-option').forEach(btn => {
+                if (btn.getAttribute('data-method').toLowerCase() === method.toLowerCase()) {
+                    btn.classList.add('selected');
+                } else {
+                    btn.classList.remove('selected');
+                }
+            });
+        }
+
+        function filterPaymentMethodButtons(query) {
+            const q = (query || '').trim().toLowerCase();
+            document.querySelectorAll('.pay-method-option').forEach(btn => {
+                const name = btn.getAttribute('data-method').toLowerCase();
+                if (!q || name.includes(q)) {
+                    btn.style.display = 'block';
+                } else {
+                    btn.style.display = 'none';
+                }
+            });
+        }
+
+        function resetPaymentFilter() {
+            filterPaymentMethod = 'All Methods';
+            tempSelectedPayment = 'All Methods';
+            highlightSelectedPaymentOption('All Methods');
+            updateFilterButtonLabels();
+            closePaymentModal();
+            renderOrderBook();
+        }
+
+        function confirmPaymentFilter() {
+            filterPaymentMethod = tempSelectedPayment || 'All Methods';
+            updateFilterButtonLabels();
+            closePaymentModal();
+            renderOrderBook();
+        }
+
+        function updateFilterButtonLabels() {
+            const amountBtn = document.getElementById('amountFilterBtn');
+            const amountLabel = document.getElementById('amountFilterLabel');
+            if (filterAmountETB && filterAmountETB > 0) {
+                amountLabel.innerText = `${Number(filterAmountETB).toLocaleString('en-US')} ETB`;
+                amountBtn.classList.add('active-filter');
+            } else {
+                amountLabel.innerText = 'Amount';
+                amountBtn.classList.remove('active-filter');
+            }
+
+            const payBtn = document.getElementById('paymentFilterBtn');
+            const payLabel = document.getElementById('paymentFilterLabel');
+            if (filterPaymentMethod && filterPaymentMethod !== 'All Methods') {
+                payLabel.innerText = filterPaymentMethod;
+                payBtn.classList.add('active-filter');
+            } else {
+                payLabel.innerText = 'Payment Method';
+                payBtn.classList.remove('active-filter');
+            }
         }
 
         async function fetchSettingsAndRender() {
@@ -768,6 +1188,10 @@
                 if (!Array.isArray(payMethods)) payMethods = [payMethods];
 
                 const traderInfo = resolveTraderDisplay(ad, localUser);
+                const numericPrice = typeof ad.price === 'number' ? ad.price : parseFloat(ad.price || 0);
+                const numericAvail = Number(ad.totalAmount || 0);
+                const numericMin = Number(ad.minLimit || 0);
+                const numericMax = Number(ad.maxLimit || 0);
 
                 return {
                     name: traderInfo.displayName,
@@ -776,12 +1200,41 @@
                     verified: true,
                     orders: ad.ordersCount || 1,
                     comp: ad.completionRate || '100%',
-                    customPrice: typeof ad.price === 'number' ? ad.price.toFixed(2) : parseFloat(ad.price || 0).toFixed(2),
-                    avail: Number(ad.totalAmount || 0).toLocaleString('en-US'),
-                    min: Number(ad.minLimit || 0).toLocaleString('en-US'),
-                    max: Number(ad.maxLimit || 0).toLocaleString('en-US'),
+                    numericPrice,
+                    numericAvail,
+                    numericMin,
+                    numericMax,
+                    customPrice: numericPrice.toFixed(2),
+                    avail: numericAvail.toLocaleString('en-US'),
+                    min: numericMin.toLocaleString('en-US'),
+                    max: numericMax.toLocaleString('en-US'),
                     pay: payMethods
                 };
+            }).filter(t => {
+                // 1. Online Filter
+                if (filterOnlineOnly && !t.isOnline) {
+                    return false;
+                }
+
+                // 2. Amount (ETB) Filter: በነጋዴው minLimit እና maxLimit ውስጥ የሚገባና በቂ USDT ያለው ብቻ
+                if (filterAmountETB && filterAmountETB > 0) {
+                    const maxPossibleETB = t.numericAvail * t.numericPrice;
+                    const effectiveMaxETB = t.numericMax > 0 ? Math.min(t.numericMax, maxPossibleETB || t.numericMax) : maxPossibleETB;
+                    if (filterAmountETB < t.numericMin || filterAmountETB > effectiveMaxETB) {
+                        return false;
+                    }
+                }
+
+                // 3. Payment Method Filter: የተመረጠውን የክፍያ ዘዴ የሚቀበል ብቻ
+                if (filterPaymentMethod && filterPaymentMethod !== 'All Methods') {
+                    const targetMethod = filterPaymentMethod.toLowerCase().trim();
+                    const hasMethod = t.pay.some(p => String(p).toLowerCase().trim() === targetMethod);
+                    if (!hasMethod) {
+                        return false;
+                    }
+                }
+
+                return true;
             });
 
             let html = '';
@@ -870,7 +1323,7 @@
             });
 
             if (filteredAds.length === 0) {
-                html = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 30px 0; font-size: 13px;">No active ads found in the market right now.</td></tr>`;
+                html = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 30px 0; font-size: 13px;">No matching ads found for the selected filters.</td></tr>`;
             }
 
             tbody.innerHTML = html;
