@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TBR Exchange - Master Admin Panel</title>
+    <link rel="preconnect" href="https://tbr-exchange-backend.onrender.com" crossorigin>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -43,13 +44,13 @@
         .logout-btn { background: rgba(246, 70, 93, 0.1); color: var(--red); border: 1px solid rgba(246, 70, 93, 0.2); padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: bold; }
         
         .admin-nav { display: flex; gap: 10px; margin-bottom: 25px; overflow-x: auto; padding-bottom: 5px; }
-        .nav-tab { background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-muted); padding: 10px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; white-space: nowrap; transition: 0.2s; }
+        .nav-tab { background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-muted); padding: 10px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; white-space: nowrap; transition: 0.12s; }
         .nav-tab.active, .nav-tab:hover { background: var(--accent-gold); color: #000; border-color: var(--accent-gold); }
 
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        /* 🚀 8-Card Symmetrical Admin Overview Grid with Icons 🚀 */
+        /* 8-Card Symmetrical Admin Overview Grid with Icons */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -173,7 +174,6 @@
         <!-- TAB 1: OVERVIEW -->
         <div id="tab-overview" class="tab-content active">
             <div class="stats-grid">
-                <!-- 1. TOTAL USERS -->
                 <div class="stat-card">
                     <div>
                         <div class="label">Total Users</div>
@@ -184,7 +184,6 @@
                     </div>
                 </div>
 
-                <!-- 2. PENDING KYC -->
                 <div class="stat-card">
                     <div>
                         <div class="label">Pending KYC</div>
@@ -195,7 +194,6 @@
                     </div>
                 </div>
 
-                <!-- 3. ON MARKET (Locked USDT in Active Sell Ads Only) -->
                 <div class="stat-card">
                     <div>
                         <div class="label">On Market</div>
@@ -206,7 +204,6 @@
                     </div>
                 </div>
 
-                <!-- 4. ACTIVE ESCROW -->
                 <div class="stat-card">
                     <div>
                         <div class="label">Active Escrow</div>
@@ -217,7 +214,6 @@
                     </div>
                 </div>
 
-                <!-- 5. LIVE POSTS (Currently Active Ads) -->
                 <div class="stat-card">
                     <div>
                         <div class="label">Live Posts</div>
@@ -228,7 +224,6 @@
                     </div>
                 </div>
 
-                <!-- 6. TOTAL TRADE (Total Completed P2P Trades Count) -->
                 <div class="stat-card">
                     <div>
                         <div class="label">Total Trade</div>
@@ -239,7 +234,6 @@
                     </div>
                 </div>
 
-                <!-- 7. TOTAL TRADE VOLUME (USDT Only) -->
                 <div class="stat-card">
                     <div>
                         <div class="label">Total Trade Volume</div>
@@ -250,7 +244,6 @@
                     </div>
                 </div>
 
-                <!-- 8. TODAY TRADE VOLUME (USDT Only) -->
                 <div class="stat-card">
                     <div>
                         <div class="label">Today Trade Volume</div>
@@ -351,21 +344,54 @@
     <script>
         const API_BASE = 'https://tbr-exchange-backend.onrender.com';
         const getToken = () => localStorage.getItem('adminToken');
+
+        // 🚀 In-Memory Instant Cache Store for 0ms Switching 🚀
+        let activeKycStatus = 'pending';
         let currentKycList = [];
+        const kycCache = {
+            pending: null,
+            approved: null,
+            rejected: null
+        };
+        const kycDocsCache = {}; // Individual user photos cache
 
         window.addEventListener('DOMContentLoaded', () => {
             if (getToken()) {
                 document.getElementById('loginOverlay').style.display = 'none';
                 document.getElementById('mainDashboard').style.display = 'block';
-                
-                fetchStats();
-                setInterval(fetchStats, 10000);
-                loadCurrentRates();
-                fetchEscrowDisputes();
-                fetchUsersList();
-                loadKycData('pending');
+                initAdminDataFast();
             }
         });
+
+        function initAdminDataFast() {
+            // 1. Restore cached stats & KYC lists immediately (0ms)
+            try {
+                const cachedStats = sessionStorage.getItem('tbr_admin_stats');
+                if (cachedStats) applyStatsToDOM(JSON.parse(cachedStats));
+
+                ['pending', 'approved', 'rejected'].forEach(st => {
+                    const saved = sessionStorage.getItem('tbr_kyc_' + st);
+                    if (saved) kycCache[st] = JSON.parse(saved);
+                });
+                if (kycCache.pending) {
+                    currentKycList = kycCache.pending;
+                    renderKycs(document.getElementById('kycTableBody'), currentKycList);
+                }
+            } catch (e) {}
+
+            // 2. Fetch fresh data in parallel without blocking UI
+            fetchStats();
+            loadCurrentRates();
+            fetchEscrowDisputes();
+            fetchUsersList();
+
+            // Preload all 3 KYC tabs in parallel so switching between Pending/Approved/Rejected is 0ms!
+            loadKycData('pending', true);
+            prefetchKycStatus('approved');
+            prefetchKycStatus('rejected');
+
+            setInterval(fetchStats, 10000);
+        }
 
         async function adminLogin() {
             const email = document.getElementById('loginEmail').value;
@@ -383,13 +409,7 @@
                     localStorage.setItem('adminToken', data.token);
                     document.getElementById('loginOverlay').style.display = 'none';
                     document.getElementById('mainDashboard').style.display = 'block';
-                    
-                    fetchStats();
-                    setInterval(fetchStats, 10000);
-                    loadCurrentRates();
-                    fetchEscrowDisputes();
-                    fetchUsersList();
-                    loadKycData('pending');
+                    initAdminDataFast();
                 } else {
                     errEl.innerText = data.message || 'Login failed.';
                 }
@@ -400,6 +420,7 @@
 
         function logoutAdmin() {
             localStorage.removeItem('adminToken');
+            sessionStorage.clear();
             location.reload();
         }
 
@@ -410,10 +431,21 @@
             event.currentTarget.classList.add('active');
         }
 
-        // Helper: Agar server se "/ ... ETB" aaye toh usko hata kar sirf USDT dikhata hai
         function formatUsdtOnly(val) {
             if (!val) return '0 USDT';
             return String(val).split('/')[0].trim();
+        }
+
+        function applyStatsToDOM(data) {
+            if (!data) return;
+            document.getElementById('statUserCount').innerText = data.totalUsers ?? 0;
+            document.getElementById('statKycCount').innerText = data.kycPending ?? 0;
+            document.getElementById('statOnMarket').innerText = formatUsdtOnly(data.onMarket);
+            document.getElementById('statLivePosts').innerText = data.livePosts ?? 0;
+            document.getElementById('statTotalTrades').innerText = data.totalTrades ?? 0;
+            document.getElementById('statEscrow').innerText = formatUsdtOnly(data.activeEscrow);
+            document.getElementById('statTotalVolume').innerText = formatUsdtOnly(data.totalVolume);
+            document.getElementById('statVolume').innerText = formatUsdtOnly(data.todayVolume);
         }
 
         async function fetchStats() {
@@ -437,23 +469,44 @@
                 }
 
                 if (statsRes.ok && json.success && json.data) {
-                    document.getElementById('statUserCount').innerText = json.data.totalUsers ?? 0;
-                    document.getElementById('statKycCount').innerText = json.data.kycPending ?? 0;
-                    document.getElementById('statOnMarket').innerText = liveAdsArray !== null
-                        ? `${lockedSellMarketUsdt.toLocaleString('en-US')} USDT`
-                        : formatUsdtOnly(json.data.onMarket);
-                    document.getElementById('statLivePosts').innerText = json.data.livePosts ?? (liveAdsArray ? liveAdsArray.length : 0);
-                    document.getElementById('statTotalTrades').innerText = json.data.totalTrades ?? 0;
-                    document.getElementById('statEscrow').innerText = formatUsdtOnly(json.data.activeEscrow);
-                    document.getElementById('statTotalVolume').innerText = formatUsdtOnly(json.data.totalVolume);
-                    document.getElementById('statVolume').innerText = formatUsdtOnly(json.data.todayVolume);
+                    const mergedStats = {
+                        ...json.data,
+                        onMarket: liveAdsArray !== null ? `${lockedSellMarketUsdt.toLocaleString('en-US')} USDT` : json.data.onMarket,
+                        livePosts: json.data.livePosts ?? (liveAdsArray ? liveAdsArray.length : 0)
+                    };
+                    applyStatsToDOM(mergedStats);
+                    try { sessionStorage.setItem('tbr_admin_stats', JSON.stringify(mergedStats)); } catch (e) {}
                 }
             } catch (err) { console.error('Error loading stats:', err); }
         }
 
-        async function loadKycData(targetStatus = 'pending') {
+        // 🚀 Background Prefetcher for Instant KYC Tab Switching 🚀
+        async function prefetchKycStatus(status) {
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/kyc-requests?status=${status}&limit=50`, {
+                    headers: { 'Authorization': 'Bearer ' + getToken() }
+                });
+                const json = await res.json();
+                let rawList = [];
+                if (Array.isArray(json)) rawList = json;
+                else if (Array.isArray(json.data)) rawList = json.data;
+                else if (Array.isArray(json.requests)) rawList = json.requests;
+
+                kycCache[status] = rawList;
+                try {
+                    // Save lightweight list metadata in sessionStorage
+                    const lightList = rawList.map(({ frontImage, backImage, selfieImage, ...rest }) => rest);
+                    sessionStorage.setItem('tbr_kyc_' + status, JSON.stringify(lightList));
+                } catch (e) {}
+            } catch (e) {}
+        }
+
+        // 🚀 Instant 0ms KYC Tab Switcher + Background Refresh 🚀
+        async function loadKycData(targetStatus = 'pending', forceRefresh = false) {
+            activeKycStatus = targetStatus;
+
             document.querySelectorAll('#tab-kyc button.btn').forEach(b => {
-                if (b.id) b.style.opacity = '0.6';
+                if (b.id) b.style.opacity = '0.5';
             });
             const activeBtn = document.getElementById(`btn-${targetStatus}-kyc`);
             if (activeBtn) activeBtn.style.opacity = '1';
@@ -461,10 +514,17 @@
             const tbody = document.getElementById('kycTableBody');
             if (!tbody) return;
 
-            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#f3ba2f; padding: 25px;"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading ${targetStatus.toUpperCase()} KYC Data... (Fetching photos)</td></tr>`;
+            // 1. If cached in memory, render IMMEDIATELY in 0ms!
+            if (Array.isArray(kycCache[targetStatus])) {
+                currentKycList = kycCache[targetStatus];
+                renderKycs(tbody, currentKycList);
+            } else {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#f3ba2f; padding: 20px;"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading ${targetStatus.toUpperCase()} KYC...</td></tr>`;
+            }
 
+            // 2. Fetch fresh lightweight list in background
             try {
-                const res = await fetch(`${API_BASE}/api/admin/kyc-requests?status=${targetStatus}&limit=20`, { 
+                const res = await fetch(`${API_BASE}/api/admin/kyc-requests?status=${targetStatus}&limit=50`, { 
                     headers: { 'Authorization': 'Bearer ' + getToken() } 
                 });
                 const json = await res.json();
@@ -474,17 +534,21 @@
                 else if (Array.isArray(json.data)) rawList = json.data;
                 else if (Array.isArray(json.requests)) rawList = json.requests;
 
-                if (rawList.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding: 20px;">No ${targetStatus} KYC submissions found.</td></tr>`;
-                    currentKycList = [];
-                    return;
-                }
+                kycCache[targetStatus] = rawList;
+                try {
+                    const lightList = rawList.map(({ frontImage, backImage, selfieImage, ...rest }) => rest);
+                    sessionStorage.setItem('tbr_kyc_' + targetStatus, JSON.stringify(lightList));
+                } catch (e) {}
 
-                currentKycList = rawList;
-                renderKycs(tbody, rawList);
+                if (activeKycStatus === targetStatus) {
+                    currentKycList = rawList;
+                    renderKycs(tbody, rawList);
+                }
             } catch (err) { 
-                console.error("KYC Load Error:", err); 
-                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--red);">Error loading data. Check connection.</td></tr>`;
+                console.error("KYC Load Error:", err);
+                if (!Array.isArray(kycCache[targetStatus])) {
+                    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--red);">Error loading data. Check connection.</td></tr>`;
+                }
             }
         }
 
@@ -509,9 +573,15 @@
         }
 
         function renderKycs(tbody, list) {
+            if (!list || list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding: 20px;">No ${activeKycStatus} KYC submissions found.</td></tr>`;
+                return;
+            }
+
             let html = '';
-            list.forEach(item => {
-                const userEmail = item.email || item.userEmail || item.userId || item._id || 'N/A';
+            list.forEach((item, idx) => {
+                const kycId = item._id || item.id || '';
+                const userEmail = item.email || item.userEmail || item.userId || kycId || 'N/A';
                 const userName = item.fullName || item.name || '';
                 const currentStatus = String(item.status || item.kycStatus || 'pending').toLowerCase();
                 const isResolved = currentStatus === 'approved' || currentStatus === 'verified' || currentStatus === 'rejected';
@@ -520,8 +590,6 @@
                 if (currentStatus === 'approved' || currentStatus === 'verified') badgeClass = 'badge-approved';
                 else if (currentStatus === 'rejected') badgeClass = 'badge-rejected';
 
-                const safeJsonStr = JSON.stringify(item).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
-
                 html += `<tr>
                     <td>
                         <strong>${userEmail}</strong>
@@ -529,7 +597,7 @@
                         <br><small style="color:gray;">db status: [${currentStatus}]</small>
                     </td>
                     <td>
-                        <button onclick='openKycModal(${safeJsonStr})' class="btn btn-sm" style="color: #f3ba2f; background: #181a20; border: 1px solid #f3ba2f; padding: 5px 12px; border-radius: 4px; cursor: pointer;">
+                        <button onclick="openKycModalByIndex(${idx})" class="btn btn-sm" style="color: #f3ba2f; background: #181a20; border: 1px solid #f3ba2f; padding: 5px 12px; border-radius: 4px; cursor: pointer;">
                             <i class="fas fa-eye"></i> View Docs
                         </button>
                     </td>
@@ -537,8 +605,8 @@
                     <td>
                         ${isResolved 
                             ? `<span style="color: var(--text-muted); font-weight: 600; font-size: 12px;">Completed</span>` 
-                            : `<button class="btn btn-approve" onclick="performKycAction('${item._id || item.id}', 'approved')">Approve</button>
-                               <button class="btn btn-reject" onclick="performKycAction('${item._id || item.id}', 'rejected')">Reject</button>`
+                            : `<button class="btn btn-approve" onclick="performKycAction('${kycId}', 'approved')">Approve</button>
+                               <button class="btn btn-reject" onclick="performKycAction('${kycId}', 'rejected')">Reject</button>`
                         }
                     </td>
                 </tr>`;
@@ -546,12 +614,112 @@
             tbody.innerHTML = html;
         }
 
+        async function openKycModalByIndex(idx) {
+            const kycItem = currentKycList[idx];
+            if (!kycItem) return;
+            await openKycModal(kycItem);
+        }
+
+        async function openKycModal(kycItem) {
+            let modal = document.getElementById('kycModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'kycModal';
+                modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 9999;";
+                modal.innerHTML = `
+                    <div style="background: #1e2329; padding: 20px; border-radius: 12px; max-width: 720px; width: 95%; color: #fff; text-align: center; position: relative; border: 1px solid #30363d; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+                        <span onclick="document.getElementById('kycModal').style.display='none'" style="position: absolute; top: 12px; right: 18px; font-size: 26px; color: #848e9c; cursor: pointer; font-weight: bold; line-height: 1;">&times;</span>
+                        <h3 id="modalUserEmail" style="margin-bottom: 15px; margin-right: 25px; color: #f3ba2f; font-size: 15px; word-break: break-all; text-align: left;"></h3>
+                        <div id="modalLoadingDocs" style="display:none; color:#f3ba2f; padding: 20px; font-size: 13px;">
+                            <i class="fa-solid fa-circle-notch fa-spin"></i> Loading high-resolution ID documents...
+                        </div>
+                        <div id="modalImagesContainer" style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 18px;">
+                            <div>
+                                <p style="margin-bottom: 4px; font-size: 12px; color: #848e9c; font-weight: bold;">Front ID</p>
+                                <img id="modalFrontImg" src="" style="width: 210px; height: 135px; object-fit: contain; background: #0b0e11; border-radius: 6px; border: 1px solid #474d57; cursor: pointer;" onclick="window.open(this.src)" title="Click to zoom">
+                            </div>
+                            <div>
+                                <p style="margin-bottom: 4px; font-size: 12px; color: #848e9c; font-weight: bold;">Back ID</p>
+                                <img id="modalBackImg" src="" style="width: 210px; height: 135px; object-fit: contain; background: #0b0e11; border-radius: 6px; border: 1px solid #474d57; cursor: pointer;" onclick="window.open(this.src)" title="Click to zoom">
+                            </div>
+                            <div>
+                                <p style="margin-bottom: 4px; font-size: 12px; color: #f3ba2f; font-weight: bold;">Selfie / User Photo</p>
+                                <img id="modalSelfieImg" src="" style="width: 210px; height: 135px; object-fit: contain; background: #0b0e11; border-radius: 6px; border: 2px solid #f3ba2f; cursor: pointer;" onclick="window.open(this.src)" title="Click to zoom">
+                            </div>
+                        </div>
+                        <button onclick="document.getElementById('kycModal').style.display='none'" style="background: #f3ba2f; color: #000; border: none; padding: 8px 24px; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 13px;">Close Panel</button>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            }
+            
+            const kycId = kycItem._id || kycItem.id;
+            document.getElementById('modalUserEmail').innerText = `KYC: ${kycItem.email || kycItem.userEmail || kycItem.userId || 'N/A'}`;
+            modal.style.display = 'flex';
+
+            let front = kycItem.frontImage || kycItem.frontId || (kycDocsCache[kycId] && kycDocsCache[kycId].frontImage) || '';
+            let back = kycItem.backImage || kycItem.backId || (kycDocsCache[kycId] && kycDocsCache[kycId].backImage) || '';
+            let selfie = kycItem.selfieImage || kycItem.selfie || (kycDocsCache[kycId] && kycDocsCache[kycId].selfieImage) || '';
+
+            // If photos were stripped for fast list loading, fetch them on demand for this single user
+            if (!front && !selfie && kycId) {
+                document.getElementById('modalLoadingDocs').style.display = 'block';
+                document.getElementById('modalImagesContainer').style.display = 'none';
+                try {
+                    const res = await fetch(`${API_BASE}/api/admin/kyc-docs/${kycId}`, {
+                        headers: { 'Authorization': 'Bearer ' + getToken() }
+                    });
+                    const json = await res.json();
+                    if (res.ok && json.success && json.data) {
+                        kycDocsCache[kycId] = json.data;
+                        front = json.data.frontImage || '';
+                        back = json.data.backImage || '';
+                        selfie = json.data.selfieImage || '';
+                    }
+                } catch (e) {
+                    console.error('Error fetching single KYC docs:', e);
+                }
+                document.getElementById('modalLoadingDocs').style.display = 'none';
+                document.getElementById('modalImagesContainer').style.display = 'flex';
+            }
+
+            document.getElementById('modalFrontImg').src = front;
+            document.getElementById('modalBackImg').src = back;
+            document.getElementById('modalSelfieImg').src = selfie;
+        }
+
+        async function performKycAction(kycId, status) {
+            let rejectionReason = status === 'rejected' ? prompt('Reason for rejection:', 'Invalid documents') : '';
+            if (status === 'rejected' && !rejectionReason) return;
+
+            // Optimistic UI update: remove from current list immediately
+            currentKycList = currentKycList.filter(item => (item._id || item.id) !== kycId);
+            kycCache[activeKycStatus] = currentKycList;
+            renderKycs(document.getElementById('kycTableBody'), currentKycList);
+
+            const res = await fetch(`${API_BASE}/api/admin/kyc-action`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+                body: JSON.stringify({ kycId, status, rejectionReason })
+            });
+            const json = await res.json();
+            if (res.ok && json.success) { 
+                prefetchKycStatus('pending');
+                prefetchKycStatus('approved');
+                prefetchKycStatus('rejected');
+                fetchStats();
+            } else {
+                alert(json.message || 'Action failed.');
+                loadKycData(activeKycStatus, true);
+            }
+        }
+
         async function fetchEscrowDisputes() {
             try {
                 const res = await fetch(`${API_BASE}/api/admin/escrow-disputes`, { headers: { 'Authorization': 'Bearer ' + getToken() } });
                 const json = await res.json();
                 const tbody = document.getElementById('escrowTableBody');
-                if (res.ok && json.success && json.data.length > 0) {
+                if (res.ok && json.success && json.data && json.data.length > 0) {
                     let html = '';
                     json.data.forEach(trade => {
                         html += `<tr>
@@ -592,67 +760,6 @@
                 }
             } catch (err) {
                 alert('Network error while resolving escrow.');
-            }
-        }
-
-        function openKycModal(kycItem) {
-            let modal = document.getElementById('kycModal');
-            if (!modal) {
-                modal = document.createElement('div');
-                modal.id = 'kycModal';
-                modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 9999;";
-                modal.innerHTML = `
-                    <div style="background: #1e2329; padding: 20px; border-radius: 12px; max-width: 720px; width: 95%; color: #fff; text-align: center; position: relative; border: 1px solid #30363d; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
-                        <span onclick="document.getElementById('kycModal').style.display='none'" style="position: absolute; top: 12px; right: 18px; font-size: 26px; color: #848e9c; cursor: pointer; font-weight: bold; line-height: 1;">&times;</span>
-                        <h3 id="modalUserEmail" style="margin-bottom: 15px; margin-right: 25px; color: #f3ba2f; font-size: 15px; word-break: break-all; text-align: left;"></h3>
-                        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 18px;">
-                            <div>
-                                <p style="margin-bottom: 4px; font-size: 12px; color: #848e9c; font-weight: bold;">Front ID</p>
-                                <img id="modalFrontImg" src="" style="width: 210px; height: 135px; object-fit: contain; background: #0b0e11; border-radius: 6px; border: 1px solid #474d57; cursor: pointer;" onclick="window.open(this.src)" title="Click to zoom">
-                            </div>
-                            <div>
-                                <p style="margin-bottom: 4px; font-size: 12px; color: #848e9c; font-weight: bold;">Back ID</p>
-                                <img id="modalBackImg" src="" style="width: 210px; height: 135px; object-fit: contain; background: #0b0e11; border-radius: 6px; border: 1px solid #474d57; cursor: pointer;" onclick="window.open(this.src)" title="Click to zoom">
-                            </div>
-                            <div>
-                                <p style="margin-bottom: 4px; font-size: 12px; color: #f3ba2f; font-weight: bold;">Selfie / User Photo</p>
-                                <img id="modalSelfieImg" src="" style="width: 210px; height: 135px; object-fit: contain; background: #0b0e11; border-radius: 6px; border: 2px solid #f3ba2f; cursor: pointer;" onclick="window.open(this.src)" title="Click to zoom">
-                            </div>
-                        </div>
-                        <button onclick="document.getElementById('kycModal').style.display='none'" style="background: #f3ba2f; color: #000; border: none; padding: 8px 24px; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 13px;">Close Panel</button>
-                    </div>
-                `;
-                document.body.appendChild(modal);
-            }
-            
-            document.getElementById('modalUserEmail').innerText = `KYC: ${kycItem.email || kycItem.userEmail || kycItem.userId || 'N/A'}`;
-            
-            const front = kycItem.frontImage || kycItem.frontId || kycItem.kycFront || kycItem.front || kycItem.idFront || kycItem.front_image || kycItem.documentFront || '';
-            const back = kycItem.backImage || kycItem.backId || kycItem.kycBack || kycItem.back || kycItem.idBack || kycItem.back_image || kycItem.documentBack || '';
-            const selfie = kycItem.selfieImage || kycItem.selfie || kycItem.userPhoto || kycItem.kycSelfie || kycItem.photo || kycItem.user_photo || kycItem.selfie_image || '';
-
-            document.getElementById('modalFrontImg').src = front;
-            document.getElementById('modalBackImg').src = back;
-            document.getElementById('modalSelfieImg').src = selfie;
-            
-            modal.style.display = 'flex';
-        }
-
-        async function performKycAction(kycId, status) {
-            let rejectionReason = status === 'rejected' ? prompt('Reason for rejection:', 'Invalid documents') : '';
-            if (status === 'rejected' && !rejectionReason) return;
-            const res = await fetch(`${API_BASE}/api/admin/kyc-action`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
-                body: JSON.stringify({ kycId, status, rejectionReason })
-            });
-            const json = await res.json();
-            if (res.ok && json.success) { 
-                alert(json.message); 
-                loadKycData('pending'); 
-                fetchStats();
-            } else {
-                alert(json.message || 'Action failed.');
             }
         }
 

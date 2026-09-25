@@ -1564,15 +1564,20 @@ app.get('/api/admin/escrow-disputes', verifyAdmin, async (req, res) => {
     }
 });
 
+// 🚀 1. ፈጣን የ KYC ዝርዝር ማምጫ (ያለ ፎቶ በ 0.1 ሰከንድ የሚመጣ) 🚀
 app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
     try {
         const page = Math.max(1, parseInt(req.query.page, 10) || 1);
-        const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+        const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 50));
         const skip = (page - 1) * limit;
         const statusFilter = req.query.status ? { status: req.query.status } : {};
 
+        // ዝርዝሩ በፍጥነት እንዲመጣ ፎቶዎቹን እዚህ ጋር አይጭንም (View Docs ሲነካ ብቻ ይመጣሉ)
+        const includePhotos = req.query.includePhotos === 'true';
+        const projection = includePhotos ? {} : { frontImage: 0, backImage: 0, selfieImage: 0 };
+
         const [kycList, totalCount] = await Promise.all([
-            KYC.find(statusFilter)
+            KYC.find(statusFilter, projection)
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit)
@@ -1594,11 +1599,13 @@ app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
             userId: kyc.userId || kyc.email || 'N/A',
             email: kyc.email || '',
             fullName: kyc.fullName || 'User',
-            frontImage: formatImage(kyc.frontImage),
-            backImage: formatImage(kyc.backImage),
-            selfieImage: formatImage(kyc.selfieImage),
             status: kyc.status || 'pending',
-            createdAt: kyc.createdAt || null
+            createdAt: kyc.createdAt || null,
+            ...(includePhotos ? {
+                frontImage: formatImage(kyc.frontImage),
+                backImage: formatImage(kyc.backImage),
+                selfieImage: formatImage(kyc.selfieImage)
+            } : {})
         }));
 
         return res.json({
@@ -1617,6 +1624,40 @@ app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
     }
 });
 
+// 🚀 2. አድሚኑ "View Docs" ሲነካ የዛን ሰው ፎቶዎች ብቻ በፍጥነት ማምጫ 🚀
+app.get('/api/admin/kyc-docs/:id', verifyAdminToken, async (req, res) => {
+    try {
+        const kyc = await KYC.findById(req.params.id).lean();
+        if (!kyc) {
+            return res.status(404).json({ success: false, message: 'KYC record not found' });
+        }
+
+        const formatImage = (img) => {
+            if (!img) return '';
+            if (Buffer.isBuffer(img)) {
+                return `data:image/jpeg;base64,${img.toString('base64')}`;
+            }
+            if (typeof img === 'string' && img.startsWith('data:image/')) return img;
+            return img;
+        };
+
+        return res.json({
+            success: true,
+            data: {
+                _id: kyc._id,
+                email: kyc.email || '',
+                frontImage: formatImage(kyc.frontImage),
+                backImage: formatImage(kyc.backImage),
+                selfieImage: formatImage(kyc.selfieImage)
+            }
+        });
+    } catch (error) {
+        console.error("KYC Docs Fetch Error:", error);
+        return res.status(500).json({ success: false, message: 'Error fetching KYC documents' });
+    }
+});
+
+// 🚀 3. KYC ማስገቢያ (Submit) 🚀
 app.post('/api/kyc/submit', async (req, res) => {
     try {
         const { userId, email, fullName, idNumber, docType, dateOfBirth, residentialAddress, frontImage, backImage, selfieImage } = req.body;
@@ -1683,29 +1724,38 @@ app.post('/api/kyc/submit', async (req, res) => {
     }
 });
 
+// 🚀 4. ፈጣን KYC Approve / Reject ማድረጊያ 🚀
 app.post('/api/admin/kyc-action', verifyAdmin, async (req, res) => {
     try {
-        const { kycId, status } = req.body; 
+        const { kycId, status, rejectionReason } = req.body; 
         const newStatus = status === 'approved' ? 'approved' : 'rejected';
         const userTargetStatus = status === 'approved' ? 'verified' : 'rejected';
 
-        let kycRecord = await KYC.findById(kycId);
+        // ፎቶዎቹን ሳይጭን በቀጥታ ስታተሱን ብቻ በፍጥነት ይቀይራል
+        const kycRecord = await KYC.findByIdAndUpdate(
+            kycId,
+            { $set: { status: newStatus, rejectionReason: rejectionReason || '' } },
+            { new: true, select: 'userId email status' }
+        );
+
         if (!kycRecord) {
-            const userRecord = await User.findById(kycId);
+            const userRecord = await User.findByIdAndUpdate(
+                kycId,
+                { $set: { kycStatus: userTargetStatus } },
+                { new: true, select: '_id email kycStatus' }
+            );
             if (userRecord) {
-                userRecord.kycStatus = userTargetStatus;
-                await userRecord.save();
                 return res.json({ success: true, message: `User KYC status updated to ${newStatus} successfully.` });
             }
             return res.status(404).json({ success: false, message: 'KYC record not found.' });
         }
 
-        kycRecord.status = newStatus;
-        await kycRecord.save();
-
         if (kycRecord.userId) {
-            await User.findByIdAndUpdate(kycRecord.userId, { kycStatus: userTargetStatus });
+            await User.findByIdAndUpdate(kycRecord.userId, { $set: { kycStatus: userTargetStatus } });
+        } else if (kycRecord.email) {
+            await User.findOneAndUpdate({ email: kycRecord.email.toLowerCase() }, { $set: { kycStatus: userTargetStatus } });
         }
+
         res.json({ success: true, message: `KYC status updated to ${newStatus} successfully.` });
     } catch (error) {
         console.error("KYC Action Error:", error);
