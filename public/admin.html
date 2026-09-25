@@ -195,7 +195,7 @@
                     </div>
                 </div>
 
-                <!-- 3. ON MARKET (Total Active USDT on Market) -->
+                <!-- 3. ON MARKET (Locked USDT in Active Sell Ads Only) -->
                 <div class="stat-card">
                     <div>
                         <div class="label">On Market</div>
@@ -228,33 +228,33 @@
                     </div>
                 </div>
 
-                <!-- 6. TOTAL POSTS (All-Time Ads Posted) -->
+                <!-- 6. TOTAL TRADE (Total Completed P2P Trades Count) -->
                 <div class="stat-card">
                     <div>
-                        <div class="label">Total Posts</div>
-                        <div class="value" id="statTotalPosts" style="color: var(--purple);">0</div>
+                        <div class="label">Total Trade</div>
+                        <div class="value" id="statTotalTrades" style="color: var(--purple);">0</div>
                     </div>
                     <div class="stat-icon icon-purple">
-                        <i class="fa-solid fa-layer-group"></i>
+                        <i class="fa-solid fa-handshake"></i>
                     </div>
                 </div>
 
-                <!-- 7. TOTAL VOLUME -->
+                <!-- 7. TOTAL TRADE VOLUME (USDT Only) -->
                 <div class="stat-card">
                     <div>
-                        <div class="label">Total Volume</div>
-                        <div class="value" id="statTotalVolume" style="color: var(--cyan);">0 USDT / 0 ETB</div>
+                        <div class="label">Total Trade Volume</div>
+                        <div class="value" id="statTotalVolume" style="color: var(--cyan);">0 USDT</div>
                     </div>
                     <div class="stat-icon icon-cyan">
                         <i class="fa-solid fa-chart-pie"></i>
                     </div>
                 </div>
 
-                <!-- 8. TODAY'S VOLUME -->
+                <!-- 8. TODAY TRADE VOLUME (USDT Only) -->
                 <div class="stat-card">
                     <div>
-                        <div class="label">Today's Volume</div>
-                        <div class="value" id="statVolume" style="color: var(--blue);">0 USDT / 0 ETB</div>
+                        <div class="label">Today Trade Volume</div>
+                        <div class="value" id="statVolume" style="color: var(--blue);">0 USDT</div>
                     </div>
                     <div class="stat-icon icon-blue">
                         <i class="fa-solid fa-chart-line"></i>
@@ -359,7 +359,7 @@
                 document.getElementById('mainDashboard').style.display = 'block';
                 
                 fetchStats();
-                setInterval(fetchStats, 10000); // በየ 10 ሰከንዱ የማርኬት እና የፖስት ቁጥሮችን በራሱ ያድሳል
+                setInterval(fetchStats, 10000);
                 loadCurrentRates();
                 fetchEscrowDisputes();
                 fetchUsersList();
@@ -410,6 +410,12 @@
             event.currentTarget.classList.add('active');
         }
 
+        // Helper: Agar server se "/ ... ETB" aaye toh usko hata kar sirf USDT dikhata hai
+        function formatUsdtOnly(val) {
+            if (!val) return '0 USDT';
+            return String(val).split('/')[0].trim();
+        }
+
         async function fetchStats() {
             try {
                 const [statsRes, adsRes] = await Promise.all([
@@ -420,24 +426,27 @@
                 const json = await statsRes.json();
                 const adsJson = await adsRes.json().catch(() => ({}));
 
-                // ከ /api/ads ቀጥታ የማርኬት USDT እና Live Posts ማስላት (ሁልጊዜ 100% ትክክል እንዲሆን)
                 let liveAdsArray = (adsJson && adsJson.success && Array.isArray(adsJson.ads)) ? adsJson.ads : null;
-                let calculatedMarketUsdt = 0;
+                let lockedSellMarketUsdt = 0;
                 if (liveAdsArray) {
                     liveAdsArray.forEach(ad => {
-                        calculatedMarketUsdt += Number(ad.totalAmount || 0);
+                        if (ad.tradeType === 'sell') {
+                            lockedSellMarketUsdt += Number(ad.totalAmount || 0);
+                        }
                     });
                 }
 
                 if (statsRes.ok && json.success && json.data) {
                     document.getElementById('statUserCount').innerText = json.data.totalUsers ?? 0;
                     document.getElementById('statKycCount').innerText = json.data.kycPending ?? 0;
-                    document.getElementById('statOnMarket').innerText = json.data.onMarket || `${calculatedMarketUsdt.toLocaleString('en-US')} USDT`;
+                    document.getElementById('statOnMarket').innerText = liveAdsArray !== null
+                        ? `${lockedSellMarketUsdt.toLocaleString('en-US')} USDT`
+                        : formatUsdtOnly(json.data.onMarket);
                     document.getElementById('statLivePosts').innerText = json.data.livePosts ?? (liveAdsArray ? liveAdsArray.length : 0);
-                    document.getElementById('statTotalPosts').innerText = json.data.totalPosts ?? (liveAdsArray ? liveAdsArray.length : 0);
-                    document.getElementById('statEscrow').innerText = json.data.activeEscrow || '0 USDT';
-                    document.getElementById('statTotalVolume').innerText = json.data.totalVolume || '0 USDT / 0 ETB';
-                    document.getElementById('statVolume').innerText = json.data.todayVolume || '0 USDT / 0 ETB';
+                    document.getElementById('statTotalTrades').innerText = json.data.totalTrades ?? 0;
+                    document.getElementById('statEscrow').innerText = formatUsdtOnly(json.data.activeEscrow);
+                    document.getElementById('statTotalVolume').innerText = formatUsdtOnly(json.data.totalVolume);
+                    document.getElementById('statVolume').innerText = formatUsdtOnly(json.data.todayVolume);
                 }
             } catch (err) { console.error('Error loading stats:', err); }
         }

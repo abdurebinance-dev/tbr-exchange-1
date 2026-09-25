@@ -1493,29 +1493,48 @@ app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        const settings = await Setting.findOne({});
-        const rate = settings && settings.sellRate ? Number(settings.sellRate) : 192;
+        // 🚀 1. TOTAL TRADE, TOTAL TRADE VOLUME & TODAY TRADE VOLUME (Sirf P2P USDT) 🚀
+        let totalTrades = 0;
+        let totalP2pUsdt = 0;
+        let todayP2pUsdt = 0;
 
-        const allCompletedTx = await Transaction.find({ status: { $in: ['completed', 'Completed'] } });
-        let totalUsdt = 0;
-        let todayUsdt = 0;
+        const p2pTransactions = await Transaction.find({
+            type: { $in: ['p2p', 'P2P', 'p2p_trade', 'p2p_buy', 'p2p_sell'] },
+            status: { $in: ['completed', 'Completed'] }
+        });
 
-        allCompletedTx.forEach(tx => {
+        p2pTransactions.forEach(tx => {
             const amt = Number(tx.amount || 0);
-            totalUsdt += amt;
+            totalTrades += 1;
+            totalP2pUsdt += amt;
             if (tx.createdAt && new Date(tx.createdAt) >= today) {
-                todayUsdt += amt;
+                todayP2pUsdt += amt;
             }
         });
 
-        // 🚀 ON MARKET USDT, LIVE POSTS & TOTAL POSTS 🚀
-        const totalPosts = await Ad.countDocuments({});
+        if (mongoose.models.Trade) {
+            const completedTrades = await mongoose.models.Trade.find({
+                status: { $in: ['completed', 'Completed', 'released', 'Released'] }
+            });
+            completedTrades.forEach(tr => {
+                const amt = Number(tr.amount || 0);
+                totalTrades += 1;
+                totalP2pUsdt += amt;
+                if (tr.createdAt && new Date(tr.createdAt) >= today) {
+                    todayP2pUsdt += amt;
+                }
+            });
+        }
+
+        // 🚀 2. ON MARKET (Sirf Active Sell Ads mein Lock hua USDT) & LIVE POSTS 🚀
         const activeAds = await Ad.find({ status: 'active' });
         const livePosts = activeAds.length;
 
-        let onMarketUsdt = 0;
+        let onMarketLockedUsdt = 0;
         activeAds.forEach(ad => {
-            onMarketUsdt += Number(ad.totalAmount || 0);
+            if (ad.tradeType === 'sell') {
+                onMarketLockedUsdt += Number(ad.totalAmount || 0);
+            }
         });
 
         res.json({ 
@@ -1523,12 +1542,12 @@ app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
             data: { 
                 totalUsers, 
                 kycPending, 
-                onMarket: `${onMarketUsdt.toLocaleString('en-US')} USDT`,
+                onMarket: `${onMarketLockedUsdt.toLocaleString('en-US')} USDT`,
                 livePosts,
-                totalPosts,
+                totalTrades,
                 activeEscrow: "0 USDT",
-                totalVolume: `${totalUsdt.toLocaleString('en-US')} USDT / ${(totalUsdt * rate).toLocaleString('en-US')} ETB`,
-                todayVolume: `${todayUsdt.toLocaleString('en-US')} USDT / ${(todayUsdt * rate).toLocaleString('en-US')} ETB`
+                totalVolume: `${totalP2pUsdt.toLocaleString('en-US')} USDT`,
+                todayVolume: `${todayP2pUsdt.toLocaleString('en-US')} USDT`
             } 
         });
     } catch (error) {
