@@ -1077,8 +1077,8 @@
         }
 
         (function initActiveTradeDashboardAlert() {
-        // 🚀 Ekhon sorasori tbrexchange.com (current domain) bebohar korbe 🚀
         const API_URL = 'https://tbr-exchange-backend.onrender.com';
+        const BANNER_CACHE_KEY = 'tbr_dash_active_banner_v2';
 
         function createBannerIfMissing() {
             let banner = document.getElementById('dashboardActiveTradeBanner');
@@ -1131,10 +1131,29 @@
             return { token, email, userId };
         }
 
+        function applyBannerData(data) {
+            const banner = createBannerIfMissing();
+            if (data && data.count > 0 && data.latestTrade) {
+                const count = data.count;
+                const trade = data.latestTrade;
+                const tradeNum = String(trade.tradeNumber || '00001').padStart(5, '0');
+                const isBuyer = data.currentUserId && String(trade.buyerId) === String(data.currentUserId);
+                const roleText = isBuyer ? 'Buyer' : 'Seller';
+
+                document.getElementById('dashboardActiveTradeText').innerText =
+                    count === 1
+                        ? `1 trade awaiting you (${roleText}) — Click to action`
+                        : `${count} trades awaiting you — Click to view`;
+                document.getElementById('dashboardActiveTradeNum').innerText = `Trade #${tradeNum}`;
+                banner.href = `trades.html?tradeId=${trade._id}`;
+                banner.style.display = 'flex';
+            } else {
+                banner.style.display = 'none';
+            }
+        }
+
         async function checkActiveTradesForUser() {
             const { token, email, userId } = getLoggedUserIdentity();
-            const banner = createBannerIfMissing();
-
             if (!token && !email && !userId) return;
 
             try {
@@ -1148,29 +1167,22 @@
 
                 if (res.ok) {
                     const json = await res.json();
-                    if (json.success && json.count > 0 && json.latestTrade) {
-                        const count = json.count;
-                        const trade = json.latestTrade;
-                        const tradeNum = String(trade.tradeNumber || '00001').padStart(5, '0');
-                        const isBuyer = json.currentUserId && String(trade.buyerId) === String(json.currentUserId);
-                        const roleText = isBuyer ? 'Buyer' : 'Seller';
-
-                        document.getElementById('dashboardActiveTradeText').innerText =
-                            count === 1
-                                ? `1 trade awaiting you (${roleText}) — Click to continue`
-                                : `${count} trades awaiting you — Click to continue`;
-                        document.getElementById('dashboardActiveTradeNum').innerText = `Trade #${tradeNum}`;
-                        banner.href = `trades.html?tradeId=${trade._id}`;
-                        banner.style.display = 'flex';
-                        return;
+                    if (json.success) {
+                        sessionStorage.setItem(BANNER_CACHE_KEY, JSON.stringify(json));
+                        applyBannerData(json);
                     }
                 }
             } catch (e) {}
-
-            banner.style.display = 'none';
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            // 1. በ 0 ሰከንድ (ወዲያውኑ) ከ Cache ማሳየት (ሪፍሬሽ ሲደረግ እንዳይዘገይ)
+            try {
+                const cached = sessionStorage.getItem(BANNER_CACHE_KEY);
+                if (cached) applyBannerData(JSON.parse(cached));
+            } catch (e) {}
+
+            // 2. ወዲያውኑ ከሰርቨር ማረጋገጥ
             checkActiveTradesForUser();
             setInterval(checkActiveTradesForUser, 3000);
         });

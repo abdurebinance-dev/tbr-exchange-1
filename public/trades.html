@@ -1595,6 +1595,7 @@
 
     <script>
         const API_BASE = 'https://tbr-exchange-backend.onrender.com';
+        const TRADES_LIST_CACHE = 'tbr_my_trades_list_v2';
         let activeTrade = null;
         let currentUserId = '';
         let selectedReceiptBase64 = '';
@@ -1614,10 +1615,6 @@
             return { token, email, userId };
         }
 
-        function getAuthToken() {
-            return getLoggedUserIdentity().token;
-        }
-
         function formatEtb(val) {
             return Number(val || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ETB';
         }
@@ -1627,14 +1624,19 @@
             const tradeIdParam = urlParams.get('tradeId');
 
             if (tradeIdParam) {
+                // Mode B: Single Trade Room
                 document.getElementById('myTradesListView').style.display = 'none';
                 document.getElementById('singleTradeRoomView').style.display = 'grid';
 
+                // ⚠️ የድሮ የተሳሳተ Trade እንዳያሳይ፣ IDው አንድ አይነት ከሆነ ብቻ ከCache ያሳያል!
                 try {
                     const cachedOrder = localStorage.getItem('tbr_active_p2p_order');
                     if (cachedOrder) {
-                        activeTrade = JSON.parse(cachedOrder);
-                        renderTradeRoomUI();
+                        const parsed = JSON.parse(cachedOrder);
+                        if (parsed && String(parsed._id) === String(tradeIdParam)) {
+                            activeTrade = parsed;
+                            renderTradeRoomUI();
+                        }
                     }
                 } catch (e) {}
 
@@ -1642,23 +1644,25 @@
                 setInterval(() => fetchTradeFromServer(tradeIdParam), 3000);
                 startCountdownTimer();
             } else {
+                // Mode A: "My Trades" List Table (Instant 0ms load from cache + fast sync)
                 document.getElementById('singleTradeRoomView').style.display = 'none';
                 document.getElementById('myTradesListView').style.display = 'block';
+
+                try {
+                    const cachedList = sessionStorage.getItem(TRADES_LIST_CACHE);
+                    if (cachedList) {
+                        const parsedList = JSON.parse(cachedList);
+                        if (Array.isArray(parsedList)) renderMyTradesTable(parsedList);
+                    }
+                } catch (e) {}
+
                 await loadMyTradesList();
-                setInterval(loadMyTradesList, 5000);
+                setInterval(loadMyTradesList, 4000);
             }
         });
 
         async function loadMyTradesList() {
             const { token, email, userId } = getLoggedUserIdentity();
-            const tbody = document.getElementById('myTradesTableBody');
-
-            let localFallbackTrades = [];
-            try {
-                const savedLocal = JSON.parse(localStorage.getItem('tbr_active_p2p_order') || 'null');
-                if (savedLocal) localFallbackTrades = [savedLocal];
-            } catch (e) {}
-
             try {
                 const params = new URLSearchParams();
                 if (email) params.set('email', email);
@@ -1672,38 +1676,42 @@
                     const json = await res.json();
                     if (json.success && Array.isArray(json.trades)) {
                         currentUserId = json.currentUserId || userId || '';
-                        const finalTrades = json.trades.length > 0 ? json.trades : localFallbackTrades;
-                        renderMyTradesTable(finalTrades);
+                        sessionStorage.setItem(TRADES_LIST_CACHE, JSON.stringify(json.trades));
+                        renderMyTradesTable(json.trades);
                         return;
                     }
                 }
             } catch (e) {
                 console.error('Error fetching My Trades:', e);
             }
-
-            renderMyTradesTable(localFallbackTrades);
         }
 
         function renderMyTradesTable(trades) {
             const tbody = document.getElementById('myTradesTableBody');
-            document.getElementById('mtTotalCountText').innerText = `${trades.length} total trades`;
+            document.getElementById('mtTotalCountText').innerText = `${trades ? trades.length : 0} total trades`;
 
             if (!trades || trades.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:35px; color:var(--text-muted);">No trades found yet. Click "Trade" to start buying or selling USDT.</td></tr>`;
                 return;
             }
 
+            const { email } = getLoggedUserIdentity();
             let html = '';
+
             trades.forEach(tr => {
-                const isBuyer = currentUserId && tr.buyerId ? (String(tr.buyerId) === String(currentUserId)) : (tr.tradeType === 'buy');
+                let isBuyer = tr.tradeType === 'buy';
+                if (currentUserId && tr.buyerId) {
+                    isBuyer = String(tr.buyerId) === String(currentUserId);
+                } else if (email && tr.buyerEmail) {
+                    isBuyer = String(tr.buyerEmail).toLowerCase() === String(email).toLowerCase();
+                }
+
                 const roleLabel = isBuyer ? 'Buy' : 'Sell';
                 const roleCls = isBuyer ? 'buy' : 'sell';
                 const roleArrow = isBuyer ? '&#8600;' : '&#8599;';
 
-                const partnerName = isBuyer ? (tr.sellerName || tr.counterpartyName || 'Seller') : (tr.buyerName || tr.counterpartyName || 'Buyer');
-                const partnerAvatar = isBuyer ? tr.sellerAvatar : tr.buyerAvatar;
+                const partnerName = isBuyer ? (tr.sellerName || 'Seller') : (tr.buyerName || 'Buyer');
                 const initials = String(partnerName).slice(0, 2).toUpperCase();
-                const avatarHtml = partnerAvatar ? `<img src="${partnerAvatar}" alt="${partnerName}">` : initials;
 
                 const tradeIdShort = tr.tradeNumber
                     ? `#${String(tr.tradeNumber).padStart(5, '0')}`
@@ -1722,7 +1730,7 @@
                     : 0;
 
                 const st = tr.status || 'funds_locked';
-                const targetId = tr._id || 'latest';
+                const targetId = tr._id;
                 let statusPillHtml = '';
                 let actionLinkHtml = '';
                 let rateSubHtml = `<div class="mt-rate-sub">${dateStr}</div>`;
@@ -1761,7 +1769,7 @@
                         <td class="mt-id-col">${tradeIdShort}</td>
                         <td>
                             <div class="mt-counterparty-cell">
-                                <div class="mt-avatar">${avatarHtml}</div>
+                                <div class="mt-avatar">${initials}</div>
                                 <div class="mt-cp-name">
                                     <span>${partnerName}</span>
                                     ${msgBadgeHtml}
@@ -2132,10 +2140,15 @@
                     localStorage.setItem('tbr_active_p2p_order', JSON.stringify(activeTrade));
                     closeConfirmPaymentModal();
                     renderTradeRoomUI();
+                } else {
+                    alert((json && json.message) || 'Failed to upload receipt. Please try again.');
                 }
-            } catch (e) {}
-            btn.disabled = false;
-            btn.innerHTML = `<i class="fa-regular fa-circle-check"></i> Yes, I've Transferred`;
+            } catch (e) {
+                alert('Network error while uploading receipt.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-regular fa-circle-check"></i> Yes, I've Transferred`;
+            }
         }
 
         function openSellerReleaseModal() {
@@ -2143,6 +2156,7 @@
             document.getElementById('srBigEtb').innerText = formatEtb(activeTrade.etbAmount);
             document.getElementById('srVerifyCheckbox').checked = false;
             document.getElementById('srFinalReleaseBtn').disabled = true;
+            document.getElementById('srFinalReleaseBtn').innerHTML = `<i class="fa-solid fa-unlock-keyhole"></i> Yes, I Have Received — Release USDT`;
             document.getElementById('sellerReleaseModal').style.display = 'flex';
         }
 
@@ -2150,6 +2164,7 @@
             document.getElementById('sellerReleaseModal').style.display = 'none';
         }
 
+        // ⚡ FIXED: Instant Seller Release USDT Function ⚡
         async function confirmAndReleaseUsdt() {
             if (!activeTrade) return;
             const { token, email, userId } = getLoggedUserIdentity();
@@ -2170,10 +2185,19 @@
                 if (res.ok && json.success) {
                     activeTrade = json.trade;
                     localStorage.setItem('tbr_active_p2p_order', JSON.stringify(activeTrade));
+                    sessionStorage.removeItem('tbr_dash_active_banner_v2');
                     closeSellerReleaseModal();
                     renderTradeRoomUI();
+                    return;
+                } else {
+                    alert((json && json.message) || 'Could not release USDT. Please try again.');
                 }
-            } catch (e) {}
+            } catch (e) {
+                alert('Connection error while releasing USDT. Please try again.');
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fa-solid fa-unlock-keyhole"></i> Yes, I Have Received — Release USDT`;
         }
 
         async function applyForDispute() {
@@ -2218,6 +2242,7 @@
                     if (res.ok && json.success) {
                         activeTrade = json.trade;
                         localStorage.setItem('tbr_active_p2p_order', JSON.stringify(activeTrade));
+                        sessionStorage.removeItem('tbr_dash_active_banner_v2');
                         renderTradeRoomUI();
                         return;
                     }
