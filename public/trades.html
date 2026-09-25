@@ -1594,13 +1594,28 @@
     </div>
 
     <script>
-        const API_BASE = '';
+        const API_BASE = 'https://tbr-exchange-backend.onrender.com';
+        let activeTrade = null;
         let currentUserId = '';
         let selectedReceiptBase64 = '';
         let countdownInterval = null;
 
+        function getLoggedUserIdentity() {
+            const token = localStorage.getItem('token') || localStorage.getItem('jwtToken') || localStorage.getItem('authToken') || '';
+            let email = localStorage.getItem('userEmail') || localStorage.getItem('email') || '';
+            let userId = localStorage.getItem('userId') || '';
+
+            try {
+                const u = JSON.parse(localStorage.getItem('user') || localStorage.getItem('currentUser') || localStorage.getItem('tbr_user') || '{}');
+                if (!email && u.email) email = u.email;
+                if (!userId && (u._id || u.id || u.userId)) userId = u._id || u.id || u.userId;
+            } catch (e) {}
+
+            return { token, email, userId };
+        }
+
         function getAuthToken() {
-            return localStorage.getItem('token') || localStorage.getItem('jwtToken') || localStorage.getItem('authToken') || '';
+            return getLoggedUserIdentity().token;
         }
 
         function formatEtb(val) {
@@ -1612,18 +1627,14 @@
             const tradeIdParam = urlParams.get('tradeId');
 
             if (tradeIdParam) {
-                // Mode B: Open Single Trade Escrow & Chat Room
                 document.getElementById('myTradesListView').style.display = 'none';
                 document.getElementById('singleTradeRoomView').style.display = 'grid';
 
                 try {
                     const cachedOrder = localStorage.getItem('tbr_active_p2p_order');
                     if (cachedOrder) {
-                        const parsed = JSON.parse(cachedOrder);
-                        if (!parsed._id || String(parsed._id) === String(tradeIdParam)) {
-                            activeTrade = parsed;
-                            renderTradeRoomUI();
-                        }
+                        activeTrade = JSON.parse(cachedOrder);
+                        renderTradeRoomUI();
                     }
                 } catch (e) {}
 
@@ -1631,7 +1642,6 @@
                 setInterval(() => fetchTradeFromServer(tradeIdParam), 3000);
                 startCountdownTimer();
             } else {
-                // Mode A: Open "My Trades" List Table (Screenshot 4543)
                 document.getElementById('singleTradeRoomView').style.display = 'none';
                 document.getElementById('myTradesListView').style.display = 'block';
                 await loadMyTradesList();
@@ -1639,39 +1649,46 @@
             }
         });
 
-        // =========================================================
-        // 🚀 MODE A: "MY TRADES" LIST TABLE FUNCTIONS 🚀
-        // =========================================================
         async function loadMyTradesList() {
-            const token = getAuthToken();
+            const { token, email, userId } = getLoggedUserIdentity();
             const tbody = document.getElementById('myTradesTableBody');
-            if (!token) {
-                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);">Please log in to view your trades.</td></tr>`;
-                return;
-            }
+
+            let localFallbackTrades = [];
+            try {
+                const savedLocal = JSON.parse(localStorage.getItem('tbr_active_p2p_order') || 'null');
+                if (savedLocal) localFallbackTrades = [savedLocal];
+            } catch (e) {}
 
             try {
-                const res = await fetch(`${API_BASE}/api/trades`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                const params = new URLSearchParams();
+                if (email) params.set('email', email);
+                if (userId) params.set('userId', userId);
+
+                const res = await fetch(`${API_BASE}/api/trades?${params.toString()}`, {
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
                 });
+
                 if (res.ok) {
                     const json = await res.json();
                     if (json.success && Array.isArray(json.trades)) {
-                        currentUserId = json.currentUserId || '';
-                        renderMyTradesTable(json.trades);
+                        currentUserId = json.currentUserId || userId || '';
+                        const finalTrades = json.trades.length > 0 ? json.trades : localFallbackTrades;
+                        renderMyTradesTable(finalTrades);
                         return;
                     }
                 }
             } catch (e) {
                 console.error('Error fetching My Trades:', e);
             }
+
+            renderMyTradesTable(localFallbackTrades);
         }
 
         function renderMyTradesTable(trades) {
             const tbody = document.getElementById('myTradesTableBody');
             document.getElementById('mtTotalCountText').innerText = `${trades.length} total trades`;
 
-            if (trades.length === 0) {
+            if (!trades || trades.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:35px; color:var(--text-muted);">No trades found yet. Click "Trade" to start buying or selling USDT.</td></tr>`;
                 return;
             }
@@ -1683,14 +1700,14 @@
                 const roleCls = isBuyer ? 'buy' : 'sell';
                 const roleArrow = isBuyer ? '&#8600;' : '&#8599;';
 
-                const partnerName = isBuyer ? (tr.sellerName || 'Seller') : (tr.buyerName || 'Buyer');
+                const partnerName = isBuyer ? (tr.sellerName || tr.counterpartyName || 'Seller') : (tr.buyerName || tr.counterpartyName || 'Buyer');
                 const partnerAvatar = isBuyer ? tr.sellerAvatar : tr.buyerAvatar;
                 const initials = String(partnerName).slice(0, 2).toUpperCase();
                 const avatarHtml = partnerAvatar ? `<img src="${partnerAvatar}" alt="${partnerName}">` : initials;
 
                 const tradeIdShort = tr.tradeNumber
                     ? `#${String(tr.tradeNumber).padStart(5, '0')}`
-                    : String(tr._id || '').slice(0, 7) + '...';
+                    : String(tr._id || '00001').slice(0, 7);
 
                 const usdtVal = Number(tr.netUsdt || tr.usdtAmount || 0).toFixed(2);
                 const etbVal = Number(tr.etbAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -1705,6 +1722,7 @@
                     : 0;
 
                 const st = tr.status || 'funds_locked';
+                const targetId = tr._id || 'latest';
                 let statusPillHtml = '';
                 let actionLinkHtml = '';
                 let rateSubHtml = `<div class="mt-rate-sub">${dateStr}</div>`;
@@ -1721,17 +1739,17 @@
                     }
 
                     if (userMsgsCount > 0) {
-                        actionLinkHtml = `<a class="mt-action-link reply-green" href="trades.html?tradeId=${tr._id}">Reply &rarr;</a>`;
+                        actionLinkHtml = `<a class="mt-action-link reply-green" href="trades.html?tradeId=${targetId}">Reply &rarr;</a>`;
                     } else {
-                        actionLinkHtml = `<a class="mt-action-link" href="trades.html?tradeId=${tr._id}">View &rarr;</a>`;
+                        actionLinkHtml = `<a class="mt-action-link" href="trades.html?tradeId=${targetId}">View &rarr;</a>`;
                     }
                 } else if (st === 'cancelled') {
                     statusPillHtml = `<span class="mt-status-pill cancelled">Cancelled</span>`;
-                    actionLinkHtml = `<a class="mt-action-link" href="trades.html?tradeId=${tr._id}">View &rarr;</a>`;
+                    actionLinkHtml = `<a class="mt-action-link" href="trades.html?tradeId=${targetId}">View &rarr;</a>`;
                 } else if (st === 'completed') {
                     statusPillHtml = `<span class="mt-status-pill completed"><i class="fa-regular fa-circle-check"></i> Completed</span>`;
                     rateSubHtml = `<div class="mt-rate-sub method-green">${tr.paymentMethod || 'Bank'}</div>`;
-                    actionLinkHtml = `<a class="mt-action-link" href="trades.html?tradeId=${tr._id}"><i class="fa-solid fa-download" style="color:var(--text-muted); margin-right:4px;"></i> Receipt &rarr;</a>`;
+                    actionLinkHtml = `<a class="mt-action-link" href="trades.html?tradeId=${targetId}"><i class="fa-solid fa-download" style="color:var(--text-muted); margin-right:4px;"></i> Receipt &rarr;</a>`;
                 }
 
                 const msgBadgeHtml = (userMsgsCount > 0 && (st === 'funds_locked' || st === 'payment_sent'))
@@ -1739,7 +1757,7 @@
                     : '';
 
                 html += `
-                    <tr class="${rowHighlight}" onclick="window.location.href='trades.html?tradeId=${tr._id}'" style="cursor:pointer;">
+                    <tr class="${rowHighlight}" onclick="window.location.href='trades.html?tradeId=${targetId}'" style="cursor:pointer;">
                         <td class="mt-id-col">${tradeIdShort}</td>
                         <td>
                             <div class="mt-counterparty-cell">
@@ -1770,26 +1788,25 @@
             tbody.innerHTML = html;
         }
 
-        // =========================================================
-        // 🚀 MODE B: SINGLE TRADE ROOM FUNCTIONS 🚀
-        // =========================================================
         async function fetchTradeFromServer(tradeIdParam) {
-            const token = getAuthToken();
-            if (!token) return;
-
+            const { token, email, userId } = getLoggedUserIdentity();
             const urlParams = new URLSearchParams(window.location.search);
             const tradeId = tradeIdParam || urlParams.get('tradeId') || (activeTrade && activeTrade._id);
-            if (!tradeId) return;
+            if (!tradeId || String(tradeId).startsWith('local_')) return;
 
             try {
-                const res = await fetch(`${API_BASE}/api/trades/${tradeId}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                const params = new URLSearchParams();
+                if (email) params.set('email', email);
+                if (userId) params.set('userId', userId);
+
+                const res = await fetch(`${API_BASE}/api/trades/${tradeId}?${params.toString()}`, {
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
                 });
                 if (res.ok) {
                     const json = await res.json();
                     if (json.success && json.trade) {
                         activeTrade = json.trade;
-                        currentUserId = json.currentUserId || '';
+                        currentUserId = json.currentUserId || userId || '';
                         localStorage.setItem('tbr_active_p2p_order', JSON.stringify(activeTrade));
                         renderTradeRoomUI();
                     }
@@ -1801,6 +1818,10 @@
             if (!activeTrade) return true;
             if (currentUserId && activeTrade.buyerId) {
                 return String(activeTrade.buyerId) === String(currentUserId);
+            }
+            const { email } = getLoggedUserIdentity();
+            if (email && activeTrade.buyerEmail) {
+                return String(activeTrade.buyerEmail).toLowerCase() === String(email).toLowerCase();
             }
             return (activeTrade.tradeType || activeTrade.type) === 'buy';
         }
@@ -2091,6 +2112,7 @@
 
         async function submitMarkPaidWithReceipt() {
             if (!activeTrade || !selectedReceiptBase64) return;
+            const { token, email, userId } = getLoggedUserIdentity();
             const btn = document.getElementById('cmConfirmSubmitBtn');
             btn.disabled = true;
             btn.innerText = 'Uploading Receipt...';
@@ -2100,13 +2122,14 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${getAuthToken()}`
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                     },
-                    body: JSON.stringify({ receiptImage: selectedReceiptBase64 })
+                    body: JSON.stringify({ receiptImage: selectedReceiptBase64, email, userId })
                 });
                 const json = await res.json();
                 if (res.ok && json.success) {
                     activeTrade = json.trade;
+                    localStorage.setItem('tbr_active_p2p_order', JSON.stringify(activeTrade));
                     closeConfirmPaymentModal();
                     renderTradeRoomUI();
                 }
@@ -2129,6 +2152,7 @@
 
         async function confirmAndReleaseUsdt() {
             if (!activeTrade) return;
+            const { token, email, userId } = getLoggedUserIdentity();
             const btn = document.getElementById('srFinalReleaseBtn');
             btn.disabled = true;
             btn.innerText = 'Releasing USDT...';
@@ -2136,11 +2160,16 @@
             try {
                 const res = await fetch(`${API_BASE}/api/trades/${activeTrade._id}/release`, {
                     method: 'POST',
-                    headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                    },
+                    body: JSON.stringify({ email, userId })
                 });
                 const json = await res.json();
                 if (res.ok && json.success) {
                     activeTrade = json.trade;
+                    localStorage.setItem('tbr_active_p2p_order', JSON.stringify(activeTrade));
                     closeSellerReleaseModal();
                     renderTradeRoomUI();
                 }
@@ -2149,6 +2178,7 @@
 
         async function applyForDispute() {
             if (!activeTrade) return;
+            const { token, email, userId } = getLoggedUserIdentity();
             const reason = prompt('Describe the issue for Admin Dispute Review:', 'I transferred the ETB and uploaded the receipt, but the seller has not released the USDT.');
             if (!reason) return;
 
@@ -2157,13 +2187,14 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${getAuthToken()}`
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                     },
-                    body: JSON.stringify({ reason })
+                    body: JSON.stringify({ reason, email, userId })
                 });
                 const json = await res.json();
                 if (res.ok && json.success) {
                     activeTrade = json.trade;
+                    localStorage.setItem('tbr_active_p2p_order', JSON.stringify(activeTrade));
                     renderTradeRoomUI();
                     alert('Dispute submitted! Admin now has your full chat history and payment receipt.');
                 }
@@ -2172,19 +2203,29 @@
 
         async function cancelActiveTrade() {
             if (!activeTrade || !confirm('Are you sure you want to cancel this order?')) return;
-            if (activeTrade._id) {
+            const { token, email, userId } = getLoggedUserIdentity();
+            if (activeTrade._id && !String(activeTrade._id).startsWith('local_')) {
                 try {
                     const res = await fetch(`${API_BASE}/api/trades/${activeTrade._id}/cancel`, {
                         method: 'POST',
-                        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                        },
+                        body: JSON.stringify({ email, userId })
                     });
                     const json = await res.json();
                     if (res.ok && json.success) {
                         activeTrade = json.trade;
+                        localStorage.setItem('tbr_active_p2p_order', JSON.stringify(activeTrade));
                         renderTradeRoomUI();
+                        return;
                     }
                 } catch (e) {}
             }
+            activeTrade.status = 'cancelled';
+            localStorage.setItem('tbr_active_p2p_order', JSON.stringify(activeTrade));
+            renderTradeRoomUI();
         }
 
         function renderChatMessages(partnerAvatar, partnerInitials) {
@@ -2205,7 +2246,7 @@
                     ? new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
                     : '';
                 const imgHtml = m.image ? `<img src="${m.image}" onclick="window.open(this.src)" title="Click to view full receipt">` : '';
-                const isMine = currentUserId && String(m.senderId) === String(currentUserId);
+                const isMine = (currentUserId && String(m.senderId) === String(currentUserId)) || m.senderId === 'me';
 
                 if (isMine) {
                     return `
@@ -2237,19 +2278,20 @@
             if (!text || !activeTrade) return;
             input.value = '';
 
+            const { token, email, userId } = getLoggedUserIdentity();
             if (!activeTrade.messages) activeTrade.messages = [];
-            activeTrade.messages.push({ senderId: currentUserId, text, isSystem: false, createdAt: new Date().toISOString() });
+            activeTrade.messages.push({ senderId: currentUserId || 'me', text, isSystem: false, createdAt: new Date().toISOString() });
             renderTradeRoomUI();
 
-            if (activeTrade._id) {
+            if (activeTrade._id && !String(activeTrade._id).startsWith('local_')) {
                 try {
                     const res = await fetch(`${API_BASE}/api/trades/${activeTrade._id}/messages`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${getAuthToken()}`
+                            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                         },
-                        body: JSON.stringify({ text })
+                        body: JSON.stringify({ text, email, userId })
                     });
                     const json = await res.json();
                     if (res.ok && json.trade) {
@@ -2263,17 +2305,18 @@
         function sendImageInChat(event) {
             const file = event.target.files[0];
             if (!file || !activeTrade) return;
+            const { token, email, userId } = getLoggedUserIdentity();
             const reader = new FileReader();
             reader.onload = async () => {
                 const base64Img = reader.result;
-                if (activeTrade._id) {
+                if (activeTrade._id && !String(activeTrade._id).startsWith('local_')) {
                     await fetch(`${API_BASE}/api/trades/${activeTrade._id}/messages`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${getAuthToken()}`
+                            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                         },
-                        body: JSON.stringify({ text: 'Attachment:', image: base64Img })
+                        body: JSON.stringify({ text: 'Attachment:', image: base64Img, email, userId })
                     });
                     await fetchTradeFromServer(activeTrade._id);
                 }

@@ -2169,9 +2169,17 @@
             }
 
             const token = getAuthToken();
-            if (!token) {
+            let email = localStorage.getItem('userEmail') || localStorage.getItem('email') || '';
+            let userId = localStorage.getItem('userId') || '';
+            try {
+                const u = JSON.parse(localStorage.getItem('user') || localStorage.getItem('currentUser') || localStorage.getItem('tbr_user') || '{}');
+                if (!email && u.email) email = u.email;
+                if (!userId && (u._id || u.id || u.userId)) userId = u._id || u.id || u.userId;
+            } catch (e) {}
+
+            if (!token && !email && !userId) {
                 alert('Please log in first to start a P2P trade.');
-                window.location.href = 'login.html';
+                window.location.href = 'signin.html';
                 return;
             }
 
@@ -2191,9 +2199,12 @@
             ) || currentUserSavedPayments[0] || {};
 
             const fallbackOrder = {
+                _id: 'local_' + Date.now(),
                 tradeNumber: '00001',
                 adId: activeModalAd.adId,
                 tradeType: isBuy ? 'buy' : 'sell',
+                buyerName: isBuy ? (currentUserFullName || 'Buyer') : activeModalAd.name,
+                sellerName: isBuy ? activeModalAd.name : (currentUserFullName || 'Seller'),
                 counterpartyName: activeModalAd.name,
                 counterpartyAvatar: activeModalAd.avatarUrl || '',
                 unitPrice: activeModalAd.numericPrice,
@@ -2209,7 +2220,13 @@
                     bankName: activeModalSelectedMethod
                 },
                 status: 'funds_locked',
-                expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+                messages: [{
+                    senderId: 'system',
+                    senderName: 'System',
+                    text: `Welcome! Trading with ${activeModalAd.name}`,
+                    isSystem: true
+                }],
+                expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
                 createdAt: new Date().toISOString()
             };
             localStorage.setItem('tbr_active_p2p_order', JSON.stringify(fallbackOrder));
@@ -2219,14 +2236,16 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                     },
                     body: JSON.stringify({
                         adId: activeModalAd.adId,
                         actionType: isBuy ? 'buy' : 'sell',
                         etbAmount,
                         usdtAmount,
-                        paymentMethod: activeModalSelectedMethod
+                        paymentMethod: activeModalSelectedMethod,
+                        email,
+                        userId
                     })
                 });
                 const json = await res.json();
@@ -2241,7 +2260,7 @@
             }
 
             closeOrderModal();
-            window.location.href = 'trades.html';
+            window.location.href = `trades.html?tradeId=${fallbackOrder._id}`;
         }
     </script>
 </body>
