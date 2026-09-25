@@ -17,6 +17,9 @@
             --red: #f6465d;
             --yellow: #f0b90b;
             --blue: #3b82f6;
+            --orange: #ff8c00;
+            --purple: #a855f7;
+            --cyan: #00d4ff;
         }
         body {
             background-color: var(--bg-color);
@@ -32,6 +35,8 @@
             margin-bottom: 20px;
             border-bottom: 1px solid var(--border-color);
             padding-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
         }
         .header h2 { color: var(--accent-gold); margin: 0; font-size: 20px; display: flex; align-items: center; gap: 10px; }
         .status-badge { font-size: 12px; color: var(--green); background: rgba(14, 203, 129, 0.1); padding: 6px 12px; border-radius: 20px; border: 1px solid rgba(14, 203, 129, 0.2); display: flex; align-items: center; gap: 6px; }
@@ -44,10 +49,65 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px; }
-        .stat-card { background: var(--card-bg); border: 1px solid var(--border-color); padding: 18px; border-radius: 12px; }
-        .stat-card .label { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; }
-        .stat-card .value { font-size: 20px; font-weight: bold; color: var(--text-main); }
+        /* 🚀 6-Card Clean Admin Overview Grid with Icons 🚀 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 25px;
+        }
+        @media (max-width: 992px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 600px) {
+            .stats-grid { grid-template-columns: 1fr; }
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 18px 20px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+        .stat-card:hover {
+            border-color: #33415c;
+            transform: translateY(-2px);
+        }
+        .stat-card .label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .stat-card .value {
+            font-size: 21px;
+            font-weight: 800;
+            color: var(--text-main);
+            line-height: 1.25;
+        }
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+        .icon-green { background: rgba(14, 203, 129, 0.12); color: var(--green); border: 1px solid rgba(14, 203, 129, 0.25); }
+        .icon-yellow { background: rgba(240, 185, 11, 0.12); color: var(--yellow); border: 1px solid rgba(240, 185, 11, 0.25); }
+        .icon-orange { background: rgba(255, 140, 0, 0.12); color: var(--orange); border: 1px solid rgba(255, 140, 0, 0.25); }
+        .icon-gold { background: rgba(212, 175, 55, 0.12); color: var(--accent-gold); border: 1px solid rgba(212, 175, 55, 0.25); }
+        .icon-cyan { background: rgba(0, 212, 255, 0.12); color: var(--cyan); border: 1px solid rgba(0, 212, 255, 0.25); }
+        .icon-blue { background: rgba(59, 130, 246, 0.12); color: var(--blue); border: 1px solid rgba(59, 130, 246, 0.25); }
 
         .section-title { font-size: 15px; color: var(--accent-gold); margin-bottom: 15px; display: flex; align-items: center; gap: 8px; font-weight: 600; }
         
@@ -112,23 +172,73 @@
         <!-- TAB 1: OVERVIEW -->
         <div id="tab-overview" class="tab-content active">
             <div class="stats-grid">
+                <!-- 1. TOTAL USERS -->
                 <div class="stat-card">
-                    <div class="label">Pending KYC</div>
-                    <div class="value" id="statKycCount" style="color: var(--yellow);">0</div>
+                    <div>
+                        <div class="label">Total Users</div>
+                        <div class="value" id="statUserCount" style="color: var(--green);">0</div>
+                    </div>
+                    <div class="stat-icon icon-green">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
                 </div>
+
+                <!-- 2. PENDING KYC -->
                 <div class="stat-card">
-                    <div class="label">Today's Volume</div>
-                    <div class="value" id="statVolume" style="color: var(--blue);">0 USDT</div>
+                    <div>
+                        <div class="label">Pending KYC</div>
+                        <div class="value" id="statKycCount" style="color: var(--yellow);">0</div>
+                    </div>
+                    <div class="stat-icon icon-yellow">
+                        <i class="fa-solid fa-id-card-clip"></i>
+                    </div>
                 </div>
+
+                <!-- 3. ON PENDING -->
                 <div class="stat-card">
-                    <div class="label">Active Escrow</div>
-                    <div class="value" id="statEscrow" style="color: var(--accent-gold);">0 USDT</div>
+                    <div>
+                        <div class="label">On Pending</div>
+                        <div class="value" id="statPendingCount" style="color: var(--orange);">0</div>
+                    </div>
+                    <div class="stat-icon icon-orange">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                    </div>
                 </div>
+
+                <!-- 4. ACTIVE ESCROW -->
                 <div class="stat-card">
-                    <div class="label">Registered Users</div>
-                    <div class="value" id="statUserCount" style="color: var(--green);">0</div>
+                    <div>
+                        <div class="label">Active Escrow</div>
+                        <div class="value" id="statEscrow" style="color: var(--accent-gold);">0 USDT</div>
+                    </div>
+                    <div class="stat-icon icon-gold">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+                </div>
+
+                <!-- 5. TOTAL VOLUME -->
+                <div class="stat-card">
+                    <div>
+                        <div class="label">Total Volume</div>
+                        <div class="value" id="statTotalVolume" style="color: var(--cyan);">0 USDT / 0 ETB</div>
+                    </div>
+                    <div class="stat-icon icon-cyan">
+                        <i class="fa-solid fa-chart-pie"></i>
+                    </div>
+                </div>
+
+                <!-- 6. TODAY'S VOLUME -->
+                <div class="stat-card">
+                    <div>
+                        <div class="label">Today's Volume</div>
+                        <div class="value" id="statVolume" style="color: var(--blue);">0 USDT / 0 ETB</div>
+                    </div>
+                    <div class="stat-icon icon-blue">
+                        <i class="fa-solid fa-chart-line"></i>
+                    </div>
                 </div>
             </div>
+
             <div class="section-title"><i class="fa-solid fa-circle-info"></i> System Operational Summary</div>
             <p style="color: var(--text-muted); font-size: 14px;">Welcome to your Master Admin Panel. Use the top navigation tabs to manage user KYC verifications, adjust exchange rates, oversee P2P escrow disputes, and manage user accounts.</p>
         </div>
@@ -225,13 +335,10 @@
                 document.getElementById('loginOverlay').style.display = 'none';
                 document.getElementById('mainDashboard').style.display = 'block';
                 
-                // ቀላል ዳታዎችን መጀመሪያ እናምጣ
                 fetchStats();
-                loadCurrentRates(); // <--- አዲሱ የተጨመረው ኮድ
+                loadCurrentRates();
                 fetchEscrowDisputes();
                 fetchUsersList();
-                
-                // ከባድ የሆነውን የ KYC ዳታ መጨረሻ ላይ እናምጣ
                 loadKycData('pending');
             }
         });
@@ -254,7 +361,7 @@
                     document.getElementById('mainDashboard').style.display = 'block';
                     
                     fetchStats();
-                    loadCurrentRates(); // <--- አዲሱ የተጨመረው ኮድ
+                    loadCurrentRates();
                     fetchEscrowDisputes();
                     fetchUsersList();
                     loadKycData('pending');
@@ -282,11 +389,13 @@
             try {
                 const res = await fetch(`${API_BASE}/api/admin/stats`, { headers: { 'Authorization': 'Bearer ' + getToken() } });
                 const json = await res.json();
-                if (res.ok && json.success) {
-                    document.getElementById('statUserCount').innerText = json.data.totalUsers;
-                    document.getElementById('statKycCount').innerText = json.data.kycPending;
-                    document.getElementById('statVolume').innerText = json.data.todayVolume;
-                    document.getElementById('statEscrow').innerText = json.data.activeEscrow;
+                if (res.ok && json.success && json.data) {
+                    document.getElementById('statUserCount').innerText = json.data.totalUsers ?? 0;
+                    document.getElementById('statKycCount').innerText = json.data.kycPending ?? 0;
+                    document.getElementById('statPendingCount').innerText = json.data.onPending ?? 0;
+                    document.getElementById('statEscrow').innerText = json.data.activeEscrow || '0 USDT';
+                    document.getElementById('statTotalVolume').innerText = json.data.totalVolume || '0 USDT / 0 ETB';
+                    document.getElementById('statVolume').innerText = json.data.todayVolume || '0 USDT / 0 ETB';
                 }
             } catch (err) { console.error('Error loading stats:', err); }
         }
@@ -563,7 +672,6 @@
             }
         }
 
-        // --- አዲሱ የተጨመረው የ ሬት ማምጫ ፋንክሽን ---
         async function loadCurrentRates() {
             try {
                 const res = await fetch(`${API_BASE}/api/settings`);
