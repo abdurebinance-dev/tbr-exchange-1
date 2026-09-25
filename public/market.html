@@ -795,7 +795,7 @@
             gap: 6px;
         }
 
-        /* 🚀 Fee Breakdown Summary Box (With Wider Gap & Dimmer/Thinner Fee Text) 🚀 */
+        /* Fee Breakdown Summary Box */
         .tm-fee-summary-box {
             margin-top: 14px;
             padding-top: 14px;
@@ -1467,6 +1467,9 @@
                         sessionStorage.setItem(ADS_CACHE_KEY, cachePayload);
                         localStorage.setItem(ADS_CACHE_KEY, cachePayload);
                     } catch (storageErr) {}
+                } else {
+                    hasLoadedAdsOnce = true;
+                    renderOrderBook();
                 }
             } catch (err) {
                 console.error("Error fetching live ads:", err);
@@ -1862,7 +1865,7 @@
         }
 
         // ==========================================
-        // 🚀 BUY / SELL MODAL, VALIDATION & ADMIN FEE BREAKDOWN 🚀
+        // BUY / SELL MODAL, VALIDATION & ADMIN FEE BREAKDOWN
         // ==========================================
 
         function formatMoney2(num) {
@@ -1932,14 +1935,12 @@
             usdtBox.className = isBuy ? 'tm-input-box buy-focus' : 'tm-input-box sell-focus';
 
             if (isBuy) {
-                // Buy USDT ላይ የ USDT ሳጥኑ እንዲደበቅ ተደርጓል
                 usdtFieldGroup.style.display = 'none';
 
                 document.getElementById('tmEtbFieldLabel').innerText = 'You pay (ETB)';
                 document.getElementById('tmEtbRightHint').innerText = `Limit ${minFormatted} - ${maxFormatted} ETB`;
                 document.getElementById('tmEtbInput').placeholder = `${minFormatted} – ${maxFormatted}`;
             } else {
-                // Sell USDT ላይ የ USDT ሳጥኑ ይታያል
                 usdtFieldGroup.style.display = 'block';
 
                 const effectiveMaxEtb = currentUserBalance > 0
@@ -2238,34 +2239,6 @@
             } catch (e) {
                 console.error('Trade API fallback:', e);
             }
-
-            closeOrderModal();
-            window.location.href = 'trades.html';
-        }
-
-            const isBuy = currentType === 'buy';
-            const etbAmount = parseFloat(document.getElementById('tmEtbInput').value);
-            const usdtAmount = parseFloat(document.getElementById('tmUsdtInput').value);
-            const feePercent = Number(systemSettings.platformFee || 0.5);
-            const feeUsdt = usdtAmount * (feePercent / 100);
-            const netUsdt = Math.max(0, usdtAmount - feeUsdt);
-
-            try {
-                const pendingTradeOrder = {
-                    adId: activeModalAd.adId,
-                    type: isBuy ? 'buy' : 'sell',
-                    traderName: activeModalAd.name,
-                    unitPrice: activeModalAd.numericPrice,
-                    etbAmount: etbAmount.toFixed(2),
-                    usdtAmount: usdtAmount.toFixed(4),
-                    platformFeePercent: feePercent,
-                    feeUsdt: feeUsdt.toFixed(6),
-                    netUsdt: netUsdt.toFixed(6),
-                    paymentMethod: activeModalSelectedMethod,
-                    createdAt: new Date().toISOString()
-                };
-                localStorage.setItem('tbr_active_p2p_order', JSON.stringify(pendingTradeOrder));
-            } catch (e) {}
 
             closeOrderModal();
             window.location.href = 'trades.html';
