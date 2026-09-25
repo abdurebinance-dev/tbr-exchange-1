@@ -505,7 +505,7 @@
             opacity: 0.92;
         }
 
-        /* 🚀 New P2P Buy/Sell Order Modal (Exact Match to Screenshots) 🚀 */
+        /* P2P Buy/Sell Order Modal */
         .modal-overlay {
             position: fixed;
             inset: 0;
@@ -590,7 +590,7 @@
             overflow-y: auto;
             flex: 1;
         }
-        .tm-Scroll-body::-webkit-scrollbar { width: 5px; }
+        .tm-scroll-body::-webkit-scrollbar { width: 5px; }
         .tm-scroll-body::-webkit-scrollbar-thumb { background: #262b36; border-radius: 4px; }
 
         .tm-trader-row {
@@ -747,6 +747,11 @@
         .tm-input-box.sell-focus:focus-within {
             border-color: #f6465d;
         }
+        /* 🚀 ከገደብ በታች ወይም በላይ ሲገባ ቀይ ቦርደር 🚀 */
+        .tm-input-box.input-error {
+            border-color: #f6465d !important;
+            background: rgba(246, 70, 93, 0.04);
+        }
         .tm-input-box input {
             width: 100%;
             background: transparent;
@@ -783,9 +788,12 @@
         }
         .tm-error-msg {
             color: #f6465d;
-            font-size: 11px;
-            margin-top: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 8px;
             display: none;
+            align-items: center;
+            gap: 6px;
         }
 
         .tm-footer {
@@ -801,23 +809,35 @@
             font-size: 14px;
             font-weight: 700;
             cursor: pointer;
-            transition: opacity 0.2s;
+            transition: all 0.2s ease;
         }
         .tm-submit-btn.buy-btn {
-            background: #09794c;
-            color: #ffffff;
-        }
-        .tm-submit-btn.buy-btn:hover {
             background: #0ecb81;
             color: #000000;
         }
-        .tm-submit-btn.sell-btn {
-            background: #7a1227;
-            color: #ffffff;
+        .tm-submit-btn.buy-btn:hover:not(:disabled) {
+            opacity: 0.92;
         }
-        .tm-submit-btn.sell-btn:hover {
+        .tm-submit-btn.sell-btn {
             background: #f6465d;
             color: #ffffff;
+        }
+        .tm-submit-btn.sell-btn:hover:not(:disabled) {
+            opacity: 0.92;
+        }
+        /* 🚀 ትክክለኛ መጠን እስኪገባ ድረስ Confirm በተኑ እንዳይነካ መቆለፊያ 🚀 */
+        .tm-submit-btn:disabled {
+            opacity: 0.35 !important;
+            cursor: not-allowed !important;
+            pointer-events: none;
+        }
+        .tm-submit-btn.buy-btn:disabled {
+            background: #09794c;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        .tm-submit-btn.sell-btn:disabled {
+            background: #7a1227;
+            color: rgba(255, 255, 255, 0.7);
         }
 
         /* Mobile Edge-to-Edge Zero-Gap Card Layout */
@@ -1137,7 +1157,7 @@
         </div>
     </div>
 
-    <!-- 🚀 P2P Buy / Sell Order Action Modal 🚀 -->
+    <!-- P2P Buy / Sell Order Action Modal -->
     <div class="modal-overlay" id="orderModal" onclick="if(event.target === this) closeOrderModal()">
         <div class="trade-modal-card">
             <!-- Top Header Section -->
@@ -1220,7 +1240,7 @@
 
             <!-- Bottom Confirm Button -->
             <div class="tm-footer">
-                <button type="button" id="tmConfirmOrderBtn" class="tm-submit-btn buy-btn" onclick="confirmTrade()">Confirm Buy</button>
+                <button type="button" id="tmConfirmOrderBtn" class="tm-submit-btn buy-btn" disabled onclick="confirmTrade()">Confirm Buy</button>
             </div>
         </div>
     </div>
@@ -1264,7 +1284,6 @@
             }).catch(() => {});
         }
 
-        // Fetch logged-in user's balance & saved payment methods for Sell Modal
         async function fetchCurrentUserWalletAndPayments() {
             const token = getAuthToken();
             if (!token) return;
@@ -1753,7 +1772,7 @@
         }
 
         // ==========================================
-        // 🚀 BUY USDT / SELL USDT MODAL LOGIC 🚀
+        // 🚀 BUY USDT / SELL USDT MODAL & REAL-TIME VALIDATION 🚀
         // ==========================================
 
         function formatMoney2(num) {
@@ -1776,7 +1795,7 @@
             priceEl.innerText = priceDisplay;
             priceEl.className = isBuy ? 'tm-price-big buy-color' : 'tm-price-big sell-color';
 
-            // 2. Sub-limits line (Buy shows Available Ad USDT; Sell shows User's Available USDT Balance)
+            // 2. Sub-limits line
             const subLimitsEl = document.getElementById('tmSubLimits');
             if (isBuy) {
                 subLimitsEl.innerHTML = `
@@ -1845,17 +1864,18 @@
             document.getElementById('tmUsdtInput').value = '';
             document.getElementById('tmOrderErrorMsg').style.display = 'none';
 
-            // 6. Confirm Button Styling
+            // 6. Confirm Button Styling (Starts Disabled until valid amount is entered)
             const confirmBtn = document.getElementById('tmConfirmOrderBtn');
             confirmBtn.innerText = isBuy ? 'Confirm Buy' : 'Confirm Sell';
             confirmBtn.className = isBuy ? 'tm-submit-btn buy-btn' : 'tm-submit-btn sell-btn';
+            confirmBtn.disabled = true;
 
             document.getElementById('orderModal').style.display = 'flex';
 
-            // Refresh user balance & saved accounts in background just in case
             fetchCurrentUserWalletAndPayments().then(() => {
                 if (!isBuy && document.getElementById('orderModal').style.display === 'flex') {
                     updateSellerAccountPreviewBox();
+                    validateModalOrderInputs();
                 }
             });
         }
@@ -1896,7 +1916,6 @@
             box.style.display = 'block';
             const target = (activeModalSelectedMethod || '').toLowerCase().trim();
 
-            // Find matching payment method from user's saved payment methods
             const matched = currentUserSavedPayments.find(pm =>
                 String(pm.type || '').toLowerCase().trim() === target
             ) || currentUserSavedPayments[0];
@@ -1916,30 +1935,90 @@
             }
         }
 
+        // 🚀 Real-time Limit & Balance Validation Function 🚀
+        function validateModalOrderInputs() {
+            const confirmBtn = document.getElementById('tmConfirmOrderBtn');
+            const errEl = document.getElementById('tmOrderErrorMsg');
+            const etbBox = document.getElementById('tmEtbInputBox');
+            const usdtBox = document.getElementById('tmUsdtInputBox');
+
+            if (!activeModalAd) {
+                confirmBtn.disabled = true;
+                return false;
+            }
+
+            const etbRaw = document.getElementById('tmEtbInput').value.trim();
+            const usdtRaw = document.getElementById('tmUsdtInput').value.trim();
+
+            // ገና ምንም ቁጥር ካልተጻፈ ስህተት ሳያሳይ በተኑን ብቻ ይቆልፋል
+            if (etbRaw === '' && usdtRaw === '') {
+                errEl.style.display = 'none';
+                etbBox.classList.remove('input-error');
+                usdtBox.classList.remove('input-error');
+                confirmBtn.disabled = true;
+                return false;
+            }
+
+            const etbAmount = parseFloat(etbRaw);
+            const usdtAmount = parseFloat(usdtRaw);
+            const isBuy = currentType === 'buy';
+
+            let errorMessage = '';
+
+            if (isNaN(etbAmount) || etbAmount <= 0 || isNaN(usdtAmount) || usdtAmount <= 0) {
+                errorMessage = 'Please enter a valid amount greater than 0.';
+            } else if (etbAmount + 0.001 < activeModalAd.numericMin) {
+                errorMessage = `Minimum order limit is ${formatMoney2(activeModalAd.numericMin)} ETB.`;
+            } else if (etbAmount - 0.001 > activeModalAd.numericMax) {
+                errorMessage = `Maximum order limit is ${formatMoney2(activeModalAd.numericMax)} ETB.`;
+            } else if (usdtAmount - 0.0001 > activeModalAd.numericAvail) {
+                const maxAvailEtb = activeModalAd.numericAvail * activeModalAd.numericPrice;
+                errorMessage = `Exceeds available USDT (${formatMoney2(activeModalAd.numericAvail)} USDT / ${formatMoney2(maxAvailEtb)} ETB).`;
+            } else if (!isBuy && usdtAmount - 0.0001 > currentUserBalance) {
+                errorMessage = `Insufficient balance. Your available balance is ${formatMoney2(currentUserBalance)} USDT.`;
+            }
+
+            if (errorMessage) {
+                errEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> <span>${errorMessage}</span>`;
+                errEl.style.display = 'flex';
+                etbBox.classList.add('input-error');
+                usdtBox.classList.add('input-error');
+                confirmBtn.disabled = true;
+                return false;
+            }
+
+            // ሁሉም ነገር ትክክል ሲሆን ስህተቱን ደብቆ በተኑን ይከፍታል
+            errEl.style.display = 'none';
+            etbBox.classList.remove('input-error');
+            usdtBox.classList.remove('input-error');
+            confirmBtn.disabled = false;
+            return true;
+        }
+
         function onModalEtbInput(val) {
             if (!activeModalAd) return;
-            document.getElementById('tmOrderErrorMsg').style.display = 'none';
             const etbNum = parseFloat(val);
             const usdtInput = document.getElementById('tmUsdtInput');
             if (isNaN(etbNum) || etbNum <= 0) {
                 usdtInput.value = '';
-                return;
+            } else {
+                const usdtVal = etbNum / activeModalAd.numericPrice;
+                usdtInput.value = usdtVal.toFixed(2);
             }
-            const usdtVal = etbNum / activeModalAd.numericPrice;
-            usdtInput.value = usdtVal.toFixed(2);
+            validateModalOrderInputs();
         }
 
         function onModalUsdtInput(val) {
             if (!activeModalAd) return;
-            document.getElementById('tmOrderErrorMsg').style.display = 'none';
             const usdtNum = parseFloat(val);
             const etbInput = document.getElementById('tmEtbInput');
             if (isNaN(usdtNum) || usdtNum <= 0) {
                 etbInput.value = '';
-                return;
+            } else {
+                const etbVal = usdtNum * activeModalAd.numericPrice;
+                etbInput.value = etbVal.toFixed(2);
             }
-            const etbVal = usdtNum * activeModalAd.numericPrice;
-            etbInput.value = etbVal.toFixed(2);
+            validateModalOrderInputs();
         }
 
         function fillMaxModalOrder() {
@@ -1962,43 +2041,14 @@
         }
 
         function confirmTrade() {
-            if (!activeModalAd) return;
+            if (!validateModalOrderInputs()) {
+                return;
+            }
+
             const isBuy = currentType === 'buy';
             const etbAmount = parseFloat(document.getElementById('tmEtbInput').value);
             const usdtAmount = parseFloat(document.getElementById('tmUsdtInput').value);
-            const errEl = document.getElementById('tmOrderErrorMsg');
 
-            if (isNaN(etbAmount) || etbAmount <= 0 || isNaN(usdtAmount) || usdtAmount <= 0) {
-                errEl.innerText = 'Please enter a valid amount to proceed.';
-                errEl.style.display = 'block';
-                return;
-            }
-
-            if (etbAmount < activeModalAd.numericMin) {
-                errEl.innerText = `Minimum order limit is ${formatMoney2(activeModalAd.numericMin)} ETB.`;
-                errEl.style.display = 'block';
-                return;
-            }
-
-            if (etbAmount > activeModalAd.numericMax) {
-                errEl.innerText = `Maximum order limit is ${formatMoney2(activeModalAd.numericMax)} ETB.`;
-                errEl.style.display = 'block';
-                return;
-            }
-
-            if (usdtAmount > activeModalAd.numericAvail) {
-                errEl.innerText = `Advertiser only has ${formatMoney2(activeModalAd.numericAvail)} USDT available.`;
-                errEl.style.display = 'block';
-                return;
-            }
-
-            if (!isBuy && currentUserBalance > 0 && usdtAmount > currentUserBalance) {
-                errEl.innerText = `Insufficient balance. Your available balance is ${formatMoney2(currentUserBalance)} USDT.`;
-                errEl.style.display = 'block';
-                return;
-            }
-
-            // Save active P2P order details for trades.html escrow room
             try {
                 const pendingTradeOrder = {
                     adId: activeModalAd.adId,
