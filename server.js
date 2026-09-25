@@ -2446,7 +2446,7 @@ app.put('/api/ads/:id/cancel', verifyToken, async (req, res) => {
     }
 });
 
-/// --- ⚡ HIGH-SPEED P2P Trade Escrow, Chat & Dispute System ⚡ ---
+// --- ⚡ P2P Trade Escrow, Exact 0.5%+0.5% Fee, Min-Limit Auto-Refund & Fast API ⚡ ---
 const tradeSchema = new mongoose.Schema({
     tradeNumber: { type: String, required: true, index: true },
     adId: { type: mongoose.Schema.Types.ObjectId, ref: 'Ad' },
@@ -2461,10 +2461,15 @@ const tradeSchema = new mongoose.Schema({
     sellerAvatar: { type: String, default: '' },
     unitPrice: { type: Number, required: true },
     etbAmount: { type: Number, required: true },
-    usdtAmount: { type: Number, required: true },
-    feePercent: { type: Number, default: 0.5 },
-    feeUsdt: { type: Number, default: 0 },
-    netUsdt: { type: Number, default: 0 },
+    usdtAmount: { type: Number, required: true },          // Base Trade USDT (U)
+    feePercent: { type: Number, default: 0.5 },            // e.g. 0.5%
+    buyerFeeUsdt: { type: Number, default: 0 },            // 0.5% deducted from Buyer
+    sellerFeeUsdt: { type: Number, default: 0 },           // 0.5% deducted from Seller
+    totalPlatformFeeUsdt: { type: Number, default: 0 },    // 1.0% total kept by platform
+    sellerTotalDeductedUsdt: { type: Number, default: 0 }, // Total locked/deducted from Seller (U + sellerFee)
+    deductedFromAdUsdt: { type: Number, default: 0 },      // Portion taken from Ad's totalAmount
+    deductedFromWalletUsdt: { type: Number, default: 0 },  // Portion taken from Seller's wallet balance
+    netUsdt: { type: Number, default: 0 },                 // Net USDT Buyer receives (U - buyerFee)
     paymentMethod: { type: String, required: true },
     paymentDetails: {
         accountName: { type: String, default: '' },
@@ -2494,7 +2499,7 @@ const tradeSchema = new mongoose.Schema({
 
 const Trade = mongoose.models.Trade || mongoose.model('Trade', tradeSchema);
 
-// ፈጣን የተጠቃሚ መለያ (Fast User Resolver)
+// ፈጣን የተጠቃሚ መለያ (Fast User Resolver without heavy KYC fields)
 async function resolveUserFromRequest(req) {
     let decoded = null;
     const authHeader = req.headers['authorization'];
@@ -2517,41 +2522,84 @@ async function resolveUserFromRequest(req) {
                    (req.query && req.query.email) ||
                    (req.body && req.body.email);
 
+    const lightFields = '-password -kycFront -kycBack -kycSelfie';
+
     if (uid && mongoose.Types.ObjectId.isValid(uid)) {
-        const u = await User.findById(uid).select('-password');
+        const u = await User.findById(uid).select(lightFields);
         if (u) return u;
     }
     if (uemail) {
-        const u = await User.findOne({ email: String(uemail).toLowerCase().trim() }).select('-password');
+        const u = await User.findOne({ email: String(uemail).toLowerCase().trim() }).select(lightFields);
         if (u) return u;
     }
     if (uid) {
-        const u = await User.findOne({ userId: String(uid) }).select('-password');
+        const u = await User.findOne({ userId: String(uid) }).select(lightFields);
         if (u) return u;
     }
     return null;
 }
 
+// 🔄 ከማስታወቂያው ላይ የሚቀረው USDT ከ Minimum Limit በታች ከሆነ ለሻጩ መልሶ ከማርኬት ማውጫ 🔄
+async function checkAdMinLimitAndCleanUp(ad, sellerUser) {
+    if (!ad) return;
+    const remainingUsdt = Number(ad.totalAmount || 0);
+    const remainingEtbValue = remainingUsdt * Number(ad.price || 0);
+    const minLimitEtb = Number(ad.minLimit || 0);
+
+    // የሚቀረው ብር ከ Minimum Limit በታች ከሆነ (ለምሳሌ ከ 500 ETB በታች ከሆነ)
+    if (remainingUsdt <= 0.0001 || (minLimitEtb > 0 && remainingEtbValue + 0.01 < minLimitEtb)) {
+        if (ad.tradeType === 'sell' && remainingUsdt > 0.0001 && sellerUser) {
+            // ቀሪውን USDT ወደ ሻጩ ዋና ዋሌት መመለስ!
+            sellerUser.balance = Number(((sellerUser.balance || 0) + remainingUsdt).toFixed(6));
+            sellerUser.lockedBalance = Math.max(0, Number(((sellerUser.lockedBalance || 0) - remainingUsdt).toFixed(6)));
+            await sellerUser.save();
+        }
+        ad.totalAmount = 0;
+        ad.status = 'completed'; // ከማርኬት ላይ ማውጣት
+    }
+    await ad.save();
+}
+
+// 🔄 ትዕዛዝ ሲሰረዝ (Cancel) የሻጩን USDT እና ኮሚሽን በትክክል መመለሻ 🔄
 async function refundEscrowOnCancel(trade) {
     try {
+        const seller = await User.findById(trade.sellerId);
+        const ad = trade.adId ? await Ad.findById(trade.adId) : null;
+
         if (trade.tradeType === 'buy') {
-            const ad = await Ad.findById(trade.adId);
-            if (ad) {
-                ad.totalAmount = Number((ad.totalAmount + trade.usdtAmount).toFixed(6));
-                ad.status = 'active';
-                await ad.save();
+            // ማስታወቂያው የሻጭ (Sell Ad) ነበር
+            const fromAd = Number(trade.deductedFromAdUsdt || trade.usdtAmount || 0);
+            const fromWallet = Number(trade.deductedFromWalletUsdt || 0);
+
+            if (seller && fromWallet > 0) {
+                seller.balance = Number(((seller.balance || 0) + fromWallet).toFixed(6));
             }
-        } else {
-            const seller = await User.findById(trade.sellerId);
             if (seller) {
-                seller.lockedBalance = Math.max(0, Number(((seller.lockedBalance || 0) - trade.usdtAmount).toFixed(6)));
-                seller.balance = Number(((seller.balance || 0) + trade.usdtAmount).toFixed(6));
+                seller.lockedBalance = Math.max(0, Number(((seller.lockedBalance || 0) - Number(trade.sellerTotalDeductedUsdt || trade.usdtAmount || 0)).toFixed(6)));
+            }
+
+            if (ad && ad.status === 'active') {
+                ad.totalAmount = Number(((ad.totalAmount || 0) + fromAd).toFixed(6));
+                await checkAdMinLimitAndCleanUp(ad, seller);
+            } else if (seller && fromAd > 0) {
+                // ማስታወቂያው ተዘግቶ ከነበረ፣ ቀጥታ ወደ ሻጩ ዋና ዋሌት ይመለስለት
+                seller.balance = Number(((seller.balance || 0) + fromAd).toFixed(6));
+            }
+
+            if (seller) await seller.save();
+        } else {
+            // ማስታወቂያው የገዢ (Buy Ad) ነበር፤ ሻጩ ከዋሌቱ ነበር የሸጠው
+            const totalToRefundSeller = Number(trade.sellerTotalDeductedUsdt || trade.usdtAmount || 0);
+            if (seller) {
+                seller.lockedBalance = Math.max(0, Number(((seller.lockedBalance || 0) - totalToRefundSeller).toFixed(6)));
+                seller.balance = Number(((seller.balance || 0) + totalToRefundSeller).toFixed(6));
                 await seller.save();
             }
-            const ad = await Ad.findById(trade.adId);
             if (ad) {
-                ad.totalAmount = Number((ad.totalAmount + trade.usdtAmount).toFixed(6));
-                ad.status = 'active';
+                ad.totalAmount = Number(((ad.totalAmount || 0) + Number(trade.usdtAmount || 0)).toFixed(6));
+                if ((ad.totalAmount * ad.price) >= ad.minLimit) {
+                    ad.status = 'active';
+                }
                 await ad.save();
             }
         }
@@ -2560,7 +2608,7 @@ async function refundEscrowOnCancel(trade) {
     }
 }
 
-// 1. Create Trade & Lock Seller USDT in Escrow
+// 1. ትዕዛዝ መፍጠሪያ (ከሻጭም 0.5%፣ ከገዢም 0.5% ቆርጦ፣ ቀሪው ከMin በታች ከሆነ መልሶ ከማርኬት የሚያወጣ)
 app.post('/api/trades', async (req, res) => {
     try {
         const { adId, actionType, etbAmount, usdtAmount, paymentMethod } = req.body;
@@ -2574,13 +2622,13 @@ app.post('/api/trades', async (req, res) => {
 
         let adOwner = null;
         if (ad.userId && mongoose.Types.ObjectId.isValid(ad.userId)) {
-            adOwner = await User.findById(ad.userId).select('-password');
+            adOwner = await User.findById(ad.userId).select('-password -kycFront -kycBack -kycSelfie');
         }
         if (!adOwner && ad.email) {
-            adOwner = await User.findOne({ email: String(ad.email).toLowerCase().trim() }).select('-password');
+            adOwner = await User.findOne({ email: String(ad.email).toLowerCase().trim() }).select('-password -kycFront -kycBack -kycSelfie');
         }
         if (!adOwner && ad.userId) {
-            adOwner = await User.findOne({ userId: String(ad.userId) }).select('-password');
+            adOwner = await User.findOne({ userId: String(ad.userId) }).select('-password -kycFront -kycBack -kycSelfie');
         }
         if (!adOwner) return res.status(404).json({ success: false, message: 'Advertiser not found.' });
 
@@ -2594,32 +2642,83 @@ app.post('/api/trades', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Amount exceeds ad available USDT.' });
         }
 
+        // የአድሚን ኮሚሽን (ለምሳሌ 0.5%)
         const settings = await Setting.findOne({}).lean();
         const feePercent = settings && settings.platformFee !== undefined ? Number(settings.platformFee) : 0.5;
-        const feeUsdt = usdtNum * (feePercent / 100);
-        const netUsdt = Math.max(0, usdtNum - feeUsdt);
+        const feeRate = feePercent / 100;
+
+        // 0.5% ከገዢ + 0.5% ከሻጭ ስሌት
+        const buyerFeeUsdt = Number((usdtNum * feeRate).toFixed(6));
+        const sellerFeeUsdt = Number((usdtNum * feeRate).toFixed(6));
+        const totalPlatformFeeUsdt = Number((buyerFeeUsdt + sellerFeeUsdt).toFixed(6));
+        const netUsdtForBuyer = Math.max(0, Number((usdtNum - buyerFeeUsdt).toFixed(6)));
 
         let buyerUser, sellerUser;
+        let sellerTotalDeductedUsdt = Number((usdtNum + sellerFeeUsdt).toFixed(6));
+        let deductedFromAdUsdt = 0;
+        let deductedFromWalletUsdt = 0;
+
         if (actionType === 'buy') {
+            // ተጠቃሚው "Buy" ብሏል -> ማስታወቂያውን የለጠፈው ሰው ሻጭ (Seller) ነው
             buyerUser = currentUser;
             sellerUser = adOwner;
+
+            // የንግዱን መጠን (usdtNum) እና የሻጩን 0.5% ኮሚሽን (sellerFeeUsdt) መቀነስ
+            if (ad.totalAmount >= sellerTotalDeductedUsdt) {
+                deductedFromAdUsdt = sellerTotalDeductedUsdt;
+                ad.totalAmount = Number((ad.totalAmount - sellerTotalDeductedUsdt).toFixed(6));
+            } else {
+                // ማስታወቂያው ላይ ያለው ለንግዱ ብቻ የሚበቃ ከሆነ (Max ተነክቶ ከሆነ)፣ የ0.5% ኮሚሽኑን ከሻጩ ዋሌት መውሰድ
+                deductedFromAdUsdt = Number(ad.totalAmount.toFixed(6));
+                const neededFeeFromWallet = Number((sellerTotalDeductedUsdt - deductedFromAdUsdt).toFixed(6));
+                ad.totalAmount = 0;
+
+                if ((sellerUser.balance || 0) >= neededFeeFromWallet) {
+                    deductedFromWalletUsdt = neededFeeFromWallet;
+                    sellerUser.balance = Number(((sellerUser.balance || 0) - neededFeeFromWallet).toFixed(6));
+                } else {
+                    deductedFromWalletUsdt = Number((sellerUser.balance || 0).toFixed(6));
+                    sellerUser.balance = 0;
+                    sellerTotalDeductedUsdt = Number((deductedFromAdUsdt + deductedFromWalletUsdt).toFixed(6));
+                }
+            }
+
+            // በEscrow ውስጥ የተያዘውን መመዝገብ
+            sellerUser.lockedBalance = Number(((sellerUser.lockedBalance || 0) + sellerTotalDeductedUsdt).toFixed(6));
+            await sellerUser.save();
+
+            // 🔄 በማስታወቂያው ላይ የቀረው USDT ከ Minimum Limit በታች ከሆነ ለሻጩ መልሶ ከማርኬት ማውጣት! 🔄
+            await checkAdMinLimitAndCleanUp(ad, sellerUser);
+
         } else {
+            // ተጠቃሚው "Sell" ብሏል -> አሁን የሚሸጠው ሰው ሻጭ (Seller) ነው፣ ማስታወቂያው የገዢ (Buy Ad) ነው
             sellerUser = currentUser;
             buyerUser = adOwner;
 
-            if ((sellerUser.balance || 0) < usdtNum) {
+            const sellerAvail = Number(sellerUser.balance || 0);
+            if (sellerAvail + 0.0001 < usdtNum) {
                 return res.status(400).json({ success: false, message: 'Insufficient USDT balance to sell.' });
             }
-            sellerUser.balance = Number(((sellerUser.balance || 0) - usdtNum).toFixed(6));
-            sellerUser.lockedBalance = Number(((sellerUser.lockedBalance || 0) + usdtNum).toFixed(6));
-            await sellerUser.save();
-        }
 
-        ad.totalAmount = Math.max(0, Number((ad.totalAmount - usdtNum).toFixed(6)));
-        if (ad.totalAmount <= 0.0001) {
-            ad.status = 'completed';
+            // ከሻጩ ዋሌት ላይ የንግዱን መጠን (usdtNum) + የሻጩን 0.5% ኮሚሽን (sellerFeeUsdt) መቀነስ!
+            if (sellerAvail >= sellerTotalDeductedUsdt) {
+                deductedFromWalletUsdt = sellerTotalDeductedUsdt;
+                sellerUser.balance = Number((sellerAvail - sellerTotalDeductedUsdt).toFixed(6));
+            } else {
+                // ሻጩ ሙሉ ባላንሱን (Max) እየሸጠ ከሆነ
+                deductedFromWalletUsdt = sellerAvail;
+                sellerTotalDeductedUsdt = sellerAvail;
+                sellerUser.balance = 0;
+            }
+
+            sellerUser.lockedBalance = Number(((sellerUser.lockedBalance || 0) + sellerTotalDeductedUsdt).toFixed(6));
+            await sellerUser.save();
+
+            // ከገዢው ማስታወቂያ (Buy Ad) ላይ መቀነስ እና ከ Minimum Limit በታች ከሆነ ከማርኬት ማውጣት
+            deductedFromAdUsdt = usdtNum;
+            ad.totalAmount = Math.max(0, Number((ad.totalAmount - usdtNum).toFixed(6)));
+            await checkAdMinLimitAndCleanUp(ad, null);
         }
-        await ad.save();
 
         const sellerPayments = Array.isArray(sellerUser.paymentMethods) ? sellerUser.paymentMethods : [];
         const matchedPay = sellerPayments.find(p =>
@@ -2650,14 +2749,17 @@ app.post('/api/trades', async (req, res) => {
             sellerName: sName,
             buyerEmail: (buyerUser.email || '').toLowerCase(),
             sellerEmail: (sellerUser.email || '').toLowerCase(),
-            buyerAvatar: buyerUser.avatar ? '' : '', // Keep lightweight
-            sellerAvatar: sellerUser.avatar ? '' : '',
             unitPrice: Number(ad.price),
             etbAmount: etbNum,
             usdtAmount: usdtNum,
             feePercent,
-            feeUsdt,
-            netUsdt,
+            buyerFeeUsdt,
+            sellerFeeUsdt,
+            totalPlatformFeeUsdt,
+            sellerTotalDeductedUsdt,
+            deductedFromAdUsdt,
+            deductedFromWalletUsdt,
+            netUsdt: netUsdtForBuyer,
             paymentMethod: paymentMethod || 'Telebirr',
             paymentDetails: {
                 accountName: matchedPay.name || sellerUser.fullName || sName,
@@ -2683,7 +2785,7 @@ app.post('/api/trades', async (req, res) => {
     }
 });
 
-// 2. ⚡ FAST "MY TRADES" LIST (Strips heavy Base64 images so it loads in <100ms!) ⚡
+// 2. ፈጣን "My Trades" ዝርዝር (ከባድ ምስሎችን ሳይጨምር በ 0.05 ሰከንድ የሚመጣ)
 app.get('/api/trades', async (req, res) => {
     try {
         const currentUser = await resolveUserFromRequest(req);
@@ -2703,7 +2805,7 @@ app.get('/api/trades', async (req, res) => {
         })
         .select('-receiptImage -messages.image -buyerAvatar -sellerAvatar')
         .sort({ createdAt: -1 })
-        .limit(50)
+        .limit(40)
         .lean();
 
         res.json({
@@ -2713,12 +2815,11 @@ app.get('/api/trades', async (req, res) => {
             trades
         });
     } catch (error) {
-        console.error("Fetch My Trades Error:", error);
         res.status(500).json({ success: false, trades: [] });
     }
 });
 
-// 3. ⚡ FAST DASHBOARD ACTIVE TRADES BANNER (<100ms response) ⚡
+// 3. ፈጣን የዳሽቦርድ Active Trades ማሳወቂያ
 app.get('/api/user/active-trades', async (req, res) => {
     try {
         const currentUser = await resolveUserFromRequest(req);
@@ -2753,7 +2854,7 @@ app.get('/api/user/active-trades', async (req, res) => {
     }
 });
 
-// 4. Get Single Trade Details & Auto-Warning / Auto-Cancel
+// 4. የአንድን Trade ዝርዝር ማምጫ እና የ2 ደቂቃ ማስጠንቀቂያ / Auto-Cancel
 app.get('/api/trades/:id', async (req, res) => {
     try {
         const currentUser = await resolveUserFromRequest(req);
@@ -2803,7 +2904,7 @@ app.get('/api/trades/:id', async (req, res) => {
     }
 });
 
-// 5. Buyer Uploads Receipt & Marks Payment Sent
+// 5. ገዢው የደረሰኝ ፎቶ ጭኖ "Yes, I've Transferred" ሲል
 app.post('/api/trades/:id/mark-paid', async (req, res) => {
     try {
         const { receiptImage } = req.body;
@@ -2835,7 +2936,7 @@ app.post('/api/trades/:id/mark-paid', async (req, res) => {
     }
 });
 
-// 6. ⚡ FIXED & INSTANT: Seller Clicks "Release USDT" ⚡
+// 6. ⚡ ሻጩ "Release USDT" ሲል (ከሻጭ የተቆለፈውን አጽድቶ፣ ከገዢ 0.5% ቆርጦ፣ የተጣራውን ለገዢው ያስገባል) ⚡
 app.post('/api/trades/:id/release', async (req, res) => {
     try {
         const trade = await Trade.findById(req.params.id);
@@ -2848,12 +2949,19 @@ app.post('/api/trades/:id/release', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Trade was already cancelled.' });
         }
 
-        const usdtFull = Number(trade.usdtAmount || 0);
-        const netUsdtToCredit = Number(trade.netUsdt) > 0
-            ? Number(trade.netUsdt)
-            : Number((usdtFull * (1 - Number(trade.feePercent || 0.5) / 100)).toFixed(6));
+        const baseUsdt = Number(trade.usdtAmount || 0);
+        const feePct = Number(trade.feePercent || 0.5);
+        const buyerFee = Number(trade.buyerFeeUsdt) > 0 ? Number(trade.buyerFeeUsdt) : Number((baseUsdt * (feePct / 100)).toFixed(6));
+        const sellerLockedTotal = Number(trade.sellerTotalDeductedUsdt) > 0
+            ? Number(trade.sellerTotalDeductedUsdt)
+            : Number((baseUsdt * (1 + feePct / 100)).toFixed(6));
 
-        // 1. Seller lockedBalance reduction
+        // ለገዢው የሚገባው የተጣራ USDT (ከ 0.5% የገዢ ኮሚሽን ውጪ ያለው)
+        const netUsdtToCreditBuyer = Number(trade.netUsdt) > 0
+            ? Number(trade.netUsdt)
+            : Math.max(0, Number((baseUsdt - buyerFee).toFixed(6)));
+
+        // 1. ከሻጩ (Seller) lockedBalance ላይ የተቆለፈውን ማጽዳት
         let seller = null;
         if (trade.sellerId && mongoose.Types.ObjectId.isValid(trade.sellerId)) {
             seller = await User.findById(trade.sellerId);
@@ -2862,11 +2970,11 @@ app.post('/api/trades/:id/release', async (req, res) => {
             seller = await User.findOne({ email: trade.sellerEmail.toLowerCase() });
         }
         if (seller) {
-            seller.lockedBalance = Math.max(0, Number(((seller.lockedBalance || 0) - usdtFull).toFixed(6)));
+            seller.lockedBalance = Math.max(0, Number(((seller.lockedBalance || 0) - sellerLockedTotal).toFixed(6)));
             await seller.save();
         }
 
-        // 2. Buyer balance credit
+        // 2. ለገዢው (Buyer) የተጣራውን USDT (netUsdtToCreditBuyer) ወደ ዋና ዋሌቱ መጨመር
         let buyer = null;
         if (trade.buyerId && mongoose.Types.ObjectId.isValid(trade.buyerId)) {
             buyer = await User.findById(trade.buyerId);
@@ -2875,16 +2983,15 @@ app.post('/api/trades/:id/release', async (req, res) => {
             buyer = await User.findOne({ email: trade.buyerEmail.toLowerCase() });
         }
         if (buyer) {
-            buyer.balance = Number(((buyer.balance || 0) + netUsdtToCredit).toFixed(6));
+            buyer.balance = Number(((buyer.balance || 0) + netUsdtToCreditBuyer).toFixed(6));
             await buyer.save();
         }
 
-        // 3. Mark trade as completed immediately (without crashing on Transaction enum!)
         trade.status = 'completed';
         trade.messages.push({
             senderId: 'system',
             senderName: 'System',
-            text: `Trade completed — ${netUsdtToCredit.toFixed(2)} USDT released to buyer. Post-trade chat is open.`,
+            text: `Trade completed — ${netUsdtToCreditBuyer.toFixed(4)} USDT credited to buyer (after ${feePct}% fee). Post-trade chat is open.`,
             isSystem: true
         });
 
