@@ -2214,16 +2214,20 @@ app.post('/api/ads', verifyToken, async (req, res) => {
                 return res.status(400).json({ success: false, message: 'Insufficient balance to post this sell ad.' });
             }
             
-            // ከሚንቀሳቀሰው ባላንስ ቀንሶ ወደታገደው ያዞረዋል
             user.balance -= amountNum;
             user.lockedBalance = (user.lockedBalance || 0) + amountNum;
             await user.save();
         }
 
+        // Username ካለው እሱን፣ ከሌለው ደግሞ trader + የ ID ቁጥሩን (ለምሳሌ trader000012) መጠቀም
+        let cleanUsername = (user.traderUsername || '').trim().replace(/^@+/, '').trim();
+        let idDigits = String(user.userId || '').replace(/\D/g, '').padStart(6, '0');
+        let displayTraderName = cleanUsername ? cleanUsername : `trader${idDigits || '000001'}`;
+
         const newAd = new Ad({
             userId: user._id,
             email: user.email,
-            name: user.fullName || user.email.split('@')[0],
+            name: displayTraderName,
             tradeType,
             price: Number(price),
             totalAmount: amountNum,
@@ -2243,18 +2247,41 @@ app.post('/api/ads', verifyToken, async (req, res) => {
     }
 });
 
-// 2. የተፈጠሩ ማስታወቂያዎችን በሙሉ በማርኬት ላይ ለማሳየት (Get All Active Ads)
+// 2. የተፈጠሩ ማስታወቂያዎችን በሙሉ ከነጋዴው ፎቶ፣ Username እና TBR-ID ጋር ማምጣት
 app.get('/api/ads', async (req, res) => {
     try {
-        const ads = await Ad.find({ status: 'active' }).sort({ createdAt: -1 });
-        res.json({ success: true, ads });
+        const ads = await Ad.find({ status: 'active' })
+            .populate('userId', 'avatar traderUsername userId numericId fullName email')
+            .sort({ createdAt: -1 })
+            .lean();
+
+        const enrichedAds = ads.map(ad => {
+            const trader = ad.userId && typeof ad.userId === 'object' ? ad.userId : {};
+            const rawUsername = (trader.traderUsername || '').trim().replace(/^@+/, '').trim();
+            const tbrId = trader.userId || '';
+            const idDigits = String(tbrId).replace(/\D/g, '').padStart(6, '0') || '000001';
+
+            // ነጋዴው Username ካስገባ እሱን፣ ካላስገባ ግን trader000012 ተብሎ እንዲወጣ
+            const displayName = rawUsername ? rawUsername : `trader${idDigits}`;
+
+            return {
+                ...ad,
+                userId: trader._id || ad.userId,
+                name: displayName,
+                traderUsername: rawUsername,
+                tbrId: tbrId,
+                avatar: trader.avatar || ''
+            };
+        });
+
+        res.json({ success: true, ads: enrichedAds });
     } catch (error) {
         console.error("Fetch Ads Error:", error);
         res.status(500).json({ success: false, message: 'Server error fetching ads.' });
     }
 });
 
-// 3. የራሱን (የተ로그 ያደረገውን ዩዘር) ማስታወቂያዎች ብቻ ማምጫ ራውት
+// 3. የራሱን (የተሎግ ያደረገውን ዩዘር) ማስታወቂያዎች ብቻ ማምጫ ራውት
 app.get('/api/ads/my', verifyToken, async (req, res) => {
     try {
         const myAds = await Ad.find({ userId: req.user.id }).sort({ createdAt: -1 });
@@ -2271,17 +2298,14 @@ app.put('/api/ads/:id/cancel', verifyToken, async (req, res) => {
         const ad = await Ad.findOne({ _id: req.params.id, userId: req.user.id });
         if (!ad) return res.status(404).json({ success: false, message: 'Ad not found.' });
         
-        // ማስታወቂያው ቀድሞ Cancel ካልተደረገ ብቻ
         if (ad.status !== 'cancelled') {
             ad.status = 'cancelled';
             
-            // 🚀 SELL አድ ከነበረ፣ የተቆለፈውን ብር ወደ ዋናው ባላንስ መመለስ (Refund) 🚀
             if (ad.tradeType === 'sell') {
                 const user = await User.findById(req.user.id);
                 if (user) {
-                    user.balance += ad.totalAmount; // ወደ ዋናው ይመለሳል
-                    user.lockedBalance -= ad.totalAmount; // ከተቆለፈው ይቀነሳል
-                    // lockedBalance ከ 0 በታች እንዳይወርድ መከላከል
+                    user.balance += ad.totalAmount;
+                    user.lockedBalance -= ad.totalAmount;
                     if (user.lockedBalance < 0) user.lockedBalance = 0; 
                     await user.save();
                 }
