@@ -511,12 +511,13 @@
         }
 
 .active-trade-alert-banner {
-        max-width: 1200px;
-        margin: 12px auto 6px auto;
-        padding: 12px 18px;
-        background: rgba(240, 185, 11, 0.1);
-        border: 1px solid rgba(240, 185, 11, 0.4);
-        border-radius: 10px;
+        max-width: 1160px;
+        width: calc(100% - 32px);
+        margin: 14px auto 12px auto;
+        padding: 13px 18px;
+        background: rgba(240, 185, 11, 0.14);
+        border: 1px solid rgba(240, 185, 11, 0.55);
+        border-radius: 12px;
         display: none;
         align-items: center;
         justify-content: space-between;
@@ -525,9 +526,11 @@
         text-decoration: none;
         transition: all 0.2s ease;
         box-sizing: border-box;
+        position: relative;
+        z-index: 950;
     }
     .active-trade-alert-banner:hover {
-        background: rgba(240, 185, 11, 0.16);
+        background: rgba(240, 185, 11, 0.22);
         border-color: #f0b90b;
         transform: translateY(-1px);
     }
@@ -537,11 +540,11 @@
         gap: 10px;
         color: #f0b90b;
         font-size: 13.5px;
-        font-weight: 700;
+        font-weight: 800;
     }
     .atb-pulse-dot {
-        width: 8px;
-        height: 8px;
+        width: 9px;
+        height: 9px;
         border-radius: 50%;
         background: #f0b90b;
         box-shadow: 0 0 0 0 rgba(240, 185, 11, 0.7);
@@ -550,18 +553,18 @@
     }
     @keyframes pulseTradeDot {
         0% { box-shadow: 0 0 0 0 rgba(240, 185, 11, 0.7); }
-        70% { box-shadow: 0 0 0 7px rgba(240, 185, 11, 0); }
+        70% { box-shadow: 0 0 0 8px rgba(240, 185, 11, 0); }
         100% { box-shadow: 0 0 0 0 rgba(240, 185, 11, 0); }
     }
     .atb-right {
         display: flex;
         align-items: center;
         gap: 8px;
-        color: #ffffff;
+        color: #000000;
         font-size: 12px;
-        font-weight: 700;
-        background: rgba(240, 185, 11, 0.2);
-        padding: 5px 12px;
+        font-weight: 800;
+        background: #f0b90b;
+        padding: 6px 14px;
         border-radius: 20px;
         white-space: nowrap;
     }
@@ -1074,7 +1077,8 @@
         }
 
         (function initActiveTradeDashboardAlert() {
-        const API_URL = 'https://tbr-exchange-backend.onrender.com';
+        // 🚀 Ekhon sorasori tbrexchange.com (current domain) bebohar korbe 🚀
+        const API_URL = '';
 
         function createBannerIfMissing() {
             let banner = document.getElementById('dashboardActiveTradeBanner');
@@ -1087,45 +1091,74 @@
             banner.innerHTML = `
                 <div class="atb-left">
                     <span class="atb-pulse-dot"></span>
-                    <span id="dashboardActiveTradeText">1 trade waiting you for action</span>
+                    <span id="dashboardActiveTradeText">1 trade awaiting you for action</span>
                 </div>
                 <div class="atb-right">
-                    <span id="dashboardActiveTradeNum">Trade #00001</span>
-                    <i class="fa-solid fa-arrow-right" style="font-size: 11px; color: #f0b90b;"></i>
+                    <span id="dashboardActiveTradeNum">Open Trade</span>
+                    <i class="fa-solid fa-arrow-right" style="font-size: 11px;"></i>
                 </div>
             `;
 
-            // ከ Navbar በታች (ከዋናው ኮንቴይነር መጀመሪያ ላይ) በትክክል ማስገባት
-            const nav = document.querySelector('.navbar') || document.querySelector('nav') || document.querySelector('header');
-            if (nav && nav.nextElementSibling) {
-                nav.parentNode.insertBefore(banner, nav.nextElementSibling);
+            const mainContainer = document.querySelector('.dashboard-container') ||
+                                  document.querySelector('.main-content') ||
+                                  document.querySelector('.container') ||
+                                  document.querySelector('main');
+            if (mainContainer) {
+                mainContainer.prepend(banner);
             } else {
-                document.body.prepend(banner);
+                const nav = document.querySelector('.navbar') || document.querySelector('nav') || document.querySelector('header');
+                banner.style.marginTop = '74px';
+                if (nav && nav.nextElementSibling) {
+                    nav.parentNode.insertBefore(banner, nav.nextElementSibling);
+                } else {
+                    document.body.prepend(banner);
+                }
             }
             return banner;
         }
 
-        async function checkActiveTradesForUser() {
-            const token = localStorage.getItem('token') || localStorage.getItem('jwtToken') || localStorage.getItem('authToken');
-            if (!token) return;
-
-            const banner = createBannerIfMissing();
+        function getLoggedUserIdentity() {
+            const token = localStorage.getItem('token') || localStorage.getItem('jwtToken') || localStorage.getItem('authToken') || '';
+            let email = localStorage.getItem('userEmail') || localStorage.getItem('email') || '';
+            let userId = localStorage.getItem('userId') || '';
 
             try {
-                const res = await fetch(`${API_URL}/api/user/active-trades`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                const u = JSON.parse(localStorage.getItem('user') || localStorage.getItem('currentUser') || localStorage.getItem('tbr_user') || '{}');
+                if (!email && u.email) email = u.email;
+                if (!userId && (u._id || u.id || u.userId)) userId = u._id || u.id || u.userId;
+            } catch (e) {}
+
+            return { token, email, userId };
+        }
+
+        async function checkActiveTradesForUser() {
+            const { token, email, userId } = getLoggedUserIdentity();
+            const banner = createBannerIfMissing();
+
+            if (!token && !email && !userId) return;
+
+            try {
+                const params = new URLSearchParams();
+                if (email) params.set('email', email);
+                if (userId) params.set('userId', userId);
+
+                const res = await fetch(`${API_URL}/api/user/active-trades?${params.toString()}`, {
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
                 });
+
                 if (res.ok) {
                     const json = await res.json();
                     if (json.success && json.count > 0 && json.latestTrade) {
                         const count = json.count;
                         const trade = json.latestTrade;
                         const tradeNum = String(trade.tradeNumber || '00001').padStart(5, '0');
+                        const isBuyer = json.currentUserId && String(trade.buyerId) === String(json.currentUserId);
+                        const roleText = isBuyer ? 'Buyer' : 'Seller';
 
                         document.getElementById('dashboardActiveTradeText').innerText =
                             count === 1
-                                ? `1 trade waiting you for action`
-                                : `${count} trades waiting you for action`;
+                                ? `1 trade awaiting you (${roleText}) — Click to continue`
+                                : `${count} trades awaiting you — Click to continue`;
                         document.getElementById('dashboardActiveTradeNum').innerText = `Trade #${tradeNum}`;
                         banner.href = `trades.html?tradeId=${trade._id}`;
                         banner.style.display = 'flex';
@@ -1134,25 +1167,12 @@
                 }
             } catch (e) {}
 
-            // Fallback: በ localStorage ላይ ገና የተከፈተ ንቁ ትዕዛዝ ካለ
-            try {
-                const localTrade = JSON.parse(localStorage.getItem('tbr_active_p2p_order') || 'null');
-                if (localTrade && (localTrade.status === 'funds_locked' || localTrade.status === 'payment_sent')) {
-                    const tradeNum = String(localTrade.tradeNumber || '00001').padStart(5, '0');
-                    document.getElementById('dashboardActiveTradeText').innerText = `1 trade waiting you for action`;
-                    document.getElementById('dashboardActiveTradeNum').innerText = `Trade #${tradeNum}`;
-                    banner.href = localTrade._id ? `trades.html?tradeId=${localTrade._id}` : 'trades.html';
-                    banner.style.display = 'flex';
-                    return;
-                }
-            } catch (e) {}
-
             banner.style.display = 'none';
         }
 
         document.addEventListener('DOMContentLoaded', () => {
             checkActiveTradesForUser();
-            setInterval(checkActiveTradesForUser, 6000);
+            setInterval(checkActiveTradesForUser, 3000);
         });
     })();
     </script>
