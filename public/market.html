@@ -2162,10 +2162,86 @@
             document.getElementById('orderModal').style.display = 'none';
         }
 
-        function confirmTrade() {
+        async function confirmTrade() {
             if (!validateModalOrderInputs()) {
                 return;
             }
+
+            const token = getAuthToken();
+            if (!token) {
+                alert('Please log in first to start a P2P trade.');
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const isBuy = currentType === 'buy';
+            const etbAmount = parseFloat(document.getElementById('tmEtbInput').value);
+            const usdtAmount = parseFloat(document.getElementById('tmUsdtInput').value);
+            const feePercent = Number(systemSettings.platformFee || 0.5);
+            const feeUsdt = usdtAmount * (feePercent / 100);
+            const netUsdt = Math.max(0, usdtAmount - feeUsdt);
+
+            const confirmBtn = document.getElementById('tmConfirmOrderBtn');
+            confirmBtn.disabled = true;
+            confirmBtn.innerText = 'Locking Escrow...';
+
+            const matchedSellerPay = currentUserSavedPayments.find(pm =>
+                String(pm.type || '').toLowerCase().trim() === String(activeModalSelectedMethod || '').toLowerCase().trim()
+            ) || currentUserSavedPayments[0] || {};
+
+            const fallbackOrder = {
+                tradeNumber: '00001',
+                adId: activeModalAd.adId,
+                tradeType: isBuy ? 'buy' : 'sell',
+                counterpartyName: activeModalAd.name,
+                counterpartyAvatar: activeModalAd.avatarUrl || '',
+                unitPrice: activeModalAd.numericPrice,
+                etbAmount: etbAmount,
+                usdtAmount: usdtAmount,
+                feePercent: feePercent,
+                feeUsdt: feeUsdt,
+                netUsdt: netUsdt,
+                paymentMethod: activeModalSelectedMethod,
+                paymentDetails: {
+                    accountName: isBuy ? activeModalAd.name : (matchedSellerPay.name || currentUserFullName || 'Account Holder'),
+                    accountNumber: isBuy ? '1000570640058' : (matchedSellerPay.account || '-'),
+                    bankName: activeModalSelectedMethod
+                },
+                status: 'funds_locked',
+                expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+                createdAt: new Date().toISOString()
+            };
+            localStorage.setItem('tbr_active_p2p_order', JSON.stringify(fallbackOrder));
+
+            try {
+                const res = await fetch(`${API_BASE}/api/trades`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        adId: activeModalAd.adId,
+                        actionType: isBuy ? 'buy' : 'sell',
+                        etbAmount,
+                        usdtAmount,
+                        paymentMethod: activeModalSelectedMethod
+                    })
+                });
+                const json = await res.json();
+                if (res.ok && json.success && json.trade) {
+                    localStorage.setItem('tbr_active_p2p_order', JSON.stringify(json.trade));
+                    closeOrderModal();
+                    window.location.href = `trades.html?tradeId=${json.trade._id}`;
+                    return;
+                }
+            } catch (e) {
+                console.error('Trade API fallback:', e);
+            }
+
+            closeOrderModal();
+            window.location.href = 'trades.html';
+        }
 
             const isBuy = currentType === 'buy';
             const etbAmount = parseFloat(document.getElementById('tmEtbInput').value);

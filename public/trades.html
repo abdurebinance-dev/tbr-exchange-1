@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TBR Exchange - P2P Escrow Trade & Chat Room</title>
+    <link rel="preconnect" href="https://tbr-exchange-backend.onrender.com" crossorigin>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #050709;
+            --card-bg: #0f1318;
+            --card-inner: #141920;
+            --border-color: #1e242d;
+            --accent-gold: #f0b90b;
+            --yellow-btn: #eab308;
+            --green: #0ecb81;
+            --blue: #3b82f6;
+            --red: #f6465d;
+            --text-main: #ffffff;
+            --text-muted: #848e9c;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg-color);
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: var(--text-main);
+            padding-top: 62px;
+            padding-bottom: 30px;
+        }
+
+        /* Top Navbar */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: #0b0e11;
+            border-bottom: 1px solid var(--border-color);
+            padding: 8px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+        }
+        .nav-left { display: flex; align-items: center; gap: 18px; }
+        .logo-container img { height: 24px; width: auto; object-fit: contain; }
+        .nav-links { display: flex; gap: 12px; }
+        .nav-links a {
+            color: #848e9c;
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 9px;
+            border-radius: 6px;
+            transition: 0.2s;
+        }
+        .nav-links a.active, .nav-links a:hover {
+            color: var(--accent-gold);
+            background: rgba(240, 185, 11, 0.08);
+        }
+        .dashboard-shortcut-btn {
+            background: rgba(240, 185, 11, 0.1);
+            color: var(--accent-gold);
+            border: 1px solid rgba(240, 185, 11, 0.2);
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            text-decoration: none;
+        }
+
+        /* Main 2-Column Split Container */
+        .trade-room-wrapper {
+            max-width: 1220px;
+            margin: 0 auto;
+            padding: 16px 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            align-items: start;
+        }
+
+        @media (max-width: 960px) {
+            .trade-room-wrapper {
+                grid-template-columns: 1fr;
+                padding: 10px 10px;
+            }
+            .nav-links { display: none; }
+        }
+
+        /* Left Column: Escrow Steps & Controls */
+        .left-escrow-col {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .trade-top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .breadcrumb-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+        .breadcrumb-wrap a {
+            color: var(--text-muted);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .breadcrumb-wrap a:hover { color: #fff; }
+        .breadcrumb-wrap .sep { color: #3a4250; }
+        .breadcrumb-wrap .trade-id-label {
+            font-weight: 800;
+            color: #ffffff;
+        }
+        .status-pill-badge {
+            background: rgba(59, 130, 246, 0.12);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            padding: 5px 13px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .status-pill-badge.completed {
+            background: rgba(14, 203, 129, 0.14);
+            color: var(--green);
+            border-color: rgba(14, 203, 129, 0.35);
+        }
+        .status-pill-badge.cancelled {
+            background: rgba(246, 70, 93, 0.14);
+            color: var(--red);
+            border-color: rgba(246, 70, 93, 0.35);
+        }
+
+        /* 4-Step Progress Tracker Card */
+        .stepper-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            position: relative;
+        }
+        .step-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            z-index: 2;
+            width: 72px;
+        }
+        .step-circle {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: #161b22;
+            border: 1.5px solid #2b3340;
+            color: #5a6372;
+        }
+        .step-item.done .step-circle {
+            background: var(--green);
+            border-color: var(--green);
+            color: #000;
+        }
+        .step-item.active .step-circle {
+            background: rgba(14, 203, 129, 0.15);
+            border: 2px solid var(--green);
+            color: var(--green);
+        }
+        .step-label {
+            font-size: 10px;
+            line-height: 1.25;
+            color: #5a6372;
+            font-weight: 600;
+        }
+        .step-item.done .step-label { color: var(--green); }
+        .step-item.active .step-label { color: #ffffff; font-weight: 700; }
+
+        .step-line {
+            flex: 1;
+            height: 2px;
+            background: #1e242d;
+            margin-top: 13px;
+        }
+        .step-line.done {
+            background: var(--green);
+        }
+
+        /* 4 Numbered Instructions Card */
+        .instructions-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .inst-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 12.5px;
+            color: var(--text-muted);
+        }
+        .inst-row.highlight {
+            color: #ffffff;
+            font-weight: 700;
+        }
+        .inst-num {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 700;
+            background: #171c24;
+            border: 1px solid #28303d;
+            color: #7c8696;
+            flex-shrink: 0;
+        }
+        .inst-row.highlight .inst-num {
+            background: rgba(14, 203, 129, 0.15);
+            border-color: rgba(14, 203, 129, 0.4);
+            color: var(--green);
+        }
+
+        /* Seller Receive Summary Card */
+        .seller-bank-summary-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px 18px;
+            display: none;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+        .sbs-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .sbs-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: rgba(14, 203, 129, 0.1);
+            border: 1px solid rgba(14, 203, 129, 0.25);
+            color: var(--green);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+        }
+        .sbs-holder {
+            font-size: 13px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 4px;
+        }
+        .sbs-sub {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        .sbs-sub strong { color: #ffffff; }
+        .sbs-method-badge {
+            background: rgba(14, 203, 129, 0.12);
+            color: var(--green);
+            border: 1px solid rgba(14, 203, 129, 0.3);
+            padding: 5px 11px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        /* Payment Window Countdown Card */
+        .timer-card {
+            background: rgba(234, 179, 8, 0.04);
+            border: 1px solid rgba(234, 179, 8, 0.28);
+            border-radius: 12px;
+            padding: 14px 18px;
+        }
+        .timer-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .timer-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #eab308;
+        }
+        .timer-clock {
+            font-size: 14px;
+            font-weight: 800;
+            color: #eab308;
+            font-family: monospace;
+        }
+        .timer-bar-bg {
+            width: 100%;
+            height: 4px;
+            background: #23272e;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .timer-bar-fill {
+            height: 100%;
+            width: 90%;
+            background: #eab308;
+            border-radius: 4px;
+            transition: width 1s linear;
+        }
+
+        /* Warning Notice Box */
+        .warning-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 14px 16px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.45;
+        }
+        .warning-card i {
+            color: #eab308;
+            margin-top: 2px;
+            font-size: 13px;
+        }
+
+        /* Waiting for Buyer's Payment Box */
+        .seller-waiting-card {
+            background: rgba(59, 130, 246, 0.05);
+            border: 1px solid rgba(59, 130, 246, 0.22);
+            border-radius: 12px;
+            padding: 16px 18px;
+            display: none;
+            align-items: center;
+            gap: 14px;
+        }
+        .sw-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(59, 130, 246, 0.12);
+            color: #60a5fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            flex-shrink: 0;
+        }
+        .sw-title {
+            font-size: 13.5px;
+            font-weight: 700;
+            color: #60a5fa;
+            margin-bottom: 4px;
+        }
+        .sw-sub {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* Action Buttons */
+        .primary-yellow-btn {
+            width: 100%;
+            background: #eab308;
+            color: #000000;
+            border: none;
+            border-radius: 10px;
+            padding: 14px;
+            font-size: 13.5px;
+            font-weight: 800;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: 0.2s;
+        }
+        .primary-yellow-btn:hover:not(:disabled) {
+            background: #facc15;
+        }
+        .primary-yellow-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .primary-green-btn {
+            width: 100%;
+            background: var(--green);
+            color: #000000;
+            border: none;
+            border-radius: 10px;
+            padding: 14px;
+            font-size: 13.5px;
+            font-weight: 800;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .secondary-cancel-btn {
+            width: 100%;
+            background: #0b0e12;
+            color: #d1d5db;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px;
+            font-size: 12.5px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .secondary-cancel-btn:hover {
+            background: #151a22;
+            color: #ffffff;
+        }
+
+        .appeal-lock-card {
+            background: #0a0d11;
+            border: 1px solid #161b22;
+            border-radius: 10px;
+            padding: 13px 16px;
+            font-size: 12px;
+            color: #6c7583;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+        }
+        .appeal-lock-card strong { color: #9ca3af; }
+
+        /* Right Column: Chat & Counterparty Payment Details */
+        .right-chat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            display: flex;
+            flex-direction: column;
+            height: 640px;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .chat-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: rgba(14, 203, 129, 0.15);
+            border: 1px solid rgba(14, 203, 129, 0.35);
+            color: var(--green);
+            font-weight: 800;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .chat-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .chat-partner-name {
+            font-size: 14px;
+            font-weight: 800;
+            color: #ffffff;
+            margin-bottom: 3px;
+        }
+        .chat-partner-sub {
+            font-size: 11.5px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .chat-partner-sub .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--green);
+        }
+        .chat-partner-sub a {
+            color: var(--green);
+            text-decoration: none;
+        }
+
+        /* Collapsible Payment Details Box inside Chat Header */
+        .chat-pay-details-wrap {
+            margin: 12px 16px 0 16px;
+            border: 1px solid rgba(234, 179, 8, 0.28);
+            background: rgba(234, 179, 8, 0.04);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .cpd-header {
+            padding: 10px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        .cpd-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #eab308;
+        }
+        .cpd-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .cpd-bank-pill {
+            background: rgba(234, 179, 8, 0.12);
+            border: 1px solid rgba(234, 179, 8, 0.3);
+            color: #eab308;
+            padding: 3px 10px;
+            border-radius: 14px;
+            font-size: 10.5px;
+            font-weight: 700;
+        }
+        .cpd-body {
+            border-top: 1px solid rgba(234, 179, 8, 0.15);
+            padding: 10px 14px;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            background: #11151c;
+        }
+        .cpd-body.open {
+            display: flex;
+        }
+        .cpd-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            padding: 4px 0;
+            border-bottom: 1px solid #1a2029;
+        }
+        .cpd-row:last-child { border-bottom: none; }
+        .cpd-row .k { color: var(--text-muted); }
+        .cpd-row .v {
+            color: #ffffff;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: monospace;
+            font-size: 12.5px;
+        }
+        .copy-icon-btn {
+            background: #1b212b;
+            border: 1px solid #2b3342;
+            color: #848e9c;
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .copy-icon-btn:hover { color: #fff; border-color: #eab308; }
+
+        /* Chat Messages Feed */
+        .chat-messages-area {
+            flex: 1;
+            padding: 18px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .chat-empty-state {
+            margin: auto;
+            text-align: center;
+            color: #6c7583;
+        }
+        .chat-empty-state .icon-box {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: #151a22;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px auto;
+            font-size: 18px;
+            color: #5a6372;
+        }
+        .chat-empty-state h4 {
+            margin: 0 0 4px 0;
+            font-size: 13px;
+            color: #848e9c;
+        }
+        .chat-empty-state p {
+            margin: 0;
+            font-size: 11.5px;
+            color: #555e6d;
+        }
+
+        .msg-bubble {
+            max-width: 78%;
+            padding: 10px 13px;
+            border-radius: 12px;
+            font-size: 12.5px;
+            line-height: 1.45;
+        }
+        .msg-bubble.mine {
+            align-self: flex-end;
+            background: rgba(14, 203, 129, 0.16);
+            border: 1px solid rgba(14, 203, 129, 0.35);
+            color: #ffffff;
+        }
+        .msg-bubble.theirs {
+            align-self: flex-start;
+            background: #171c24;
+            border: 1px solid #262e3b;
+            color: #e5e7eb;
+        }
+        .msg-bubble.system {
+            align-self: center;
+            max-width: 92%;
+            background: rgba(234, 179, 8, 0.08);
+            border: 1px solid rgba(234, 179, 8, 0.25);
+            color: #eab308;
+            font-size: 11.5px;
+            text-align: center;
+        }
+        .msg-bubble img {
+            max-width: 210px;
+            border-radius: 8px;
+            margin-top: 6px;
+            display: block;
+            cursor: pointer;
+        }
+
+        /* Chat Footer Area */
+        .chat-footer {
+            padding: 12px 16px 16px 16px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: #0c0f14;
+        }
+        .chat-input-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .upload-img-btn {
+            width: 38px;
+            height: 38px;
+            border-radius: 9px;
+            background: #141922;
+            border: 1px solid #232a36;
+            color: #848e9c;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .upload-img-btn:hover { color: #fff; }
+        .chat-text-input {
+            flex: 1;
+            background: #13171f;
+            border: 1px solid #232a36;
+            border-radius: 9px;
+            padding: 10px 14px;
+            color: #ffffff;
+            font-size: 13px;
+            outline: none;
+        }
+        .chat-text-input:focus { border-color: var(--green); }
+        .send-msg-btn {
+            width: 38px;
+            height: 38px;
+            border-radius: 9px;
+            background: #09794c;
+            border: none;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .send-msg-btn:hover { background: var(--green); color: #000; }
+    </style>
+</head>
+<body>
+
+    <!-- Top Navbar -->
+    <div class="navbar">
+        <div class="nav-left">
+            <div class="logo-container">
+                <img src="logo.png" alt="TBR Exchange Logo" onerror="this.style.display='none'">
+            </div>
+            <div class="nav-links">
+                <a href="dashboard.html"><i class="fa-solid fa-house"></i> Dashboard</a>
+                <a href="market.html"><i class="fa-solid fa-store"></i> Market</a>
+                <a href="my-ads.html"><i class="fa-solid fa-bullhorn"></i> My Ads</a>
+                <a href="trades.html" class="active"><i class="fa-solid fa-right-left"></i> Trades</a>
+                <a href="wallet.html"><i class="fa-solid fa-wallet"></i> Wallet</a>
+            </div>
+        </div>
+        <div class="nav-right">
+            <a href="dashboard.html" class="dashboard-shortcut-btn" title="Go to Dashboard">
+                <i class="fa-solid fa-house"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Main 2-Column P2P Escrow & Chat Room -->
+    <div class="trade-room-wrapper">
+
+        <!-- LEFT COLUMN: ESCROW STEPS & ACTIONS -->
+        <div class="left-escrow-col">
+            <div class="trade-top-bar">
+                <div class="breadcrumb-wrap">
+                    <a href="market.html"><i class="fa-solid fa-chevron-left" style="font-size: 11px;"></i> My Orders</a>
+                    <span class="sep">/</span>
+                    <span class="trade-id-label" id="uiTradeNumber">Trade #00001</span>
+                </div>
+                <span class="status-pill-badge" id="uiStatusBadge">Funds Locked</span>
+            </div>
+
+            <!-- 4-Step Progress Bar -->
+            <div class="stepper-card">
+                <div class="step-item done" id="step1Item">
+                    <div class="step-circle"><i class="fa-solid fa-check"></i></div>
+                    <div class="step-label">Order<br>Placed</div>
+                </div>
+                <div class="step-line done" id="stepLine1"></div>
+                <div class="step-item active" id="step2Item">
+                    <div class="step-circle" id="step2Circle">2</div>
+                    <div class="step-label">Funds<br>Locked</div>
+                </div>
+                <div class="step-line" id="stepLine2"></div>
+                <div class="step-item" id="step3Item">
+                    <div class="step-circle" id="step3Circle">3</div>
+                    <div class="step-label">Payment<br>Sent</div>
+                </div>
+                <div class="step-line" id="stepLine3"></div>
+                <div class="step-item" id="step4Item">
+                    <div class="step-circle" id="step4Circle">4</div>
+                    <div class="step-label">Completed</div>
+                </div>
+            </div>
+
+            <!-- 4 Numbered Instructions -->
+            <div class="instructions-card" id="uiInstructionsCard">
+                <div class="inst-row highlight">
+                    <div class="inst-num">1</div>
+                    <div id="instText1">Transfer exactly 0.00 ETB to the seller's account shown below.</div>
+                </div>
+                <div class="inst-row">
+                    <div class="inst-num">2</div>
+                    <div id="instText2">Take a screenshot of your transfer receipt.</div>
+                </div>
+                <div class="inst-row">
+                    <div class="inst-num">3</div>
+                    <div id="instText3">Click "Transferred, Notify Seller" and upload your receipt.</div>
+                </div>
+                <div class="inst-row">
+                    <div class="inst-num">4</div>
+                    <div id="instText4">Wait for the seller to confirm receipt and release USDT.</div>
+                </div>
+            </div>
+
+            <!-- Seller Bank Summary Card -->
+            <div class="seller-bank-summary-card" id="uiSellerSummaryCard">
+                <div class="sbs-left">
+                    <div class="sbs-icon"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+                    <div>
+                        <div class="sbs-holder" id="uiSellerHolderName">Account Holder</div>
+                        <div class="sbs-sub">Buyer will send <strong id="uiSellerEtbAmount">0.00 ETB</strong> via <span id="uiSellerBankSub">Bank</span></div>
+                    </div>
+                </div>
+                <span class="sbs-method-badge" id="uiSellerMethodBadge">Bank</span>
+            </div>
+
+            <!-- 15-Minute Countdown Timer -->
+            <div class="timer-card">
+                <div class="timer-top">
+                    <div class="timer-label"><i class="fa-regular fa-clock"></i> Payment window</div>
+                    <div class="timer-clock" id="uiCountdownClock">14m 59s</div>
+                </div>
+                <div class="timer-bar-bg">
+                    <div class="timer-bar-fill" id="uiTimerBarFill"></div>
+                </div>
+            </div>
+
+            <!-- Safety Warning Card -->
+            <div class="warning-card">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <div id="uiWarningText">Only pay using the account details shown here. Never cancel after sending — use Appeal if there's an issue.</div>
+            </div>
+
+            <!-- Seller Waiting Status Card -->
+            <div class="seller-waiting-card" id="uiSellerWaitingCard">
+                <div class="sw-icon"><i class="fa-regular fa-clock"></i></div>
+                <div>
+                    <div class="sw-title" id="uiSellerWaitTitle">Waiting for buyer's payment</div>
+                    <div class="sw-sub" id="uiSellerWaitSub">Your 0.00 USDT is secured in escrow.</div>
+                </div>
+            </div>
+
+            <!-- Buyer Action Button: Transferred, Notify Seller -->
+            <button type="button" class="primary-yellow-btn" id="uiLeftMarkPaidBtn" onclick="markPaymentTransferred()">
+                <i class="fa-regular fa-circle-check"></i> Transferred, Notify Seller
+            </button>
+
+            <!-- Seller Action Button: Release USDT -->
+            <button type="button" class="primary-green-btn" id="uiSellerReleaseBtn" onclick="releaseUsdtToBuyer()">
+                <i class="fa-solid fa-unlock-keyhole"></i> Confirm Receipt & Release USDT
+            </button>
+
+            <!-- Cancel / Request Cancellation Button -->
+            <button type="button" class="secondary-cancel-btn" id="uiCancelTradeBtn" onclick="cancelActiveTrade()">
+                Cancel Order
+            </button>
+
+            <!-- Appeal Unlocks Timer -->
+            <div class="appeal-lock-card">
+                <i class="fa-solid fa-lock"></i>
+                <span>Appeal unlocks in <strong id="uiAppealClock">14m 59s</strong></span>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: COUNTERPARTY HEADER, PAYMENT DETAILS & LIVE CHAT -->
+        <div class="right-chat-card">
+            <div class="chat-header">
+                <div class="chat-avatar" id="uiPartnerAvatar">TR</div>
+                <div>
+                    <div class="chat-partner-name" id="uiPartnerName">Trader</div>
+                    <div class="chat-partner-sub">
+                        <span class="dot"></span>
+                        <span>Active trade &middot; <a href="javascript:void(0)">View profile &rarr;</a></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Collapsible Payment Details Dropdown (Buyer View) -->
+            <div class="chat-pay-details-wrap" id="uiBuyerPayDropdown">
+                <div class="cpd-header" onclick="togglePaymentDetailsDropdown()">
+                    <div class="cpd-left">
+                        <i class="fa-solid fa-file-invoice-dollar"></i>
+                        <span>Payment details</span>
+                    </div>
+                    <div class="cpd-right">
+                        <span class="cpd-bank-pill" id="uiDropdownBankPill">Commercial Bank of Ethiopia</span>
+                        <i class="fa-solid fa-chevron-down" id="uiDropdownChevron" style="color:#eab308; font-size:11px;"></i>
+                    </div>
+                </div>
+                <div class="cpd-body open" id="uiDropdownBody">
+                    <div class="cpd-row">
+                        <span class="k">Account Name</span>
+                        <span class="v">
+                            <span id="uiPayAccountName">-</span>
+                            <button type="button" class="copy-icon-btn" onclick="copyTextValue('uiPayAccountName')"><i class="fa-regular fa-copy"></i></button>
+                        </span>
+                    </div>
+                    <div class="cpd-row">
+                        <span class="k">Account No.</span>
+                        <span class="v">
+                            <span id="uiPayAccountNo">-</span>
+                            <button type="button" class="copy-icon-btn" onclick="copyTextValue('uiPayAccountNo')"><i class="fa-regular fa-copy"></i></button>
+                        </span>
+                    </div>
+                    <div class="cpd-row">
+                        <span class="k">Bank</span>
+                        <span class="v">
+                            <span id="uiPayBankName">-</span>
+                            <button type="button" class="copy-icon-btn" onclick="copyTextValue('uiPayBankName')"><i class="fa-regular fa-copy"></i></button>
+                        </span>
+                    </div>
+                    <div class="cpd-row">
+                        <span class="k">Amount</span>
+                        <span class="v">
+                            <span id="uiPayEtbExact">0.00 ETB</span>
+                            <button type="button" class="copy-icon-btn" onclick="copyTextValue('uiPayEtbExact')"><i class="fa-regular fa-copy"></i></button>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Messages Feed -->
+            <div class="chat-messages-area" id="uiChatMessagesArea">
+                <div class="chat-empty-state" id="uiChatEmptyState">
+                    <div class="icon-box"><i class="fa-regular fa-message"></i></div>
+                    <h4>No messages yet</h4>
+                    <p>Start the conversation below</p>
+                </div>
+            </div>
+
+            <!-- Chat Footer -->
+            <div class="chat-footer">
+                <button type="button" class="primary-yellow-btn" id="uiRightMarkPaidBtn" onclick="markPaymentTransferred()">
+                    <i class="fa-regular fa-circle-check"></i> Transferred, Notify Seller
+                </button>
+
+                <div class="chat-input-bar">
+                    <label class="upload-img-btn" title="Upload Receipt Screenshot">
+                        <i class="fa-regular fa-image"></i>
+                        <input type="file" accept="image/*" style="display:none;" onchange="uploadReceiptImage(event)">
+                    </label>
+                    <input type="text" class="chat-text-input" id="uiChatInput" placeholder="Message..." onkeydown="if(event.key==='Enter') sendChatMessage()">
+                    <button type="button" class="send-msg-btn" onclick="sendChatMessage()">
+                        <i class="fa-regular fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const API_BASE = 'https://tbr-exchange-backend.onrender.com';
+        let activeTrade = null;
+        let currentUserId = '';
+        let countdownInterval = null;
+
+        function getAuthToken() {
+            return localStorage.getItem('token') || localStorage.getItem('jwtToken') || localStorage.getItem('authToken') || '';
+        }
+
+        function formatEtb(val) {
+            return Number(val || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ETB';
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const cachedOrder = localStorage.getItem('tbr_active_p2p_order');
+                if (cachedOrder) {
+                    activeTrade = JSON.parse(cachedOrder);
+                    renderTradeRoomUI();
+                }
+            } catch (e) {}
+
+            await fetchTradeFromServer();
+            setInterval(fetchTradeFromServer, 5000);
+            startCountdownTimer();
+        });
+
+        async function fetchTradeFromServer() {
+            const token = getAuthToken();
+            if (!token) return;
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const tradeId = urlParams.get('tradeId') || (activeTrade && activeTrade._id) || 'latest';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/trades/${tradeId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const json = await res.json();
+                    if (json.success && json.trade) {
+                        activeTrade = json.trade;
+                        currentUserId = json.currentUserId || '';
+                        localStorage.setItem('tbr_active_p2p_order', JSON.stringify(activeTrade));
+                        renderTradeRoomUI();
+                    }
+                }
+            } catch (e) {}
+        }
+
+        function isCurrentUserBuyer() {
+            if (!activeTrade) return true;
+            if (currentUserId && activeTrade.buyerId) {
+                return String(activeTrade.buyerId) === String(currentUserId);
+            }
+            return (activeTrade.tradeType || activeTrade.type) === 'buy';
+        }
+
+        function renderTradeRoomUI() {
+            if (!activeTrade) return;
+
+            const isBuyer = isCurrentUserBuyer();
+            // 🚀 ሁልጊዜ በ 5 አሃዝ (#00001, #00002...) እንዲያሳይ ተደርጓል 🚀
+            const tradeNum = String(activeTrade.tradeNumber || '00001').padStart(5, '0');
+            const etbFormatted = formatEtb(activeTrade.etbAmount);
+            const usdtFormatted = Number(activeTrade.usdtAmount || 0).toFixed(2) + ' USDT';
+            const payMethod = activeTrade.paymentMethod || 'Commercial Bank of Ethiopia';
+            const payDetails = activeTrade.paymentDetails || {};
+            const status = activeTrade.status || 'funds_locked';
+
+            document.getElementById('uiTradeNumber').innerText = `Trade #${tradeNum}`;
+
+            const badgeEl = document.getElementById('uiStatusBadge');
+            const step2Item = document.getElementById('step2Item');
+            const step3Item = document.getElementById('step3Item');
+            const step4Item = document.getElementById('step4Item');
+            const stepLine2 = document.getElementById('stepLine2');
+            const stepLine3 = document.getElementById('stepLine3');
+
+            if (status === 'funds_locked') {
+                badgeEl.innerText = 'Funds Locked';
+                badgeEl.className = 'status-pill-badge';
+                step2Item.className = 'step-item active';
+                step3Item.className = 'step-item';
+                step4Item.className = 'step-item';
+            } else if (status === 'payment_sent') {
+                badgeEl.innerText = 'Payment Sent';
+                badgeEl.className = 'status-pill-badge';
+                step2Item.className = 'step-item done';
+                document.getElementById('step2Circle').innerHTML = '<i class="fa-solid fa-check"></i>';
+                stepLine2.className = 'step-line done';
+                step3Item.className = 'step-item active';
+            } else if (status === 'completed') {
+                badgeEl.innerText = 'Completed';
+                badgeEl.className = 'status-pill-badge completed';
+                step2Item.className = 'step-item done';
+                step3Item.className = 'step-item done';
+                step4Item.className = 'step-item done';
+                stepLine2.className = 'step-line done';
+                stepLine3.className = 'step-line done';
+            } else if (status === 'cancelled') {
+                badgeEl.innerText = 'Cancelled';
+                badgeEl.className = 'status-pill-badge cancelled';
+            }
+
+            const partnerName = isBuyer
+                ? (activeTrade.sellerName || activeTrade.counterpartyName || activeTrade.traderName || 'Seller')
+                : (activeTrade.buyerName || activeTrade.counterpartyName || activeTrade.traderName || 'Buyer');
+            const partnerAvatar = isBuyer ? activeTrade.sellerAvatar : activeTrade.buyerAvatar;
+            const initials = String(partnerName).slice(0, 2).toUpperCase();
+
+            document.getElementById('uiPartnerName').innerText = partnerName;
+            document.getElementById('uiPartnerAvatar').innerHTML = partnerAvatar
+                ? `<img src="${partnerAvatar}" alt="${partnerName}">`
+                : initials;
+
+            if (isBuyer) {
+                document.getElementById('instText1').innerText = `Transfer exactly ${etbFormatted} to the seller's account shown below.`;
+                document.getElementById('instText2').innerText = `Take a screenshot of your transfer receipt.`;
+                document.getElementById('instText3').innerText = `Click "Transferred, Notify Seller" and upload your receipt.`;
+                document.getElementById('instText4').innerText = `Wait for the seller to confirm receipt and release USDT.`;
+
+                document.getElementById('uiSellerSummaryCard').style.display = 'none';
+                document.getElementById('uiSellerWaitingCard').style.display = 'none';
+                document.getElementById('uiSellerReleaseBtn').style.display = 'none';
+                document.getElementById('uiBuyerPayDropdown').style.display = 'block';
+
+                document.getElementById('uiDropdownBankPill').innerText = payMethod;
+                document.getElementById('uiPayAccountName').innerText = payDetails.accountName || partnerName;
+                document.getElementById('uiPayAccountNo').innerText = payDetails.accountNumber || '1000570640058';
+                document.getElementById('uiPayBankName').innerText = payDetails.bankName || payMethod;
+                document.getElementById('uiPayEtbExact').innerText = etbFormatted;
+
+                document.getElementById('uiWarningText').innerText =
+                    `Only pay using the account details shown here. Never cancel after sending — use Appeal if there's an issue.`;
+                document.getElementById('uiCancelTradeBtn').innerText = 'Cancel Order';
+
+                const showPayBtns = status === 'funds_locked';
+                document.getElementById('uiLeftMarkPaidBtn').style.display = showPayBtns ? 'flex' : 'none';
+                document.getElementById('uiRightMarkPaidBtn').style.display = showPayBtns ? 'flex' : 'none';
+            } else {
+                document.getElementById('instText1').innerText = `Your USDT is secured in escrow — the buyer will pay shortly.`;
+                document.getElementById('instText2').innerText = `Once the buyer transfers payment, they will click 'Transferred' to notify you.`;
+                document.getElementById('instText3').innerText = `Check your bank app to verify the exact amount before releasing.`;
+                document.getElementById('instText4').innerText = `Never release USDT before confirming payment in your account.`;
+
+                document.getElementById('uiBuyerPayDropdown').style.display = 'none';
+                document.getElementById('uiLeftMarkPaidBtn').style.display = 'none';
+                document.getElementById('uiRightMarkPaidBtn').style.display = 'none';
+
+                document.getElementById('uiSellerSummaryCard').style.display = 'flex';
+                document.getElementById('uiSellerHolderName').innerText = payDetails.accountName || 'Account Holder';
+                document.getElementById('uiSellerEtbAmount').innerText = etbFormatted;
+                document.getElementById('uiSellerBankSub').innerText = payMethod;
+                document.getElementById('uiSellerMethodBadge').innerText = payMethod;
+
+                document.getElementById('uiWarningText').innerText =
+                    `Only release USDT after verifying payment in your bank app. Never release based on screenshots alone.`;
+
+                document.getElementById('uiSellerWaitingCard').style.display = 'flex';
+                document.getElementById('uiSellerWaitSub').innerText = `Your ${usdtFormatted} is secured in escrow.`;
+                document.getElementById('uiCancelTradeBtn').innerText = 'Request Cancellation';
+
+                if (status === 'payment_sent') {
+                    document.getElementById('uiSellerWaitTitle').innerText = 'Buyer marked payment as transferred!';
+                    document.getElementById('uiSellerReleaseBtn').style.display = 'flex';
+                } else {
+                    document.getElementById('uiSellerWaitTitle').innerText = "Waiting for buyer's payment";
+                    document.getElementById('uiSellerReleaseBtn').style.display = 'none';
+                }
+            }
+
+            renderChatMessages();
+        }
+
+        function togglePaymentDetailsDropdown() {
+            const body = document.getElementById('uiDropdownBody');
+            const icon = document.getElementById('uiDropdownChevron');
+            body.classList.toggle('open');
+            icon.className = body.classList.contains('open') ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down';
+        }
+
+        function copyTextValue(elId) {
+            const text = document.getElementById(elId).innerText.replace(' ETB', '').trim();
+            navigator.clipboard.writeText(text);
+        }
+
+        function startCountdownTimer() {
+            if (countdownInterval) clearInterval(countdownInterval);
+            const totalWindowMs = 15 * 60 * 1000;
+
+            countdownInterval = setInterval(() => {
+                if (!activeTrade) return;
+                const expiresAt = activeTrade.expiresAt ? new Date(activeTrade.expiresAt).getTime() : (Date.now() + totalWindowMs);
+                const remaining = Math.max(0, expiresAt - Date.now());
+
+                const mins = Math.floor(remaining / 60000);
+                const secs = Math.floor((remaining % 60000) / 1000);
+                const formatted = `${mins}m ${String(secs).padStart(2, '0')}s`;
+
+                document.getElementById('uiCountdownClock').innerText = formatted;
+                document.getElementById('uiAppealClock').innerText = formatted;
+
+                const pct = Math.max(0, Math.min(100, (remaining / totalWindowMs) * 100));
+                document.getElementById('uiTimerBarFill').style.width = `${pct}%`;
+            }, 1000);
+        }
+
+        async function markPaymentTransferred() {
+            if (!activeTrade) return;
+            activeTrade.status = 'payment_sent';
+            renderTradeRoomUI();
+
+            if (!activeTrade._id) return;
+            try {
+                const res = await fetch(`${API_BASE}/api/trades/${activeTrade._id}/mark-paid`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+                });
+                const json = await res.json();
+                if (res.ok && json.success) {
+                    activeTrade = json.trade;
+                    renderTradeRoomUI();
+                }
+            } catch (e) {}
+        }
+
+        async function releaseUsdtToBuyer() {
+            if (!activeTrade || !confirm('Have you verified the exact ETB payment in your bank/Telebirr account?')) return;
+            try {
+                const res = await fetch(`${API_BASE}/api/trades/${activeTrade._id}/release`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+                });
+                const json = await res.json();
+                if (res.ok && json.success) {
+                    activeTrade = json.trade;
+                    renderTradeRoomUI();
+                    alert('USDT released to Buyer successfully!');
+                }
+            } catch (e) {}
+        }
+
+        async function cancelActiveTrade() {
+            if (!activeTrade || !confirm('Are you sure you want to cancel this order?')) return;
+            if (activeTrade._id) {
+                try {
+                    await fetch(`${API_BASE}/api/trades/${activeTrade._id}/cancel`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+                    });
+                } catch (e) {}
+            }
+            localStorage.removeItem('tbr_active_p2p_order');
+            window.location.href = 'market.html';
+        }
+
+        function renderChatMessages() {
+            const area = document.getElementById('uiChatMessagesArea');
+            const emptyEl = document.getElementById('uiChatEmptyState');
+            const msgs = (activeTrade && Array.isArray(activeTrade.messages)) ? activeTrade.messages : [];
+
+            if (msgs.length === 0) {
+                emptyEl.style.display = 'block';
+                return;
+            }
+            emptyEl.style.display = 'none';
+
+            area.innerHTML = msgs.map(m => {
+                if (m.isSystem) {
+                    return `<div class="msg-bubble system">${m.text}</div>`;
+                }
+                const isMine = currentUserId && String(m.senderId) === String(currentUserId);
+                const cls = isMine ? 'mine' : 'theirs';
+                const imgHtml = m.image ? `<img src="${m.image}" onclick="window.open(this.src)">` : '';
+                return `<div class="msg-bubble ${cls}">${m.text || ''}${imgHtml}</div>`;
+            }).join('');
+            area.scrollTop = area.scrollHeight;
+        }
+
+        async function sendChatMessage() {
+            const input = document.getElementById('uiChatInput');
+            const text = input.value.trim();
+            if (!text || !activeTrade) return;
+            input.value = '';
+
+            if (!activeTrade.messages) activeTrade.messages = [];
+            activeTrade.messages.push({ senderId: currentUserId, text, isSystem: false });
+            renderChatMessages();
+
+            if (activeTrade._id) {
+                try {
+                    await fetch(`${API_BASE}/api/trades/${activeTrade._id}/messages`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${getAuthToken()}`
+                        },
+                        body: JSON.stringify({ text })
+                    });
+                } catch (e) {}
+            }
+        }
+
+        function uploadReceiptImage(event) {
+            const file = event.target.files[0];
+            if (!file || !activeTrade) return;
+            const reader = new FileReader();
+            reader.onload = async () => {
+                const base64Img = reader.result;
+                if (!activeTrade.messages) activeTrade.messages = [];
+                activeTrade.messages.push({ senderId: currentUserId, text: 'Receipt uploaded:', image: base64Img });
+                renderChatMessages();
+
+                if (activeTrade._id) {
+                    try {
+                        await fetch(`${API_BASE}/api/trades/${activeTrade._id}/messages`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${getAuthToken()}`
+                            },
+                            body: JSON.stringify({ text: 'Receipt uploaded:', image: base64Img })
+                        });
+                    } catch (e) {}
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    </script>
+</body>
+</html>
