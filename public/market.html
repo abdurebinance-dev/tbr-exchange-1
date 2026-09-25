@@ -153,7 +153,6 @@
             text-align: left;
         }
         
-        /* 🚀 Wider vertical gap between PC rows (padding: 20px 16px) 🚀 */
         th, td {
             padding: 20px 16px;
             border-bottom: 1px solid #181a20;
@@ -187,8 +186,8 @@
             gap: 10px;
         }
         .avatar-box {
-            width: 30px;
-            height: 30px;
+            width: 34px;
+            height: 34px;
             border-radius: 50%;
             background: #1c2027;
             display: flex;
@@ -196,9 +195,17 @@
             justify-content: center;
             color: var(--accent-gold);
             font-weight: bold;
-            font-size: 12px;
+            font-size: 13px;
             border: 1px solid #2b313a;
             flex-shrink: 0;
+            overflow: hidden;
+        }
+        .avatar-box img, .m-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+            display: block;
         }
         .adv-name {
             font-weight: 700;
@@ -224,7 +231,6 @@
             color: var(--green);
         }
 
-        /* 🚀 Much wider gap between USDT and Limit (margin-bottom: 18px) 🚀 */
         .limit-cell .available {
             font-weight: 700;
             font-size: 13px;
@@ -376,6 +382,7 @@
                 font-size: 13px;
                 border: 1px solid #2b313a;
                 flex-shrink: 0;
+                overflow: hidden;
             }
             .m-name {
                 font-weight: 700;
@@ -625,6 +632,63 @@
             renderOrderBook();
         }
 
+        // የነጋዴውን Username ወይም trader + ID ቁጥር (ለምሳሌ trader000012) የሚሰራ ተግባር
+        function resolveTraderDisplay(ad, localUser) {
+            const isCurrentUser = localUser && (
+                (ad.email && localUser.email && ad.email.toLowerCase() === localUser.email.toLowerCase()) ||
+                (ad.userId && (ad.userId === localUser._id || ad.userId === localUser.id)) ||
+                (ad.name && localUser.name && ad.name.toLowerCase() === localUser.name.toLowerCase()) ||
+                (ad.name && localUser.email && ad.name.toLowerCase() === localUser.email.split('@')[0].toLowerCase())
+            );
+
+            // 1. ፕሮፋይል ፎቶ (Profile Picture)
+            let avatarUrl = ad.profilePic || ad.avatar || ad.profileImage || ad.photoUrl || (ad.user && (ad.user.profilePic || ad.user.avatar || ad.user.profileImage)) || '';
+            if (!avatarUrl && isCurrentUser) {
+                avatarUrl = localUser.profilePic || localUser.avatar || localUser.profileImage ||
+                            localStorage.getItem('userAvatar') || localStorage.getItem('profilePic') ||
+                            localStorage.getItem('tbr_avatar') || localStorage.getItem('avatar') || '';
+            }
+
+            // 2. Trader Username
+            let rawUsername = ad.traderUsername || ad.username || (ad.user && (ad.user.traderUsername || ad.user.username)) || '';
+            if (!rawUsername && isCurrentUser) {
+                rawUsername = localUser.traderUsername || localUser.username ||
+                              localStorage.getItem('traderUsername') || localStorage.getItem('tbr_username') ||
+                              localStorage.getItem('username') || '';
+            }
+
+            let cleanUsername = String(rawUsername || '').trim().replace(/^@+/, '').trim();
+            const invalidNames = ['', 'not added', 'not set', 'none', 'null', 'undefined'];
+
+            // Username ካለው እሱን ይጠቀማል
+            if (!invalidNames.includes(cleanUsername.toLowerCase())) {
+                return { displayName: cleanUsername, avatarUrl };
+            }
+
+            // 3. Username ካላስገባ -> trader + የ ID ቁጥር (ለምሳሌ TBR-000012 -> trader000012)
+            let rawId = ad.tbrId || ad.customId || ad.traderId || (ad.user && (ad.user.tbrId || ad.user.customId)) || '';
+            if (!rawId && isCurrentUser) {
+                rawId = localUser.tbrId || localUser.customId || localStorage.getItem('tbrId') || localStorage.getItem('userTbrId') || '';
+            }
+
+            let idDigits = String(rawId || '').replace(/\D/g, '');
+            if (!idDigits && (ad.userId || ad._id || (isCurrentUser && (localUser._id || localUser.id)))) {
+                const fallbackSource = String(ad.userId || (isCurrentUser && (localUser._id || localUser.id)) || ad._id || '');
+                const numericPart = fallbackSource.replace(/\D/g, '');
+                idDigits = numericPart ? numericPart.slice(-6).padStart(6, '0') : '000015';
+            }
+            if (!idDigits) {
+                idDigits = '000015';
+            } else if (idDigits.length < 6) {
+                idDigits = idDigits.padStart(6, '0');
+            }
+
+            return {
+                displayName: `trader${idDigits}`,
+                avatarUrl
+            };
+        }
+
         async function renderOrderBook() {
             const tbody = document.getElementById('p2pOrdersBody');
             const isBuy = currentType === 'buy';
@@ -632,6 +696,12 @@
             const actionLabel = isBuy ? 'Buy' : 'Sell';
             const btnClass = isBuy ? 'order-btn' : 'order-btn sell';
             const mobileBtnClass = isBuy ? 'm-order-btn buy' : 'm-order-btn sell';
+
+            let localUser = null;
+            try {
+                const storedUser = localStorage.getItem('user') || localStorage.getItem('currentUser') || localStorage.getItem('tbr_user');
+                if (storedUser) localUser = JSON.parse(storedUser);
+            } catch (e) {}
 
             let serverAds = [];
             try {
@@ -654,8 +724,11 @@
                 }
                 if (!Array.isArray(payMethods)) payMethods = [payMethods];
 
+                const traderInfo = resolveTraderDisplay(ad, localUser);
+
                 return {
-                    name: ad.name || 'Trader',
+                    name: traderInfo.displayName,
+                    avatarUrl: traderInfo.avatarUrl,
                     verified: true,
                     orders: ad.ordersCount || 1,
                     comp: ad.completionRate || '100%',
@@ -672,13 +745,18 @@
                 const effectivePrice = t.customPrice;
                 const payTagsHTML = t.pay.map(p => `<span class="pay-tag">${p}</span>`).join('');
                 const mobileTagsRendered = t.pay.map(p => `<span class="m-pay-tag">${p}</span>`).join('');
+                const firstLetter = (t.name || 'T').replace(/^@/, '').charAt(0).toUpperCase();
+
+                const avatarContent = t.avatarUrl
+                    ? `<img src="${t.avatarUrl}" alt="${t.name}" onerror="this.outerHTML='${firstLetter}'">`
+                    : firstLetter;
 
                 html += `
                 <!-- PC Table Row View -->
                 <tr class="pc-table-row">
                     <td>
                         <div class="advertiser-cell">
-                            <div class="avatar-box">${t.name.charAt(0).toUpperCase()}</div>
+                            <div class="avatar-box">${avatarContent}</div>
                             <div>
                                 <div class="adv-name">${t.name} ${t.verified ? '<i class="fa-solid fa-circle-check"></i>' : ''}</div>
                                 <div class="adv-stats">${t.orders} trades &bull; ${t.comp}</div>
@@ -710,7 +788,7 @@
                         <div class="m-card">
                             <div class="m-top-row">
                                 <div class="m-user-info">
-                                    <div class="m-avatar">${t.name.charAt(0).toUpperCase()}</div>
+                                    <div class="m-avatar">${avatarContent}</div>
                                     <div>
                                         <div class="m-name">${t.name} ${t.verified ? '<i class="fa-solid fa-circle-check" style="font-size:11px; color:var(--accent-gold);"></i>' : ''}</div>
                                         <div class="m-stats">${t.orders} trades &bull; ${t.comp}</div>
