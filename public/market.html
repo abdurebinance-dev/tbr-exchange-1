@@ -795,7 +795,7 @@
             gap: 6px;
         }
 
-        /* 🚀 Fee Breakdown Summary Box (Exact Match to Screenshot 4500) 🚀 */
+        /* 🚀 Fee Breakdown Summary Box (With Wider Gap & Dimmer/Thinner Fee Text) 🚀 */
         .tm-fee-summary-box {
             margin-top: 14px;
             padding-top: 14px;
@@ -808,7 +808,7 @@
         .tm-fee-right .fee-caption {
             font-size: 11px;
             color: #6c7583;
-            margin-bottom: 4px;
+            margin-bottom: 5px;
         }
         .tm-fee-right {
             text-align: right;
@@ -818,6 +818,7 @@
             font-weight: 800;
             color: #ffffff;
             font-family: monospace;
+            line-height: 1.2;
         }
         .tm-fee-main-val span {
             font-size: 11px;
@@ -830,10 +831,12 @@
             padding-top: 16px;
         }
         .tm-fee-subline {
-            font-size: 11px;
-            color: #6c7583;
-            margin-top: 4px;
-            font-family: monospace;
+            font-size: 10.5px;
+            font-weight: 300;
+            color: rgba(132, 142, 156, 0.42);
+            margin-top: 12px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            letter-spacing: 0.25px;
         }
 
         .tm-footer {
@@ -1261,11 +1264,11 @@
                     </div>
                 </div>
 
-                <!-- USDT Input Field (You receive / You send) -->
-                <div class="tm-field-group">
+                <!-- USDT Input Field (Hidden on Buy USDT, Shown on Sell USDT) -->
+                <div class="tm-field-group" id="tmUsdtFieldGroup">
                     <div class="tm-field-header">
-                        <span id="tmUsdtFieldLabel">You receive (USDT)</span>
-                        <span class="right-hint" id="tmUsdtRightHint">Available 0.00 USDT</span>
+                        <span id="tmUsdtFieldLabel">You send (USDT)</span>
+                        <span class="right-hint" id="tmUsdtRightHint">Balance 0.00 USDT</span>
                     </div>
                     <div class="tm-input-row">
                         <div class="tm-input-box buy-focus" id="tmUsdtInputBox">
@@ -1273,10 +1276,12 @@
                             <span class="tm-input-unit">USDT</span>
                         </div>
                     </div>
-                    <div class="tm-error-msg" id="tmOrderErrorMsg"></div>
                 </div>
 
-                <!-- 🚀 Dynamic Fee Breakdown Summary (Synced with Admin Platform Fee %) 🚀 -->
+                <!-- Error Message (Visible on both Buy and Sell) -->
+                <div class="tm-error-msg" id="tmOrderErrorMsg"></div>
+
+                <!-- Dynamic Fee Breakdown Summary -->
                 <div class="tm-fee-summary-box" id="tmFeeSummaryBox">
                     <div class="tm-fee-left">
                         <div class="fee-caption" id="tmFeeLeftCaption">You receive</div>
@@ -1303,11 +1308,11 @@
         const ADS_CACHE_KEY = 'tbr_market_ads_v1';
         let currentType = 'buy';
 
-        // 🚀 Admin Settings State (Synced live from /api/settings) 🚀
+        // Admin Settings State (Synced live from /api/settings)
         let systemSettings = {
             buyRate: 195,
             sellRate: 192,
-            platformFee: 0.5 // Default 0.5% per side
+            platformFee: 0.5
         };
 
         // In-Memory Ads Store for 0ms Instant Tab/Filter Switching
@@ -1344,7 +1349,6 @@
             }).catch(() => {});
         }
 
-        // 🚀 Fetch Admin Rate & Platform Fee (%) Settings 🚀
         async function fetchAdminSettings() {
             try {
                 const res = await fetch(`${API_BASE}/api/settings`);
@@ -1359,7 +1363,6 @@
                         systemSettings.sellRate = parseNum(json.data.sellRate, 192);
                         systemSettings.platformFee = parseNum(json.data.platformFee, 0.5);
 
-                        // If order modal is currently open, refresh fee calculation immediately
                         if (document.getElementById('orderModal').style.display === 'flex') {
                             updateFeeSummaryDisplay();
                         }
@@ -1923,18 +1926,22 @@
             // 5. Input Labels, Placeholders & Focus Colors
             const etbBox = document.getElementById('tmEtbInputBox');
             const usdtBox = document.getElementById('tmUsdtInputBox');
+            const usdtFieldGroup = document.getElementById('tmUsdtFieldGroup');
+
             etbBox.className = isBuy ? 'tm-input-box buy-focus' : 'tm-input-box sell-focus';
             usdtBox.className = isBuy ? 'tm-input-box buy-focus' : 'tm-input-box sell-focus';
 
             if (isBuy) {
+                // Buy USDT ላይ የ USDT ሳጥኑ እንዲደበቅ ተደርጓል
+                usdtFieldGroup.style.display = 'none';
+
                 document.getElementById('tmEtbFieldLabel').innerText = 'You pay (ETB)';
                 document.getElementById('tmEtbRightHint').innerText = `Limit ${minFormatted} - ${maxFormatted} ETB`;
                 document.getElementById('tmEtbInput').placeholder = `${minFormatted} – ${maxFormatted}`;
-
-                document.getElementById('tmUsdtFieldLabel').innerText = 'You receive (USDT)';
-                document.getElementById('tmUsdtRightHint').innerText = `Available ${formatMoney2(ad.numericAvail)} USDT`;
-                document.getElementById('tmUsdtInput').placeholder = `Up to ${formatMoney2(ad.numericAvail)}`;
             } else {
+                // Sell USDT ላይ የ USDT ሳጥኑ ይታያል
+                usdtFieldGroup.style.display = 'block';
+
                 const effectiveMaxEtb = currentUserBalance > 0
                     ? Math.min(ad.numericMax, currentUserBalance * ad.numericPrice)
                     : ad.numericMax;
@@ -1960,7 +1967,6 @@
 
             document.getElementById('orderModal').style.display = 'flex';
 
-            // Sync latest admin fee & user balance in background
             fetchAdminSettings();
             fetchCurrentUserWalletAndPayments().then(() => {
                 if (!isBuy && document.getElementById('orderModal').style.display === 'flex') {
@@ -2025,7 +2031,7 @@
             }
         }
 
-        // 🚀 Live Fee Calculation Display (Uses systemSettings.platformFee from Admin) 🚀
+        // Live Fee Calculation Display (Uses systemSettings.platformFee from Admin)
         function updateFeeSummaryDisplay() {
             const summaryBox = document.getElementById('tmFeeSummaryBox');
             const etbNum = parseFloat(document.getElementById('tmEtbInput').value);
@@ -2119,7 +2125,7 @@
                 usdtInput.value = '';
             } else {
                 const usdtVal = etbNum / activeModalAd.numericPrice;
-                usdtInput.value = currentType === 'sell' ? usdtVal.toFixed(4) : usdtVal.toFixed(2);
+                usdtInput.value = usdtVal.toFixed(4);
             }
             validateModalOrderInputs();
         }
