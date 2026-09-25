@@ -2176,6 +2176,8 @@ app.get('/api/transactions', verifyToken, async (req, res) => {
 });
 
 // --- 🔥 P2P Ad Schema & Model 🔥 ---
+userSchema.add({ lastActive: { type: Date, default: Date.now } });
+
 const adSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     email: { type: String, required: true },
@@ -2194,6 +2196,16 @@ const adSchema = new mongoose.Schema({
 
 const Ad = mongoose.models.Ad || mongoose.model('Ad', adSchema);
 
+// --- 🔥 የተጠቃሚ Online Status ማዘመኛ (Heartbeat API) 🔥 ---
+app.post('/api/user/heartbeat', verifyToken, async (req, res) => {
+    try {
+        await User.findByIdAndUpdate(req.user.id, { $set: { lastActive: new Date() } }, { strict: false });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false });
+    }
+});
+
 // --- 🔥 P2P Ad APIs 🔥 ---
 
 // 1. አዲስ ማስታወቂያ ለመፍጠር (Post Ad & Lock Funds)
@@ -2208,7 +2220,6 @@ app.post('/api/ads', verifyToken, async (req, res) => {
 
         const amountNum = Number(totalAmount);
 
-        // 🚀 SELL ትዕዛዝ ከሆነ ዩዘሩ በቂ ብር እንዳለው አረጋግጦ ብሩን መቆለፍ (Lock Balance) 🚀
         if (tradeType === 'sell') {
             if (!user.balance || user.balance < amountNum) {
                 return res.status(400).json({ success: false, message: 'Insufficient balance to post this sell ad.' });
@@ -2216,10 +2227,11 @@ app.post('/api/ads', verifyToken, async (req, res) => {
             
             user.balance -= amountNum;
             user.lockedBalance = (user.lockedBalance || 0) + amountNum;
-            await user.save();
         }
 
-        // Username ካለው እሱን፣ ከሌለው ደግሞ trader + የ ID ቁጥሩን (ለምሳሌ trader000012) መጠቀም
+        user.lastActive = new Date();
+        await user.save();
+
         let cleanUsername = (user.traderUsername || '').trim().replace(/^@+/, '').trim();
         let idDigits = String(user.userId || '').replace(/\D/g, '').padStart(6, '0');
         let displayTraderName = cleanUsername ? cleanUsername : `trader${idDigits || '000001'}`;
@@ -2247,13 +2259,16 @@ app.post('/api/ads', verifyToken, async (req, res) => {
     }
 });
 
-// 2. የተፈጠሩ ማስታወቂያዎችን በሙሉ ከነጋዴው ፎቶ፣ Username እና TBR-ID ጋር ማምጣት
+// 2. የተፈጠሩ ማስታወቂያዎችን በሙሉ ከነጋዴው ፎቶ፣ Username፣ TBR-ID እና Online Status ጋር ማምጣት
 app.get('/api/ads', async (req, res) => {
     try {
         const ads = await Ad.find({ status: 'active' })
-            .populate('userId', 'avatar traderUsername userId numericId fullName email')
+            .populate('userId', 'avatar traderUsername userId numericId fullName email lastActive')
             .sort({ createdAt: -1 })
             .lean();
+
+        const now = Date.now();
+        const ONLINE_THRESHOLD = 2 * 60 * 1000; // ባለፉት 2 ደቂቃዎች ውስጥ አክቲቭ ከነበረ Online ይባላል
 
         const enrichedAds = ads.map(ad => {
             const trader = ad.userId && typeof ad.userId === 'object' ? ad.userId : {};
@@ -2261,8 +2276,8 @@ app.get('/api/ads', async (req, res) => {
             const tbrId = trader.userId || '';
             const idDigits = String(tbrId).replace(/\D/g, '').padStart(6, '0') || '000001';
 
-            // ነጋዴው Username ካስገባ እሱን፣ ካላስገባ ግን trader000012 ተብሎ እንዲወጣ
             const displayName = rawUsername ? rawUsername : `trader${idDigits}`;
+            const isOnline = trader.lastActive ? (now - new Date(trader.lastActive).getTime() <= ONLINE_THRESHOLD) : false;
 
             return {
                 ...ad,
@@ -2270,7 +2285,8 @@ app.get('/api/ads', async (req, res) => {
                 name: displayName,
                 traderUsername: rawUsername,
                 tbrId: tbrId,
-                avatar: trader.avatar || ''
+                avatar: trader.avatar || '',
+                isOnline: isOnline
             };
         });
 
@@ -2281,7 +2297,7 @@ app.get('/api/ads', async (req, res) => {
     }
 });
 
-// 3. የራሱን (የተሎግ ያደረገውን ዩዘር) ማስታወቂያዎች ብቻ ማምጫ ራውት
+// 3. የራሱን ማስታወቂያዎች ብቻ ማምጫ ራውት
 app.get('/api/ads/my', verifyToken, async (req, res) => {
     try {
         const myAds = await Ad.find({ userId: req.user.id }).sort({ createdAt: -1 });

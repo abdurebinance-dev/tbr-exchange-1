@@ -185,9 +185,17 @@
             align-items: center;
             gap: 10px;
         }
-        .avatar-box {
+
+        /* 🚀 Avatar Wrapper & Online/Offline Status Dot 🚀 */
+        .avatar-wrap {
+            position: relative;
             width: 34px;
             height: 34px;
+            flex-shrink: 0;
+        }
+        .avatar-box {
+            width: 100%;
+            height: 100%;
             border-radius: 50%;
             background: #1c2027;
             display: flex;
@@ -197,8 +205,8 @@
             font-weight: bold;
             font-size: 13px;
             border: 1px solid #2b313a;
-            flex-shrink: 0;
             overflow: hidden;
+            box-sizing: border-box;
         }
         .avatar-box img, .m-avatar img {
             width: 100%;
@@ -207,6 +215,24 @@
             border-radius: 50%;
             display: block;
         }
+        .status-dot {
+            position: absolute;
+            bottom: -1px;
+            right: -1px;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            border: 2px solid var(--card-bg);
+            z-index: 2;
+            box-sizing: content-box;
+        }
+        .status-dot.online {
+            background-color: #0ecb81; /* Online: አረንጓዴ */
+        }
+        .status-dot.offline {
+            background-color: #23272f; /* Offline: በጣም ፈዛዛ ጥቁር */
+        }
+
         .adv-name {
             font-weight: 700;
             font-size: 13px;
@@ -369,9 +395,15 @@
                 align-items: center;
                 gap: 8px;
             }
-            .m-avatar {
+            .m-avatar-wrap {
+                position: relative;
                 width: 32px;
                 height: 32px;
+                flex-shrink: 0;
+            }
+            .m-avatar {
+                width: 100%;
+                height: 100%;
                 border-radius: 50%;
                 background: #1c2027;
                 display: flex;
@@ -381,8 +413,8 @@
                 font-weight: bold;
                 font-size: 13px;
                 border: 1px solid #2b313a;
-                flex-shrink: 0;
                 overflow: hidden;
+                box-sizing: border-box;
             }
             .m-name {
                 font-weight: 700;
@@ -586,7 +618,22 @@
         let currentType = 'buy';
         let currentRates = { buyRate: 192.00, sellRate: 195.00 };
 
-        document.addEventListener('DOMContentLoaded', () => {
+        // የተጠቃሚውን Online Status በየ 30 ሰከንዱ ለሰርቨሩ ያሳውቃል
+        async function sendHeartbeat() {
+            const token = localStorage.getItem('token') || localStorage.getItem('jwtToken') || localStorage.getItem('authToken');
+            if (!token) return;
+            try {
+                await fetch(`${API_BASE}/api/user/heartbeat`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+                });
+            } catch (e) {}
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await sendHeartbeat();
+            setInterval(sendHeartbeat, 30000);
+
             const urlParams = new URLSearchParams(window.location.search);
             const activeTab = urlParams.get('tab');
             const initialType = urlParams.get('type');
@@ -632,16 +679,12 @@
             renderOrderBook();
         }
 
-        // የነጋዴውን Username ወይም trader + ID ቁጥር (ለምሳሌ trader000012) የሚሰራ ተግባር
         function resolveTraderDisplay(ad, localUser) {
-            const isCurrentUser = localUser && (
+            const isCurrentUser = Boolean(localUser && (
                 (ad.email && localUser.email && ad.email.toLowerCase() === localUser.email.toLowerCase()) ||
-                (ad.userId && (ad.userId === localUser._id || ad.userId === localUser.id)) ||
-                (ad.name && localUser.name && ad.name.toLowerCase() === localUser.name.toLowerCase()) ||
-                (ad.name && localUser.email && ad.name.toLowerCase() === localUser.email.split('@')[0].toLowerCase())
-            );
+                (ad.userId && (ad.userId === localUser._id || ad.userId === localUser.id))
+            ));
 
-            // 1. ፕሮፋይል ፎቶ (Profile Picture)
             let avatarUrl = ad.profilePic || ad.avatar || ad.profileImage || ad.photoUrl || (ad.user && (ad.user.profilePic || ad.user.avatar || ad.user.profileImage)) || '';
             if (!avatarUrl && isCurrentUser) {
                 avatarUrl = localUser.profilePic || localUser.avatar || localUser.profileImage ||
@@ -649,7 +692,6 @@
                             localStorage.getItem('tbr_avatar') || localStorage.getItem('avatar') || '';
             }
 
-            // 2. Trader Username
             let rawUsername = ad.traderUsername || ad.username || (ad.user && (ad.user.traderUsername || ad.user.username)) || '';
             if (!rawUsername && isCurrentUser) {
                 rawUsername = localUser.traderUsername || localUser.username ||
@@ -660,12 +702,12 @@
             let cleanUsername = String(rawUsername || '').trim().replace(/^@+/, '').trim();
             const invalidNames = ['', 'not added', 'not set', 'none', 'null', 'undefined'];
 
-            // Username ካለው እሱን ይጠቀማል
+            const isOnline = isCurrentUser ? true : Boolean(ad.isOnline);
+
             if (!invalidNames.includes(cleanUsername.toLowerCase())) {
-                return { displayName: cleanUsername, avatarUrl };
+                return { displayName: cleanUsername, avatarUrl, isOnline };
             }
 
-            // 3. Username ካላስገባ -> trader + የ ID ቁጥር (ለምሳሌ TBR-000012 -> trader000012)
             let rawId = ad.tbrId || ad.customId || ad.traderId || (ad.user && (ad.user.tbrId || ad.user.customId)) || '';
             if (!rawId && isCurrentUser) {
                 rawId = localUser.tbrId || localUser.customId || localStorage.getItem('tbrId') || localStorage.getItem('userTbrId') || '';
@@ -685,7 +727,8 @@
 
             return {
                 displayName: `trader${idDigits}`,
-                avatarUrl
+                avatarUrl,
+                isOnline
             };
         }
 
@@ -729,6 +772,7 @@
                 return {
                     name: traderInfo.displayName,
                     avatarUrl: traderInfo.avatarUrl,
+                    isOnline: traderInfo.isOnline,
                     verified: true,
                     orders: ad.ordersCount || 1,
                     comp: ad.completionRate || '100%',
@@ -751,12 +795,18 @@
                     ? `<img src="${t.avatarUrl}" alt="${t.name}" onerror="this.outerHTML='${firstLetter}'">`
                     : firstLetter;
 
+                const statusClass = t.isOnline ? 'online' : 'offline';
+                const statusTitle = t.isOnline ? 'Online' : 'Offline';
+
                 html += `
                 <!-- PC Table Row View -->
                 <tr class="pc-table-row">
                     <td>
                         <div class="advertiser-cell">
-                            <div class="avatar-box">${avatarContent}</div>
+                            <div class="avatar-wrap" title="${statusTitle}">
+                                <div class="avatar-box">${avatarContent}</div>
+                                <span class="status-dot ${statusClass}"></span>
+                            </div>
                             <div>
                                 <div class="adv-name">${t.name} ${t.verified ? '<i class="fa-solid fa-circle-check"></i>' : ''}</div>
                                 <div class="adv-stats">${t.orders} trades &bull; ${t.comp}</div>
@@ -788,7 +838,10 @@
                         <div class="m-card">
                             <div class="m-top-row">
                                 <div class="m-user-info">
-                                    <div class="m-avatar">${avatarContent}</div>
+                                    <div class="m-avatar-wrap" title="${statusTitle}">
+                                        <div class="m-avatar">${avatarContent}</div>
+                                        <span class="status-dot ${statusClass}"></span>
+                                    </div>
                                     <div>
                                         <div class="m-name">${t.name} ${t.verified ? '<i class="fa-solid fa-circle-check" style="font-size:11px; color:var(--accent-gold);"></i>' : ''}</div>
                                         <div class="m-stats">${t.orders} trades &bull; ${t.comp}</div>
