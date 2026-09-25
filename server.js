@@ -1325,9 +1325,18 @@ app.post('/api/admin/settings', verifyAdminToken, async (req, res) => {
             settings = new Setting();
         }
 
-        if (buyRate) settings.buyRate = Number(buyRate);
-        if (sellRate) settings.sellRate = Number(sellRate);
-        if (platformFee) settings.platformFee = Number(platformFee);
+        if (buyRate !== undefined && buyRate !== '') {
+            const parsedBuy = parseFloat(String(buyRate).replace(',', '.'));
+            if (!isNaN(parsedBuy)) settings.buyRate = parsedBuy;
+        }
+        if (sellRate !== undefined && sellRate !== '') {
+            const parsedSell = parseFloat(String(sellRate).replace(',', '.'));
+            if (!isNaN(parsedSell)) settings.sellRate = parsedSell;
+        }
+        if (platformFee !== undefined && platformFee !== '') {
+            const parsedFee = parseFloat(String(platformFee).replace(',', '.'));
+            if (!isNaN(parsedFee) && parsedFee >= 0) settings.platformFee = parsedFee;
+        }
         settings.updatedAt = Date.now();
 
         await settings.save();
@@ -1337,7 +1346,6 @@ app.post('/api/admin/settings', verifyAdminToken, async (req, res) => {
         res.status(500).json({ success: false, message: 'Server error updating settings' });
     }
 });
-
 
 // --- 🔥 Finance Dashboard Stats & Manual Sweep 🔥 ---
 app.get('/api/admin/finance/stats', verifyFinanceAdmin, async (req, res) => {

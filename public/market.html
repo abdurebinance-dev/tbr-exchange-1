@@ -322,7 +322,7 @@
         .mobile-card-row { display: none; }
         .pc-table-row { display: table-row; }
 
-        /* Bottom Sheet Filter Modals (Amount & Payment Method) */
+        /* Bottom Sheet Filter Modals */
         .sheet-overlay {
             position: fixed;
             inset: 0;
@@ -470,7 +470,7 @@
             color: var(--green);
         }
 
-        /* Sheet Action Buttons (Reset & Confirm) */
+        /* Sheet Action Buttons */
         .sheet-actions {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -706,7 +706,7 @@
             color: #6c7583;
         }
 
-        /* Input Groups (You pay / You receive / You send) */
+        /* Input Groups */
         .tm-field-group {
             margin-bottom: 14px;
         }
@@ -747,7 +747,6 @@
         .tm-input-box.sell-focus:focus-within {
             border-color: #f6465d;
         }
-        /* 🚀 ከገደብ በታች ወይም በላይ ሲገባ ቀይ ቦርደር 🚀 */
         .tm-input-box.input-error {
             border-color: #f6465d !important;
             background: rgba(246, 70, 93, 0.04);
@@ -796,6 +795,47 @@
             gap: 6px;
         }
 
+        /* 🚀 Fee Breakdown Summary Box (Exact Match to Screenshot 4500) 🚀 */
+        .tm-fee-summary-box {
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid #1c2029;
+            display: none;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .tm-fee-left .fee-caption,
+        .tm-fee-right .fee-caption {
+            font-size: 11px;
+            color: #6c7583;
+            margin-bottom: 4px;
+        }
+        .tm-fee-right {
+            text-align: right;
+        }
+        .tm-fee-main-val {
+            font-size: 14px;
+            font-weight: 800;
+            color: #ffffff;
+            font-family: monospace;
+        }
+        .tm-fee-main-val span {
+            font-size: 11px;
+            color: #848e9c;
+            font-weight: 600;
+        }
+        .tm-fee-arrow {
+            color: #6c7583;
+            font-size: 13px;
+            padding-top: 16px;
+        }
+        .tm-fee-subline {
+            font-size: 11px;
+            color: #6c7583;
+            margin-top: 4px;
+            font-family: monospace;
+        }
+
         .tm-footer {
             padding: 14px 22px 18px 22px;
             border-top: 1px solid #1c2029;
@@ -825,7 +865,6 @@
         .tm-submit-btn.sell-btn:hover:not(:disabled) {
             opacity: 0.92;
         }
-        /* 🚀 ትክክለኛ መጠን እስኪገባ ድረስ Confirm በተኑ እንዳይነካ መቆለፊያ 🚀 */
         .tm-submit-btn:disabled {
             opacity: 0.35 !important;
             cursor: not-allowed !important;
@@ -1236,6 +1275,20 @@
                     </div>
                     <div class="tm-error-msg" id="tmOrderErrorMsg"></div>
                 </div>
+
+                <!-- 🚀 Dynamic Fee Breakdown Summary (Synced with Admin Platform Fee %) 🚀 -->
+                <div class="tm-fee-summary-box" id="tmFeeSummaryBox">
+                    <div class="tm-fee-left">
+                        <div class="fee-caption" id="tmFeeLeftCaption">You receive</div>
+                        <div class="tm-fee-main-val"><span id="tmFeeEtbVal" style="color:#fff; font-size:14px; font-weight:800;">0.00</span> <span>ETB</span></div>
+                    </div>
+                    <div class="tm-fee-arrow">&rarr;</div>
+                    <div class="tm-fee-right">
+                        <div class="fee-caption" id="tmFeeRightCaption">Buyer gets</div>
+                        <div class="tm-fee-main-val"><span id="tmFeeNetUsdtVal" style="color:#fff; font-size:14px; font-weight:800;">0.000000</span> <span>USDT</span></div>
+                        <div class="tm-fee-subline" id="tmFeeSubtext">0.50% fee — 0.000000 USDT</div>
+                    </div>
+                </div>
             </div>
 
             <!-- Bottom Confirm Button -->
@@ -1250,13 +1303,20 @@
         const ADS_CACHE_KEY = 'tbr_market_ads_v1';
         let currentType = 'buy';
 
+        // 🚀 Admin Settings State (Synced live from /api/settings) 🚀
+        let systemSettings = {
+            buyRate: 195,
+            sellRate: 192,
+            platformFee: 0.5 // Default 0.5% per side
+        };
+
         // In-Memory Ads Store for 0ms Instant Tab/Filter Switching
         let allServerAds = [];
         let currentRenderedAds = [];
         let hasLoadedAdsOnce = false;
         let isFetchingAds = false;
 
-        // Current User Balance & Saved Payment Accounts (for Sell Modal)
+        // Current User Balance & Saved Payment Accounts
         let currentUserBalance = 0;
         let currentUserFullName = '';
         let currentUserSavedPayments = [];
@@ -1282,6 +1342,32 @@
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
             }).catch(() => {});
+        }
+
+        // 🚀 Fetch Admin Rate & Platform Fee (%) Settings 🚀
+        async function fetchAdminSettings() {
+            try {
+                const res = await fetch(`${API_BASE}/api/settings`);
+                if (res.ok) {
+                    const json = await res.json();
+                    if (json.success && json.data) {
+                        const parseNum = (v, fallback) => {
+                            const n = parseFloat(String(v).replace(',', '.'));
+                            return !isNaN(n) ? n : fallback;
+                        };
+                        systemSettings.buyRate = parseNum(json.data.buyRate, 195);
+                        systemSettings.sellRate = parseNum(json.data.sellRate, 192);
+                        systemSettings.platformFee = parseNum(json.data.platformFee, 0.5);
+
+                        // If order modal is currently open, refresh fee calculation immediately
+                        if (document.getElementById('orderModal').style.display === 'flex') {
+                            updateFeeSummaryDisplay();
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to fetch admin settings:", e);
+            }
         }
 
         async function fetchCurrentUserWalletAndPayments() {
@@ -1332,7 +1418,8 @@
                 }
             } catch (e) {}
 
-            // 2. Fetch fresh live ads & user wallet/payments
+            // 2. Fetch fresh live ads, admin settings & user wallet/payments in parallel
+            fetchAdminSettings();
             fetchLiveAdsFromServer();
             fetchCurrentUserWalletAndPayments();
 
@@ -1340,6 +1427,7 @@
             sendHeartbeat();
             setInterval(sendHeartbeat, 30000);
             setInterval(fetchLiveAdsFromServer, 15000);
+            setInterval(fetchAdminSettings, 15000);
         });
 
         function switchTradeType(type) {
@@ -1596,7 +1684,6 @@
             return 0;
         }
 
-        // Synchronous 0ms Renderer with Price & First-Posted Sorting
         function renderOrderBook() {
             const tbody = document.getElementById('p2pOrdersBody');
             if (!hasLoadedAdsOnce && allServerAds.length === 0) {
@@ -1772,7 +1859,7 @@
         }
 
         // ==========================================
-        // 🚀 BUY USDT / SELL USDT MODAL & REAL-TIME VALIDATION 🚀
+        // 🚀 BUY / SELL MODAL, VALIDATION & ADMIN FEE BREAKDOWN 🚀
         // ==========================================
 
         function formatMoney2(num) {
@@ -1863,8 +1950,9 @@
             document.getElementById('tmEtbInput').value = '';
             document.getElementById('tmUsdtInput').value = '';
             document.getElementById('tmOrderErrorMsg').style.display = 'none';
+            document.getElementById('tmFeeSummaryBox').style.display = 'none';
 
-            // 6. Confirm Button Styling (Starts Disabled until valid amount is entered)
+            // 6. Confirm Button Starts Disabled
             const confirmBtn = document.getElementById('tmConfirmOrderBtn');
             confirmBtn.innerText = isBuy ? 'Confirm Buy' : 'Confirm Sell';
             confirmBtn.className = isBuy ? 'tm-submit-btn buy-btn' : 'tm-submit-btn sell-btn';
@@ -1872,6 +1960,8 @@
 
             document.getElementById('orderModal').style.display = 'flex';
 
+            // Sync latest admin fee & user balance in background
+            fetchAdminSettings();
             fetchCurrentUserWalletAndPayments().then(() => {
                 if (!isBuy && document.getElementById('orderModal').style.display === 'flex') {
                     updateSellerAccountPreviewBox();
@@ -1935,12 +2025,40 @@
             }
         }
 
-        // 🚀 Real-time Limit & Balance Validation Function 🚀
+        // 🚀 Live Fee Calculation Display (Uses systemSettings.platformFee from Admin) 🚀
+        function updateFeeSummaryDisplay() {
+            const summaryBox = document.getElementById('tmFeeSummaryBox');
+            const etbNum = parseFloat(document.getElementById('tmEtbInput').value);
+            const usdtNum = parseFloat(document.getElementById('tmUsdtInput').value);
+
+            if (!activeModalAd || isNaN(etbNum) || etbNum <= 0 || isNaN(usdtNum) || usdtNum <= 0) {
+                summaryBox.style.display = 'none';
+                return;
+            }
+
+            const isBuy = currentType === 'buy';
+            const feePercent = Number(systemSettings.platformFee || 0.5);
+            const feeDecimal = feePercent / 100;
+
+            const feeUsdt = usdtNum * feeDecimal;
+            const netUsdt = Math.max(0, usdtNum - feeUsdt);
+
+            document.getElementById('tmFeeLeftCaption').innerText = isBuy ? 'You pay' : 'You receive';
+            document.getElementById('tmFeeRightCaption').innerText = isBuy ? 'You get' : 'Buyer gets';
+            document.getElementById('tmFeeEtbVal').innerText = formatMoney2(etbNum);
+            document.getElementById('tmFeeNetUsdtVal').innerText = netUsdt.toFixed(6);
+            document.getElementById('tmFeeSubtext').innerText = `${feePercent.toFixed(2)}% fee — ${feeUsdt.toFixed(6)} USDT`;
+
+            summaryBox.style.display = 'flex';
+        }
+
         function validateModalOrderInputs() {
             const confirmBtn = document.getElementById('tmConfirmOrderBtn');
             const errEl = document.getElementById('tmOrderErrorMsg');
             const etbBox = document.getElementById('tmEtbInputBox');
             const usdtBox = document.getElementById('tmUsdtInputBox');
+
+            updateFeeSummaryDisplay();
 
             if (!activeModalAd) {
                 confirmBtn.disabled = true;
@@ -1950,7 +2068,6 @@
             const etbRaw = document.getElementById('tmEtbInput').value.trim();
             const usdtRaw = document.getElementById('tmUsdtInput').value.trim();
 
-            // ገና ምንም ቁጥር ካልተጻፈ ስህተት ሳያሳይ በተኑን ብቻ ይቆልፋል
             if (etbRaw === '' && usdtRaw === '') {
                 errEl.style.display = 'none';
                 etbBox.classList.remove('input-error');
@@ -1987,7 +2104,6 @@
                 return false;
             }
 
-            // ሁሉም ነገር ትክክል ሲሆን ስህተቱን ደብቆ በተኑን ይከፍታል
             errEl.style.display = 'none';
             etbBox.classList.remove('input-error');
             usdtBox.classList.remove('input-error');
@@ -2003,7 +2119,7 @@
                 usdtInput.value = '';
             } else {
                 const usdtVal = etbNum / activeModalAd.numericPrice;
-                usdtInput.value = usdtVal.toFixed(2);
+                usdtInput.value = currentType === 'sell' ? usdtVal.toFixed(4) : usdtVal.toFixed(2);
             }
             validateModalOrderInputs();
         }
@@ -2048,6 +2164,9 @@
             const isBuy = currentType === 'buy';
             const etbAmount = parseFloat(document.getElementById('tmEtbInput').value);
             const usdtAmount = parseFloat(document.getElementById('tmUsdtInput').value);
+            const feePercent = Number(systemSettings.platformFee || 0.5);
+            const feeUsdt = usdtAmount * (feePercent / 100);
+            const netUsdt = Math.max(0, usdtAmount - feeUsdt);
 
             try {
                 const pendingTradeOrder = {
@@ -2056,7 +2175,10 @@
                     traderName: activeModalAd.name,
                     unitPrice: activeModalAd.numericPrice,
                     etbAmount: etbAmount.toFixed(2),
-                    usdtAmount: usdtAmount.toFixed(2),
+                    usdtAmount: usdtAmount.toFixed(4),
+                    platformFeePercent: feePercent,
+                    feeUsdt: feeUsdt.toFixed(6),
+                    netUsdt: netUsdt.toFixed(6),
                     paymentMethod: activeModalSelectedMethod,
                     createdAt: new Date().toISOString()
                 };
