@@ -331,7 +331,6 @@
                 padding: 0 !important;
                 border: none !important;
             }
-            /* ይህ ትላንት ካርዱን ወደ ውስጥ እንዲሰበሰብ ያደረገውን የ td padding ሙሉ በሙሉ ያጠፋል */
             tr.mobile-card-row > td {
                 display: block !important;
                 width: 100% !important;
@@ -410,6 +409,7 @@
             .m-middle-row .avail {
                 color: #fff;
                 font-weight: 700;
+                margin-top: 2px;
             }
             .m-bottom-row {
                 display: flex;
@@ -719,7 +719,8 @@
                             </div>
                             
                             <div class="m-middle-row">
-                                Limit: ${t.min} - ${t.max} ETB &bull; <span class="avail">Avail: ${t.avail} USDT</span>
+                                <div>Limit: ${t.min} - ${t.max} ETB</div>
+                                <div class="avail">Avail: ${t.avail} USDT</div>
                             </div>
 
                             <div class="m-bottom-row">
