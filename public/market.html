@@ -23,8 +23,8 @@
             margin: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             color: var(--text-main);
-            padding-top: 70px;
-            padding-bottom: 70px;
+            padding-top: 60px;
+            padding-bottom: 50px;
         }
 
         /* Navbar */
@@ -35,25 +35,25 @@
             width: 100%;
             background: #0b0e11;
             border-bottom: 1px solid var(--border-color);
-            padding: 10px 20px;
+            padding: 8px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             z-index: 1000;
             box-sizing: border-box;
         }
-        .nav-left { display: flex; align-items: center; gap: 20px; }
-        .logo-container img { height: 28px; width: auto; object-fit: contain; }
-        .nav-links { display: flex; gap: 15px; }
+        .nav-left { display: flex; align-items: center; gap: 18px; }
+        .logo-container img { height: 24px; width: auto; object-fit: contain; }
+        .nav-links { display: flex; gap: 12px; }
         .nav-links a {
             color: #848e9c;
             text-decoration: none;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 500;
             display: flex;
             align-items: center;
-            gap: 6px;
-            padding: 6px 10px;
+            gap: 5px;
+            padding: 5px 9px;
             border-radius: 6px;
             transition: 0.2s;
         }
@@ -62,18 +62,18 @@
             background: rgba(240, 185, 11, 0.08);
         }
         
-        .nav-right { display: flex; align-items: center; gap: 15px; }
+        .nav-right { display: flex; align-items: center; gap: 12px; }
         .dashboard-shortcut-btn {
             background: rgba(240, 185, 11, 0.1);
             color: var(--accent-gold);
             border: 1px solid rgba(240, 185, 11, 0.2);
-            width: 36px;
-            height: 36px;
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 15px;
+            font-size: 13px;
             cursor: pointer;
             text-decoration: none;
             transition: 0.2s;
@@ -84,24 +84,24 @@
             .nav-links { display: none; }
         }
 
-        /* Market Container */
+        /* Compact Market Container for PC */
         .market-container {
-            max-width: 1300px;
+            max-width: 1200px;
             margin: 0 auto;
-            padding: 30px 20px 20px 20px;
+            padding: 18px 20px;
         }
 
-        /* Buy / Sell Switch Tabs */
+        /* Compact Buy / Sell Switch Tabs */
         .trade-toggle-wrap {
             display: flex;
             align-items: center;
-            gap: 12px;
-            margin-bottom: 20px;
+            gap: 8px;
+            margin-bottom: 12px;
         }
         .toggle-btn {
-            padding: 10px 35px;
-            border-radius: 8px;
-            font-size: 15px;
+            padding: 6px 22px;
+            border-radius: 6px;
+            font-size: 13px;
             font-weight: 700;
             cursor: pointer;
             border: none;
@@ -118,11 +118,11 @@
             color: #fff;
         }
 
-        /* Filter Controls */
+        /* Compact Filter Controls */
         .filter-row {
             display: flex;
-            gap: 12px;
-            margin-bottom: 25px;
+            gap: 8px;
+            margin-bottom: 14px;
             align-items: center;
             flex-wrap: wrap;
         }
@@ -130,20 +130,20 @@
             background: #181a20;
             border: none;
             color: #848e9c;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 13px;
+            padding: 6px 12px;
+            border-radius: 5px;
+            font-size: 11px;
             font-weight: 600;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
-        /* Market Table Styling for PC */
+        /* Compact Market Table Styling for PC */
         .p2p-table-card {
             background: var(--card-bg);
-            border-radius: 12px;
+            border-radius: 10px;
             border: 1px solid var(--border-color);
             overflow: hidden;
         }
@@ -154,16 +154,17 @@
         }
         
         th, td {
-            padding: 20px 24px;
+            padding: 12px 16px;
             border-bottom: 1px solid #14151a;
             vertical-align: middle;
         }
         th {
-            font-size: 11px;
+            font-size: 10px;
             color: var(--text-muted);
             text-transform: uppercase;
             font-weight: 600;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.4px;
+            padding: 10px 16px;
         }
         tr.pc-table-row:hover td {
             background: rgba(255, 255, 255, 0.02);
@@ -172,7 +173,7 @@
             border-bottom: none;
         }
 
-        /* 🚀 PC Column Widths: Wider gap after Advertiser, other columns pushed right 🚀 */
+        /* PC Column Widths */
         .pc-table-row td:nth-child(1), thead th:nth-child(1) { width: 38%; }
         .pc-table-row td:nth-child(2), thead th:nth-child(2) { width: 14%; }
         .pc-table-row td:nth-child(3), thead th:nth-child(3) { width: 17%; }
@@ -181,12 +182,12 @@
 
         .advertiser-cell {
             display: flex;
-            align-items: flex-start;
-            gap: 12px;
+            align-items: center;
+            gap: 10px;
         }
         .avatar-box {
-            width: 38px;
-            height: 38px;
+            width: 30px;
+            height: 30px;
             border-radius: 50%;
             background: #1c2027;
             display: flex;
@@ -194,56 +195,56 @@
             justify-content: center;
             color: var(--accent-gold);
             font-weight: bold;
-            font-size: 14px;
+            font-size: 12px;
             border: 1px solid #2b313a;
             flex-shrink: 0;
         }
         .adv-name {
             font-weight: 700;
-            font-size: 15px;
+            font-size: 13px;
             color: #fff;
             display: flex;
             align-items: center;
-            gap: 6px;
-            margin-bottom: 4px;
+            gap: 5px;
+            margin-bottom: 2px;
         }
         .adv-name i {
             color: var(--accent-gold);
-            font-size: 13px;
+            font-size: 11px;
         }
         .adv-stats {
-            font-size: 12px;
+            font-size: 11px;
             color: #848e9c;
         }
 
         .price-cell {
-            font-size: 20px;
+            font-size: 16px;
             font-weight: 700;
             color: var(--green);
         }
 
         .limit-cell .available {
             font-weight: 700;
-            font-size: 14px;
+            font-size: 12px;
             color: #fff;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
         }
         .limit-cell .range {
-            font-size: 12px;
+            font-size: 11px;
             color: #848e9c;
         }
 
         .payment-tags {
             display: flex;
-            gap: 6px;
+            gap: 5px;
             flex-wrap: wrap;
         }
         .pay-tag {
             background: #181a20;
             color: #848e9c;
-            padding: 6px 12px;
-            border-radius: 16px;
-            font-size: 11px;
+            padding: 4px 9px;
+            border-radius: 12px;
+            font-size: 10px;
             font-weight: 600;
             border: 1px solid #2b313a;
             white-space: nowrap;
@@ -255,10 +256,10 @@
         .order-btn {
             background: var(--green-btn);
             color: #000000;
-            padding: 10px 30px;
-            border-radius: 6px;
+            padding: 7px 20px;
+            border-radius: 5px;
             font-weight: 700;
-            font-size: 14px;
+            font-size: 12px;
             border: none;
             cursor: pointer;
             transition: background 0.2s;
@@ -276,7 +277,7 @@
         .mobile-card-row { display: none; }
         .pc-table-row { display: table-row; }
 
-        /* 🚀 Mobile Edge-to-Edge Zero-Gap Card Layout 🚀 */
+        /* 🚀 Mobile Edge-to-Edge Zero-Gap Card Layout (Unchanged) 🚀 */
         @media(max-width: 768px) {
             body {
                 padding-top: 56px;
@@ -466,28 +467,28 @@
             border: 1px solid var(--border-color);
             border-radius: 12px;
             width: 90%;
-            max-width: 400px;
-            padding: 24px;
+            max-width: 380px;
+            padding: 20px;
             box-sizing: border-box;
         }
         .modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 18px;
+            margin-bottom: 15px;
         }
-        .modal-header h3 { margin: 0; font-size: 16px; color: #fff; }
-        .modal-header i { cursor: pointer; color: #848e9c; font-size: 18px; }
-        .form-group { margin-bottom: 16px; }
-        .form-group label { display: block; font-size: 12px; color: #848e9c; margin-bottom: 6px; }
+        .modal-header h3 { margin: 0; font-size: 15px; color: #fff; }
+        .modal-header i { cursor: pointer; color: #848e9c; font-size: 16px; }
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 11px; color: #848e9c; margin-bottom: 5px; }
         .input-control {
             width: 100%;
             background: #0d0f12;
             border: 1px solid #2b313a;
             color: #fff;
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 14px;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 13px;
             box-sizing: border-box;
         }
     </style>
@@ -524,9 +525,9 @@
         </div>
 
         <div class="filter-row">
-            <button class="filter-btn"><i class="fa-solid fa-circle" style="font-size: 6px; color: var(--green);"></i> Online</button>
-            <button class="filter-btn">Amount <i class="fa-solid fa-chevron-down" style="font-size: 10px; margin-left:4px;"></i></button>
-            <button class="filter-btn">Payment Method <i class="fa-solid fa-chevron-down" style="font-size: 10px; margin-left:4px;"></i></button>
+            <button class="filter-btn"><i class="fa-solid fa-circle" style="font-size: 5px; color: var(--green);"></i> Online</button>
+            <button class="filter-btn">Amount <i class="fa-solid fa-chevron-down" style="font-size: 9px; margin-left:3px;"></i></button>
+            <button class="filter-btn">Payment Method <i class="fa-solid fa-chevron-down" style="font-size: 9px; margin-left:3px;"></i></button>
         </div>
 
         <!-- Orders Table / Mobile Card Grid -->
@@ -543,7 +544,7 @@
                 </thead>
                 <tbody id="p2pOrdersBody">
                     <tr>
-                        <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 40px 0; font-size: 14px;">
+                        <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 30px 0; font-size: 13px;">
                             <i class="fa-solid fa-circle-notch fa-spin"></i> Loading live orders...
                         </td>
                     </tr>
@@ -567,7 +568,7 @@
                 <label>Amount (USDT)</label>
                 <input type="number" class="input-control" id="modalAmountInput" placeholder="Enter amount">
             </div>
-            <button id="modalConfirmBtn" class="order-btn" style="width: 100%; margin-top: 15px; padding: 14px;" onclick="confirmTrade()">Proceed Trade</button>
+            <button id="modalConfirmBtn" class="order-btn" style="width: 100%; margin-top: 12px; padding: 11px;" onclick="confirmTrade()">Proceed Trade</button>
         </div>
     </div>
 
@@ -683,7 +684,7 @@
                         </div>
                     </td>
                     <td>
-                        <div class="price-cell" style="color: ${isBuy ? 'var(--green)' : 'var(--red)'};">${effectivePrice} <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">ETB</span></div>
+                        <div class="price-cell" style="color: ${isBuy ? 'var(--green)' : 'var(--red)'};">${effectivePrice} <span style="font-size:10px; color:var(--text-muted); font-weight:normal;">ETB</span></div>
                     </td>
                     <td>
                         <div class="limit-cell">
@@ -736,7 +737,7 @@
             });
 
             if (filteredAds.length === 0) {
-                html = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 40px 0;">No active ads found in the market right now.</td></tr>`;
+                html = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 30px 0; font-size: 13px;">No active ads found in the market right now.</td></tr>`;
             }
 
             tbody.innerHTML = html;
