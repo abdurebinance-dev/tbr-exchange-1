@@ -505,6 +505,321 @@
             opacity: 0.92;
         }
 
+        /* 🚀 New P2P Buy/Sell Order Modal (Exact Match to Screenshots) 🚀 */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.82);
+            backdrop-filter: blur(3px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2600;
+            padding: 16px;
+            box-sizing: border-box;
+        }
+        .trade-modal-card {
+            background: #11141a;
+            border: 1px solid #222731;
+            border-radius: 18px;
+            width: 100%;
+            max-width: 440px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75);
+        }
+        .tm-top-section {
+            padding: 20px 22px 16px 22px;
+            border-bottom: 1px solid #1c2029;
+            position: relative;
+        }
+        .tm-close-x {
+            position: absolute;
+            top: 16px;
+            right: 18px;
+            background: transparent;
+            border: none;
+            color: #848e9c;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 4px;
+            line-height: 1;
+        }
+        .tm-close-x:hover { color: #fff; }
+        .tm-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #ffffff;
+            margin: 0 0 12px 0;
+        }
+        .tm-price-row {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+        .tm-price-big {
+            font-size: 26px;
+            font-weight: 800;
+            line-height: 1;
+        }
+        .tm-price-big.buy-color { color: #0ecb81; }
+        .tm-price-big.sell-color { color: #f6465d; }
+        .tm-price-unit {
+            font-size: 12px;
+            color: #848e9c;
+            font-weight: 600;
+        }
+        .tm-sub-limits {
+            font-size: 12px;
+            color: #848e9c;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .tm-sub-limits strong {
+            color: #ffffff;
+            font-weight: 700;
+        }
+
+        .tm-scroll-body {
+            padding: 18px 22px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        .tm-Scroll-body::-webkit-scrollbar { width: 5px; }
+        .tm-scroll-body::-webkit-scrollbar-thumb { background: #262b36; border-radius: 4px; }
+
+        .tm-trader-row {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            margin-bottom: 18px;
+        }
+        .tm-trader-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 3px;
+        }
+        .tm-trader-stats {
+            font-size: 12px;
+            color: #848e9c;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .tm-trader-stats i.fa-star {
+            color: #f0b90b;
+            font-size: 11px;
+        }
+
+        .tm-section-label {
+            font-size: 12px;
+            color: #848e9c;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+        .tm-methods-wrap {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .tm-method-pill {
+            background: #151921;
+            border: 1px solid #262c36;
+            color: #cfd6e0;
+            padding: 9px 14px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            transition: all 0.15s ease;
+        }
+        .tm-method-pill:hover {
+            border-color: #384152;
+        }
+        .tm-method-pill .pill-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            display: none;
+        }
+        .tm-method-pill.selected-buy {
+            background: rgba(14, 203, 129, 0.12);
+            border-color: #0ecb81;
+            color: #0ecb81;
+        }
+        .tm-method-pill.selected-buy .pill-dot {
+            display: inline-block;
+            background: #0ecb81;
+        }
+        .tm-method-pill.selected-sell {
+            background: rgba(246, 70, 93, 0.12);
+            border-color: #f6465d;
+            color: #f6465d;
+        }
+        .tm-method-pill.selected-sell .pill-dot {
+            display: inline-block;
+            background: #f6465d;
+        }
+
+        /* Seller Receive Account Details Box */
+        .tm-receive-account-box {
+            background: #141820;
+            border: 1px solid #222733;
+            border-radius: 12px;
+            padding: 13px 15px;
+            margin-bottom: 16px;
+            display: none;
+        }
+        .tm-receive-caption {
+            font-size: 11px;
+            color: #848e9c;
+            margin-bottom: 8px;
+        }
+        .tm-receive-holder {
+            font-size: 13px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 4px;
+        }
+        .tm-receive-number {
+            font-size: 12px;
+            color: #848e9c;
+            margin-bottom: 3px;
+            font-family: monospace;
+            letter-spacing: 0.3px;
+        }
+        .tm-receive-bank {
+            font-size: 11px;
+            color: #6c7583;
+        }
+
+        /* Input Groups (You pay / You receive / You send) */
+        .tm-field-group {
+            margin-bottom: 14px;
+        }
+        .tm-field-group:last-child {
+            margin-bottom: 4px;
+        }
+        .tm-field-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: #848e9c;
+            margin-bottom: 7px;
+        }
+        .tm-field-header .right-hint {
+            font-size: 11px;
+            color: #6c7583;
+            font-family: monospace;
+        }
+        .tm-input-row {
+            display: flex;
+            gap: 8px;
+            align-items: stretch;
+        }
+        .tm-input-box {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            background: #090b0e;
+            border: 1px solid #222731;
+            border-radius: 10px;
+            padding: 0 13px;
+            transition: border-color 0.15s;
+        }
+        .tm-input-box.buy-focus:focus-within {
+            border-color: #0ecb81;
+        }
+        .tm-input-box.sell-focus:focus-within {
+            border-color: #f6465d;
+        }
+        .tm-input-box input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            font-size: 14px;
+            padding: 12px 0;
+            outline: none;
+        }
+        .tm-input-box input::placeholder {
+            color: #6c7583;
+        }
+        .tm-input-unit {
+            font-size: 11px;
+            font-weight: 700;
+            color: #848e9c;
+            margin-left: 8px;
+            user-select: none;
+        }
+        .tm-max-btn {
+            background: #161a22;
+            border: 1px solid #262c36;
+            color: #ffffff;
+            border-radius: 10px;
+            padding: 0 15px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+        .tm-max-btn:hover {
+            border-color: #3b4252;
+            background: #1d222c;
+        }
+        .tm-error-msg {
+            color: #f6465d;
+            font-size: 11px;
+            margin-top: 6px;
+            display: none;
+        }
+
+        .tm-footer {
+            padding: 14px 22px 18px 22px;
+            border-top: 1px solid #1c2029;
+            background: #0e1116;
+        }
+        .tm-submit-btn {
+            width: 100%;
+            padding: 13px;
+            border-radius: 10px;
+            border: none;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .tm-submit-btn.buy-btn {
+            background: #09794c;
+            color: #ffffff;
+        }
+        .tm-submit-btn.buy-btn:hover {
+            background: #0ecb81;
+            color: #000000;
+        }
+        .tm-submit-btn.sell-btn {
+            background: #7a1227;
+            color: #ffffff;
+        }
+        .tm-submit-btn.sell-btn:hover {
+            background: #f6465d;
+            color: #ffffff;
+        }
+
         /* Mobile Edge-to-Edge Zero-Gap Card Layout */
         @media(max-width: 768px) {
             body {
@@ -699,49 +1014,6 @@
                 font-size: 12px;
             }
         }
-
-        /* Order Modal */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 2000;
-        }
-        .modal-box {
-            background: #16181d;
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            width: 90%;
-            max-width: 380px;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-        .modal-header h3 { margin: 0; font-size: 15px; color: #fff; }
-        .modal-header i { cursor: pointer; color: #848e9c; font-size: 16px; }
-        .form-group { margin-bottom: 14px; }
-        .form-group label { display: block; font-size: 11px; color: #848e9c; margin-bottom: 5px; }
-        .input-control {
-            width: 100%;
-            background: #0d0f12;
-            border: 1px solid #2b313a;
-            color: #fff;
-            padding: 10px;
-            border-radius: 6px;
-            font-size: 13px;
-            box-sizing: border-box;
-        }
     </style>
 </head>
 <body>
@@ -865,22 +1137,91 @@
         </div>
     </div>
 
-    <!-- Order Action Modal -->
-    <div class="modal-overlay" id="orderModal">
-        <div class="modal-box">
-            <div class="modal-header">
-                <h3 id="modalTitle">Create P2P Order</h3>
-                <i class="fa-solid fa-xmark" onclick="closeOrderModal()"></i>
+    <!-- 🚀 P2P Buy / Sell Order Action Modal 🚀 -->
+    <div class="modal-overlay" id="orderModal" onclick="if(event.target === this) closeOrderModal()">
+        <div class="trade-modal-card">
+            <!-- Top Header Section -->
+            <div class="tm-top-section">
+                <button type="button" class="tm-close-x" onclick="closeOrderModal()"><i class="fa-solid fa-xmark"></i></button>
+                <h3 class="tm-title" id="tmHeaderTitle">Buy USDT</h3>
+                <div class="tm-price-row">
+                    <span class="tm-price-big buy-color" id="tmUnitPrice">200</span>
+                    <span class="tm-price-unit">ETB / USDT</span>
+                </div>
+                <div class="tm-sub-limits" id="tmSubLimits">
+                    <span>Available <strong id="tmAvailUsdt">0.00 USDT</strong></span>
+                    <span>&middot;</span>
+                    <span>Limit <strong id="tmLimitRange">500.00–100,000.00 ETB</strong></span>
+                </div>
             </div>
-            <div class="form-group">
-                <label>Unit Price</label>
-                <input type="text" class="input-control" id="modalPriceInput" readonly>
+
+            <!-- Scrollable Body -->
+            <div class="tm-scroll-body">
+                <!-- Trader Profile Info -->
+                <div class="tm-trader-row">
+                    <div class="avatar-wrap" id="tmTraderAvatarWrap">
+                        <div class="avatar-box" id="tmTraderAvatar">T</div>
+                        <span class="status-dot online" id="tmTraderStatusDot"></span>
+                    </div>
+                    <div>
+                        <div class="tm-trader-name">
+                            <span id="tmTraderName">Trader</span>
+                            <i class="fa-solid fa-circle-check" style="color: var(--accent-gold); font-size: 12px;"></i>
+                        </div>
+                        <div class="tm-trader-stats">
+                            <span><i class="fa-solid fa-star"></i> <span id="tmTraderComp">100%</span></span>
+                            <span><span id="tmTraderOrders">1</span> trades</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Method Selector -->
+                <div class="tm-section-label" id="tmMethodSectionLabel">Payment method — select one</div>
+                <div class="tm-methods-wrap" id="tmMethodPillsContainer"></div>
+
+                <!-- Seller Receive Account Preview Box (Shown on Sell USDT) -->
+                <div class="tm-receive-account-box" id="tmSellerAccountBox">
+                    <div class="tm-receive-caption">Buyer will send to:</div>
+                    <div class="tm-receive-holder" id="tmAccountHolderName">-</div>
+                    <div class="tm-receive-number" id="tmAccountNumber">-</div>
+                    <div class="tm-receive-bank" id="tmAccountBankName">-</div>
+                </div>
+
+                <!-- ETB Input Field (You pay / You receive) -->
+                <div class="tm-field-group">
+                    <div class="tm-field-header">
+                        <span id="tmEtbFieldLabel">You pay (ETB)</span>
+                        <span class="right-hint" id="tmEtbRightHint">Limit 500.00 - 100,000.00 ETB</span>
+                    </div>
+                    <div class="tm-input-row">
+                        <div class="tm-input-box buy-focus" id="tmEtbInputBox">
+                            <input type="number" step="any" id="tmEtbInput" placeholder="500.00 – 100,000.00" oninput="onModalEtbInput(this.value)">
+                            <span class="tm-input-unit">ETB</span>
+                        </div>
+                        <button type="button" class="tm-max-btn" onclick="fillMaxModalOrder()">Max</button>
+                    </div>
+                </div>
+
+                <!-- USDT Input Field (You receive / You send) -->
+                <div class="tm-field-group">
+                    <div class="tm-field-header">
+                        <span id="tmUsdtFieldLabel">You receive (USDT)</span>
+                        <span class="right-hint" id="tmUsdtRightHint">Available 0.00 USDT</span>
+                    </div>
+                    <div class="tm-input-row">
+                        <div class="tm-input-box buy-focus" id="tmUsdtInputBox">
+                            <input type="number" step="any" id="tmUsdtInput" placeholder="0.00" oninput="onModalUsdtInput(this.value)">
+                            <span class="tm-input-unit">USDT</span>
+                        </div>
+                    </div>
+                    <div class="tm-error-msg" id="tmOrderErrorMsg"></div>
+                </div>
             </div>
-            <div class="form-group">
-                <label>Amount (USDT)</label>
-                <input type="number" class="input-control" id="modalAmountInput" placeholder="Enter amount">
+
+            <!-- Bottom Confirm Button -->
+            <div class="tm-footer">
+                <button type="button" id="tmConfirmOrderBtn" class="tm-submit-btn buy-btn" onclick="confirmTrade()">Confirm Buy</button>
             </div>
-            <button id="modalConfirmBtn" class="order-btn" style="width: 100%; margin-top: 12px; padding: 11px;" onclick="confirmTrade()">Proceed Trade</button>
         </div>
     </div>
 
@@ -891,8 +1232,18 @@
 
         // In-Memory Ads Store for 0ms Instant Tab/Filter Switching
         let allServerAds = [];
+        let currentRenderedAds = [];
         let hasLoadedAdsOnce = false;
         let isFetchingAds = false;
+
+        // Current User Balance & Saved Payment Accounts (for Sell Modal)
+        let currentUserBalance = 0;
+        let currentUserFullName = '';
+        let currentUserSavedPayments = [];
+
+        // Active Modal Order State
+        let activeModalAd = null;
+        let activeModalSelectedMethod = '';
 
         // Active Filter States
         let filterOnlineOnly = false;
@@ -900,13 +1251,42 @@
         let filterPaymentMethod = 'All Methods';
         let tempSelectedPayment = 'All Methods';
 
+        function getAuthToken() {
+            return localStorage.getItem('token') || localStorage.getItem('jwtToken') || localStorage.getItem('authToken') || '';
+        }
+
         function sendHeartbeat() {
-            const token = localStorage.getItem('token') || localStorage.getItem('jwtToken') || localStorage.getItem('authToken');
+            const token = getAuthToken();
             if (!token) return;
             fetch(`${API_BASE}/api/user/heartbeat`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
             }).catch(() => {});
+        }
+
+        // Fetch logged-in user's balance & saved payment methods for Sell Modal
+        async function fetchCurrentUserWalletAndPayments() {
+            const token = getAuthToken();
+            if (!token) return;
+            try {
+                const [profRes, payRes] = await Promise.all([
+                    fetch(`${API_BASE}/api/user/profile`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch(`${API_BASE}/api/user/payments`, { headers: { 'Authorization': `Bearer ${token}` } })
+                ]);
+                if (profRes.ok) {
+                    const profJson = await profRes.json();
+                    if (profJson.success && profJson.user) {
+                        currentUserBalance = Number(profJson.user.balance || 0);
+                        currentUserFullName = profJson.user.fullName || '';
+                    }
+                }
+                if (payRes.ok) {
+                    const payJson = await payRes.json();
+                    if (payJson.success && Array.isArray(payJson.payments)) {
+                        currentUserSavedPayments = payJson.payments;
+                    }
+                }
+            } catch (e) {}
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -933,8 +1313,9 @@
                 }
             } catch (e) {}
 
-            // 2. Fetch fresh live ads
+            // 2. Fetch fresh live ads & user wallet/payments
             fetchLiveAdsFromServer();
+            fetchCurrentUserWalletAndPayments();
 
             // 3. Background heartbeat & periodic sync
             sendHeartbeat();
@@ -1184,7 +1565,6 @@
             };
         }
 
-        // ማስታወቂያው የተለጠፈበትን ትክክለኛ ሰዓት (Timestamp) ማውጫ
         function getAdCreatedTimestamp(ad) {
             if (ad.createdAt) {
                 const t = new Date(ad.createdAt).getTime();
@@ -1197,7 +1577,7 @@
             return 0;
         }
 
-        // 🚀 Synchronous 0ms Renderer with Price & First-Posted Sorting 🚀
+        // Synchronous 0ms Renderer with Price & First-Posted Sorting
         function renderOrderBook() {
             const tbody = document.getElementById('p2pOrdersBody');
             if (!hasLoadedAdsOnce && allServerAds.length === 0) {
@@ -1233,6 +1613,7 @@
                 const createdTime = getAdCreatedTimestamp(ad);
 
                 return {
+                    adId: ad._id || '',
                     name: traderInfo.displayName,
                     avatarUrl: traderInfo.avatarUrl,
                     isOnline: traderInfo.isOnline,
@@ -1270,17 +1651,17 @@
                 }
                 return true;
             }).sort((a, b) => {
-                // 1. Buy ላይ ከዝቅተኛ ዋጋ ወደ ከፍተኛ፣ Sell ላይ ከከፍተኛ ዋጋ ወደ ዝቅተኛ
                 const priceDiff = isBuy ? (a.numericPrice - b.numericPrice) : (b.numericPrice - a.numericPrice);
                 if (Math.abs(priceDiff) > 0.00001) {
                     return priceDiff;
                 }
-                // 2. ዋጋቸው እኩል ከሆነ መጀመሪያ (ቀድሞ) የለጠፈው ሰው ከላይ ይቀድማል
                 return a.createdTime - b.createdTime;
             });
 
+            currentRenderedAds = filteredAds;
+
             let html = '';
-            filteredAds.forEach(t => {
+            filteredAds.forEach((t, index) => {
                 const effectivePrice = t.customPrice;
                 const payTagsHTML = t.pay.map(p => `<span class="pay-tag">${p}</span>`).join('');
                 const mobileTagsRendered = t.pay.map(p => `<span class="m-pay-tag">${p}</span>`).join('');
@@ -1323,7 +1704,7 @@
                         </div>
                     </td>
                     <td class="action-cell">
-                        <button class="${btnClass}" onclick="openOrderModal('${actionLabel}', '${effectivePrice}')">${actionLabel}</button>
+                        <button class="${btnClass}" onclick="openOrderModalByIndex(${index})">${actionLabel}</button>
                     </td>
                 </tr>
 
@@ -1357,7 +1738,7 @@
                                 <div class="m-payment-tags">
                                     ${mobileTagsRendered}
                                 </div>
-                                <button class="${mobileBtnClass}" onclick="openOrderModal('${actionLabel}', '${effectivePrice}')">${actionLabel}</button>
+                                <button class="${mobileBtnClass}" onclick="openOrderModalByIndex(${index})">${actionLabel}</button>
                             </div>
                         </div>
                     </td>
@@ -1371,11 +1752,209 @@
             tbody.innerHTML = html;
         }
 
-        function openOrderModal(action, price) {
-            document.getElementById('modalTitle').innerText = `${action} USDT via Escrow`;
-            document.getElementById('modalPriceInput').value = `${price} ETB`;
-            document.getElementById('modalConfirmBtn').innerText = `Confirm ${action}`;
+        // ==========================================
+        // 🚀 BUY USDT / SELL USDT MODAL LOGIC 🚀
+        // ==========================================
+
+        function formatMoney2(num) {
+            return Number(num || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function openOrderModalByIndex(index) {
+            const ad = currentRenderedAds[index];
+            if (!ad) return;
+            activeModalAd = ad;
+
+            const isBuy = currentType === 'buy';
+            const priceDisplay = Number(ad.numericPrice) % 1 === 0 ? Number(ad.numericPrice).toString() : ad.numericPrice.toFixed(2);
+            const minFormatted = formatMoney2(ad.numericMin);
+            const maxFormatted = formatMoney2(ad.numericMax);
+
+            // 1. Header & Price
+            document.getElementById('tmHeaderTitle').innerText = isBuy ? 'Buy USDT' : 'Sell USDT';
+            const priceEl = document.getElementById('tmUnitPrice');
+            priceEl.innerText = priceDisplay;
+            priceEl.className = isBuy ? 'tm-price-big buy-color' : 'tm-price-big sell-color';
+
+            // 2. Sub-limits line (Buy shows Available Ad USDT; Sell shows User's Available USDT Balance)
+            const subLimitsEl = document.getElementById('tmSubLimits');
+            if (isBuy) {
+                subLimitsEl.innerHTML = `
+                    <span>Available <strong>${formatMoney2(ad.numericAvail)} USDT</strong></span>
+                    <span>&middot;</span>
+                    <span>Limit <strong>${minFormatted}–${maxFormatted} ETB</strong></span>
+                `;
+            } else {
+                const sellMaxEtb = currentUserBalance > 0
+                    ? Math.min(ad.numericMax, currentUserBalance * ad.numericPrice)
+                    : ad.numericMax;
+                subLimitsEl.innerHTML = `
+                    <span>Your available <strong>${formatMoney2(currentUserBalance)} USDT</strong></span>
+                    <span>&middot;</span>
+                    <span>Limit <strong>${minFormatted}–${formatMoney2(sellMaxEtb)} ETB</strong></span>
+                `;
+            }
+
+            // 3. Trader Avatar, Online Dot, Name, Completion, Orders
+            const firstLetter = (ad.name || 'T').replace(/^@/, '').charAt(0).toUpperCase();
+            document.getElementById('tmTraderAvatar').innerHTML = ad.avatarUrl
+                ? `<img src="${ad.avatarUrl}" alt="${ad.name}" onerror="this.outerHTML='${firstLetter}'">`
+                : firstLetter;
+            document.getElementById('tmTraderStatusDot').className = `status-dot ${ad.isOnline ? 'online' : 'offline'}`;
+            document.getElementById('tmTraderName').innerText = ad.name;
+            document.getElementById('tmTraderComp').innerText = ad.comp || '100%';
+            document.getElementById('tmTraderOrders').innerText = ad.orders || 1;
+
+            // 4. Payment Method Label & Pills
+            document.getElementById('tmMethodSectionLabel').innerText = isBuy
+                ? 'Payment method — select one'
+                : 'Your receive account — buyer will send ETB here';
+
+            const methods = Array.isArray(ad.pay) && ad.pay.length > 0 ? ad.pay : ['Telebirr'];
+            activeModalSelectedMethod = methods[0];
+            renderModalPaymentPills();
+
+            // 5. Input Labels, Placeholders & Focus Colors
+            const etbBox = document.getElementById('tmEtbInputBox');
+            const usdtBox = document.getElementById('tmUsdtInputBox');
+            etbBox.className = isBuy ? 'tm-input-box buy-focus' : 'tm-input-box sell-focus';
+            usdtBox.className = isBuy ? 'tm-input-box buy-focus' : 'tm-input-box sell-focus';
+
+            if (isBuy) {
+                document.getElementById('tmEtbFieldLabel').innerText = 'You pay (ETB)';
+                document.getElementById('tmEtbRightHint').innerText = `Limit ${minFormatted} - ${maxFormatted} ETB`;
+                document.getElementById('tmEtbInput').placeholder = `${minFormatted} – ${maxFormatted}`;
+
+                document.getElementById('tmUsdtFieldLabel').innerText = 'You receive (USDT)';
+                document.getElementById('tmUsdtRightHint').innerText = `Available ${formatMoney2(ad.numericAvail)} USDT`;
+                document.getElementById('tmUsdtInput').placeholder = `Up to ${formatMoney2(ad.numericAvail)}`;
+            } else {
+                const effectiveMaxEtb = currentUserBalance > 0
+                    ? Math.min(ad.numericMax, currentUserBalance * ad.numericPrice)
+                    : ad.numericMax;
+                document.getElementById('tmEtbFieldLabel').innerText = 'You receive (ETB)';
+                document.getElementById('tmEtbRightHint').innerText = `Limit ${minFormatted} - ${formatMoney2(effectiveMaxEtb)} ETB`;
+                document.getElementById('tmEtbInput').placeholder = `${minFormatted} – ${formatMoney2(effectiveMaxEtb)}`;
+
+                document.getElementById('tmUsdtFieldLabel').innerText = 'You send (USDT)';
+                document.getElementById('tmUsdtRightHint').innerText = `Balance ${formatMoney2(currentUserBalance)} USDT`;
+                document.getElementById('tmUsdtInput').placeholder = `Up to ${formatMoney2(currentUserBalance)}`;
+            }
+
+            document.getElementById('tmEtbInput').value = '';
+            document.getElementById('tmUsdtInput').value = '';
+            document.getElementById('tmOrderErrorMsg').style.display = 'none';
+
+            // 6. Confirm Button Styling
+            const confirmBtn = document.getElementById('tmConfirmOrderBtn');
+            confirmBtn.innerText = isBuy ? 'Confirm Buy' : 'Confirm Sell';
+            confirmBtn.className = isBuy ? 'tm-submit-btn buy-btn' : 'tm-submit-btn sell-btn';
+
             document.getElementById('orderModal').style.display = 'flex';
+
+            // Refresh user balance & saved accounts in background just in case
+            fetchCurrentUserWalletAndPayments().then(() => {
+                if (!isBuy && document.getElementById('orderModal').style.display === 'flex') {
+                    updateSellerAccountPreviewBox();
+                }
+            });
+        }
+
+        function renderModalPaymentPills() {
+            if (!activeModalAd) return;
+            const isBuy = currentType === 'buy';
+            const methods = Array.isArray(activeModalAd.pay) && activeModalAd.pay.length > 0 ? activeModalAd.pay : ['Telebirr'];
+            const container = document.getElementById('tmMethodPillsContainer');
+
+            container.innerHTML = methods.map(m => {
+                const isSelected = m === activeModalSelectedMethod;
+                const selClass = isSelected ? (isBuy ? 'selected-buy' : 'selected-sell') : '';
+                const safeMethod = String(m).replace(/'/g, "\\'");
+                return `
+                    <button type="button" class="tm-method-pill ${selClass}" onclick="selectModalPaymentMethod('${safeMethod}')">
+                        <span class="pill-dot"></span>
+                        <span>${m}</span>
+                    </button>
+                `;
+            }).join('');
+
+            updateSellerAccountPreviewBox();
+        }
+
+        function selectModalPaymentMethod(methodName) {
+            activeModalSelectedMethod = methodName;
+            renderModalPaymentPills();
+        }
+
+        function updateSellerAccountPreviewBox() {
+            const box = document.getElementById('tmSellerAccountBox');
+            if (currentType === 'buy') {
+                box.style.display = 'none';
+                return;
+            }
+
+            box.style.display = 'block';
+            const target = (activeModalSelectedMethod || '').toLowerCase().trim();
+
+            // Find matching payment method from user's saved payment methods
+            const matched = currentUserSavedPayments.find(pm =>
+                String(pm.type || '').toLowerCase().trim() === target
+            ) || currentUserSavedPayments[0];
+
+            if (matched) {
+                document.getElementById('tmAccountHolderName').innerText = matched.name || currentUserFullName || 'Account Holder';
+                document.getElementById('tmAccountNumber').innerText = matched.account || '-';
+                document.getElementById('tmAccountBankName').innerText = matched.type || activeModalSelectedMethod;
+            } else {
+                let localUser = null;
+                try {
+                    localUser = JSON.parse(localStorage.getItem('user') || localStorage.getItem('currentUser') || '{}');
+                } catch (e) {}
+                document.getElementById('tmAccountHolderName').innerText = currentUserFullName || (localUser && localUser.fullName) || 'No linked account for ' + activeModalSelectedMethod;
+                document.getElementById('tmAccountNumber').innerText = 'Add this payment method in Account Settings';
+                document.getElementById('tmAccountBankName').innerText = activeModalSelectedMethod;
+            }
+        }
+
+        function onModalEtbInput(val) {
+            if (!activeModalAd) return;
+            document.getElementById('tmOrderErrorMsg').style.display = 'none';
+            const etbNum = parseFloat(val);
+            const usdtInput = document.getElementById('tmUsdtInput');
+            if (isNaN(etbNum) || etbNum <= 0) {
+                usdtInput.value = '';
+                return;
+            }
+            const usdtVal = etbNum / activeModalAd.numericPrice;
+            usdtInput.value = usdtVal.toFixed(2);
+        }
+
+        function onModalUsdtInput(val) {
+            if (!activeModalAd) return;
+            document.getElementById('tmOrderErrorMsg').style.display = 'none';
+            const usdtNum = parseFloat(val);
+            const etbInput = document.getElementById('tmEtbInput');
+            if (isNaN(usdtNum) || usdtNum <= 0) {
+                etbInput.value = '';
+                return;
+            }
+            const etbVal = usdtNum * activeModalAd.numericPrice;
+            etbInput.value = etbVal.toFixed(2);
+        }
+
+        function fillMaxModalOrder() {
+            if (!activeModalAd) return;
+            const isBuy = currentType === 'buy';
+            const adMaxEtb = Math.min(activeModalAd.numericMax, activeModalAd.numericAvail * activeModalAd.numericPrice);
+
+            let maxEtb = adMaxEtb;
+            if (!isBuy && currentUserBalance > 0) {
+                maxEtb = Math.min(adMaxEtb, currentUserBalance * activeModalAd.numericPrice);
+            }
+
+            const etbInput = document.getElementById('tmEtbInput');
+            etbInput.value = maxEtb.toFixed(2);
+            onModalEtbInput(etbInput.value);
         }
 
         function closeOrderModal() {
@@ -1383,12 +1962,57 @@
         }
 
         function confirmTrade() {
-            const amount = document.getElementById('modalAmountInput').value;
-            if (!amount || amount <= 0) {
-                alert('Please enter a valid amount.');
+            if (!activeModalAd) return;
+            const isBuy = currentType === 'buy';
+            const etbAmount = parseFloat(document.getElementById('tmEtbInput').value);
+            const usdtAmount = parseFloat(document.getElementById('tmUsdtInput').value);
+            const errEl = document.getElementById('tmOrderErrorMsg');
+
+            if (isNaN(etbAmount) || etbAmount <= 0 || isNaN(usdtAmount) || usdtAmount <= 0) {
+                errEl.innerText = 'Please enter a valid amount to proceed.';
+                errEl.style.display = 'block';
                 return;
             }
-            alert(`Order initiated for ${amount} USDT! Transferring to secure Escrow Trade room...`);
+
+            if (etbAmount < activeModalAd.numericMin) {
+                errEl.innerText = `Minimum order limit is ${formatMoney2(activeModalAd.numericMin)} ETB.`;
+                errEl.style.display = 'block';
+                return;
+            }
+
+            if (etbAmount > activeModalAd.numericMax) {
+                errEl.innerText = `Maximum order limit is ${formatMoney2(activeModalAd.numericMax)} ETB.`;
+                errEl.style.display = 'block';
+                return;
+            }
+
+            if (usdtAmount > activeModalAd.numericAvail) {
+                errEl.innerText = `Advertiser only has ${formatMoney2(activeModalAd.numericAvail)} USDT available.`;
+                errEl.style.display = 'block';
+                return;
+            }
+
+            if (!isBuy && currentUserBalance > 0 && usdtAmount > currentUserBalance) {
+                errEl.innerText = `Insufficient balance. Your available balance is ${formatMoney2(currentUserBalance)} USDT.`;
+                errEl.style.display = 'block';
+                return;
+            }
+
+            // Save active P2P order details for trades.html escrow room
+            try {
+                const pendingTradeOrder = {
+                    adId: activeModalAd.adId,
+                    type: isBuy ? 'buy' : 'sell',
+                    traderName: activeModalAd.name,
+                    unitPrice: activeModalAd.numericPrice,
+                    etbAmount: etbAmount.toFixed(2),
+                    usdtAmount: usdtAmount.toFixed(2),
+                    paymentMethod: activeModalSelectedMethod,
+                    createdAt: new Date().toISOString()
+                };
+                localStorage.setItem('tbr_active_p2p_order', JSON.stringify(pendingTradeOrder));
+            } catch (e) {}
+
             closeOrderModal();
             window.location.href = 'trades.html';
         }
