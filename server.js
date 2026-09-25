@@ -2446,7 +2446,7 @@ app.put('/api/ads/:id/cancel', verifyToken, async (req, res) => {
     }
 });
 
-// --- 🔥 P2P Trade Escrow & Chat Schema 🔥 ---
+// --- 🔥 P2P Trade Escrow, Auto-Warning, Receipt & Dispute Schema 🔥 ---
 const tradeSchema = new mongoose.Schema({
     tradeNumber: { type: String, required: true },
     adId: { type: mongoose.Schema.Types.ObjectId, ref: 'Ad' },
@@ -2455,6 +2455,8 @@ const tradeSchema = new mongoose.Schema({
     sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     buyerName: { type: String, default: 'Buyer' },
     sellerName: { type: String, default: 'Seller' },
+    buyerEmail: { type: String, default: '' },
+    sellerEmail: { type: String, default: '' },
     buyerAvatar: { type: String, default: '' },
     sellerAvatar: { type: String, default: '' },
     unitPrice: { type: Number, required: true },
@@ -2469,6 +2471,11 @@ const tradeSchema = new mongoose.Schema({
         accountNumber: { type: String, default: '' },
         bankName: { type: String, default: '' }
     },
+    receiptImage: { type: String, default: '' },
+    warningExtended: { type: Boolean, default: false },
+    disputeReason: { type: String, default: '' },
+    rating: { type: Number, default: 0 },
+    reviewText: { type: String, default: '' },
     status: {
         type: String,
         enum: ['funds_locked', 'payment_sent', 'completed', 'cancelled', 'disputed'],
@@ -2488,7 +2495,32 @@ const tradeSchema = new mongoose.Schema({
 
 const Trade = mongoose.models.Trade || mongoose.model('Trade', tradeSchema);
 
-// 1. ትዕዛዝ መፍጠሪያ (ከ Trade #00001 ጀምሮ በቅደም ተከተል የሚቆጥር)
+// Helper: Refund Seller Escrow when trade cancels
+async function refundEscrowOnCancel(trade) {
+    if (trade.tradeType === 'buy') {
+        const ad = await Ad.findById(trade.adId);
+        if (ad) {
+            ad.totalAmount = Number((ad.totalAmount + trade.usdtAmount).toFixed(6));
+            ad.status = 'active';
+            await ad.save();
+        }
+    } else {
+        const seller = await User.findById(trade.sellerId);
+        if (seller) {
+            seller.lockedBalance = Math.max(0, Number(((seller.lockedBalance || 0) - trade.usdtAmount).toFixed(6)));
+            seller.balance = Number(((seller.balance || 0) + trade.usdtAmount).toFixed(6));
+            await seller.save();
+        }
+        const ad = await Ad.findById(trade.adId);
+        if (ad) {
+            ad.totalAmount = Number((ad.totalAmount + trade.usdtAmount).toFixed(6));
+            ad.status = 'active';
+            await ad.save();
+        }
+    }
+}
+
+// 1. Create Trade & Lock Seller USDT in Escrow
 app.post('/api/trades', verifyToken, async (req, res) => {
     try {
         const { adId, actionType, etbAmount, usdtAmount, paymentMethod } = req.body;
@@ -2529,8 +2561,8 @@ app.post('/api/trades', verifyToken, async (req, res) => {
             if ((sellerUser.balance || 0) < usdtNum) {
                 return res.status(400).json({ success: false, message: 'Insufficient USDT balance to sell.' });
             }
-            sellerUser.balance -= usdtNum;
-            sellerUser.lockedBalance = (sellerUser.lockedBalance || 0) + usdtNum;
+            sellerUser.balance = Number(((sellerUser.balance || 0) - usdtNum).toFixed(6));
+            sellerUser.lockedBalance = Number(((sellerUser.lockedBalance || 0) + usdtNum).toFixed(6));
             await sellerUser.save();
         }
 
@@ -2553,9 +2585,11 @@ app.post('/api/trades', verifyToken, async (req, res) => {
             return `trader${digits}`;
         };
 
-        // 🚀 ከ #00001 ጀምሮ በቅደም ተከተል (00001, 00002, 00003...) እንዲቆጥር 🚀
         const totalTradesCount = await Trade.countDocuments({});
         const sequentialTradeNumber = String(totalTradesCount + 1).padStart(5, '0');
+
+        const sName = resolveName(sellerUser);
+        const bName = resolveName(buyerUser);
 
         const newTrade = new Trade({
             tradeNumber: sequentialTradeNumber,
@@ -2563,8 +2597,10 @@ app.post('/api/trades', verifyToken, async (req, res) => {
             tradeType: actionType,
             buyerId: buyerUser._id,
             sellerId: sellerUser._id,
-            buyerName: resolveName(buyerUser),
-            sellerName: resolveName(sellerUser),
+            buyerName: bName,
+            sellerName: sName,
+            buyerEmail: buyerUser.email || '',
+            sellerEmail: sellerUser.email || '',
             buyerAvatar: buyerUser.avatar || '',
             sellerAvatar: sellerUser.avatar || '',
             unitPrice: Number(ad.price),
@@ -2575,12 +2611,19 @@ app.post('/api/trades', verifyToken, async (req, res) => {
             netUsdt,
             paymentMethod: paymentMethod || 'Telebirr',
             paymentDetails: {
-                accountName: matchedPay.name || sellerUser.fullName || resolveName(sellerUser),
+                accountName: matchedPay.name || sellerUser.fullName || sName,
                 accountNumber: matchedPay.account || 'Contact seller in chat',
                 bankName: matchedPay.type || paymentMethod || 'Telebirr'
             },
             status: 'funds_locked',
-            expiresAt: new Date(Date.now() + 15 * 60 * 1000)
+            warningExtended: false,
+            messages: [{
+                senderId: 'system',
+                senderName: 'System',
+                text: `Welcome! Trading with ${actionType === 'buy' ? sName : bName}`,
+                isSystem: true
+            }],
+            expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 mins initial window (+2 mins warning)
         });
 
         await newTrade.save();
@@ -2591,26 +2634,7 @@ app.post('/api/trades', verifyToken, async (req, res) => {
     }
 });
 
-// 🚀 ለ Dashboard "1 trade waiting you for action" ማሳወቂያ የሚሆን API 🚀
-app.get('/api/user/active-trades', verifyToken, async (req, res) => {
-    try {
-        const activeTrades = await Trade.find({
-            $or: [{ buyerId: req.user.id }, { sellerId: req.user.id }],
-            status: { $in: ['funds_locked', 'payment_sent', 'disputed'] }
-        }).sort({ createdAt: -1 }).lean();
-
-        res.json({
-            success: true,
-            count: activeTrades.length,
-            latestTrade: activeTrades[0] || null,
-            trades: activeTrades
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, count: 0, trades: [] });
-    }
-});
-
-// 2. Get Single Trade Details (or Latest Active Trade for User)
+// 2. Get Single Trade & Handle Automatic 2-Min Warning or Auto-Cancel
 app.get('/api/trades/:id', verifyToken, async (req, res) => {
     try {
         let trade;
@@ -2623,28 +2647,66 @@ app.get('/api/trades/:id', verifyToken, async (req, res) => {
         }
 
         if (!trade) return res.status(404).json({ success: false, message: 'Trade not found.' });
+
+        // Check if timer expired while in funds_locked
+        if (trade.status === 'funds_locked' && new Date() >= new Date(trade.expiresAt)) {
+            if (!trade.warningExtended) {
+                // Give 2 extra minutes with warning
+                trade.warningExtended = true;
+                trade.expiresAt = new Date(Date.now() + 2 * 60 * 1000);
+                trade.messages.push({
+                    senderId: 'system',
+                    senderName: 'System',
+                    text: '⚠️ Warning: Payment window expired! An extra 2 minutes has been granted. Please complete payment and upload your receipt now, or this order will be automatically cancelled.',
+                    isSystem: true
+                });
+                await trade.save();
+            } else {
+                // 2-minute warning also expired -> Auto-Cancel
+                await refundEscrowOnCancel(trade);
+                trade.status = 'cancelled';
+                trade.messages.push({
+                    senderId: 'system',
+                    senderName: 'System',
+                    text: 'Trade automatically cancelled due to payment timeout. Escrowed USDT has been returned to the seller.',
+                    isSystem: true
+                });
+                await trade.save();
+            }
+        }
+
         res.json({ success: true, trade, currentUserId: req.user.id });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error fetching trade.' });
     }
 });
 
-// 3. Buyer Clicks "Transferred, Notify Seller"
+// 3. Buyer Uploads Receipt & Marks Payment Sent
 app.post('/api/trades/:id/mark-paid', verifyToken, async (req, res) => {
     try {
+        const { receiptImage } = req.body;
         const trade = await Trade.findById(req.params.id);
         if (!trade) return res.status(404).json({ success: false, message: 'Trade not found.' });
 
         if (String(trade.buyerId) !== String(req.user.id)) {
             return res.status(403).json({ success: false, message: 'Only the buyer can mark payment as sent.' });
         }
+        if (!receiptImage) {
+            return res.status(400).json({ success: false, message: 'Payment receipt screenshot is required.' });
+        }
 
         trade.status = 'payment_sent';
+        trade.receiptImage = receiptImage;
+        // Reset 10-minute verification timer (+2 min warning) for seller to release
+        trade.warningExtended = false;
+        trade.expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
         trade.messages.push({
             senderId: String(req.user.id),
-            senderName: 'System',
-            text: `Buyer marked ${trade.etbAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })} ETB as transferred. Waiting for seller to release USDT.`,
-            isSystem: true
+            senderName: trade.buyerName,
+            text: `Payment receipt uploaded (${trade.etbAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })} ETB)`,
+            image: receiptImage,
+            isSystem: false
         });
 
         await trade.save();
@@ -2654,7 +2716,7 @@ app.post('/api/trades/:id/mark-paid', verifyToken, async (req, res) => {
     }
 });
 
-// 4. Seller Clicks "Release USDT" (Deducts 0.5% Fee & Credits Buyer)
+// 4. Seller Confirms "I Have Received" & Releases USDT
 app.post('/api/trades/:id/release', verifyToken, async (req, res) => {
     try {
         const trade = await Trade.findById(req.params.id);
@@ -2671,19 +2733,28 @@ app.post('/api/trades/:id/release', verifyToken, async (req, res) => {
         const buyer = await User.findById(trade.buyerId);
 
         if (seller) {
-            seller.lockedBalance = Math.max(0, (seller.lockedBalance || 0) - trade.usdtAmount);
+            seller.lockedBalance = Math.max(0, Number(((seller.lockedBalance || 0) - trade.usdtAmount).toFixed(6)));
             await seller.save();
         }
         if (buyer) {
-            buyer.balance = (buyer.balance || 0) + trade.netUsdt;
+            buyer.balance = Number(((buyer.balance || 0) + trade.netUsdt).toFixed(6));
             await buyer.save();
         }
 
+        // Record completed P2P transaction for Admin volume stats
+        await Transaction.create({
+            userId: buyer ? buyer._id : trade.buyerId,
+            email: buyer ? buyer.email : trade.buyerEmail,
+            type: 'p2p_trade',
+            amount: trade.usdtAmount,
+            status: 'completed'
+        });
+
         trade.status = 'completed';
         trade.messages.push({
-            senderId: String(req.user.id),
+            senderId: 'system',
             senderName: 'System',
-            text: `Seller released ${trade.netUsdt.toFixed(4)} USDT to Buyer. Trade completed!`,
+            text: `Trade completed — post-trade chat is open`,
             isSystem: true
         });
 
@@ -2694,7 +2765,7 @@ app.post('/api/trades/:id/release', verifyToken, async (req, res) => {
     }
 });
 
-// 5. Cancel Trade & Refund Locked Escrow USDT to Seller/Ad
+// 5. Cancel Trade (Manual or Auto Timeout)
 app.post('/api/trades/:id/cancel', verifyToken, async (req, res) => {
     try {
         const trade = await Trade.findById(req.params.id);
@@ -2704,35 +2775,12 @@ app.post('/api/trades/:id/cancel', verifyToken, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Trade cannot be cancelled.' });
         }
 
-        if (trade.tradeType === 'buy') {
-            // Restore USDT back to Seller's active Ad
-            const ad = await Ad.findById(trade.adId);
-            if (ad) {
-                ad.totalAmount += trade.usdtAmount;
-                ad.status = 'active';
-                await ad.save();
-            }
-        } else {
-            // Refund locked USDT back to Seller's wallet balance
-            const seller = await User.findById(trade.sellerId);
-            if (seller) {
-                seller.lockedBalance = Math.max(0, (seller.lockedBalance || 0) - trade.usdtAmount);
-                seller.balance = (seller.balance || 0) + trade.usdtAmount;
-                await seller.save();
-            }
-            const ad = await Ad.findById(trade.adId);
-            if (ad) {
-                ad.totalAmount += trade.usdtAmount;
-                ad.status = 'active';
-                await ad.save();
-            }
-        }
-
+        await refundEscrowOnCancel(trade);
         trade.status = 'cancelled';
         trade.messages.push({
             senderId: String(req.user.id),
             senderName: 'System',
-            text: 'Trade was cancelled and escrow funds have been returned.',
+            text: 'This trade was cancelled. Escrowed USDT has been returned to the seller.',
             isSystem: true
         });
 
@@ -2743,12 +2791,39 @@ app.post('/api/trades/:id/cancel', verifyToken, async (req, res) => {
     }
 });
 
-// 6. Send Chat Message or Receipt Image in Trade Room
+// 6. Apply for Dispute (Sends Trade, Full Chat & Receipt to Admin Dispute Room)
+app.post('/api/trades/:id/dispute', verifyToken, async (req, res) => {
+    try {
+        const { reason } = req.body;
+        const trade = await Trade.findById(req.params.id);
+        if (!trade) return res.status(404).json({ success: false, message: 'Trade not found.' });
+
+        trade.status = 'disputed';
+        trade.disputeReason = reason || 'Seller did not release USDT after payment receipt was uploaded.';
+        trade.messages.push({
+            senderId: String(req.user.id),
+            senderName: 'System',
+            text: `⚖️ Dispute opened! Chat history and payment receipt have been forwarded to the TBR Admin Dispute Room.`,
+            isSystem: true
+        });
+
+        await trade.save();
+        res.json({ success: true, trade });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error opening dispute.' });
+    }
+});
+
+// 7. Send Real-Time Chat Message or Image
 app.post('/api/trades/:id/messages', verifyToken, async (req, res) => {
     try {
         const { text, image } = req.body;
         const trade = await Trade.findById(req.params.id);
         if (!trade) return res.status(404).json({ success: false, message: 'Trade not found.' });
+
+        if (trade.status === 'cancelled') {
+            return res.status(400).json({ success: false, message: 'Chat is closed for cancelled trades.' });
+        }
 
         const isBuyer = String(trade.buyerId) === String(req.user.id);
         const senderName = isBuyer ? trade.buyerName : trade.sellerName;
@@ -2758,13 +2833,71 @@ app.post('/api/trades/:id/messages', verifyToken, async (req, res) => {
             senderName,
             text: text || '',
             image: image || '',
-            isSystem: false
+            isSystem: false,
+            createdAt: new Date()
         });
 
         await trade.save();
-        res.json({ success: true, messages: trade.messages });
+        res.json({ success: true, trade, messages: trade.messages });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error sending message.' });
+    }
+});
+
+// 8. Admin Fetch Disputed & Active Escrow Trades (with Full Chat & Receipt)
+app.get('/api/admin/escrow-disputes', verifyAdminToken, async (req, res) => {
+    try {
+        const disputes = await Trade.find({
+            status: { $in: ['disputed', 'payment_sent', 'funds_locked'] }
+        }).sort({ status: 1, createdAt: -1 }).lean();
+
+        res.json({ success: true, data: disputes });
+    } catch (error) {
+        res.status(500).json({ success: false, data: [] });
+    }
+});
+
+// 9. Admin Resolve Dispute (Release to Buyer or Refund Seller)
+app.post('/api/admin/escrow-action', verifyAdminToken, async (req, res) => {
+    try {
+        const { tradeId, action } = req.body;
+        const trade = await Trade.findById(tradeId);
+        if (!trade) return res.status(404).json({ success: false, message: 'Trade not found.' });
+
+        if (action === 'release') {
+            const seller = await User.findById(trade.sellerId);
+            const buyer = await User.findById(trade.buyerId);
+            if (seller) {
+                seller.lockedBalance = Math.max(0, Number(((seller.lockedBalance || 0) - trade.usdtAmount).toFixed(6)));
+                await seller.save();
+            }
+            if (buyer) {
+                buyer.balance = Number(((buyer.balance || 0) + trade.netUsdt).toFixed(6));
+                await buyer.save();
+            }
+            trade.status = 'completed';
+            trade.messages.push({
+                senderId: 'admin',
+                senderName: 'Admin',
+                text: `⚖️ Admin resolved dispute: Released ${trade.netUsdt.toFixed(4)} USDT to Buyer.`,
+                isSystem: true
+            });
+            await trade.save();
+            return res.json({ success: true, message: 'Escrow USDT released to Buyer!' });
+        } else {
+            await refundEscrowOnCancel(trade);
+            trade.status = 'cancelled';
+            trade.messages.push({
+                senderId: 'admin',
+                senderName: 'Admin',
+                text: `⚖️ Admin resolved dispute: Order cancelled and USDT refunded to Seller.`,
+                isSystem: true
+            });
+            await trade.save();
+            return res.json({ success: true, message: 'Escrow USDT refunded to Seller!' });
+        }
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error resolving dispute.' });
     }
 });
 

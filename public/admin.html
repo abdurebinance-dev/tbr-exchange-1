@@ -723,19 +723,34 @@
             }
         }
 
+        let currentDisputesList = [];
+
         async function fetchEscrowDisputes() {
             try {
                 const res = await fetch(`${API_BASE}/api/admin/escrow-disputes`, { headers: { 'Authorization': 'Bearer ' + getToken() } });
                 const json = await res.json();
                 const tbody = document.getElementById('escrowTableBody');
                 if (res.ok && json.success && json.data && json.data.length > 0) {
+                    currentDisputesList = json.data;
                     let html = '';
-                    json.data.forEach(trade => {
+                    json.data.forEach((trade, idx) => {
+                        const tNum = String(trade.tradeNumber || '00001').padStart(5, '0');
+                        const st = String(trade.status || 'disputed').toUpperCase();
+                        const badgeCls = trade.status === 'disputed' ? 'badge-rejected' : 'badge-pending';
+
                         html += `<tr>
-                            <td>${trade._id}</td>
-                            <td>${trade.buyerEmail || 'Buyer'} / ${trade.sellerEmail || 'Seller'}</td>
-                            <td>${trade.amount} USDT</td>
-                            <td><span class="badge-pending">${trade.status || 'Disputed'}</span></td>
+                            <td><strong>Trade #${tNum}</strong><br><small style="color:var(--text-muted);">${trade.paymentMethod || ''} (${trade.etbAmount || 0} ETB)</small></td>
+                            <td>
+                                <span style="color:var(--green);">B:</span> ${trade.buyerName || trade.buyerEmail || 'Buyer'}<br>
+                                <span style="color:var(--yellow);">S:</span> ${trade.sellerName || trade.sellerEmail || 'Seller'}
+                            </td>
+                            <td><strong>${trade.usdtAmount} USDT</strong></td>
+                            <td>
+                                <span class="${badgeCls}">${st}</span><br>
+                                <button class="btn" style="margin-top:6px; background:#18202a; color:#f0b90b; border:1px solid #f0b90b;" onclick="openDisputeEvidenceModal(${idx})">
+                                    <i class="fa-solid fa-comments"></i> View Chat & Receipt
+                                </button>
+                            </td>
                             <td>
                                 <button class="btn btn-approve" onclick="resolveEscrow('${trade._id}', 'release')">Release to Buyer</button>
                                 <button class="btn btn-reject" onclick="resolveEscrow('${trade._id}', 'refund')">Refund Seller</button>
@@ -749,6 +764,51 @@
             } catch (err) {
                 document.getElementById('escrowTableBody').innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No active disputes or escrow trades found.</td></tr>`;
             }
+        }
+
+        function openDisputeEvidenceModal(idx) {
+            const trade = currentDisputesList[idx];
+            if (!trade) return;
+
+            let modal = document.getElementById('disputeEvidenceModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'disputeEvidenceModal';
+                modal.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.85); display:flex; justify-content:center; align-items:center; z-index:99999; padding:16px;";
+                document.body.appendChild(modal);
+            }
+
+            const msgs = Array.isArray(trade.messages) ? trade.messages : [];
+            const chatHtml = msgs.map(m => `
+                <div style="padding:8px 10px; margin-bottom:6px; border-radius:8px; background:${m.isSystem ? 'rgba(240,185,11,0.1)' : '#151a21'}; border:1px solid #232d3f; font-size:12px;">
+                    <strong style="color:#f0b90b;">${m.senderName || 'User'}:</strong> ${m.text || ''}
+                    ${m.image ? `<br><img src="${m.image}" style="max-width:220px; border-radius:6px; margin-top:6px; cursor:pointer;" onclick="window.open(this.src)">` : ''}
+                </div>
+            `).join('') || '<p style="color:#848e9c;">No chat messages.</p>';
+
+            modal.innerHTML = `
+                <div style="background:#151a21; border:1px solid #232d3f; border-radius:12px; max-width:680px; width:100%; max-height:88vh; display:flex; flex-direction:column; padding:20px; color:#fff;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #232d3f; padding-bottom:12px; margin-bottom:12px;">
+                        <h3 style="margin:0; color:#f0b90b;">Dispute Evidence — Trade #${String(trade.tradeNumber || '00001').padStart(5, '0')}</h3>
+                        <button onclick="document.getElementById('disputeEvidenceModal').style.display='none'" style="background:none; border:none; color:#fff; font-size:20px; cursor:pointer;">&times;</button>
+                    </div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px; overflow-y:auto; flex:1;">
+                        <div>
+                            <h4 style="margin:0 0 8px 0; font-size:13px; color:#0ecb81;">Uploaded Payment Receipt</h4>
+                            ${trade.receiptImage
+                                ? `<img src="${trade.receiptImage}" style="width:100%; max-height:320px; object-fit:contain; border:1px solid #f0b90b; border-radius:8px; cursor:pointer;" onclick="window.open(this.src)">`
+                                : `<p style="color:#848e9c; font-size:12px;">No receipt image uploaded.</p>`
+                            }
+                            <p style="font-size:12px; color:#848e9c; margin-top:10px;"><strong>Dispute Reason:</strong> ${trade.disputeReason || 'N/A'}</p>
+                        </div>
+                        <div style="overflow-y:auto; max-height:380px;">
+                            <h4 style="margin:0 0 8px 0; font-size:13px; color:#f0b90b;">Full Chat History</h4>
+                            ${chatHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+            modal.style.display = 'flex';
         }
 
         async function resolveEscrow(tradeId, action) {

@@ -98,7 +98,6 @@
             .nav-links { display: none; }
         }
 
-        /* Left Column: Escrow Steps & Controls */
         .left-escrow-col {
             display: flex;
             flex-direction: column;
@@ -131,6 +130,7 @@
             font-weight: 800;
             color: #ffffff;
         }
+
         .status-pill-badge {
             background: rgba(59, 130, 246, 0.12);
             color: #60a5fa;
@@ -140,12 +140,22 @@
             font-size: 11px;
             font-weight: 700;
         }
+        .status-pill-badge.payment-sent {
+            background: rgba(234, 179, 8, 0.12);
+            color: #eab308;
+            border-color: rgba(234, 179, 8, 0.35);
+        }
         .status-pill-badge.completed {
             background: rgba(14, 203, 129, 0.14);
             color: var(--green);
             border-color: rgba(14, 203, 129, 0.35);
         }
         .status-pill-badge.cancelled {
+            background: rgba(132, 142, 156, 0.14);
+            color: #9ca3af;
+            border-color: rgba(132, 142, 156, 0.3);
+        }
+        .status-pill-badge.disputed {
             background: rgba(246, 70, 93, 0.14);
             color: var(--red);
             border-color: rgba(246, 70, 93, 0.35);
@@ -160,14 +170,12 @@
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            position: relative;
         }
         .step-item {
             display: flex;
             flex-direction: column;
             align-items: center;
             text-align: center;
-            z-index: 2;
             width: 72px;
         }
         .step-circle {
@@ -209,11 +217,9 @@
             background: #1e242d;
             margin-top: 13px;
         }
-        .step-line.done {
-            background: var(--green);
-        }
+        .step-line.done { background: var(--green); }
 
-        /* 4 Numbered Instructions Card */
+        /* Instructions Card */
         .instructions-card {
             background: var(--card-bg);
             border: 1px solid var(--border-color);
@@ -265,11 +271,7 @@
             align-items: center;
             gap: 12px;
         }
-        .sbs-left {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
+        .sbs-left { display: flex; align-items: center; gap: 12px; }
         .sbs-icon {
             width: 34px;
             height: 34px;
@@ -282,16 +284,8 @@
             justify-content: center;
             font-size: 13px;
         }
-        .sbs-holder {
-            font-size: 13px;
-            font-weight: 700;
-            color: #ffffff;
-            margin-bottom: 4px;
-        }
-        .sbs-sub {
-            font-size: 12px;
-            color: var(--text-muted);
-        }
+        .sbs-holder { font-size: 13px; font-weight: 700; color: #ffffff; margin-bottom: 4px; }
+        .sbs-sub { font-size: 12px; color: var(--text-muted); }
         .sbs-sub strong { color: #ffffff; }
         .sbs-method-badge {
             background: rgba(14, 203, 129, 0.12);
@@ -301,7 +295,6 @@
             border-radius: 20px;
             font-size: 11px;
             font-weight: 700;
-            white-space: nowrap;
         }
 
         /* Payment Window Countdown Card */
@@ -310,6 +303,10 @@
             border: 1px solid rgba(234, 179, 8, 0.28);
             border-radius: 12px;
             padding: 14px 18px;
+        }
+        .timer-card.warning-mode {
+            background: rgba(246, 70, 93, 0.08);
+            border-color: rgba(246, 70, 93, 0.5);
         }
         .timer-top {
             display: flex;
@@ -324,6 +321,10 @@
             font-size: 12px;
             font-weight: 700;
             color: #eab308;
+        }
+        .timer-card.warning-mode .timer-label,
+        .timer-card.warning-mode .timer-clock {
+            color: var(--red);
         }
         .timer-clock {
             font-size: 14px;
@@ -345,8 +346,10 @@
             border-radius: 4px;
             transition: width 1s linear;
         }
+        .timer-card.warning-mode .timer-bar-fill {
+            background: var(--red);
+        }
 
-        /* Warning Notice Box */
         .warning-card {
             background: var(--card-bg);
             border: 1px solid var(--border-color);
@@ -359,46 +362,43 @@
             color: var(--text-muted);
             line-height: 1.45;
         }
-        .warning-card i {
-            color: #eab308;
-            margin-top: 2px;
-            font-size: 13px;
-        }
+        .warning-card i { color: #eab308; margin-top: 2px; font-size: 13px; }
 
-        /* Waiting for Buyer's Payment Box */
-        .seller-waiting-card {
-            background: rgba(59, 130, 246, 0.05);
-            border: 1px solid rgba(59, 130, 246, 0.22);
+        /* Waiting Status Box (Yellow for Buyer Payment Sent, Blue for Seller Waiting) */
+        .status-waiting-card {
+            background: rgba(234, 179, 8, 0.05);
+            border: 1px solid rgba(234, 179, 8, 0.25);
             border-radius: 12px;
             padding: 16px 18px;
             display: none;
             align-items: center;
             gap: 14px;
         }
+        .status-waiting-card.blue-theme {
+            background: rgba(59, 130, 246, 0.05);
+            border-color: rgba(59, 130, 246, 0.25);
+        }
         .sw-icon {
             width: 36px;
             height: 36px;
             border-radius: 50%;
-            background: rgba(59, 130, 246, 0.12);
-            color: #60a5fa;
+            background: rgba(234, 179, 8, 0.12);
+            color: #eab308;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 15px;
             flex-shrink: 0;
         }
-        .sw-title {
-            font-size: 13.5px;
-            font-weight: 700;
+        .status-waiting-card.blue-theme .sw-icon {
+            background: rgba(59, 130, 246, 0.12);
             color: #60a5fa;
-            margin-bottom: 4px;
         }
-        .sw-sub {
-            font-size: 12px;
-            color: var(--text-muted);
-        }
+        .sw-title { font-size: 13.5px; font-weight: 700; color: #eab308; margin-bottom: 4px; }
+        .status-waiting-card.blue-theme .sw-title { color: #60a5fa; }
+        .sw-sub { font-size: 12px; color: var(--text-muted); }
 
-        /* Action Buttons */
+        /* Buttons */
         .primary-yellow-btn {
             width: 100%;
             background: #eab308;
@@ -415,13 +415,8 @@
             gap: 8px;
             transition: 0.2s;
         }
-        .primary-yellow-btn:hover:not(:disabled) {
-            background: #facc15;
-        }
-        .primary-yellow-btn:disabled {
-            opacity: 0.45;
-            cursor: not-allowed;
-        }
+        .primary-yellow-btn:hover:not(:disabled) { background: #facc15; }
+        .primary-yellow-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
         .primary-green-btn {
             width: 100%;
@@ -438,6 +433,24 @@
             justify-content: center;
             gap: 8px;
         }
+        .primary-green-btn:hover { opacity: 0.92; }
+
+        .dispute-red-btn {
+            width: 100%;
+            background: rgba(246, 70, 93, 0.15);
+            color: var(--red);
+            border: 1px solid var(--red);
+            border-radius: 10px;
+            padding: 13px;
+            font-size: 13px;
+            font-weight: 800;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .dispute-red-btn:hover { background: var(--red); color: #fff; }
 
         .secondary-cancel-btn {
             width: 100%;
@@ -449,12 +462,8 @@
             font-size: 12.5px;
             font-weight: 700;
             cursor: pointer;
-            transition: 0.2s;
         }
-        .secondary-cancel-btn:hover {
-            background: #151a22;
-            color: #ffffff;
-        }
+        .secondary-cancel-btn:hover { background: #151a22; color: #ffffff; }
 
         .appeal-lock-card {
             background: #0a0d11;
@@ -469,17 +478,156 @@
         }
         .appeal-lock-card strong { color: #9ca3af; }
 
-        /* Right Column: Chat & Counterparty Payment Details */
+        /* 🚀 COMPLETED STATE VIEW (Screenshots 4531 & 4532) 🚀 */
+        .completed-view-wrap {
+            display: none;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .completed-hero-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 32px 20px;
+            text-align: center;
+        }
+        .comp-check-circle {
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            background: rgba(14, 203, 129, 0.12);
+            border: 1px solid rgba(14, 203, 129, 0.35);
+            color: var(--green);
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 14px auto;
+        }
+        .comp-tag {
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--green);
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .comp-big-usdt {
+            font-size: 34px;
+            font-weight: 800;
+            color: #ffffff;
+            margin-bottom: 6px;
+        }
+        .comp-big-usdt span {
+            font-size: 16px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        .comp-sub-note {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+        .comp-summary-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 18px 20px;
+        }
+        .comp-sum-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 14px;
+            border-bottom: 1px solid #1a2029;
+            margin-bottom: 12px;
+        }
+        .comp-sum-title { font-size: 15px; font-weight: 800; }
+        .comp-sum-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 9px 0;
+            font-size: 13px;
+            border-bottom: 1px solid #151a22;
+        }
+        .comp-sum-row:last-child { border-bottom: none; }
+        .comp-sum-row .k { color: var(--text-muted); }
+        .comp-sum-row .v { color: #ffffff; font-weight: 700; font-family: monospace; }
+
+        .download-receipt-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        .download-receipt-card:hover { border-color: #2e3746; }
+
+        .rate-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 18px 20px;
+        }
+        .star-row {
+            display: flex;
+            gap: 10px;
+            margin: 14px 0 18px 0;
+            font-size: 22px;
+            color: #3a4250;
+        }
+        .star-row i { cursor: pointer; transition: 0.15s; }
+        .star-row i.active { color: #eab308; }
+
+        /* 🚀 CANCELLED STATE VIEW (Screenshot 4522) 🚀 */
+        .cancelled-view-wrap {
+            display: none;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .cancelled-summary-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            overflow: hidden;
+        }
+        .canc-top-banner {
+            background: rgba(234, 179, 8, 0.06);
+            padding: 16px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .canc-body { padding: 20px 18px; }
+        .canc-big-green {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--green);
+            margin: 6px 0 12px 0;
+        }
+        .canc-notice-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 18px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        /* RIGHT COLUMN: CHAT ROOM */
         .right-chat-card {
             background: var(--card-bg);
             border: 1px solid var(--border-color);
             border-radius: 14px;
             display: flex;
             flex-direction: column;
-            height: 640px;
+            height: 650px;
             overflow: hidden;
         }
-
         .chat-header {
             padding: 16px 20px;
             border-bottom: 1px solid var(--border-color);
@@ -502,36 +650,13 @@
             overflow: hidden;
             flex-shrink: 0;
         }
-        .chat-avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        .chat-partner-name {
-            font-size: 14px;
-            font-weight: 800;
-            color: #ffffff;
-            margin-bottom: 3px;
-        }
-        .chat-partner-sub {
-            font-size: 11.5px;
-            color: var(--text-muted);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .chat-partner-sub .dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: var(--green);
-        }
-        .chat-partner-sub a {
-            color: var(--green);
-            text-decoration: none;
-        }
+        .chat-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .chat-partner-name { font-size: 14px; font-weight: 800; color: #ffffff; margin-bottom: 3px; }
+        .chat-partner-sub { font-size: 11.5px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+        .chat-partner-sub .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+        .chat-partner-sub a { color: var(--green); text-decoration: none; }
 
-        /* Collapsible Payment Details Box inside Chat Header */
+        /* Collapsible Payment Details Box */
         .chat-pay-details-wrap {
             margin: 12px 16px 0 16px;
             border: 1px solid rgba(234, 179, 8, 0.28);
@@ -546,19 +671,8 @@
             align-items: center;
             cursor: pointer;
         }
-        .cpd-left {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 12px;
-            font-weight: 700;
-            color: #eab308;
-        }
-        .cpd-right {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+        .cpd-left { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: #eab308; }
+        .cpd-right { display: flex; align-items: center; gap: 8px; }
         .cpd-bank-pill {
             background: rgba(234, 179, 8, 0.12);
             border: 1px solid rgba(234, 179, 8, 0.3);
@@ -576,9 +690,7 @@
             gap: 10px;
             background: #11151c;
         }
-        .cpd-body.open {
-            display: flex;
-        }
+        .cpd-body.open { display: flex; }
         .cpd-row {
             display: flex;
             justify-content: space-between;
@@ -611,74 +723,92 @@
             font-size: 11px;
             cursor: pointer;
         }
-        .copy-icon-btn:hover { color: #fff; border-color: #eab308; }
 
-        /* Chat Messages Feed */
+        /* 🚀 2-Way Chat Feed (Screenshots 4529 & 4531) 🚀 */
         .chat-messages-area {
             flex: 1;
             padding: 18px;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
         }
-        .chat-empty-state {
-            margin: auto;
-            text-align: center;
+        .msg-row-mine {
+            align-self: flex-end;
+            max-width: 78%;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+        .msg-row-mine .bubble {
+            background: #0ecb81;
+            color: #000000;
+            font-weight: 500;
+            padding: 10px 14px;
+            border-radius: 14px 14px 3px 14px;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        .msg-row-mine .time-meta {
+            font-size: 10px;
             color: #6c7583;
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
-        .chat-empty-state .icon-box {
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
-            background: #151a22;
+        .msg-row-mine .time-meta i { color: var(--green); }
+
+        .msg-row-theirs {
+            align-self: flex-start;
+            max-width: 78%;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        .msg-theirs-avatar {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #1e242d;
+            color: var(--accent-gold);
+            font-size: 11px;
+            font-weight: 700;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 10px auto;
-            font-size: 18px;
-            color: #5a6372;
+            overflow: hidden;
+            flex-shrink: 0;
+            margin-top: 2px;
         }
-        .chat-empty-state h4 {
-            margin: 0 0 4px 0;
+        .msg-theirs-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .msg-row-theirs .bubble {
+            background: #1a2028;
+            border: 1px solid #262e3b;
+            color: #ffffff;
+            padding: 10px 14px;
+            border-radius: 14px 14px 14px 3px;
             font-size: 13px;
-            color: #848e9c;
+            line-height: 1.4;
         }
-        .chat-empty-state p {
-            margin: 0;
-            font-size: 11.5px;
-            color: #555e6d;
+        .msg-row-theirs .time-meta {
+            font-size: 10px;
+            color: #6c7583;
+            margin-top: 4px;
         }
 
-        .msg-bubble {
-            max-width: 78%;
-            padding: 10px 13px;
-            border-radius: 12px;
-            font-size: 12.5px;
-            line-height: 1.45;
-        }
-        .msg-bubble.mine {
-            align-self: flex-end;
-            background: rgba(14, 203, 129, 0.16);
-            border: 1px solid rgba(14, 203, 129, 0.35);
-            color: #ffffff;
-        }
-        .msg-bubble.theirs {
-            align-self: flex-start;
-            background: #171c24;
-            border: 1px solid #262e3b;
-            color: #e5e7eb;
-        }
-        .msg-bubble.system {
+        .msg-bubble-system {
             align-self: center;
-            max-width: 92%;
-            background: rgba(234, 179, 8, 0.08);
-            border: 1px solid rgba(234, 179, 8, 0.25);
-            color: #eab308;
-            font-size: 11.5px;
+            max-width: 90%;
+            background: rgba(14, 203, 129, 0.07);
+            border: 1px solid rgba(14, 203, 129, 0.22);
+            color: #d1fae5;
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: 12px;
             text-align: center;
         }
-        .msg-bubble img {
+        .bubble img {
             max-width: 210px;
             border-radius: 8px;
             margin-top: 6px;
@@ -686,7 +816,6 @@
             cursor: pointer;
         }
 
-        /* Chat Footer Area */
         .chat-footer {
             padding: 12px 16px 16px 16px;
             border-top: 1px solid var(--border-color);
@@ -694,6 +823,25 @@
             flex-direction: column;
             gap: 10px;
             background: #0c0f14;
+        }
+        .post-trade-open-banner {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            background: rgba(14, 203, 129, 0.06);
+            border: 1px solid rgba(14, 203, 129, 0.25);
+            color: var(--green);
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .chat-closed-banner {
+            display: none;
+            text-align: center;
+            color: #6c7583;
+            font-size: 12.5px;
+            padding: 8px 0;
         }
         .chat-input-bar {
             display: flex;
@@ -711,9 +859,7 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            flex-shrink: 0;
         }
-        .upload-img-btn:hover { color: #fff; }
         .chat-text-input {
             flex: 1;
             background: #13171f;
@@ -724,7 +870,6 @@
             font-size: 13px;
             outline: none;
         }
-        .chat-text-input:focus { border-color: var(--green); }
         .send-msg-btn {
             width: 38px;
             height: 38px;
@@ -736,9 +881,121 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            flex-shrink: 0;
         }
-        .send-msg-btn:hover { background: var(--green); color: #000; }
+
+        /* 🚀 CONFIRM PAYMENT SENT & SELLER RELEASE MODALS (Screenshots 4520 & 4525) 🚀 */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.84);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+            padding: 16px;
+        }
+        .confirm-modal-card {
+            background: #0c0e12;
+            border: 1px solid #222832;
+            border-radius: 18px;
+            width: 100%;
+            max-width: 420px;
+            padding: 22px;
+            position: relative;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85);
+        }
+        .cm-close {
+            position: absolute;
+            top: 18px;
+            right: 18px;
+            background: none;
+            border: none;
+            color: #848e9c;
+            font-size: 15px;
+            cursor: pointer;
+        }
+        .cm-title {
+            margin: 0 0 8px 0;
+            font-size: 16px;
+            font-weight: 800;
+            color: #ffffff;
+        }
+        .cm-desc {
+            font-size: 12px;
+            color: #848e9c;
+            line-height: 1.5;
+            margin-bottom: 18px;
+        }
+        .cm-desc strong { color: #ffffff; }
+        .cm-amount-box {
+            background: #11151c;
+            border: 1px solid #222834;
+            border-radius: 12px;
+            padding: 14px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+        .cm-amount-label { font-size: 11px; color: #848e9c; margin-bottom: 5px; }
+        .cm-amount-val { font-size: 20px; font-weight: 800; color: #eab308; font-family: monospace; }
+        .cm-receipt-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .cm-uploaded-tag {
+            color: var(--green);
+            font-size: 11.5px;
+            display: none;
+            align-items: center;
+            gap: 4px;
+        }
+        .cm-upload-zone {
+            border: 1.5px dashed #2b3340;
+            background: #11141b;
+            border-radius: 12px;
+            min-height: 150px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        .cm-upload-zone:hover { border-color: #eab308; }
+        .cm-preview-img {
+            width: 100%;
+            max-height: 180px;
+            object-fit: cover;
+            display: none;
+        }
+        .cm-change-btn {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(15, 19, 24, 0.88);
+            border: 1px solid #384152;
+            color: #fff;
+            padding: 5px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            display: none;
+            align-items: center;
+            gap: 5px;
+        }
+        .cm-foot-note {
+            font-size: 11px;
+            color: #6c7583;
+            margin-bottom: 16px;
+        }
     </style>
 </head>
 <body>
@@ -767,7 +1024,7 @@
     <!-- Main 2-Column P2P Escrow & Chat Room -->
     <div class="trade-room-wrapper">
 
-        <!-- LEFT COLUMN: ESCROW STEPS & ACTIONS -->
+        <!-- LEFT COLUMN -->
         <div class="left-escrow-col">
             <div class="trade-top-bar">
                 <div class="breadcrumb-wrap">
@@ -778,110 +1035,191 @@
                 <span class="status-pill-badge" id="uiStatusBadge">Funds Locked</span>
             </div>
 
-            <!-- 4-Step Progress Bar -->
-            <div class="stepper-card">
-                <div class="step-item done" id="step1Item">
-                    <div class="step-circle"><i class="fa-solid fa-check"></i></div>
-                    <div class="step-label">Order<br>Placed</div>
-                </div>
-                <div class="step-line done" id="stepLine1"></div>
-                <div class="step-item active" id="step2Item">
-                    <div class="step-circle" id="step2Circle">2</div>
-                    <div class="step-label">Funds<br>Locked</div>
-                </div>
-                <div class="step-line" id="stepLine2"></div>
-                <div class="step-item" id="step3Item">
-                    <div class="step-circle" id="step3Circle">3</div>
-                    <div class="step-label">Payment<br>Sent</div>
-                </div>
-                <div class="step-line" id="stepLine3"></div>
-                <div class="step-item" id="step4Item">
-                    <div class="step-circle" id="step4Circle">4</div>
-                    <div class="step-label">Completed</div>
-                </div>
-            </div>
-
-            <!-- 4 Numbered Instructions -->
-            <div class="instructions-card" id="uiInstructionsCard">
-                <div class="inst-row highlight">
-                    <div class="inst-num">1</div>
-                    <div id="instText1">Transfer exactly 0.00 ETB to the seller's account shown below.</div>
-                </div>
-                <div class="inst-row">
-                    <div class="inst-num">2</div>
-                    <div id="instText2">Take a screenshot of your transfer receipt.</div>
-                </div>
-                <div class="inst-row">
-                    <div class="inst-num">3</div>
-                    <div id="instText3">Click "Transferred, Notify Seller" and upload your receipt.</div>
-                </div>
-                <div class="inst-row">
-                    <div class="inst-num">4</div>
-                    <div id="instText4">Wait for the seller to confirm receipt and release USDT.</div>
-                </div>
-            </div>
-
-            <!-- Seller Bank Summary Card -->
-            <div class="seller-bank-summary-card" id="uiSellerSummaryCard">
-                <div class="sbs-left">
-                    <div class="sbs-icon"><i class="fa-solid fa-file-invoice-dollar"></i></div>
-                    <div>
-                        <div class="sbs-holder" id="uiSellerHolderName">Account Holder</div>
-                        <div class="sbs-sub">Buyer will send <strong id="uiSellerEtbAmount">0.00 ETB</strong> via <span id="uiSellerBankSub">Bank</span></div>
+            <!-- 1. ACTIVE TRADE FLOW VIEW (Funds Locked / Payment Sent / Disputed) -->
+            <div id="uiActiveTradeSection" style="display:flex; flex-direction:column; gap:14px;">
+                <div class="stepper-card">
+                    <div class="step-item done" id="step1Item">
+                        <div class="step-circle"><i class="fa-solid fa-check"></i></div>
+                        <div class="step-label">Order<br>Placed</div>
+                    </div>
+                    <div class="step-line done" id="stepLine1"></div>
+                    <div class="step-item active" id="step2Item">
+                        <div class="step-circle" id="step2Circle">2</div>
+                        <div class="step-label">Funds<br>Locked</div>
+                    </div>
+                    <div class="step-line" id="stepLine2"></div>
+                    <div class="step-item" id="step3Item">
+                        <div class="step-circle" id="step3Circle">3</div>
+                        <div class="step-label">Payment<br>Sent</div>
+                    </div>
+                    <div class="step-line" id="stepLine3"></div>
+                    <div class="step-item" id="step4Item">
+                        <div class="step-circle" id="step4Circle">4</div>
+                        <div class="step-label">Completed</div>
                     </div>
                 </div>
-                <span class="sbs-method-badge" id="uiSellerMethodBadge">Bank</span>
-            </div>
 
-            <!-- 15-Minute Countdown Timer -->
-            <div class="timer-card">
-                <div class="timer-top">
-                    <div class="timer-label"><i class="fa-regular fa-clock"></i> Payment window</div>
-                    <div class="timer-clock" id="uiCountdownClock">14m 59s</div>
+                <!-- Dynamic Instructions -->
+                <div class="instructions-card" id="uiInstructionsCard"></div>
+
+                <!-- Seller Bank Summary Card -->
+                <div class="seller-bank-summary-card" id="uiSellerSummaryCard">
+                    <div class="sbs-left">
+                        <div class="sbs-icon"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+                        <div>
+                            <div class="sbs-holder" id="uiSellerHolderName">Account Holder</div>
+                            <div class="sbs-sub">Buyer will send <strong id="uiSellerEtbAmount">0.00 ETB</strong> via <span id="uiSellerBankSub">Bank</span></div>
+                        </div>
+                    </div>
+                    <span class="sbs-method-badge" id="uiSellerMethodBadge">Bank</span>
                 </div>
-                <div class="timer-bar-bg">
-                    <div class="timer-bar-fill" id="uiTimerBarFill"></div>
+
+                <!-- Countdown Timer (Turns Red on 2-Minute Warning) -->
+                <div class="timer-card" id="uiTimerCard">
+                    <div class="timer-top">
+                        <div class="timer-label" id="uiTimerLabel"><i class="fa-regular fa-clock"></i> Payment window</div>
+                        <div class="timer-clock" id="uiCountdownClock">09m 59s</div>
+                    </div>
+                    <div class="timer-bar-bg">
+                        <div class="timer-bar-fill" id="uiTimerBarFill"></div>
+                    </div>
+                </div>
+
+                <!-- Safety Warning Card -->
+                <div class="warning-card">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <div id="uiWarningText">Only pay using the account details shown here. Never cancel after sending — use Appeal if there's an issue.</div>
+                </div>
+
+                <!-- Waiting Status Card -->
+                <div class="status-waiting-card" id="uiWaitingStatusCard">
+                    <div class="sw-icon" id="uiWaitingIcon"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
+                    <div>
+                        <div class="sw-title" id="uiWaitingTitle">Waiting for seller to release</div>
+                        <div class="sw-sub" id="uiWaitingSub">Your payment is being verified. USDT will be credited once the seller confirms.</div>
+                    </div>
+                </div>
+
+                <!-- Buyer Button: Opens Upload Receipt Modal -->
+                <button type="button" class="primary-yellow-btn" id="uiLeftMarkPaidBtn" onclick="openConfirmPaymentModal()">
+                    <i class="fa-regular fa-circle-check"></i> Transferred, Notify Seller
+                </button>
+
+                <!-- Seller Button: Opens I Have Received Confirmation Modal -->
+                <button type="button" class="primary-green-btn" id="uiLeftSellerReleaseBtn" onclick="openSellerReleaseModal()">
+                    <i class="fa-solid fa-circle-check"></i> I Have Received (Release USDT)
+                </button>
+
+                <!-- Apply for Dispute Button (Unlocks when timer expires after Payment Sent) -->
+                <button type="button" class="dispute-red-btn" id="uiApplyDisputeBtn" onclick="applyForDispute()">
+                    <i class="fa-solid fa-scale-balanced"></i> Apply for Dispute (Appeal to Admin)
+                </button>
+
+                <!-- Cancel Button -->
+                <button type="button" class="secondary-cancel-btn" id="uiCancelTradeBtn" onclick="cancelActiveTrade()">
+                    Cancel Order
+                </button>
+
+                <!-- Appeal Unlocks Counter -->
+                <div class="appeal-lock-card" id="uiAppealLockCard">
+                    <i class="fa-solid fa-lock"></i>
+                    <span id="uiAppealLockText">Appeal unlocks in <strong id="uiAppealClock">09m 59s</strong></span>
                 </div>
             </div>
 
-            <!-- Safety Warning Card -->
-            <div class="warning-card">
-                <i class="fa-solid fa-triangle-exclamation"></i>
-                <div id="uiWarningText">Only pay using the account details shown here. Never cancel after sending — use Appeal if there's an issue.</div>
-            </div>
+            <!-- 2. COMPLETED STATE VIEW (Screenshots 4531 & 4532) -->
+            <div class="completed-view-wrap" id="uiCompletedSection">
+                <div class="completed-hero-card">
+                    <div class="comp-check-circle"><i class="fa-regular fa-circle-check"></i></div>
+                    <div class="comp-tag">COMPLETED</div>
+                    <div class="comp-big-usdt" id="uiCompBigUsdt">0.00 <span>USDT</span></div>
+                    <div class="comp-sub-note" id="uiCompSubNote">You received 0.00 USDT</div>
+                </div>
 
-            <!-- Seller Waiting Status Card -->
-            <div class="seller-waiting-card" id="uiSellerWaitingCard">
-                <div class="sw-icon"><i class="fa-regular fa-clock"></i></div>
-                <div>
-                    <div class="sw-title" id="uiSellerWaitTitle">Waiting for buyer's payment</div>
-                    <div class="sw-sub" id="uiSellerWaitSub">Your 0.00 USDT is secured in escrow.</div>
+                <div class="comp-summary-card">
+                    <div class="comp-sum-header">
+                        <div class="comp-sum-title"><span id="uiCompTypeWord" style="color:var(--green);">Buy</span> USDT</div>
+                        <span class="status-pill-badge" id="uiCompBankBadge" style="background:#161b22; color:#9ca3af; border-color:#262e3b;">Bank</span>
+                    </div>
+                    <div class="comp-sum-row">
+                        <span class="k">Fiat Amount</span>
+                        <span class="v" id="uiCompFiat">Br 0.00</span>
+                    </div>
+                    <div class="comp-sum-row">
+                        <span class="k">Price</span>
+                        <span class="v" id="uiCompPrice">Br 0.00</span>
+                    </div>
+                    <div class="comp-sum-row">
+                        <span class="k">Receive Quantity</span>
+                        <span class="v" id="uiCompQty">0.00 USDT</span>
+                    </div>
+                </div>
+
+                <div class="download-receipt-card" onclick="window.print()">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <div class="sbs-icon" style="background:#161b22; border-color:#262e3b; color:#9ca3af;"><i class="fa-solid fa-download"></i></div>
+                        <strong style="font-size:13.5px;">Download Receipt</strong>
+                    </div>
+                    <span style="font-size:12px; color:var(--text-muted);">PDF / Print &rarr;</span>
+                </div>
+
+                <div class="rate-card">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <div class="sbs-icon" style="background:rgba(234,179,8,0.12); border-color:rgba(234,179,8,0.3); color:#eab308;"><i class="fa-regular fa-star"></i></div>
+                        <div>
+                            <div style="font-size:13.5px; font-weight:800;">Rate your counterparty</div>
+                            <div style="font-size:12px; color:var(--text-muted);" id="uiRatePartnerPrompt">How was your experience?</div>
+                        </div>
+                    </div>
+                    <div class="star-row" id="uiStarRow">
+                        <i class="fa-regular fa-star" onclick="selectStar(1)"></i>
+                        <i class="fa-regular fa-star" onclick="selectStar(2)"></i>
+                        <i class="fa-regular fa-star" onclick="selectStar(3)"></i>
+                        <i class="fa-regular fa-star" onclick="selectStar(4)"></i>
+                        <i class="fa-regular fa-star" onclick="selectStar(5)"></i>
+                    </div>
+                    <div style="display:flex; gap:14px; align-items:center;">
+                        <button type="button" class="primary-yellow-btn" style="width:auto; padding:10px 22px; font-size:12.5px;" onclick="alert('Thank you for your review!')">Submit Review</button>
+                        <span style="font-size:12px; color:var(--text-muted); cursor:pointer;" onclick="this.parentElement.parentElement.style.display='none'">Skip</span>
+                    </div>
                 </div>
             </div>
 
-            <!-- Buyer Action Button: Transferred, Notify Seller -->
-            <button type="button" class="primary-yellow-btn" id="uiLeftMarkPaidBtn" onclick="markPaymentTransferred()">
-                <i class="fa-regular fa-circle-check"></i> Transferred, Notify Seller
-            </button>
+            <!-- 3. CANCELLED STATE VIEW (Screenshot 4522) -->
+            <div class="cancelled-view-wrap" id="uiCancelledSection">
+                <div class="cancelled-summary-card">
+                    <div class="canc-top-banner">
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <div class="sbs-icon" style="background:rgba(234,179,8,0.12); border-color:rgba(234,179,8,0.3); color:#eab308;">&#8601;</div>
+                            <div>
+                                <div style="font-size:13.5px; font-weight:800; color:#eab308;" id="uiCancRoleTitle">You are the Buyer</div>
+                                <div style="font-size:11.5px; color:var(--text-muted);" id="uiCancRoleSub">You pay ETB and receive USDT</div>
+                            </div>
+                        </div>
+                        <span class="status-pill-badge cancelled">Cancelled</span>
+                    </div>
+                    <div class="canc-body">
+                        <div style="font-size:10.5px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">YOU RECEIVE</div>
+                        <div class="canc-big-green" id="uiCancUsdt">0.00 <span style="font-size:15px; color:var(--text-muted);">USDT</span></div>
+                        <div style="font-size:12px; color:var(--text-muted); display:flex; gap:14px; flex-wrap:wrap;">
+                            <span>You pay <strong style="color:#fff;" id="uiCancEtb">0.00 ETB</strong></span>
+                            <span>Rate <strong style="color:#fff;" id="uiCancRate">0.00 / USDT</strong></span>
+                            <span>Via <strong style="color:var(--green);" id="uiCancBank">Bank</strong></span>
+                        </div>
+                    </div>
+                </div>
 
-            <!-- Seller Action Button: Release USDT -->
-            <button type="button" class="primary-green-btn" id="uiSellerReleaseBtn" onclick="releaseUsdtToBuyer()">
-                <i class="fa-solid fa-unlock-keyhole"></i> Confirm Receipt & Release USDT
-            </button>
-
-            <!-- Cancel / Request Cancellation Button -->
-            <button type="button" class="secondary-cancel-btn" id="uiCancelTradeBtn" onclick="cancelActiveTrade()">
-                Cancel Order
-            </button>
-
-            <!-- Appeal Unlocks Timer -->
-            <div class="appeal-lock-card">
-                <i class="fa-solid fa-lock"></i>
-                <span>Appeal unlocks in <strong id="uiAppealClock">14m 59s</strong></span>
+                <div class="canc-notice-card">
+                    <i class="fa-solid fa-xmark" style="color:#9ca3af; font-size:16px; margin-top:2px;"></i>
+                    <div>
+                        <div style="font-size:13.5px; font-weight:800; color:#d1d5db; margin-bottom:5px;">Trade Cancelled</div>
+                        <div style="font-size:12px; color:var(--text-muted);">This trade was cancelled. Escrowed USDT has been returned to the seller.</div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- RIGHT COLUMN: COUNTERPARTY HEADER, PAYMENT DETAILS & LIVE CHAT -->
+        <!-- RIGHT COLUMN: CHAT ROOM -->
         <div class="right-chat-card">
             <div class="chat-header">
                 <div class="chat-avatar" id="uiPartnerAvatar">TR</div>
@@ -894,7 +1232,7 @@
                 </div>
             </div>
 
-            <!-- Collapsible Payment Details Dropdown (Buyer View) -->
+            <!-- Collapsible Payment Details Dropdown -->
             <div class="chat-pay-details-wrap" id="uiBuyerPayDropdown">
                 <div class="cpd-header" onclick="togglePaymentDetailsDropdown()">
                     <div class="cpd-left">
@@ -902,8 +1240,8 @@
                         <span>Payment details</span>
                     </div>
                     <div class="cpd-right">
-                        <span class="cpd-bank-pill" id="uiDropdownBankPill">Commercial Bank of Ethiopia</span>
-                        <i class="fa-solid fa-chevron-down" id="uiDropdownChevron" style="color:#eab308; font-size:11px;"></i>
+                        <span class="cpd-bank-pill" id="uiDropdownBankPill">Bank</span>
+                        <i class="fa-solid fa-chevron-up" id="uiDropdownChevron" style="color:#eab308; font-size:11px;"></i>
                     </div>
                 </div>
                 <div class="cpd-body open" id="uiDropdownBody">
@@ -938,25 +1276,32 @@
                 </div>
             </div>
 
-            <!-- Messages Feed -->
-            <div class="chat-messages-area" id="uiChatMessagesArea">
-                <div class="chat-empty-state" id="uiChatEmptyState">
-                    <div class="icon-box"><i class="fa-regular fa-message"></i></div>
-                    <h4>No messages yet</h4>
-                    <p>Start the conversation below</p>
-                </div>
-            </div>
+            <!-- Live Chat Feed -->
+            <div class="chat-messages-area" id="uiChatMessagesArea"></div>
 
             <!-- Chat Footer -->
             <div class="chat-footer">
-                <button type="button" class="primary-yellow-btn" id="uiRightMarkPaidBtn" onclick="markPaymentTransferred()">
+                <div class="post-trade-open-banner" id="uiPostTradeBanner">
+                    <span style="width:7px; height:7px; border-radius:50%; background:var(--green);"></span>
+                    <span>Trade completed — post-trade chat is open</span>
+                </div>
+
+                <button type="button" class="primary-yellow-btn" id="uiRightMarkPaidBtn" onclick="openConfirmPaymentModal()">
                     <i class="fa-regular fa-circle-check"></i> Transferred, Notify Seller
                 </button>
 
-                <div class="chat-input-bar">
-                    <label class="upload-img-btn" title="Upload Receipt Screenshot">
+                <button type="button" class="primary-green-btn" id="uiRightSellerReleaseBtn" onclick="openSellerReleaseModal()">
+                    <i class="fa-solid fa-circle-check"></i> I Have Received (Release USDT)
+                </button>
+
+                <div class="chat-closed-banner" id="uiChatClosedBanner">
+                    Trade cancelled — chat is closed
+                </div>
+
+                <div class="chat-input-bar" id="uiChatInputBar">
+                    <label class="upload-img-btn" title="Send Image in Chat">
                         <i class="fa-regular fa-image"></i>
-                        <input type="file" accept="image/*" style="display:none;" onchange="uploadReceiptImage(event)">
+                        <input type="file" accept="image/*" style="display:none;" onchange="sendImageInChat(event)">
                     </label>
                     <input type="text" class="chat-text-input" id="uiChatInput" placeholder="Message..." onkeydown="if(event.key==='Enter') sendChatMessage()">
                     <button type="button" class="send-msg-btn" onclick="sendChatMessage()">
@@ -968,10 +1313,80 @@
 
     </div>
 
+    <!-- 🚀 1. BUYER MODAL: CONFIRM PAYMENT SENT & UPLOAD RECEIPT (Screenshots 4520 & 4525) 🚀 -->
+    <div class="modal-overlay" id="confirmPaymentModal" onclick="if(event.target===this) closeConfirmPaymentModal()">
+        <div class="confirm-modal-card">
+            <button type="button" class="cm-close" onclick="closeConfirmPaymentModal()"><i class="fa-solid fa-xmark"></i></button>
+            <h3 class="cm-title">Confirm Payment Sent</h3>
+            <div class="cm-desc">
+                Only click confirm after you have <strong>actually transferred</strong> <span id="cmDescEtb">0.00 ETB</span>. False confirmations may result in account suspension.
+            </div>
+            <div class="cm-amount-box">
+                <div>
+                    <div class="cm-amount-label">Amount transferred</div>
+                    <div class="cm-amount-val" id="cmBigEtb">0.00 ETB</div>
+                </div>
+                <span style="color:#eab308; font-size:18px;">&#8599;</span>
+            </div>
+
+            <div class="cm-receipt-header">
+                <span>Payment Receipt <span style="color:var(--red);">*</span></span>
+                <span class="cm-uploaded-tag" id="cmUploadedBadge"><i class="fa-regular fa-circle-check"></i> Uploaded</span>
+            </div>
+
+            <label class="cm-upload-zone">
+                <input type="file" accept="image/*" style="display:none;" onchange="handleModalReceiptSelect(event)">
+                <div id="cmUploadPlaceholder" style="text-align:center;">
+                    <div style="width:38px; height:38px; border-radius:10px; background:#191e28; display:flex; align-items:center; justify-content:center; margin:0 auto 10px auto; color:#848e9c;">
+                        <i class="fa-regular fa-image"></i>
+                    </div>
+                    <div style="font-size:13px; font-weight:700; color:#fff; margin-bottom:4px;">Upload receipt</div>
+                    <div style="font-size:11px; color:#6c7583;">Screenshot of your payment</div>
+                </div>
+                <img id="cmReceiptPreviewImg" class="cm-preview-img" alt="Receipt Preview">
+                <span class="cm-change-btn" id="cmChangeReceiptBtn"><i class="fa-regular fa-image"></i> Change</span>
+            </label>
+
+            <div class="cm-foot-note">Receipt is required to protect you in case of a dispute.</div>
+
+            <button type="button" class="primary-yellow-btn" id="cmConfirmSubmitBtn" disabled onclick="submitMarkPaidWithReceipt()">
+                <i class="fa-regular fa-circle-check"></i> Yes, I've Transferred
+            </button>
+        </div>
+    </div>
+
+    <!-- 🚀 2. SELLER MODAL: CONFIRM "I HAVE RECEIVED" & RELEASE USDT 🚀 -->
+    <div class="modal-overlay" id="sellerReleaseModal" onclick="if(event.target===this) closeSellerReleaseModal()">
+        <div class="confirm-modal-card">
+            <button type="button" class="cm-close" onclick="closeSellerReleaseModal()"><i class="fa-solid fa-xmark"></i></button>
+            <h3 class="cm-title">Confirm Payment Received</h3>
+            <div class="cm-desc">
+                Please verify that you have <strong>actually received</strong> the exact ETB amount in your bank/Telebirr account before releasing USDT.
+            </div>
+            <div class="cm-amount-box" style="border-color: rgba(14,203,129,0.35);">
+                <div>
+                    <div class="cm-amount-label">Amount to verify in your account</div>
+                    <div class="cm-amount-val" id="srBigEtb" style="color:var(--green);">0.00 ETB</div>
+                </div>
+                <i class="fa-solid fa-shield-halved" style="color:var(--green); font-size:18px;"></i>
+            </div>
+
+            <label style="display:flex; align-items:flex-start; gap:10px; font-size:12px; color:#d1d5db; margin-bottom:18px; cursor:pointer;">
+                <input type="checkbox" id="srVerifyCheckbox" style="margin-top:3px;" onchange="document.getElementById('srFinalReleaseBtn').disabled = !this.checked">
+                <span>I confirm that I have logged into my bank/Telebirr app and verified receiving the exact amount above.</span>
+            </label>
+
+            <button type="button" class="primary-green-btn" id="srFinalReleaseBtn" style="display:flex;" disabled onclick="confirmAndReleaseUsdt()">
+                <i class="fa-solid fa-unlock-keyhole"></i> Yes, I Have Received — Release USDT
+            </button>
+        </div>
+    </div>
+
     <script>
         const API_BASE = 'https://tbr-exchange-backend.onrender.com';
         let activeTrade = null;
         let currentUserId = '';
+        let selectedReceiptBase64 = '';
         let countdownInterval = null;
 
         function getAuthToken() {
@@ -992,7 +1407,7 @@
             } catch (e) {}
 
             await fetchTradeFromServer();
-            setInterval(fetchTradeFromServer, 5000);
+            setInterval(fetchTradeFromServer, 3000); // Fast 3s real-time chat & status sync
             startCountdownTimer();
         });
 
@@ -1031,52 +1446,20 @@
             if (!activeTrade) return;
 
             const isBuyer = isCurrentUserBuyer();
-            // 🚀 ሁልጊዜ በ 5 አሃዝ (#00001, #00002...) እንዲያሳይ ተደርጓል 🚀
             const tradeNum = String(activeTrade.tradeNumber || '00001').padStart(5, '0');
             const etbFormatted = formatEtb(activeTrade.etbAmount);
-            const usdtFormatted = Number(activeTrade.usdtAmount || 0).toFixed(2) + ' USDT';
+            const netUsdtNum = Number(activeTrade.netUsdt || activeTrade.usdtAmount || 0);
+            const usdtFormatted = netUsdtNum.toFixed(2) + ' USDT';
             const payMethod = activeTrade.paymentMethod || 'Commercial Bank of Ethiopia';
             const payDetails = activeTrade.paymentDetails || {};
             const status = activeTrade.status || 'funds_locked';
 
             document.getElementById('uiTradeNumber').innerText = `Trade #${tradeNum}`;
 
-            const badgeEl = document.getElementById('uiStatusBadge');
-            const step2Item = document.getElementById('step2Item');
-            const step3Item = document.getElementById('step3Item');
-            const step4Item = document.getElementById('step4Item');
-            const stepLine2 = document.getElementById('stepLine2');
-            const stepLine3 = document.getElementById('stepLine3');
-
-            if (status === 'funds_locked') {
-                badgeEl.innerText = 'Funds Locked';
-                badgeEl.className = 'status-pill-badge';
-                step2Item.className = 'step-item active';
-                step3Item.className = 'step-item';
-                step4Item.className = 'step-item';
-            } else if (status === 'payment_sent') {
-                badgeEl.innerText = 'Payment Sent';
-                badgeEl.className = 'status-pill-badge';
-                step2Item.className = 'step-item done';
-                document.getElementById('step2Circle').innerHTML = '<i class="fa-solid fa-check"></i>';
-                stepLine2.className = 'step-line done';
-                step3Item.className = 'step-item active';
-            } else if (status === 'completed') {
-                badgeEl.innerText = 'Completed';
-                badgeEl.className = 'status-pill-badge completed';
-                step2Item.className = 'step-item done';
-                step3Item.className = 'step-item done';
-                step4Item.className = 'step-item done';
-                stepLine2.className = 'step-line done';
-                stepLine3.className = 'step-line done';
-            } else if (status === 'cancelled') {
-                badgeEl.innerText = 'Cancelled';
-                badgeEl.className = 'status-pill-badge cancelled';
-            }
-
+            // Counterparty Header
             const partnerName = isBuyer
-                ? (activeTrade.sellerName || activeTrade.counterpartyName || activeTrade.traderName || 'Seller')
-                : (activeTrade.buyerName || activeTrade.counterpartyName || activeTrade.traderName || 'Buyer');
+                ? (activeTrade.sellerName || activeTrade.counterpartyName || 'Seller')
+                : (activeTrade.buyerName || activeTrade.counterpartyName || 'Buyer');
             const partnerAvatar = isBuyer ? activeTrade.sellerAvatar : activeTrade.buyerAvatar;
             const initials = String(partnerName).slice(0, 2).toUpperCase();
 
@@ -1085,36 +1468,152 @@
                 ? `<img src="${partnerAvatar}" alt="${partnerName}">`
                 : initials;
 
+            // Top Status Pill Badge
+            const badgeEl = document.getElementById('uiStatusBadge');
+            if (status === 'funds_locked') {
+                badgeEl.innerText = 'Funds Locked';
+                badgeEl.className = 'status-pill-badge';
+            } else if (status === 'payment_sent') {
+                badgeEl.innerText = 'Payment Sent';
+                badgeEl.className = 'status-pill-badge payment-sent';
+            } else if (status === 'completed') {
+                badgeEl.innerText = 'Completed';
+                badgeEl.className = 'status-pill-badge completed';
+            } else if (status === 'cancelled') {
+                badgeEl.innerText = 'Cancelled';
+                badgeEl.className = 'status-pill-badge cancelled';
+            } else if (status === 'disputed') {
+                badgeEl.innerText = 'Disputed';
+                badgeEl.className = 'status-pill-badge disputed';
+            }
+
+            // Toggle Major Left-Column Sections
+            const activeSec = document.getElementById('uiActiveTradeSection');
+            const compSec = document.getElementById('uiCompletedSection');
+            const cancSec = document.getElementById('uiCancelledSection');
+
+            if (status === 'completed') {
+                activeSec.style.display = 'none';
+                cancSec.style.display = 'none';
+                compSec.style.display = 'flex';
+
+                document.getElementById('uiCompBigUsdt').innerHTML = `${netUsdtNum.toFixed(2)} <span>USDT</span>`;
+                document.getElementById('uiCompSubNote').innerText = isBuyer
+                    ? `You received ${netUsdtNum.toFixed(2)} USDT`
+                    : `You sold ${Number(activeTrade.usdtAmount || 0).toFixed(2)} USDT`;
+                document.getElementById('uiCompTypeWord').innerText = isBuyer ? 'Buy' : 'Sell';
+                document.getElementById('uiCompBankBadge').innerText = payMethod;
+                document.getElementById('uiCompFiat').innerText = `Br ${Number(activeTrade.etbAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+                document.getElementById('uiCompPrice').innerText = `Br ${Number(activeTrade.unitPrice || 0).toFixed(2)}`;
+                document.getElementById('uiCompQty').innerText = `${netUsdtNum.toFixed(2)} USDT`;
+                document.getElementById('uiRatePartnerPrompt').innerText = `How was your experience with ${partnerName}?`;
+
+                document.getElementById('uiBuyerPayDropdown').style.display = 'none';
+                document.getElementById('uiRightMarkPaidBtn').style.display = 'none';
+                document.getElementById('uiRightSellerReleaseBtn').style.display = 'none';
+                document.getElementById('uiPostTradeBanner').style.display = 'flex';
+                document.getElementById('uiChatClosedBanner').style.display = 'none';
+                document.getElementById('uiChatInputBar').style.display = 'flex';
+                renderChatMessages(partnerAvatar, initials);
+                return;
+            }
+
+            if (status === 'cancelled') {
+                activeSec.style.display = 'none';
+                compSec.style.display = 'none';
+                cancSec.style.display = 'flex';
+
+                document.getElementById('uiCancRoleTitle').innerText = isBuyer ? 'You are the Buyer' : 'You are the Seller';
+                document.getElementById('uiCancRoleSub').innerText = isBuyer ? 'You pay ETB and receive USDT' : 'You sell USDT and receive ETB';
+                document.getElementById('uiCancUsdt').innerHTML = `${netUsdtNum.toFixed(2)} <span style="font-size:15px; color:var(--text-muted);">USDT</span>`;
+                document.getElementById('uiCancEtb').innerText = etbFormatted;
+                document.getElementById('uiCancRate').innerText = `${Number(activeTrade.unitPrice || 0).toFixed(2)} / USDT`;
+                document.getElementById('uiCancBank').innerText = payMethod;
+
+                document.getElementById('uiBuyerPayDropdown').style.display = 'none';
+                document.getElementById('uiRightMarkPaidBtn').style.display = 'none';
+                document.getElementById('uiRightSellerReleaseBtn').style.display = 'none';
+                document.getElementById('uiPostTradeBanner').style.display = 'none';
+                document.getElementById('uiChatClosedBanner').style.display = 'block';
+                document.getElementById('uiChatInputBar').style.display = 'none';
+                renderChatMessages(partnerAvatar, initials);
+                return;
+            }
+
+            // Active States: funds_locked, payment_sent, disputed
+            activeSec.style.display = 'flex';
+            compSec.style.display = 'none';
+            cancSec.style.display = 'none';
+            document.getElementById('uiPostTradeBanner').style.display = 'none';
+            document.getElementById('uiChatClosedBanner').style.display = 'none';
+            document.getElementById('uiChatInputBar').style.display = 'flex';
+
+            // Stepper Progress
+            const step2Item = document.getElementById('step2Item');
+            const step3Item = document.getElementById('step3Item');
+            const stepLine2 = document.getElementById('stepLine2');
+
+            if (status === 'funds_locked') {
+                step2Item.className = 'step-item active';
+                document.getElementById('step2Circle').innerText = '2';
+                stepLine2.className = 'step-line';
+                step3Item.className = 'step-item';
+            } else {
+                step2Item.className = 'step-item done';
+                document.getElementById('step2Circle').innerHTML = '<i class="fa-solid fa-check"></i>';
+                stepLine2.className = 'step-line done';
+                step3Item.className = 'step-item active';
+            }
+
+            // Instructions & Buttons per Role + Status
+            const instCard = document.getElementById('uiInstructionsCard');
+            const waitingCard = document.getElementById('uiWaitingStatusCard');
+
             if (isBuyer) {
-                document.getElementById('instText1').innerText = `Transfer exactly ${etbFormatted} to the seller's account shown below.`;
-                document.getElementById('instText2').innerText = `Take a screenshot of your transfer receipt.`;
-                document.getElementById('instText3').innerText = `Click "Transferred, Notify Seller" and upload your receipt.`;
-                document.getElementById('instText4').innerText = `Wait for the seller to confirm receipt and release USDT.`;
-
-                document.getElementById('uiSellerSummaryCard').style.display = 'none';
-                document.getElementById('uiSellerWaitingCard').style.display = 'none';
-                document.getElementById('uiSellerReleaseBtn').style.display = 'none';
                 document.getElementById('uiBuyerPayDropdown').style.display = 'block';
-
                 document.getElementById('uiDropdownBankPill').innerText = payMethod;
                 document.getElementById('uiPayAccountName').innerText = payDetails.accountName || partnerName;
-                document.getElementById('uiPayAccountNo').innerText = payDetails.accountNumber || '1000570640058';
+                document.getElementById('uiPayAccountNo').innerText = payDetails.accountNumber || '-';
                 document.getElementById('uiPayBankName').innerText = payDetails.bankName || payMethod;
                 document.getElementById('uiPayEtbExact').innerText = etbFormatted;
 
-                document.getElementById('uiWarningText').innerText =
-                    `Only pay using the account details shown here. Never cancel after sending — use Appeal if there's an issue.`;
-                document.getElementById('uiCancelTradeBtn').innerText = 'Cancel Order';
+                document.getElementById('uiSellerSummaryCard').style.display = 'none';
+                document.getElementById('uiLeftSellerReleaseBtn').style.display = 'none';
+                document.getElementById('uiRightSellerReleaseBtn').style.display = 'none';
 
-                const showPayBtns = status === 'funds_locked';
-                document.getElementById('uiLeftMarkPaidBtn').style.display = showPayBtns ? 'flex' : 'none';
-                document.getElementById('uiRightMarkPaidBtn').style.display = showPayBtns ? 'flex' : 'none';
+                if (status === 'funds_locked') {
+                    instCard.innerHTML = `
+                        <div class="inst-row highlight"><div class="inst-num">1</div><div>Transfer exactly ${etbFormatted} to the seller's account shown below.</div></div>
+                        <div class="inst-row"><div class="inst-num">2</div><div>Take a screenshot of your transfer receipt.</div></div>
+                        <div class="inst-row"><div class="inst-num">3</div><div>Click "Transferred, Notify Seller" and upload your receipt.</div></div>
+                        <div class="inst-row"><div class="inst-num">4</div><div>Wait for the seller to confirm receipt and release USDT.</div></div>
+                    `;
+                    waitingCard.style.display = 'none';
+                    document.getElementById('uiLeftMarkPaidBtn').style.display = 'flex';
+                    document.getElementById('uiRightMarkPaidBtn').style.display = 'flex';
+                    document.getElementById('uiCancelTradeBtn').style.display = 'block';
+                } else {
+                    // Payment Sent or Disputed (Screenshots 4529 & 4530)
+                    instCard.innerHTML = `
+                        <div class="inst-row highlight"><div class="inst-num">1</div><div>Your payment has been marked as sent.</div></div>
+                        <div class="inst-row"><div class="inst-num">2</div><div>The seller is verifying your payment in their bank app.</div></div>
+                        <div class="inst-row"><div class="inst-num">3</div><div>USDT will be credited to your wallet once the seller releases.</div></div>
+                    `;
+                    waitingCard.className = 'status-waiting-card';
+                    waitingCard.style.display = 'flex';
+                    document.getElementById('uiWaitingTitle').innerText = status === 'disputed'
+                        ? 'Dispute under Admin Review'
+                        : 'Waiting for seller to release';
+                    document.getElementById('uiWaitingSub').innerText = status === 'disputed'
+                        ? 'Admin is reviewing your uploaded receipt and chat history.'
+                        : 'Your payment is being verified. USDT will be credited once the seller confirms.';
+
+                    document.getElementById('uiLeftMarkPaidBtn').style.display = 'none';
+                    document.getElementById('uiRightMarkPaidBtn').style.display = 'none';
+                    document.getElementById('uiCancelTradeBtn').style.display = 'none';
+                }
             } else {
-                document.getElementById('instText1').innerText = `Your USDT is secured in escrow — the buyer will pay shortly.`;
-                document.getElementById('instText2').innerText = `Once the buyer transfers payment, they will click 'Transferred' to notify you.`;
-                document.getElementById('instText3').innerText = `Check your bank app to verify the exact amount before releasing.`;
-                document.getElementById('instText4').innerText = `Never release USDT before confirming payment in your account.`;
-
+                // SELLER VIEW
                 document.getElementById('uiBuyerPayDropdown').style.display = 'none';
                 document.getElementById('uiLeftMarkPaidBtn').style.display = 'none';
                 document.getElementById('uiRightMarkPaidBtn').style.display = 'none';
@@ -1125,23 +1624,314 @@
                 document.getElementById('uiSellerBankSub').innerText = payMethod;
                 document.getElementById('uiSellerMethodBadge').innerText = payMethod;
 
-                document.getElementById('uiWarningText').innerText =
-                    `Only release USDT after verifying payment in your bank app. Never release based on screenshots alone.`;
+                instCard.innerHTML = `
+                    <div class="inst-row highlight"><div class="inst-num">1</div><div>Your USDT is secured in escrow — the buyer will pay shortly.</div></div>
+                    <div class="inst-row"><div class="inst-num">2</div><div>Once the buyer transfers payment, they will upload their receipt.</div></div>
+                    <div class="inst-row"><div class="inst-num">3</div><div>Check your bank app to verify the exact amount before releasing.</div></div>
+                    <div class="inst-row"><div class="inst-num">4</div><div>Click "I Have Received" to confirm and release USDT to the buyer.</div></div>
+                `;
 
-                document.getElementById('uiSellerWaitingCard').style.display = 'flex';
-                document.getElementById('uiSellerWaitSub').innerText = `Your ${usdtFormatted} is secured in escrow.`;
-                document.getElementById('uiCancelTradeBtn').innerText = 'Request Cancellation';
+                waitingCard.className = 'status-waiting-card blue-theme';
+                waitingCard.style.display = 'flex';
 
-                if (status === 'payment_sent') {
-                    document.getElementById('uiSellerWaitTitle').innerText = 'Buyer marked payment as transferred!';
-                    document.getElementById('uiSellerReleaseBtn').style.display = 'flex';
+                if (status === 'payment_sent' || status === 'disputed') {
+                    document.getElementById('uiWaitingTitle').innerText = 'Buyer uploaded payment receipt!';
+                    document.getElementById('uiWaitingSub').innerText = `Verify ${etbFormatted} in your bank app and click "I Have Received" below.`;
+                    document.getElementById('uiLeftSellerReleaseBtn').style.display = 'flex';
+                    document.getElementById('uiRightSellerReleaseBtn').style.display = 'flex';
+                    document.getElementById('uiCancelTradeBtn').style.display = 'none';
                 } else {
-                    document.getElementById('uiSellerWaitTitle').innerText = "Waiting for buyer's payment";
-                    document.getElementById('uiSellerReleaseBtn').style.display = 'none';
+                    document.getElementById('uiWaitingTitle').innerText = "Waiting for buyer's payment";
+                    document.getElementById('uiWaitingSub').innerText = `Your ${usdtFormatted} is secured in escrow.`;
+                    document.getElementById('uiLeftSellerReleaseBtn').style.display = 'none';
+                    document.getElementById('uiRightSellerReleaseBtn').style.display = 'none';
+                    document.getElementById('uiCancelTradeBtn').style.display = 'block';
                 }
             }
 
-            renderChatMessages();
+            renderChatMessages(partnerAvatar, initials);
+        }
+
+        // 🚀 Countdown Timer + 2-Minute Warning + Dispute Unlock 🚀
+        function startCountdownTimer() {
+            if (countdownInterval) clearInterval(countdownInterval);
+            const baseWindowMs = 10 * 60 * 1000;
+
+            countdownInterval = setInterval(async () => {
+                if (!activeTrade || activeTrade.status === 'completed' || activeTrade.status === 'cancelled') return;
+
+                const expiresAt = activeTrade.expiresAt ? new Date(activeTrade.expiresAt).getTime() : (Date.now() + baseWindowMs);
+                const remaining = Math.max(0, expiresAt - Date.now());
+
+                const mins = Math.floor(remaining / 60000);
+                const secs = Math.floor((remaining % 60000) / 1000);
+                const formatted = `${mins}m ${String(secs).padStart(2, '0')}s`;
+
+                document.getElementById('uiCountdownClock').innerText = formatted;
+                document.getElementById('uiAppealClock').innerText = formatted;
+
+                const timerCard = document.getElementById('uiTimerCard');
+                const timerLabel = document.getElementById('uiTimerLabel');
+                if (activeTrade.warningExtended) {
+                    timerCard.classList.add('warning-mode');
+                    timerLabel.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Final 2m Warning before Cancel!`;
+                } else {
+                    timerCard.classList.remove('warning-mode');
+                    timerLabel.innerHTML = `<i class="fa-regular fa-clock"></i> Payment window`;
+                }
+
+                const totalMs = activeTrade.warningExtended ? (2 * 60 * 1000) : baseWindowMs;
+                const pct = Math.max(0, Math.min(100, (remaining / totalMs) * 100));
+                document.getElementById('uiTimerBarFill').style.width = `${pct}%`;
+
+                // If timer hits 0
+                if (remaining <= 0) {
+                    if (activeTrade.status === 'funds_locked') {
+                        // Trigger server check to grant 2-min warning or auto-cancel
+                        await fetchTradeFromServer();
+                    } else if (activeTrade.status === 'payment_sent') {
+                        // Buyer already sent payment & uploaded receipt, but Seller hasn't released -> Unlock Dispute Button!
+                        document.getElementById('uiApplyDisputeBtn').style.display = 'flex';
+                        document.getElementById('uiAppealLockCard').style.display = 'none';
+                    }
+                } else if (activeTrade.status !== 'disputed') {
+                    document.getElementById('uiApplyDisputeBtn').style.display = 'none';
+                    document.getElementById('uiAppealLockCard').style.display = 'flex';
+                }
+            }, 1000);
+        }
+
+        // 🚀 Buyer Upload Receipt Modal Functions (Screenshots 4520 & 4525) 🚀
+        function openConfirmPaymentModal() {
+            if (!activeTrade) return;
+            const etbStr = formatEtb(activeTrade.etbAmount);
+            document.getElementById('cmDescEtb').innerText = etbStr;
+            document.getElementById('cmBigEtb').innerText = etbStr;
+
+            selectedReceiptBase64 = '';
+            document.getElementById('cmReceiptPreviewImg').style.display = 'none';
+            document.getElementById('cmChangeReceiptBtn').style.display = 'none';
+            document.getElementById('cmUploadedBadge').style.display = 'none';
+            document.getElementById('cmUploadPlaceholder').style.display = 'block';
+            document.getElementById('cmConfirmSubmitBtn').disabled = true;
+
+            document.getElementById('confirmPaymentModal').style.display = 'flex';
+        }
+
+        function closeConfirmPaymentModal() {
+            document.getElementById('confirmPaymentModal').style.display = 'none';
+        }
+
+        function handleModalReceiptSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                selectedReceiptBase64 = reader.result;
+                const preview = document.getElementById('cmReceiptPreviewImg');
+                preview.src = selectedReceiptBase64;
+                preview.style.display = 'block';
+                document.getElementById('cmUploadPlaceholder').style.display = 'none';
+                document.getElementById('cmChangeReceiptBtn').style.display = 'inline-flex';
+                document.getElementById('cmUploadedBadge').style.display = 'inline-flex';
+                document.getElementById('cmConfirmSubmitBtn').disabled = false;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function submitMarkPaidWithReceipt() {
+            if (!activeTrade || !selectedReceiptBase64) return;
+            const btn = document.getElementById('cmConfirmSubmitBtn');
+            btn.disabled = true;
+            btn.innerText = 'Uploading Receipt...';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/trades/${activeTrade._id}/mark-paid`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getAuthToken()}`
+                    },
+                    body: JSON.stringify({ receiptImage: selectedReceiptBase64 })
+                });
+                const json = await res.json();
+                if (res.ok && json.success) {
+                    activeTrade = json.trade;
+                    closeConfirmPaymentModal();
+                    renderTradeRoomUI();
+                }
+            } catch (e) {}
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fa-regular fa-circle-check"></i> Yes, I've Transferred`;
+        }
+
+        // 🚀 Seller "I Have Received" Confirmation Modal Functions 🚀
+        function openSellerReleaseModal() {
+            if (!activeTrade) return;
+            document.getElementById('srBigEtb').innerText = formatEtb(activeTrade.etbAmount);
+            document.getElementById('srVerifyCheckbox').checked = false;
+            document.getElementById('srFinalReleaseBtn').disabled = true;
+            document.getElementById('sellerReleaseModal').style.display = 'flex';
+        }
+
+        function closeSellerReleaseModal() {
+            document.getElementById('sellerReleaseModal').style.display = 'none';
+        }
+
+        async function confirmAndReleaseUsdt() {
+            if (!activeTrade) return;
+            const btn = document.getElementById('srFinalReleaseBtn');
+            btn.disabled = true;
+            btn.innerText = 'Releasing USDT...';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/trades/${activeTrade._id}/release`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+                });
+                const json = await res.json();
+                if (res.ok && json.success) {
+                    activeTrade = json.trade;
+                    closeSellerReleaseModal();
+                    renderTradeRoomUI();
+                }
+            } catch (e) {}
+        }
+
+        // 🚀 Apply for Dispute Function 🚀
+        async function applyForDispute() {
+            if (!activeTrade) return;
+            const reason = prompt('Describe the issue for Admin Dispute Review:', 'I transferred the ETB and uploaded the receipt, but the seller has not released the USDT.');
+            if (!reason) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/api/trades/${activeTrade._id}/dispute`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getAuthToken()}`
+                    },
+                    body: JSON.stringify({ reason })
+                });
+                const json = await res.json();
+                if (res.ok && json.success) {
+                    activeTrade = json.trade;
+                    renderTradeRoomUI();
+                    alert('Dispute submitted! Admin now has your full chat history and payment receipt.');
+                }
+            } catch (e) {}
+        }
+
+        async function cancelActiveTrade() {
+            if (!activeTrade || !confirm('Are you sure you want to cancel this order?')) return;
+            if (activeTrade._id) {
+                try {
+                    const res = await fetch(`${API_BASE}/api/trades/${activeTrade._id}/cancel`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+                    });
+                    const json = await res.json();
+                    if (res.ok && json.success) {
+                        activeTrade = json.trade;
+                        renderTradeRoomUI();
+                    }
+                } catch (e) {}
+            }
+        }
+
+        // 🚀 2-Way Real-Time Chat Renderer (Screenshots 4529 & 4531) 🚀
+        function renderChatMessages(partnerAvatar, partnerInitials) {
+            const area = document.getElementById('uiChatMessagesArea');
+            const msgs = (activeTrade && Array.isArray(activeTrade.messages)) ? activeTrade.messages : [];
+
+            if (msgs.length === 0) {
+                area.innerHTML = `<div class="msg-bubble-system">👋 Welcome! Start chatting with your trade counterparty below.</div>`;
+                return;
+            }
+
+            area.innerHTML = msgs.map(m => {
+                if (m.isSystem || m.senderId === 'system' || m.senderId === 'admin') {
+                    return `<div class="msg-bubble-system">${m.text}</div>`;
+                }
+
+                const timeStr = m.createdAt
+                    ? new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+                    : '';
+                const imgHtml = m.image ? `<img src="${m.image}" onclick="window.open(this.src)" title="Click to view full receipt">` : '';
+                const isMine = currentUserId && String(m.senderId) === String(currentUserId);
+
+                if (isMine) {
+                    return `
+                        <div class="msg-row-mine">
+                            <div class="bubble">${m.text || ''}${imgHtml}</div>
+                            <div class="time-meta"><i class="fa-solid fa-check"></i> ${timeStr}</div>
+                        </div>
+                    `;
+                } else {
+                    const avHtml = partnerAvatar ? `<img src="${partnerAvatar}">` : (partnerInitials || 'TR');
+                    return `
+                        <div class="msg-row-theirs">
+                            <div class="msg-theirs-avatar">${avHtml}</div>
+                            <div>
+                                <div class="bubble">${m.text || ''}${imgHtml}</div>
+                                <div class="time-meta">${timeStr}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }).join('');
+
+            area.scrollTop = area.scrollHeight;
+        }
+
+        async function sendChatMessage() {
+            const input = document.getElementById('uiChatInput');
+            const text = input.value.trim();
+            if (!text || !activeTrade) return;
+            input.value = '';
+
+            if (!activeTrade.messages) activeTrade.messages = [];
+            activeTrade.messages.push({ senderId: currentUserId, text, isSystem: false, createdAt: new Date().toISOString() });
+            renderTradeRoomUI();
+
+            if (activeTrade._id) {
+                try {
+                    const res = await fetch(`${API_BASE}/api/trades/${activeTrade._id}/messages`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${getAuthToken()}`
+                        },
+                        body: JSON.stringify({ text })
+                    });
+                    const json = await res.json();
+                    if (res.ok && json.trade) {
+                        activeTrade = json.trade;
+                        renderTradeRoomUI();
+                    }
+                } catch (e) {}
+            }
+        }
+
+        function sendImageInChat(event) {
+            const file = event.target.files[0];
+            if (!file || !activeTrade) return;
+            const reader = new FileReader();
+            reader.onload = async () => {
+                const base64Img = reader.result;
+                if (activeTrade._id) {
+                    await fetch(`${API_BASE}/api/trades/${activeTrade._id}/messages`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${getAuthToken()}`
+                        },
+                        body: JSON.stringify({ text: 'Attachment:', image: base64Img })
+                    });
+                    await fetchTradeFromServer();
+                }
+            };
+            reader.readAsDataURL(file);
         }
 
         function togglePaymentDetailsDropdown() {
@@ -1156,147 +1946,10 @@
             navigator.clipboard.writeText(text);
         }
 
-        function startCountdownTimer() {
-            if (countdownInterval) clearInterval(countdownInterval);
-            const totalWindowMs = 15 * 60 * 1000;
-
-            countdownInterval = setInterval(() => {
-                if (!activeTrade) return;
-                const expiresAt = activeTrade.expiresAt ? new Date(activeTrade.expiresAt).getTime() : (Date.now() + totalWindowMs);
-                const remaining = Math.max(0, expiresAt - Date.now());
-
-                const mins = Math.floor(remaining / 60000);
-                const secs = Math.floor((remaining % 60000) / 1000);
-                const formatted = `${mins}m ${String(secs).padStart(2, '0')}s`;
-
-                document.getElementById('uiCountdownClock').innerText = formatted;
-                document.getElementById('uiAppealClock').innerText = formatted;
-
-                const pct = Math.max(0, Math.min(100, (remaining / totalWindowMs) * 100));
-                document.getElementById('uiTimerBarFill').style.width = `${pct}%`;
-            }, 1000);
-        }
-
-        async function markPaymentTransferred() {
-            if (!activeTrade) return;
-            activeTrade.status = 'payment_sent';
-            renderTradeRoomUI();
-
-            if (!activeTrade._id) return;
-            try {
-                const res = await fetch(`${API_BASE}/api/trades/${activeTrade._id}/mark-paid`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${getAuthToken()}` }
-                });
-                const json = await res.json();
-                if (res.ok && json.success) {
-                    activeTrade = json.trade;
-                    renderTradeRoomUI();
-                }
-            } catch (e) {}
-        }
-
-        async function releaseUsdtToBuyer() {
-            if (!activeTrade || !confirm('Have you verified the exact ETB payment in your bank/Telebirr account?')) return;
-            try {
-                const res = await fetch(`${API_BASE}/api/trades/${activeTrade._id}/release`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${getAuthToken()}` }
-                });
-                const json = await res.json();
-                if (res.ok && json.success) {
-                    activeTrade = json.trade;
-                    renderTradeRoomUI();
-                    alert('USDT released to Buyer successfully!');
-                }
-            } catch (e) {}
-        }
-
-        async function cancelActiveTrade() {
-            if (!activeTrade || !confirm('Are you sure you want to cancel this order?')) return;
-            if (activeTrade._id) {
-                try {
-                    await fetch(`${API_BASE}/api/trades/${activeTrade._id}/cancel`, {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
-                    });
-                } catch (e) {}
-            }
-            localStorage.removeItem('tbr_active_p2p_order');
-            window.location.href = 'market.html';
-        }
-
-        function renderChatMessages() {
-            const area = document.getElementById('uiChatMessagesArea');
-            const emptyEl = document.getElementById('uiChatEmptyState');
-            const msgs = (activeTrade && Array.isArray(activeTrade.messages)) ? activeTrade.messages : [];
-
-            if (msgs.length === 0) {
-                emptyEl.style.display = 'block';
-                return;
-            }
-            emptyEl.style.display = 'none';
-
-            area.innerHTML = msgs.map(m => {
-                if (m.isSystem) {
-                    return `<div class="msg-bubble system">${m.text}</div>`;
-                }
-                const isMine = currentUserId && String(m.senderId) === String(currentUserId);
-                const cls = isMine ? 'mine' : 'theirs';
-                const imgHtml = m.image ? `<img src="${m.image}" onclick="window.open(this.src)">` : '';
-                return `<div class="msg-bubble ${cls}">${m.text || ''}${imgHtml}</div>`;
-            }).join('');
-            area.scrollTop = area.scrollHeight;
-        }
-
-        async function sendChatMessage() {
-            const input = document.getElementById('uiChatInput');
-            const text = input.value.trim();
-            if (!text || !activeTrade) return;
-            input.value = '';
-
-            if (!activeTrade.messages) activeTrade.messages = [];
-            activeTrade.messages.push({ senderId: currentUserId, text, isSystem: false });
-            renderChatMessages();
-
-            if (activeTrade._id) {
-                try {
-                    await fetch(`${API_BASE}/api/trades/${activeTrade._id}/messages`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${getAuthToken()}`
-                        },
-                        body: JSON.stringify({ text })
-                    });
-                } catch (e) {}
-            }
-        }
-
-        function uploadReceiptImage(event) {
-            const file = event.target.files[0];
-            if (!file || !activeTrade) return;
-            const reader = new FileReader();
-            reader.onload = async () => {
-                const base64Img = reader.result;
-                if (!activeTrade.messages) activeTrade.messages = [];
-                activeTrade.messages.push({ senderId: currentUserId, text: 'Receipt uploaded:', image: base64Img });
-                renderChatMessages();
-
-                if (activeTrade._id) {
-                    try {
-                        await fetch(`${API_BASE}/api/trades/${activeTrade._id}/messages`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${getAuthToken()}`
-                            },
-                            body: JSON.stringify({ text: 'Receipt uploaded:', image: base64Img })
-                        });
-                    } catch (e) {}
-                }
-            };
-            reader.readAsDataURL(file);
+        function selectStar(num) {
+            document.querySelectorAll('#uiStarRow i').forEach((star, idx) => {
+                star.className = idx < num ? 'fa-solid fa-star active' : 'fa-regular fa-star';
+            });
         }
     </script>
 </body>
