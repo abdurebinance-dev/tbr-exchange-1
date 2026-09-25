@@ -1489,14 +1489,46 @@ app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
         const kycPending = await KYC.countDocuments({ 
             status: { $in: ['pending', 'under_review', 'submitted', ''] } 
         });
-        
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const settings = await Setting.findOne({});
+        const rate = settings && settings.sellRate ? Number(settings.sellRate) : 192;
+
+        const allCompletedTx = await Transaction.find({ status: { $in: ['completed', 'Completed'] } });
+        let totalUsdt = 0;
+        let todayUsdt = 0;
+
+        allCompletedTx.forEach(tx => {
+            const amt = Number(tx.amount || 0);
+            totalUsdt += amt;
+            if (tx.createdAt && new Date(tx.createdAt) >= today) {
+                todayUsdt += amt;
+            }
+        });
+
+        // 🚀 ON MARKET USDT, LIVE POSTS & TOTAL POSTS 🚀
+        const totalPosts = await Ad.countDocuments({});
+        const activeAds = await Ad.find({ status: 'active' });
+        const livePosts = activeAds.length;
+
+        let onMarketUsdt = 0;
+        activeAds.forEach(ad => {
+            onMarketUsdt += Number(ad.totalAmount || 0);
+        });
+
         res.json({ 
             success: true, 
             data: { 
                 totalUsers, 
                 kycPending, 
-                todayVolume: "0 USDT / 0 ETB", 
-                activeEscrow: "0 USDT" 
+                onMarket: `${onMarketUsdt.toLocaleString('en-US')} USDT`,
+                livePosts,
+                totalPosts,
+                activeEscrow: "0 USDT",
+                totalVolume: `${totalUsdt.toLocaleString('en-US')} USDT / ${(totalUsdt * rate).toLocaleString('en-US')} ETB`,
+                todayVolume: `${todayUsdt.toLocaleString('en-US')} USDT / ${(todayUsdt * rate).toLocaleString('en-US')} ETB`
             } 
         });
     } catch (error) {

@@ -49,14 +49,14 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        /* 🚀 6-Card Clean Admin Overview Grid with Icons 🚀 */
+        /* 🚀 8-Card Symmetrical Admin Overview Grid with Icons 🚀 */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 16px;
             margin-bottom: 25px;
         }
-        @media (max-width: 992px) {
+        @media (max-width: 1100px) {
             .stats-grid { grid-template-columns: repeat(2, 1fr); }
         }
         @media (max-width: 600px) {
@@ -87,7 +87,7 @@
             letter-spacing: 0.5px;
         }
         .stat-card .value {
-            font-size: 21px;
+            font-size: 20px;
             font-weight: 800;
             color: var(--text-main);
             line-height: 1.25;
@@ -106,6 +106,7 @@
         .icon-yellow { background: rgba(240, 185, 11, 0.12); color: var(--yellow); border: 1px solid rgba(240, 185, 11, 0.25); }
         .icon-orange { background: rgba(255, 140, 0, 0.12); color: var(--orange); border: 1px solid rgba(255, 140, 0, 0.25); }
         .icon-gold { background: rgba(212, 175, 55, 0.12); color: var(--accent-gold); border: 1px solid rgba(212, 175, 55, 0.25); }
+        .icon-purple { background: rgba(168, 85, 247, 0.12); color: var(--purple); border: 1px solid rgba(168, 85, 247, 0.25); }
         .icon-cyan { background: rgba(0, 212, 255, 0.12); color: var(--cyan); border: 1px solid rgba(0, 212, 255, 0.25); }
         .icon-blue { background: rgba(59, 130, 246, 0.12); color: var(--blue); border: 1px solid rgba(59, 130, 246, 0.25); }
 
@@ -194,14 +195,14 @@
                     </div>
                 </div>
 
-                <!-- 3. ON PENDING -->
+                <!-- 3. ON MARKET (Total Active USDT on Market) -->
                 <div class="stat-card">
                     <div>
-                        <div class="label">On Pending</div>
-                        <div class="value" id="statPendingCount" style="color: var(--orange);">0</div>
+                        <div class="label">On Market</div>
+                        <div class="value" id="statOnMarket" style="color: var(--orange);">0 USDT</div>
                     </div>
                     <div class="stat-icon icon-orange">
-                        <i class="fa-solid fa-clock-rotate-left"></i>
+                        <i class="fa-solid fa-store"></i>
                     </div>
                 </div>
 
@@ -216,7 +217,29 @@
                     </div>
                 </div>
 
-                <!-- 5. TOTAL VOLUME -->
+                <!-- 5. LIVE POSTS (Currently Active Ads) -->
+                <div class="stat-card">
+                    <div>
+                        <div class="label">Live Posts</div>
+                        <div class="value" id="statLivePosts" style="color: var(--green);">0</div>
+                    </div>
+                    <div class="stat-icon icon-green">
+                        <i class="fa-solid fa-bullhorn"></i>
+                    </div>
+                </div>
+
+                <!-- 6. TOTAL POSTS (All-Time Ads Posted) -->
+                <div class="stat-card">
+                    <div>
+                        <div class="label">Total Posts</div>
+                        <div class="value" id="statTotalPosts" style="color: var(--purple);">0</div>
+                    </div>
+                    <div class="stat-icon icon-purple">
+                        <i class="fa-solid fa-layer-group"></i>
+                    </div>
+                </div>
+
+                <!-- 7. TOTAL VOLUME -->
                 <div class="stat-card">
                     <div>
                         <div class="label">Total Volume</div>
@@ -227,7 +250,7 @@
                     </div>
                 </div>
 
-                <!-- 6. TODAY'S VOLUME -->
+                <!-- 8. TODAY'S VOLUME -->
                 <div class="stat-card">
                     <div>
                         <div class="label">Today's Volume</div>
@@ -336,6 +359,7 @@
                 document.getElementById('mainDashboard').style.display = 'block';
                 
                 fetchStats();
+                setInterval(fetchStats, 10000); // በየ 10 ሰከንዱ የማርኬት እና የፖስት ቁጥሮችን በራሱ ያድሳል
                 loadCurrentRates();
                 fetchEscrowDisputes();
                 fetchUsersList();
@@ -361,6 +385,7 @@
                     document.getElementById('mainDashboard').style.display = 'block';
                     
                     fetchStats();
+                    setInterval(fetchStats, 10000);
                     loadCurrentRates();
                     fetchEscrowDisputes();
                     fetchUsersList();
@@ -387,12 +412,29 @@
 
         async function fetchStats() {
             try {
-                const res = await fetch(`${API_BASE}/api/admin/stats`, { headers: { 'Authorization': 'Bearer ' + getToken() } });
-                const json = await res.json();
-                if (res.ok && json.success && json.data) {
+                const [statsRes, adsRes] = await Promise.all([
+                    fetch(`${API_BASE}/api/admin/stats`, { headers: { 'Authorization': 'Bearer ' + getToken() } }),
+                    fetch(`${API_BASE}/api/ads`)
+                ]);
+
+                const json = await statsRes.json();
+                const adsJson = await adsRes.json().catch(() => ({}));
+
+                // ከ /api/ads ቀጥታ የማርኬት USDT እና Live Posts ማስላት (ሁልጊዜ 100% ትክክል እንዲሆን)
+                let liveAdsArray = (adsJson && adsJson.success && Array.isArray(adsJson.ads)) ? adsJson.ads : null;
+                let calculatedMarketUsdt = 0;
+                if (liveAdsArray) {
+                    liveAdsArray.forEach(ad => {
+                        calculatedMarketUsdt += Number(ad.totalAmount || 0);
+                    });
+                }
+
+                if (statsRes.ok && json.success && json.data) {
                     document.getElementById('statUserCount').innerText = json.data.totalUsers ?? 0;
                     document.getElementById('statKycCount').innerText = json.data.kycPending ?? 0;
-                    document.getElementById('statPendingCount').innerText = json.data.onPending ?? 0;
+                    document.getElementById('statOnMarket').innerText = json.data.onMarket || `${calculatedMarketUsdt.toLocaleString('en-US')} USDT`;
+                    document.getElementById('statLivePosts').innerText = json.data.livePosts ?? (liveAdsArray ? liveAdsArray.length : 0);
+                    document.getElementById('statTotalPosts').innerText = json.data.totalPosts ?? (liveAdsArray ? liveAdsArray.length : 0);
                     document.getElementById('statEscrow').innerText = json.data.activeEscrow || '0 USDT';
                     document.getElementById('statTotalVolume').innerText = json.data.totalVolume || '0 USDT / 0 ETB';
                     document.getElementById('statVolume').innerText = json.data.todayVolume || '0 USDT / 0 ETB';
