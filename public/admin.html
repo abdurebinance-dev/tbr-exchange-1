@@ -255,6 +255,26 @@
                 </div>
             </div>
 
+            <div class="stat-card" style="grid-column: 3; border-color: rgba(14, 203, 129, 0.35);">
+                 <div>
+                     <div class="label">Total Trade Fee</div>
+                     <div class="value" id="statTotalFee" style="color: var(--green);">0 USDT</div>
+                 </div>
+                 <div class="stat-icon icon-green">
+                     <i class="fa-solid fa-sack-dollar"></i>
+                 </div>
+             </div>
+
+             <div class="stat-card" style="grid-column: 4; border-color: rgba(226, 184, 66, 0.35);">
+                 <div>
+                     <div class="label">Today Trade Fee</div>
+                     <div class="value" id="statTodayFee" style="color: var(--accent-gold);">0 USDT</div>
+                 </div>
+                 <div class="stat-icon icon-gold">
+                     <i class="fa-solid fa-coins"></i>
+                 </div>
+             </div>
+
             <div class="section-title"><i class="fa-solid fa-circle-info"></i> System Operational Summary</div>
             <p style="color: var(--text-muted); font-size: 14px;">Welcome to your Master Admin Panel. Use the top navigation tabs to manage user KYC verifications, adjust exchange rates, oversee P2P escrow disputes, and manage user accounts.</p>
         </div>
@@ -446,24 +466,23 @@
         }
 
         function applyStatsToDOM(data) {
-            if (!data) return;
-            document.getElementById('statUserCount').innerText = data.totalUsers ?? 0;
-            document.getElementById('statKycCount').innerText = data.kycPending ?? 0;
-            document.getElementById('statOnMarket').innerText = formatUsdtOnly(data.onMarket);
-            document.getElementById('statLivePosts').innerText = data.livePosts ?? 0;
-            document.getElementById('statTotalTrades').innerText = data.totalTrades ?? 0;
-            document.getElementById('statEscrow').innerText = formatUsdtOnly(data.activeEscrow);
-            document.getElementById('statTotalVolume').innerText = formatUsdtOnly(data.totalVolume);
-            document.getElementById('statVolume').innerText = formatUsdtOnly(data.todayVolume);
+         if (!data) return;
+         document.getElementById('statUserCount').innerText = data.totalUsers ?? 0;
+         document.getElementById('statKycCount').innerText = data.kycPending ?? 0;
+         document.getElementById('statOnMarket').innerText = formatUsdtOnly(data.onMarket);
+         document.getElementById('statLivePosts').innerText = data.livePosts ?? 0;
+         document.getElementById('statTotalTrades').innerText = data.totalTrades ?? 0;
+         document.getElementById('statEscrow').innerText = formatUsdtOnly(data.activeEscrow);
+         document.getElementById('statTotalVolume').innerText = formatUsdtOnly(data.totalVolume);
+         document.getElementById('statVolume').innerText = formatUsdtOnly(data.todayVolume);
 
-            // ✅ በግብይቱ ወቅት ተቆርጦ በዳታቤዝ የተቀመጠውን ትክክለኛ USDT ብቻ ያሳያል
-            if (document.getElementById('statTotalFee')) {
-                document.getElementById('statTotalFee').innerText = formatUsdtOnly(data.totalFeeEarned || '0 USDT');
-            }
-            if (document.getElementById('statTodayFee')) {
-                document.getElementById('statTodayFee').innerText = formatUsdtOnly(data.todayFeeEarned || '0 USDT');
-            }
-        }
+         if (document.getElementById('statTotalFee')) {
+             document.getElementById('statTotalFee').innerText = formatUsdtOnly(data.totalFeeEarned || '0 USDT');
+         }
+         if (document.getElementById('statTodayFee')) {
+             document.getElementById('statTodayFee').innerText = formatUsdtOnly(data.todayFeeEarned || '0 USDT');
+         }
+     }
 
         async function fetchStats() {
             try {
