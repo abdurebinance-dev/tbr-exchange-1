@@ -1471,14 +1471,11 @@ app.post('/api/admin/assign-role', verifyAdmin, async (req, res) => {
 
 app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
     try {
-        const [totalUsers, kycPending, activeAds, settings] = await Promise.all([
+        const [totalUsers, kycPending, activeAds] = await Promise.all([
             User.countDocuments({}),
             KYC.countDocuments({ status: { $in: ['pending', 'under_review', 'submitted', ''] } }),
-            Ad.find({ status: 'active', totalAmount: { $gt: 0.0001 } }).select('tradeType totalAmount').lean(),
-            Setting.findOne({}).lean()
+            Ad.find({ status: 'active', totalAmount: { $gt: 0.0001 } }).select('tradeType totalAmount').lean()
         ]);
-
-        const defaultFeePct = settings && settings.platformFee !== undefined ? Number(settings.platformFee) : 0.5;
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -1495,7 +1492,7 @@ app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
             const [completedTrades, activeEscrowTrades] = await Promise.all([
                 TradeModel.find({
                     status: { $in: ['completed', 'Completed', 'released', 'Released'] }
-                }).select('usdtAmount amount netUsdt feePercent buyerFeeUsdt sellerFeeUsdt totalPlatformFeeUsdt createdAt updatedAt').lean(),
+                }).select('usdtAmount amount netUsdt buyerFeeUsdt sellerFeeUsdt totalPlatformFeeUsdt feeUsdt createdAt updatedAt').lean(),
 
                 TradeModel.find({
                     status: { $in: ['funds_locked', 'payment_sent', 'disputed'] }
@@ -1507,22 +1504,22 @@ app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
                 totalTrades += 1;
                 totalP2pUsdt += amt;
 
-                // ከትሬዱ የተቆረጠውን ጠቅላላ ኮሚሽን (0.5% ከገዢ + 0.5% ከሻጭ = 1%) ማስላት
-                let tradeFee = Number(tr.totalPlatformFeeUsdt || 0);
-                if (tradeFee <= 0 && (tr.buyerFeeUsdt || tr.sellerFeeUsdt)) {
-                    tradeFee = Number(tr.buyerFeeUsdt || 0) + Number(tr.sellerFeeUsdt || 0);
-                }
-                if (tradeFee <= 0 && amt > 0) {
-                    const pct = tr.feePercent !== undefined ? Number(tr.feePercent) : defaultFeePct;
-                    tradeFee = amt * ((pct * 2) / 100);
+                // ✅ በግብይቱ ወቅት በትክክል ተቆርጦ የተቀመጠውን የUSDT ኮሚሽን ብቻ መደመር
+                let exactSavedFee = 0;
+                if (tr.totalPlatformFeeUsdt !== undefined && Number(tr.totalPlatformFeeUsdt) > 0) {
+                    exactSavedFee = Number(tr.totalPlatformFeeUsdt);
+                } else if (tr.buyerFeeUsdt !== undefined || tr.sellerFeeUsdt !== undefined) {
+                    exactSavedFee = Number(tr.buyerFeeUsdt || 0) + Number(tr.sellerFeeUsdt || 0);
+                } else if (tr.feeUsdt !== undefined && Number(tr.feeUsdt) > 0) {
+                    exactSavedFee = Number(tr.feeUsdt);
                 }
 
-                totalFeeUsdt += tradeFee;
+                totalFeeUsdt += exactSavedFee;
 
                 const tradeDate = tr.updatedAt ? new Date(tr.updatedAt) : new Date(tr.createdAt);
                 if (tradeDate >= today) {
                     todayP2pUsdt += amt;
-                    todayFeeUsdt += tradeFee;
+                    todayFeeUsdt += exactSavedFee;
                 }
             });
 
@@ -2942,7 +2939,12 @@ app.post('/api/trades/:id/release', async (req, res) => {
             });
         } catch (txErr) {}
 
+        // ✅ በግብይቱ ሰዓት የተቆረጠውን ትክክለኛ የUSDT ኮሚሽን በዳታቤዝ ውስጥ ለዘለቄታው መቆለፍ
+        trade.buyerFeeUsdt = buyerFee;
+        trade.sellerFeeUsdt = sellerFee;
+        trade.totalPlatformFeeUsdt = totalPlatformFee;
         trade.status = 'completed';
+
         trade.messages.push({
             senderId: 'system',
             senderName: 'System',
@@ -3060,8 +3062,16 @@ app.post('/api/admin/escrow-action', verifyAdminToken, async (req, res) => {
         if (!trade) return res.status(404).json({ success: false, message: 'Trade not found.' });
 
         if (action === 'release') {
-            const sellerLockedTotal = Number(trade.sellerTotalDeductedUsdt || trade.usdtAmount || 0);
-            const netUsdtToCreditBuyer = Number(trade.netUsdt || trade.usdtAmount || 0);
+            const baseUsdt = Number(trade.usdtAmount || 0);
+            const feePct = Number(trade.feePercent || 0.5);
+            const feeRate = feePct / 100;
+
+            const buyerFee = Number(trade.buyerFeeUsdt) > 0 ? Number(trade.buyerFeeUsdt) : Number((baseUsdt * feeRate).toFixed(6));
+            const sellerFee = Number(trade.sellerFeeUsdt) > 0 ? Number(trade.sellerFeeUsdt) : Number((baseUsdt * feeRate).toFixed(6));
+            const totalPlatformFee = Number((buyerFee + sellerFee).toFixed(6));
+
+            const sellerLockedTotal = Number(trade.sellerTotalDeductedUsdt || (baseUsdt + sellerFee));
+            const netUsdtToCreditBuyer = Number(trade.netUsdt || Math.max(0, baseUsdt - buyerFee));
 
             await User.findByIdAndUpdate(trade.sellerId, {
                 $inc: { lockedBalance: -sellerLockedTotal }
@@ -3070,7 +3080,12 @@ app.post('/api/admin/escrow-action', verifyAdminToken, async (req, res) => {
                 $inc: { balance: netUsdtToCreditBuyer }
             });
 
+            // ✅ አድሚኑም Release ሲያደርግ የተቆረጠውን ትክክለኛ የUSDT ኮሚሽን መመዝገብ
+            trade.buyerFeeUsdt = buyerFee;
+            trade.sellerFeeUsdt = sellerFee;
+            trade.totalPlatformFeeUsdt = totalPlatformFee;
             trade.status = 'completed';
+
             trade.messages.push({
                 senderId: 'admin',
                 senderName: 'Admin',
@@ -3078,6 +3093,7 @@ app.post('/api/admin/escrow-action', verifyAdminToken, async (req, res) => {
                 isSystem: true
             });
             await trade.save();
+            adsCacheData = null;
             return res.json({ success: true, message: 'Escrow USDT released to Buyer!' });
         } else {
             await refundEscrowOnCancel(trade);
@@ -3089,6 +3105,7 @@ app.post('/api/admin/escrow-action', verifyAdminToken, async (req, res) => {
                 isSystem: true
             });
             await trade.save();
+            adsCacheData = null;
             return res.json({ success: true, message: 'Escrow USDT refunded to Seller!' });
         }
     } catch (error) {

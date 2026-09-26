@@ -456,6 +456,7 @@
             document.getElementById('statTotalVolume').innerText = formatUsdtOnly(data.totalVolume);
             document.getElementById('statVolume').innerText = formatUsdtOnly(data.todayVolume);
 
+            // ✅ በግብይቱ ወቅት ተቆርጦ በዳታቤዝ የተቀመጠውን ትክክለኛ USDT ብቻ ያሳያል
             if (document.getElementById('statTotalFee')) {
                 document.getElementById('statTotalFee').innerText = formatUsdtOnly(data.totalFeeEarned || '0 USDT');
             }
