@@ -455,6 +455,13 @@
             document.getElementById('statEscrow').innerText = formatUsdtOnly(data.activeEscrow);
             document.getElementById('statTotalVolume').innerText = formatUsdtOnly(data.totalVolume);
             document.getElementById('statVolume').innerText = formatUsdtOnly(data.todayVolume);
+
+            if (document.getElementById('statTotalFee')) {
+                document.getElementById('statTotalFee').innerText = formatUsdtOnly(data.totalFeeEarned || '0 USDT');
+            }
+            if (document.getElementById('statTodayFee')) {
+                document.getElementById('statTodayFee').innerText = formatUsdtOnly(data.todayFeeEarned || '0 USDT');
+            }
         }
 
         async function fetchStats() {

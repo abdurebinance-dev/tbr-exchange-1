@@ -1471,11 +1471,14 @@ app.post('/api/admin/assign-role', verifyAdmin, async (req, res) => {
 
 app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
     try {
-        const [totalUsers, kycPending, activeAds] = await Promise.all([
+        const [totalUsers, kycPending, activeAds, settings] = await Promise.all([
             User.countDocuments({}),
             KYC.countDocuments({ status: { $in: ['pending', 'under_review', 'submitted', ''] } }),
-            Ad.find({ status: 'active', totalAmount: { $gt: 0.0001 } }).select('tradeType totalAmount').lean()
+            Ad.find({ status: 'active', totalAmount: { $gt: 0.0001 } }).select('tradeType totalAmount').lean(),
+            Setting.findOne({}).lean()
         ]);
+
+        const defaultFeePct = settings && settings.platformFee !== undefined ? Number(settings.platformFee) : 0.5;
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -1484,14 +1487,15 @@ app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
         let totalP2pUsdt = 0;
         let todayP2pUsdt = 0;
         let activeEscrowUsdt = 0;
+        let totalFeeUsdt = 0;
+        let todayFeeUsdt = 0;
 
-        // 🚀 1. ከ Trade ሰንጠረዥ ላይ የተጠናቀቁትን (Completed) እና በEscrow ላይ ያሉትን በትክክል መደመር 🚀
         const TradeModel = mongoose.models.Trade || (typeof Trade !== 'undefined' ? Trade : null);
         if (TradeModel) {
             const [completedTrades, activeEscrowTrades] = await Promise.all([
                 TradeModel.find({
                     status: { $in: ['completed', 'Completed', 'released', 'Released'] }
-                }).select('usdtAmount amount netUsdt createdAt updatedAt').lean(),
+                }).select('usdtAmount amount netUsdt feePercent buyerFeeUsdt sellerFeeUsdt totalPlatformFeeUsdt createdAt updatedAt').lean(),
 
                 TradeModel.find({
                     status: { $in: ['funds_locked', 'payment_sent', 'disputed'] }
@@ -1499,25 +1503,35 @@ app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
             ]);
 
             completedTrades.forEach(tr => {
-                // usdtAmount ወይም amount ወይም netUsdt በትክክል ማንበብ
                 const amt = Number(tr.usdtAmount || tr.amount || tr.netUsdt || 0);
                 totalTrades += 1;
                 totalP2pUsdt += amt;
 
+                // ከትሬዱ የተቆረጠውን ጠቅላላ ኮሚሽን (0.5% ከገዢ + 0.5% ከሻጭ = 1%) ማስላት
+                let tradeFee = Number(tr.totalPlatformFeeUsdt || 0);
+                if (tradeFee <= 0 && (tr.buyerFeeUsdt || tr.sellerFeeUsdt)) {
+                    tradeFee = Number(tr.buyerFeeUsdt || 0) + Number(tr.sellerFeeUsdt || 0);
+                }
+                if (tradeFee <= 0 && amt > 0) {
+                    const pct = tr.feePercent !== undefined ? Number(tr.feePercent) : defaultFeePct;
+                    tradeFee = amt * ((pct * 2) / 100);
+                }
+
+                totalFeeUsdt += tradeFee;
+
                 const tradeDate = tr.updatedAt ? new Date(tr.updatedAt) : new Date(tr.createdAt);
                 if (tradeDate >= today) {
                     todayP2pUsdt += amt;
+                    todayFeeUsdt += tradeFee;
                 }
             });
 
-            // በአሁኑ ሰዓት በንግድ (Escrow) ውስጥ ተቆልፎ ያለ ጠቅላላ USDT
             activeEscrowTrades.forEach(tr => {
                 const lockedAmt = Number(tr.usdtAmount || tr.sellerTotalDeductedUsdt || tr.amount || 0);
                 activeEscrowUsdt += lockedAmt;
             });
         }
 
-        // 🚀 2. ON MARKET (በActive Sell ማስታወቂያዎች ላይ የተቆለፈ USDT) እና LIVE POSTS 🚀
         const livePosts = activeAds.length;
         let onMarketLockedUsdt = 0;
         activeAds.forEach(ad => {
@@ -1536,7 +1550,9 @@ app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
                 totalTrades,
                 activeEscrow: `${Number(activeEscrowUsdt.toFixed(2)).toLocaleString('en-US')} USDT`,
                 totalVolume: `${Number(totalP2pUsdt.toFixed(2)).toLocaleString('en-US')} USDT`,
-                todayVolume: `${Number(todayP2pUsdt.toFixed(2)).toLocaleString('en-US')} USDT`
+                todayVolume: `${Number(todayP2pUsdt.toFixed(2)).toLocaleString('en-US')} USDT`,
+                totalFeeEarned: `${Number(totalFeeUsdt.toFixed(4)).toLocaleString('en-US', { maximumFractionDigits: 4 })} USDT`,
+                todayFeeEarned: `${Number(todayFeeUsdt.toFixed(4)).toLocaleString('en-US', { maximumFractionDigits: 4 })} USDT`
             } 
         });
     } catch (error) {
