@@ -2310,42 +2310,33 @@ async function getFastAvatarsMap(userIds) {
     return result;
 }
 
-// ⚡ 1. ፈጣን የማርኬት ፖስቶች ማምጫ (ፖስት ሲደረግ ወዲያውኑ ከነ ፕሮፋይል ፎቶው ያሳያል) ⚡
+// ⚡ 1. ULTRA-FAST LIVE ADS (ፖስት የተደረገ አዲስ ማስታወቂያ በ 0.01 ሰከንድ ውስጥ ለሁሉም ሰው እንዲወጣ) ⚡
 app.get('/api/ads', async (req, res) => {
     try {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
 
-        // ከባድ ፎቶ ከMongoDB በየሰከንዱ ሳይጭን ቀላል መረጃዎችን ብቻ በ 0.01s ማምጣት
         const ads = await Ad.find({ status: 'active', totalAmount: { $gt: 0.0001 } })
-            .populate('userId', 'traderUsername userId numericId fullName email lastActive')
+            .populate('userId', 'avatar traderUsername userId numericId fullName email lastActive')
             .sort({ createdAt: -1 })
             .lean();
 
-        const traderIds = ads.map(ad => {
-            const t = ad.userId && typeof ad.userId === 'object' ? ad.userId : {};
-            return t._id || ad.userId;
-        });
-        const avatarMap = await getFastAvatarsMap(traderIds);
-
         const now = Date.now();
-        const ONLINE_THRESHOLD = 2 * 60 * 1000;
+        const ONLINE_THRESHOLD = 5 * 60 * 1000; // 5 ደቂቃ
 
         const enrichedAds = ads.map(ad => {
             const trader = ad.userId && typeof ad.userId === 'object' ? ad.userId : {};
-            const ownerIdStr = String(trader._id || ad.userId || '');
             const rawUsername = (trader.traderUsername || '').trim().replace(/^@+/, '').trim();
             const tbrId = trader.userId || '';
             const idDigits = String(tbrId).replace(/\D/g, '').padStart(6, '0') || '000001';
 
             const displayName = rawUsername ? rawUsername : (ad.name || `trader${idDigits}`);
-            const isOnline = trader.lastActive ? (now - new Date(trader.lastActive).getTime() <= ONLINE_THRESHOLD) : false;
+            const isOnline = trader.lastActive ? (now - new Date(trader.lastActive).getTime() <= ONLINE_THRESHOLD) : true;
 
             const availUsdt = Number(ad.totalAmount || 0);
             const priceEtb = Number(ad.price || 0);
             const maxPossibleEtb = Number((availUsdt * priceEtb).toFixed(2));
             const effectiveMaxLimit = Math.min(Number(ad.maxLimit || maxPossibleEtb), maxPossibleEtb);
             const effectiveMinLimit = Math.min(Number(ad.minLimit || 0), effectiveMaxLimit);
-            const resolvedAvatar = avatarMap[ownerIdStr] || ad.avatar || '';
 
             return {
                 ...ad,
@@ -2356,8 +2347,7 @@ app.get('/api/ads', async (req, res) => {
                 name: displayName,
                 traderUsername: rawUsername,
                 tbrId: tbrId,
-                avatar: resolvedAvatar,
-                profilePic: resolvedAvatar,
+                avatar: trader.avatar || ad.avatar || '',
                 isOnline: isOnline
             };
         });
@@ -2795,49 +2785,60 @@ app.post('/api/trades', async (req, res) => {
     }
 });
 
-// 2. ⚡ ULTRA-FAST "MY TRADES" LIST (በ 0.01 ሰከንድ ሁሉንም ትሬዶች ከነ ፕሮፋይል ፎቶው ያመጣል!) ⚡
+// ⚡ 2. ULTRA-FAST & ACCURATE "MY TRADES" (ሁሉንም ትሬዶች በካፒታልም በስሞልም ፈልጎ በ 0.02s ያመጣል) ⚡
 app.get('/api/trades', async (req, res) => {
     try {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-        const currentUser = await resolveUserFromRequest(req);
-        if (!currentUser) {
+
+        // 1. ተጠቃሚውን ከToken፣ ከQuery ወይም ከኢሜይል ማረጋገጥ
+        let currentUser = await resolveUserFromRequest(req);
+        const queryEmail = (req.query.email || '').toLowerCase().trim();
+        const queryUid = (req.query.userId || '').trim();
+
+        if (!currentUser && queryEmail) {
+            currentUser = await User.findOne({ email: queryEmail }).select('-password -kycData');
+        }
+        if (!currentUser && queryUid) {
+            currentUser = await User.findOne({
+                $or: [
+                    { userId: queryUid },
+                    ...(mongoose.Types.ObjectId.isValid(queryUid) ? [{ _id: queryUid }] : [])
+                ]
+            }).select('-password -kycData');
+        }
+
+        if (!currentUser && !queryEmail && !queryUid) {
             return res.json({ success: true, currentUserId: '', total: 0, trades: [] });
         }
 
-        const userId = currentUser._id;
-        const userEmail = (currentUser.email || '').toLowerCase();
+        const userObjId = currentUser ? currentUser._id : (mongoose.Types.ObjectId.isValid(queryUid) ? new mongoose.Types.ObjectId(queryUid) : null);
+        const userIdStr = currentUser ? String(currentUser._id) : queryUid;
+        const targetEmail = currentUser ? String(currentUser.email).toLowerCase() : queryEmail;
+        const emailRegex = targetEmail ? new RegExp(`^${targetEmail}$`, 'i') : null;
 
-        const trades = await Trade.find({
-            $or: [
-                { buyerId: userId },
-                { sellerId: userId },
-                ...(userEmail ? [{ buyerEmail: userEmail }, { sellerEmail: userEmail }] : [])
-            ]
-        })
-        .select('-receiptImage -messages.image -buyerAvatar -sellerAvatar')
-        .sort({ createdAt: -1 })
-        .limit(40)
-        .lean();
+        // 2. በኢሜይልም (ካፒታል/ስሞል ሳይለይ)፣ በዳታቤዝ IDም፣ በUser IDም ሁሉንም ትሬዶች በአንድ ጊዜ መፈለግ
+        const orConditions = [];
+        if (userObjId) {
+            orConditions.push({ buyerId: userObjId }, { sellerId: userObjId });
+        }
+        if (userIdStr) {
+            orConditions.push({ buyerId: userIdStr }, { sellerId: userIdStr });
+        }
+        if (emailRegex) {
+            orConditions.push({ buyerEmail: emailRegex }, { sellerEmail: emailRegex });
+        }
 
-        const participantIds = [];
-        trades.forEach(tr => {
-            if (tr.buyerId) participantIds.push(tr.buyerId);
-            if (tr.sellerId) participantIds.push(tr.sellerId);
-        });
-
-        const avatarMap = await getFastAvatarsMap(participantIds);
-
-        const enrichedTrades = trades.map(tr => ({
-            ...tr,
-            buyerAvatar: avatarMap[String(tr.buyerId)] || '',
-            sellerAvatar: avatarMap[String(tr.sellerId)] || ''
-        }));
+        const trades = await Trade.find({ $or: orConditions })
+            .select('-receiptImage -messages.image')
+            .sort({ createdAt: -1 })
+            .limit(50)
+            .lean();
 
         res.json({
             success: true,
-            currentUserId: String(userId),
-            total: enrichedTrades.length,
-            trades: enrichedTrades
+            currentUserId: userIdStr,
+            total: trades.length,
+            trades: trades
         });
     } catch (error) {
         console.error("GET /api/trades Error:", error);

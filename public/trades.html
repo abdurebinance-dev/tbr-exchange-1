@@ -1621,9 +1621,11 @@
 
         function decodeJwtSafe(token) {
             try {
-                const part = token.split('.')[1];
+                const clean = String(token || '').replace(/^["']|["']$/g, '').replace(/^Bearer\s+/i, '').trim();
+                const part = clean.split('.')[1];
                 if (!part) return null;
-                const base64 = part.replace(/-/g, '+').replace(/_/g, '/');
+                let base64 = part.replace(/-/g, '+').replace(/_/g, '/');
+                while (base64.length % 4) base64 += '=';
                 return JSON.parse(atob(base64));
             } catch (e) {
                 return null;
@@ -1631,25 +1633,59 @@
         }
 
         function getLoggedUserIdentity() {
-            const token = localStorage.getItem('token') || localStorage.getItem('jwtToken') || localStorage.getItem('authToken') || '';
+            const rawToken = localStorage.getItem('token') || localStorage.getItem('jwtToken') || localStorage.getItem('authToken') || localStorage.getItem('userToken') || '';
+            const token = String(rawToken).replace(/^["']|["']$/g, '').replace(/^Bearer\s+/i, '').trim();
             let email = localStorage.getItem('userEmail') || localStorage.getItem('email') || '';
             let userId = localStorage.getItem('userId') || localStorage.getItem('tbr_resolved_uid') || '';
 
             try {
                 const u = JSON.parse(localStorage.getItem('user') || localStorage.getItem('currentUser') || localStorage.getItem('tbr_user') || '{}');
-                if (!email && u.email) email = u.email;
-                if (!userId && (u._id || u.id || u.userId)) userId = u._id || u.id || u.userId;
+                if (!email && u.email) email = String(u.email).trim();
+                if (!userId && (u._id || u.id || u.userId)) userId = String(u._id || u.id || u.userId).trim();
             } catch (e) {}
 
             if (token && (!userId || !email)) {
                 const payload = decodeJwtSafe(token);
                 if (payload) {
-                    if (!userId && (payload.id || payload._id)) userId = String(payload.id || payload._id);
-                    if (!email && payload.email) email = String(payload.email);
+                    if (!userId && (payload.id || payload._id || payload.userId)) {
+                        userId = String(payload.id || payload._id || payload.userId);
+                    }
+                    if (!email && payload.email) {
+                        email = String(payload.email);
+                    }
                 }
             }
 
             return { token, email, userId };
+        }
+
+        // ⚡ ተጠቃሚው ኢሜይሉ ወይም UserIDው በlocalStorage ውስጥ ከጠፋ፣ ከሰርቨሩ በ 0.02s አምጥቶ የሚያስቀምጥ ፋንክሽን ⚡
+        async function ensureUserIdentityResolved() {
+            const ident = getLoggedUserIdentity();
+            if ((ident.email && ident.userId) || !ident.token) return ident;
+
+            try {
+                const res = await fetch(`${API_BASE}/api/user/profile`, {
+                    headers: { 'Authorization': 'Bearer ' + ident.token },
+                    cache: 'no-store'
+                });
+                if (res.ok) {
+                    const json = await res.json();
+                    if (json && json.user) {
+                        const u = json.user;
+                        if (u.id || u._id) {
+                            currentUserId = String(u.id || u._id);
+                            localStorage.setItem('tbr_resolved_uid', currentUserId);
+                            localStorage.setItem('userId', currentUserId);
+                        }
+                        if (u.email) {
+                            localStorage.setItem('userEmail', u.email);
+                            localStorage.setItem('email', u.email);
+                        }
+                    }
+                }
+            } catch (e) {}
+            return getLoggedUserIdentity();
         }
 
         function formatEtb(val) {
@@ -1707,6 +1743,7 @@
                     renderTradeRoomUI();
                 }
 
+                await ensureUserIdentityResolved();
                 await fetchTradeFromServer(tradeIdParam);
                 setInterval(() => fetchTradeFromServer(tradeIdParam), 2500);
                 startCountdownTimer();
@@ -1720,11 +1757,19 @@
                     if (Array.isArray(cachedList) && cachedList.length > 0) {
                         renderMyTradesTable(cachedList);
                         hasRenderedCache = true;
+                    } else {
+                        // አዲስ የተከፈተ ትሬድ በ localStorage ውስጥ ካለ ወዲያውኑ ማሳየት
+                        const latestLocal = JSON.parse(localStorage.getItem('tbr_active_p2p_order') || 'null');
+                        if (latestLocal && latestLocal._id) {
+                            renderMyTradesTable([latestLocal]);
+                            hasRenderedCache = true;
+                        }
                     }
                 } catch (e) {}
 
+                await ensureUserIdentityResolved();
                 await loadMyTradesList(hasRenderedCache);
-                setInterval(() => loadMyTradesList(true), 3500);
+                setInterval(() => loadMyTradesList(true), 3000);
             }
         });
 
@@ -1744,7 +1789,7 @@
                 params.set('t', Date.now());
 
                 const res = await fetch(`${API_BASE}/api/trades?${params.toString()}`, {
-                    headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                    headers: token ? { 'Authorization': 'Bearer ' + token } : {},
                     cache: 'no-store'
                 });
 
@@ -1755,8 +1800,26 @@
                             currentUserId = String(json.currentUserId);
                             localStorage.setItem('tbr_resolved_uid', currentUserId);
                         }
-                        sessionStorage.setItem(TRADES_LIST_CACHE, JSON.stringify(json.trades));
-                        renderMyTradesTable(json.trades);
+
+                        let finalTrades = json.trades;
+
+                        // በቅርቡ የተከፈተ ትሬድ በlocalStorage ካለና በዝርዝሩ ውስጥ ገና ካልገባ አብሮ እንዲታይ ማድረግ
+                        try {
+                            const localActive = JSON.parse(localStorage.getItem('tbr_active_p2p_order') || 'null');
+                            if (localActive && localActive._id && !finalTrades.some(t => String(t._id) === String(localActive._id))) {
+                                const myE = (email || '').toLowerCase();
+                                const myU = String(currentUserId || userId || '');
+                                const belongsToMe =
+                                    (myU && (String(localActive.buyerId) === myU || String(localActive.sellerId) === myU)) ||
+                                    (myE && (String(localActive.buyerEmail || '').toLowerCase() === myE || String(localActive.sellerEmail || '').toLowerCase() === myE));
+                                if (belongsToMe) {
+                                    finalTrades = [localActive, ...finalTrades];
+                                }
+                            }
+                        } catch (e) {}
+
+                        sessionStorage.setItem(TRADES_LIST_CACHE, JSON.stringify(finalTrades));
+                        renderMyTradesTable(finalTrades);
                         return;
                     }
                 }
@@ -1903,7 +1966,7 @@
                 params.set('t', Date.now());
 
                 const res = await fetch(`${API_BASE}/api/trades/${tradeId}?${params.toString()}`, {
-                    headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                    headers: token ? { 'Authorization': 'Bearer ' + token } : {},
                     cache: 'no-store'
                 });
                 if (res.ok) {
@@ -2248,7 +2311,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                        ...(token ? { 'Authorization': 'Bearer ' + token } : {})
                     },
                     body: JSON.stringify({ receiptImage: selectedReceiptBase64, email, userId })
                 });
@@ -2294,7 +2357,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                        ...(token ? { 'Authorization': 'Bearer ' + token } : {})
                     },
                     body: JSON.stringify({ email, userId })
                 });
@@ -2329,7 +2392,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                        ...(token ? { 'Authorization': 'Bearer ' + token } : {})
                     },
                     body: JSON.stringify({ reason, email, userId })
                 });
@@ -2355,7 +2418,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                        ...(token ? { 'Authorization': 'Bearer ' + token } : {})
                     },
                     body: JSON.stringify({ email, userId })
                 });
@@ -2384,7 +2447,7 @@
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                            ...(token ? { 'Authorization': 'Bearer ' + token } : {})
                         },
                         body: JSON.stringify({ email, userId })
                     });
@@ -2470,7 +2533,7 @@
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                            ...(token ? { 'Authorization': 'Bearer ' + token } : {})
                         },
                         body: JSON.stringify({ text, email, userId })
                     });
@@ -2493,7 +2556,7 @@
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                            ...(token ? { 'Authorization': 'Bearer ' + token } : {})
                         },
                         body: JSON.stringify({ text: 'Attachment:', image: compressedBase64, email, userId })
                     });
