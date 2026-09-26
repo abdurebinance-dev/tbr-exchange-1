@@ -2310,7 +2310,7 @@ async function getFastAvatarsMap(userIds) {
     return result;
 }
 
-// ⚡ 1. ULTRA-FAST LIVE ADS (ፖስት የተደረገ አዲስ ማስታወቂያ በ 0.01 ሰከንድ ውስጥ ለሁሉም ሰው እንዲወጣ) ⚡
+// ⚡ 1. ፈጣን የማርኬት ፖስቶች ማምጫ (አዲስ ፖስት ሲደረግ ምንም ሳይደብቅ ወዲያውኑ ያሳያል!) ⚡
 app.get('/api/ads', async (req, res) => {
     try {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -2321,7 +2321,7 @@ app.get('/api/ads', async (req, res) => {
             .lean();
 
         const now = Date.now();
-        const ONLINE_THRESHOLD = 5 * 60 * 1000; // 5 ደቂቃ
+        const ONLINE_THRESHOLD = 5 * 60 * 1000;
 
         const enrichedAds = ads.map(ad => {
             const trader = ad.userId && typeof ad.userId === 'object' ? ad.userId : {};
@@ -2348,6 +2348,7 @@ app.get('/api/ads', async (req, res) => {
                 traderUsername: rawUsername,
                 tbrId: tbrId,
                 avatar: trader.avatar || ad.avatar || '',
+                profilePic: trader.avatar || ad.avatar || '',
                 isOnline: isOnline
             };
         });
@@ -2785,46 +2786,67 @@ app.post('/api/trades', async (req, res) => {
     }
 });
 
-// ⚡ 2. ULTRA-FAST & ACCURATE "MY TRADES" (ሁሉንም ትሬዶች በካፒታልም በስሞልም ፈልጎ በ 0.02s ያመጣል) ⚡
+// ⚡ 2. 100% ትክክለኛ እና ፈጣን "MY TRADES" ማምጫ (ሁሉንም ትሬዶች ሳይترك ያመጣል!) ⚡
 app.get('/api/trades', async (req, res) => {
     try {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
 
-        // 1. ተጠቃሚውን ከToken፣ ከQuery ወይም ከኢሜይል ማረጋገጥ
         let currentUser = await resolveUserFromRequest(req);
-        const queryEmail = (req.query.email || '').toLowerCase().trim();
-        const queryUid = (req.query.userId || '').trim();
+        
+        // ከ Header ወይም ከ Query ላይ Token መፈለግ
+        let token = req.headers['authorization'] || req.headers['Authorization'] || req.headers['token'] || req.headers['x-auth-token'];
+        if (token && String(token).startsWith('Bearer ')) {
+            token = String(token).split(' ')[1];
+        }
+
+        let tokenUid = null;
+        let tokenEmail = null;
+
+        if (token) {
+            try {
+                const decoded = jwt.verify(token, JWT_SECRET);
+                if (decoded) {
+                    tokenUid = decoded.id || decoded._id || decoded.userId;
+                    tokenEmail = decoded.email;
+                }
+            } catch (e) {
+                try {
+                    const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString('utf8'));
+                    if (payload) {
+                        tokenUid = payload.id || payload._id || payload.userId;
+                        tokenEmail = payload.email;
+                    }
+                } catch (e2) {}
+            }
+        }
+
+        const queryEmail = (req.query.email || tokenEmail || '').toLowerCase().trim();
+        const queryUid = String(req.query.userId || tokenUid || (currentUser && currentUser._id) || '').trim();
 
         if (!currentUser && queryEmail) {
-            currentUser = await User.findOne({ email: queryEmail }).select('-password -kycData');
+            currentUser = await User.findOne({ email: new RegExp(`^${queryEmail}$`, 'i') }).select('-password -kycData').lean();
         }
-        if (!currentUser && queryUid) {
-            currentUser = await User.findOne({
-                $or: [
-                    { userId: queryUid },
-                    ...(mongoose.Types.ObjectId.isValid(queryUid) ? [{ _id: queryUid }] : [])
-                ]
-            }).select('-password -kycData');
-        }
-
-        if (!currentUser && !queryEmail && !queryUid) {
-            return res.json({ success: true, currentUserId: '', total: 0, trades: [] });
+        if (!currentUser && queryUid && mongoose.Types.ObjectId.isValid(queryUid)) {
+            currentUser = await User.findById(queryUid).select('-password -kycData').lean();
         }
 
         const userObjId = currentUser ? currentUser._id : (mongoose.Types.ObjectId.isValid(queryUid) ? new mongoose.Types.ObjectId(queryUid) : null);
-        const userIdStr = currentUser ? String(currentUser._id) : queryUid;
         const targetEmail = currentUser ? String(currentUser.email).toLowerCase() : queryEmail;
-        const emailRegex = targetEmail ? new RegExp(`^${targetEmail}$`, 'i') : null;
 
-        // 2. በኢሜይልም (ካፒታል/ስሞል ሳይለይ)፣ በዳታቤዝ IDም፣ በUser IDም ሁሉንም ትሬዶች በአንድ ጊዜ መፈለግ
+        if (!userObjId && !targetEmail && !queryUid) {
+            return res.json({ success: true, currentUserId: '', total: 0, trades: [] });
+        }
+
+        // በ ObjectId፣ በ String ID እና በ Email (Capital/Small ሳይለይ) ሁሉንም ትሬዶች መፈለግ
         const orConditions = [];
         if (userObjId) {
             orConditions.push({ buyerId: userObjId }, { sellerId: userObjId });
         }
-        if (userIdStr) {
-            orConditions.push({ buyerId: userIdStr }, { sellerId: userIdStr });
+        if (queryUid) {
+            orConditions.push({ buyerId: queryUid }, { sellerId: queryUid });
         }
-        if (emailRegex) {
+        if (targetEmail) {
+            const emailRegex = new RegExp(`^${targetEmail}$`, 'i');
             orConditions.push({ buyerEmail: emailRegex }, { sellerEmail: emailRegex });
         }
 
@@ -2836,7 +2858,7 @@ app.get('/api/trades', async (req, res) => {
 
         res.json({
             success: true,
-            currentUserId: userIdStr,
+            currentUserId: String(userObjId || queryUid),
             total: trades.length,
             trades: trades
         });
