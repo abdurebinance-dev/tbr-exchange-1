@@ -2278,19 +2278,16 @@ app.post('/api/ads', verifyToken, async (req, res) => {
     }
 });
 
+// 1. በ server.js ውስጥ app.get('/api/ads', ...) የሚለውን በዚህ ተካው፦
 app.get('/api/ads', async (req, res) => {
     try {
-        const now = Date.now();
-        if (adsCacheData && (now - adsCacheTime < 2000)) {
-            return res.json(adsCacheData);
-        }
-
-        // ቀሪ USDT እስካለው ድረስ (totalAmount > 0.0001) ማስታወቂያው ከማርኬት አይጠፋም!
+        // ⚡ ካሽ (Cache) ሳይጠብቅ ሁልጊዜ የቅርብ ጊዜውን ትክክለኛ ቀሪ USDT እና Limit ወዲያውኑ እንዲያመጣ ⚡
         const ads = await Ad.find({ status: 'active', totalAmount: { $gt: 0.0001 } })
             .populate('userId', 'avatar traderUsername userId numericId fullName email lastActive')
             .sort({ createdAt: -1 })
             .lean();
 
+        const now = Date.now();
         const ONLINE_THRESHOLD = 2 * 60 * 1000;
 
         const enrichedAds = ads.map(ad => {
@@ -2302,13 +2299,20 @@ app.get('/api/ads', async (req, res) => {
             const displayName = rawUsername ? rawUsername : `trader${idDigits}`;
             const isOnline = trader.lastActive ? (now - new Date(trader.lastActive).getTime() <= ONLINE_THRESHOLD) : false;
 
-            // ቀሪው USDT በብር ሲሰላ ከመጀመሪያው minLimit ካነሰ፣ ሌላ ሰው ቀሪውን መግዛት እንዲችል minLimit ማስተካከል
-            const maxPossibleEtb = Number((Number(ad.totalAmount || 0) * Number(ad.price || 0)).toFixed(2));
-            const effectiveMinLimit = Math.min(Number(ad.minLimit || 0), maxPossibleEtb);
+            // ✅ ቀሪው USDT በብር ሲሰላ (ለምሳሌ 3.52 * 196 = 689.92 ETB) Max Limit እና Min Limit ወዲያውኑ አብረው እንዲቀንሱ ማድረግ!
+            const availUsdt = Number(ad.totalAmount || 0);
+            const priceEtb = Number(ad.price || 0);
+            const maxPossibleEtb = Number((availUsdt * priceEtb).toFixed(2));
+
+            const currentMax = Number(ad.maxLimit || maxPossibleEtb);
+            const effectiveMaxLimit = Math.min(currentMax, maxPossibleEtb);
+            const effectiveMinLimit = Math.min(Number(ad.minLimit || 0), effectiveMaxLimit);
 
             return {
                 ...ad,
+                totalAmount: Number(availUsdt.toFixed(4)),
                 minLimit: effectiveMinLimit,
+                maxLimit: effectiveMaxLimit,
                 userId: trader._id || ad.userId,
                 name: displayName,
                 traderUsername: rawUsername,
@@ -2318,9 +2322,7 @@ app.get('/api/ads', async (req, res) => {
             };
         });
 
-        adsCacheData = { success: true, ads: enrichedAds };
-        adsCacheTime = now;
-        res.json(adsCacheData);
+        res.json({ success: true, ads: enrichedAds });
     } catch (error) {
         console.error("Fetch Ads Error:", error);
         res.status(500).json({ success: false, message: 'Server error fetching ads.' });
@@ -2462,22 +2464,23 @@ async function resolveUserFromRequest(req) {
     return null;
 }
 
-// 🔄 የተሸጠውን ብቻ ከፖስቱ ላይ ቀንሶ፣ ቀሪውን እዛው ፖስቱ ላይ እንዳለ የሚያስቀር (ፖስቱ አይጠፋም!) 🔄
+// 🔄 ትሬድ ሲደረግ ከፖስቱ ላይ USDT ሲቀንስ፣ የፖስቱን Max Limit እና Min Limit በዳታቤዝ ውስጥም ወዲያውኑ ማስተካከያ 🔄
 async function checkAdMinLimitAndCleanUp(ad) {
     if (!ad) return;
     const remainingUsdt = Number(ad.totalAmount || 0);
 
     if (remainingUsdt <= 0.0001) {
-        // ሙሉው USDT (ለምሳሌ 100/100) ተሸጦ 0 ሲሆን ብቻ ፖስቱ ይዘጋል
         ad.totalAmount = 0;
         ad.status = 'completed';
     } else {
-        // ቀሪ USDT ካለው (ለምሳሌ ከ100 ላይ 60 ተሸጦ 40 ቢቀር) እዛው ፖስቱ ላይ እንዳለ ይቆያል!
         ad.totalAmount = Number(remainingUsdt.toFixed(6));
         ad.status = 'active';
 
-        // ቀሪው 40 USDT በብር ሲሰላ ከመጀመሪያው Min Limit ያነሰ ከሆነ፣ ሌላ ሰው መግዛት እንዲችል Min Limitን ማስተካከል
+        // ቀሪው USDT በብር ሲሰላ (ለምሳሌ 3.52 USDT * 196 = 689.92 ETB) Max Limit ወዲያውኑ ወደ 689.92 ETB እንዲወርድ ማድረግ!
         const remainingEtbValue = Number((remainingUsdt * Number(ad.price || 0)).toFixed(2));
+        if (Number(ad.maxLimit || 0) > remainingEtbValue) {
+            ad.maxLimit = remainingEtbValue;
+        }
         if (Number(ad.minLimit || 0) > remainingEtbValue) {
             ad.minLimit = Math.max(1, Math.floor(remainingEtbValue));
         }

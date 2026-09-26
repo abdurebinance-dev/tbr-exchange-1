@@ -1720,8 +1720,13 @@
                 const traderInfo = resolveTraderDisplay(ad, localUser);
                 const numericPrice = typeof ad.price === 'number' ? ad.price : parseFloat(ad.price || 0);
                 const numericAvail = Number(ad.totalAmount || 0);
-                const numericMin = Number(ad.minLimit || 0);
-                const numericMax = Number(ad.maxLimit || 0);
+
+                // ✅ በማርኬት ሰንጠረዥም ሆነ በሞዳሉ ውስጥ Limit ከቀሪው USDT (numericAvail * numericPrice) እንዳይበልጥ ወዲያውኑ ማስተካከል!
+                const maxPossibleEtb = Number((numericAvail * numericPrice).toFixed(2));
+                const rawMax = Number(ad.maxLimit || maxPossibleEtb);
+                const numericMax = rawMax > 0 ? Math.min(rawMax, maxPossibleEtb) : maxPossibleEtb;
+                const numericMin = Math.min(Number(ad.minLimit || 0), numericMax);
+
                 const createdTime = getAdCreatedTimestamp(ad);
 
                 return {
@@ -1738,9 +1743,9 @@
                     numericMax,
                     createdTime,
                     customPrice: numericPrice.toFixed(2),
-                    avail: numericAvail.toLocaleString('en-US'),
-                    min: numericMin.toLocaleString('en-US'),
-                    max: numericMax.toLocaleString('en-US'),
+                    avail: Number(numericAvail.toFixed(2)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+                    min: numericMin.toLocaleString('en-US', { maximumFractionDigits: 2 }),
+                    max: numericMax.toLocaleString('en-US', { maximumFractionDigits: 2 }),
                     pay: payMethods
                 };
             }).filter(t => {
@@ -2250,6 +2255,9 @@
                 });
                 const json = await res.json();
                 if (res.ok && json.success && json.trade) {
+                    sessionStorage.removeItem(ADS_CACHE_KEY);
+                    localStorage.removeItem(ADS_CACHE_KEY);
+
                     localStorage.setItem('tbr_active_p2p_order', JSON.stringify(json.trade));
                     closeOrderModal();
                     window.location.href = `trades.html?tradeId=${json.trade._id}`;
