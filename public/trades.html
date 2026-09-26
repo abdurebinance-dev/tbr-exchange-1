@@ -1263,7 +1263,7 @@
                 <div class="breadcrumb-wrap">
                     <a href="trades.html"><i class="fa-solid fa-chevron-left" style="font-size: 11px;"></i> My Orders</a>
                     <span class="sep">/</span>
-                    <span class="trade-id-label" id="uiTradeNumber">Trade #00001</span>
+                    <span class="trade-id-label" id="uiTradeNumber">Loading...</span>
                 </div>
                 <span class="status-pill-badge" id="uiStatusBadge">Funds Locked</span>
             </div>
@@ -1328,7 +1328,7 @@
                     </div>
                 </div>
 
-                <button type="button" class="primary-yellow-btn" id="uiLeftMarkPaidBtn" onclick="openConfirmPaymentModal()">
+                <button type="button" class="primary-yellow-btn" id="uiLeftMarkPaidBtn" style="display:none;" onclick="openConfirmPaymentModal()">
                     <i class="fa-regular fa-circle-check"></i> Transferred, Notify Seller
                 </button>
 
@@ -1340,7 +1340,7 @@
                     <i class="fa-solid fa-scale-balanced"></i> Apply for Dispute (Appeal to Admin)
                 </button>
 
-                <button type="button" class="secondary-cancel-btn" id="uiCancelTradeBtn" onclick="cancelActiveTrade()">
+                <button type="button" class="secondary-cancel-btn" id="uiCancelTradeBtn" style="display:none;" onclick="cancelActiveTrade()">
                     Cancel Order
                 </button>
 
@@ -1445,9 +1445,9 @@
         <!-- RIGHT COLUMN: CHAT ROOM -->
         <div class="right-chat-card">
             <div class="chat-header">
-                <div class="chat-avatar" id="uiPartnerAvatar">TR</div>
+                <div class="chat-avatar" id="uiPartnerAvatar">--</div>
                 <div>
-                    <div class="chat-partner-name" id="uiPartnerName">Trader</div>
+                    <div class="chat-partner-name" id="uiPartnerName">Counterparty</div>
                     <div class="chat-partner-sub">
                         <span class="dot"></span>
                         <span>Active trade &middot; <a href="javascript:void(0)">View profile &rarr;</a></span>
@@ -1455,7 +1455,7 @@
                 </div>
             </div>
 
-            <div class="chat-pay-details-wrap" id="uiBuyerPayDropdown">
+            <div class="chat-pay-details-wrap" id="uiBuyerPayDropdown" style="display:none;">
                 <div class="cpd-header" onclick="togglePaymentDetailsDropdown()">
                     <div class="cpd-left">
                         <i class="fa-solid fa-file-invoice-dollar"></i>
@@ -1506,7 +1506,7 @@
                     <span>Trade completed — post-trade chat is open</span>
                 </div>
 
-                <button type="button" class="primary-yellow-btn" id="uiRightMarkPaidBtn" onclick="openConfirmPaymentModal()">
+                <button type="button" class="primary-yellow-btn" id="uiRightMarkPaidBtn" style="display:none;" onclick="openConfirmPaymentModal()">
                     <i class="fa-regular fa-circle-check"></i> Transferred, Notify Seller
                 </button>
 
@@ -1603,7 +1603,7 @@
     </div>
 
     <script>
-        const API_BASE = 'https://tbr-exchange-backend.onrender.com';
+        const API_BASE = window.location.origin.includes('localhost') ? 'http://localhost:5000' : 'https://tbr-exchange-backend.onrender.com';
         const TRADES_LIST_CACHE = 'tbr_my_trades_list_v2';
         const ADS_CACHE_KEY = 'tbr_market_ads_v1';
         let activeTrade = null;
@@ -1619,6 +1619,17 @@
             } catch (e) {}
         }
 
+        function decodeJwtSafe(token) {
+            try {
+                const part = token.split('.')[1];
+                if (!part) return null;
+                const base64 = part.replace(/-/g, '+').replace(/_/g, '/');
+                return JSON.parse(atob(base64));
+            } catch (e) {
+                return null;
+            }
+        }
+
         function getLoggedUserIdentity() {
             const token = localStorage.getItem('token') || localStorage.getItem('jwtToken') || localStorage.getItem('authToken') || '';
             let email = localStorage.getItem('userEmail') || localStorage.getItem('email') || '';
@@ -1630,13 +1641,12 @@
                 if (!userId && (u._id || u.id || u.userId)) userId = u._id || u.id || u.userId;
             } catch (e) {}
 
-            // ⚡ ከToken ውስጥ የተጠቃሚውን ID እና Email ወዲያውኑ በብራውዘር መፍታት (ሰርቨር ሳይጠብቅ ሻጭ/ገዢ መሆኑን ለማወቅ) ⚡
             if (token && (!userId || !email)) {
-                try {
-                    const payload = JSON.parse(atob(token.split('.')[1]));
-                    if (!userId && (payload.id || payload._id)) userId = payload.id || payload._id;
-                    if (!email && payload.email) email = payload.email;
-                } catch (e) {}
+                const payload = decodeJwtSafe(token);
+                if (payload) {
+                    if (!userId && (payload.id || payload._id)) userId = String(payload.id || payload._id);
+                    if (!email && payload.email) email = String(payload.email);
+                }
             }
 
             return { token, email, userId };
@@ -1676,8 +1686,8 @@
             if (tradeIdParam) {
                 document.getElementById('myTradesListView').style.display = 'none';
                 const roomEl = document.getElementById('singleTradeRoomView');
+                roomEl.style.display = 'grid';
 
-                // ⚡ 1. በ localStorage ወይም በ My Trades ካሽ ውስጥ ትሬዱ ካለ በ 0.00 ሰከንድ ወዲያውኑ ማሳየት! ⚡
                 let matchedCache = null;
                 try {
                     const cachedOrder = JSON.parse(localStorage.getItem('tbr_active_p2p_order') || 'null');
@@ -1686,42 +1696,38 @@
                     }
                     if (!matchedCache) {
                         const cachedList = JSON.parse(sessionStorage.getItem(TRADES_LIST_CACHE) || '[]');
-                        matchedCache = cachedList.find(t => String(t._id) === String(tradeIdParam)) || null;
+                        if (Array.isArray(cachedList)) {
+                            matchedCache = cachedList.find(t => String(t._id) === String(tradeIdParam)) || null;
+                        }
                     }
                 } catch (e) {}
 
                 if (matchedCache) {
                     activeTrade = matchedCache;
-                    roomEl.style.display = 'grid';
                     renderTradeRoomUI();
-                } else {
-                    // ካሽ ከሌለ የውሸቱን Trade #00001 እንዳያሳይ ደብቆ ትክክለኛውን ብቻ ያሳያል!
-                    roomEl.style.opacity = '0';
-                    roomEl.style.display = 'grid';
                 }
 
                 await fetchTradeFromServer(tradeIdParam);
-                roomEl.style.opacity = '1';
                 setInterval(() => fetchTradeFromServer(tradeIdParam), 2500);
                 startCountdownTimer();
             } else {
                 document.getElementById('singleTradeRoomView').style.display = 'none';
                 document.getElementById('myTradesListView').style.display = 'block';
 
+                let hasRenderedCache = false;
                 try {
-                    const cachedList = sessionStorage.getItem(TRADES_LIST_CACHE);
-                    if (cachedList) {
-                        const parsedList = JSON.parse(cachedList);
-                        if (Array.isArray(parsedList)) renderMyTradesTable(parsedList);
+                    const cachedList = JSON.parse(sessionStorage.getItem(TRADES_LIST_CACHE) || 'null');
+                    if (Array.isArray(cachedList) && cachedList.length > 0) {
+                        renderMyTradesTable(cachedList);
+                        hasRenderedCache = true;
                     }
                 } catch (e) {}
 
-                await loadMyTradesList();
-                setInterval(loadMyTradesList, 3500);
+                await loadMyTradesList(hasRenderedCache);
+                setInterval(() => loadMyTradesList(true), 3500);
             }
         });
 
-        // በ My Trades ላይ አንድ ትሬድ ሲነካ ወዲያውኑ በ 0.00s እንዲከፍት የሚያደርግ ፋንክሽን
         function openSingleTradeInstant(tradeId) {
             if (myTradesMemoryMap[tradeId]) {
                 localStorage.setItem('tbr_active_p2p_order', JSON.stringify(myTradesMemoryMap[tradeId]));
@@ -1729,20 +1735,22 @@
             window.location.href = `trades.html?tradeId=${tradeId}`;
         }
 
-        async function loadMyTradesList() {
+        async function loadMyTradesList(alreadyHasUI) {
             const { token, email, userId } = getLoggedUserIdentity();
             try {
                 const params = new URLSearchParams();
                 if (email) params.set('email', email);
                 if (userId) params.set('userId', userId);
+                params.set('t', Date.now());
 
                 const res = await fetch(`${API_BASE}/api/trades?${params.toString()}`, {
-                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                    cache: 'no-store'
                 });
 
                 if (res.ok) {
                     const json = await res.json();
-                    if (json.success && Array.isArray(json.trades)) {
+                    if (json && Array.isArray(json.trades)) {
                         if (json.currentUserId) {
                             currentUserId = String(json.currentUserId);
                             localStorage.setItem('tbr_resolved_uid', currentUserId);
@@ -1754,6 +1762,10 @@
                 }
             } catch (e) {
                 console.error('Error fetching My Trades:', e);
+            }
+
+            if (!alreadyHasUI) {
+                renderMyTradesTable([]);
             }
         }
 
@@ -1774,10 +1786,14 @@
                 myTradesMemoryMap[tr._id] = tr;
 
                 let isBuyer = tr.tradeType === 'buy';
-                if (effectiveUid && tr.buyerId) {
-                    isBuyer = String(tr.buyerId) === String(effectiveUid);
-                } else if (email && tr.buyerEmail) {
-                    isBuyer = String(tr.buyerEmail).toLowerCase() === String(email).toLowerCase();
+                if (effectiveUid && tr.sellerId && String(tr.sellerId) === String(effectiveUid)) {
+                    isBuyer = false;
+                } else if (effectiveUid && tr.buyerId && String(tr.buyerId) === String(effectiveUid)) {
+                    isBuyer = true;
+                } else if (email && tr.sellerEmail && String(tr.sellerEmail).toLowerCase() === String(email).toLowerCase()) {
+                    isBuyer = false;
+                } else if (email && tr.buyerEmail && String(tr.buyerEmail).toLowerCase() === String(email).toLowerCase()) {
+                    isBuyer = true;
                 }
 
                 const roleLabel = isBuyer ? 'Buy' : 'Sell';
@@ -1884,9 +1900,11 @@
                 const params = new URLSearchParams();
                 if (email) params.set('email', email);
                 if (userId) params.set('userId', userId);
+                params.set('t', Date.now());
 
                 const res = await fetch(`${API_BASE}/api/trades/${tradeId}?${params.toString()}`, {
-                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                    cache: 'no-store'
                 });
                 if (res.ok) {
                     const json = await res.json();
@@ -1903,7 +1921,6 @@
             } catch (e) {}
         }
 
-        // ✅ ሻጭ ወይስ ገዢ መሆኑን ወዲያውኑ በትክክል የሚለይ ፋንክሽን
         function isCurrentUserBuyer() {
             if (!activeTrade) return true;
             const { email, userId } = getLoggedUserIdentity();

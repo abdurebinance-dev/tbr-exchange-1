@@ -2790,9 +2790,10 @@ app.post('/api/trades', async (req, res) => {
     }
 });
 
-// 2. ⚡ ፈጣን "My Trades" ዝርዝር (ከነ ፕሮፋይል ፎቶውና ሙሉ መረጃው በ 0.02s የሚመጣ) ⚡
+// 2. ⚡ ULTRA-FAST "MY TRADES" LIST (Single Batch Query in 0.02s!) ⚡
 app.get('/api/trades', async (req, res) => {
     try {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
         const currentUser = await resolveUserFromRequest(req);
         if (!currentUser) {
             return res.json({ success: true, currentUserId: '', total: 0, trades: [] });
@@ -2801,7 +2802,6 @@ app.get('/api/trades', async (req, res) => {
         const userId = currentUser._id;
         const userEmail = (currentUser.email || '').toLowerCase();
 
-        // ከባድ የደረሰኝ ፎቶዎችን ብቻ በመተው፣ የፕሮፋይል ፎቶና የትሬድ መረጃዎችን በሙሉ በፍጥነት ማምጣት
         const trades = await Trade.find({
             $or: [
                 { buyerId: userId },
@@ -2809,30 +2809,50 @@ app.get('/api/trades', async (req, res) => {
                 ...(userEmail ? [{ buyerEmail: userEmail }, { sellerEmail: userEmail }] : [])
             ]
         })
-        .select('-receiptImage -messages.image')
+        .select('-receiptImage -messages.image -buyerAvatar -sellerAvatar')
         .sort({ createdAt: -1 })
-        .limit(40)
+        .limit(35)
         .lean();
 
-        for (let tr of trades) {
-            if (!tr.buyerAvatar && tr.buyerId) tr.buyerAvatar = await getFastUserAvatar(tr.buyerId, '');
-            if (!tr.sellerAvatar && tr.sellerId) tr.sellerAvatar = await getFastUserAvatar(tr.sellerId, '');
+        // በአንድ ጊዜ ብቻ (1 Query) የተሳታፊዎቹን ፎቶዎች ከዳታቤዝ ማምጣት
+        const participantIds = new Set();
+        trades.forEach(tr => {
+            if (tr.buyerId && mongoose.Types.ObjectId.isValid(tr.buyerId)) participantIds.add(String(tr.buyerId));
+            if (tr.sellerId && mongoose.Types.ObjectId.isValid(tr.sellerId)) participantIds.add(String(tr.sellerId));
+        });
+
+        const avatarMap = {};
+        if (participantIds.size > 0) {
+            const usersWithAvatars = await User.find({ _id: { $in: Array.from(participantIds) } })
+                .select('_id avatar')
+                .lean();
+            usersWithAvatars.forEach(u => {
+                avatarMap[String(u._id)] = u.avatar || '';
+            });
         }
+
+        const enrichedTrades = trades.map(tr => ({
+            ...tr,
+            buyerAvatar: avatarMap[String(tr.buyerId)] || '',
+            sellerAvatar: avatarMap[String(tr.sellerId)] || ''
+        }));
 
         res.json({
             success: true,
             currentUserId: String(userId),
-            total: trades.length,
-            trades
+            total: enrichedTrades.length,
+            trades: enrichedTrades
         });
     } catch (error) {
+        console.error("GET /api/trades Error:", error);
         res.status(500).json({ success: false, trades: [] });
     }
 });
 
-// 3. ⚡ የዳሽቦርድ Active Trades ማሳወቂያ (ሻጩ ሲነካው በ 0.00 ሰከንድ ትክክለኛውን ትሬድ እንዲከፍት ሙሉ መረጃ ይልካል) ⚡
+// 3. ⚡ FAST DASHBOARD ACTIVE TRADES BANNER ⚡
 app.get('/api/user/active-trades', async (req, res) => {
     try {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
         const currentUser = await resolveUserFromRequest(req);
         if (!currentUser) {
             return res.json({ success: true, count: 0, trades: [] });
@@ -2849,15 +2869,9 @@ app.get('/api/user/active-trades', async (req, res) => {
             ],
             status: { $in: ['funds_locked', 'payment_sent', 'disputed'] }
         })
-        .select('-receiptImage -messages.image')
+        .select('-receiptImage -messages.image -buyerAvatar -sellerAvatar')
         .sort({ createdAt: -1 })
         .lean();
-
-        if (activeTrades[0]) {
-            const lt = activeTrades[0];
-            if (!lt.buyerAvatar && lt.buyerId) lt.buyerAvatar = await getFastUserAvatar(lt.buyerId, '');
-            if (!lt.sellerAvatar && lt.sellerId) lt.sellerAvatar = await getFastUserAvatar(lt.sellerId, '');
-        }
 
         res.json({
             success: true,
@@ -2871,9 +2885,10 @@ app.get('/api/user/active-trades', async (req, res) => {
     }
 });
 
-// 4. የአንድን Trade ዝርዝር ማምጫ (ከነ ፕሮፋይል ፎቶው)
+// 4. Get Single Trade Details (With Profile Avatars)
 app.get('/api/trades/:id', async (req, res) => {
     try {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
         const currentUser = await resolveUserFromRequest(req);
         let trade = null;
 
@@ -2912,11 +2927,13 @@ app.get('/api/trades/:id', async (req, res) => {
         }
 
         const tradeObj = trade.toObject();
-        if (!tradeObj.buyerAvatar && tradeObj.buyerId) {
-            tradeObj.buyerAvatar = await getFastUserAvatar(tradeObj.buyerId, '');
-        }
-        if (!tradeObj.sellerAvatar && tradeObj.sellerId) {
-            tradeObj.sellerAvatar = await getFastUserAvatar(tradeObj.sellerId, '');
+        if ((!tradeObj.buyerAvatar && tradeObj.buyerId) || (!tradeObj.sellerAvatar && tradeObj.sellerId)) {
+            const ids = [tradeObj.buyerId, tradeObj.sellerId].filter(id => id && mongoose.Types.ObjectId.isValid(id));
+            const users = await User.find({ _id: { $in: ids } }).select('_id avatar').lean();
+            users.forEach(u => {
+                if (String(u._id) === String(tradeObj.buyerId)) tradeObj.buyerAvatar = u.avatar || '';
+                if (String(u._id) === String(tradeObj.sellerId)) tradeObj.sellerAvatar = u.avatar || '';
+            });
         }
 
         res.json({
