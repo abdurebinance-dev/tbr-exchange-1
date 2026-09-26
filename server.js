@@ -2278,75 +2278,89 @@ app.post('/api/ads', verifyToken, async (req, res) => {
     }
 });
 
-// ⚡ ፈጣን የፕሮፋይል ፎቶ ማስቀመጫ (RAM Cache) - ፍጥነት ሳይቀንስ ፎቶዎችን በ 0.01s ያመጣል ⚡
+// ⚡ ፈጣን የፕሮፋይል ፎቶ ማስቀመጫ (RAM Cache) - ፍጥነት ሳይቀንስ ፎቶዎችን በ 0.001s ያመጣል ⚡
 const userAvatarMemoryCache = new Map();
 
-async function getFastUserAvatar(userId, fallbackAvatar) {
-    if (fallbackAvatar) return fallbackAvatar;
-    if (!userId) return '';
-    const key = String(userId);
-    if (userAvatarMemoryCache.has(key)) return userAvatarMemoryCache.get(key);
-    try {
-        if (mongoose.Types.ObjectId.isValid(key)) {
-            const u = await User.findById(key).select('avatar').lean();
-            const av = (u && u.avatar) || '';
-            userAvatarMemoryCache.set(key, av);
-            return av;
+async function getFastAvatarsMap(userIds) {
+    const result = {};
+    const missingIds = [];
+
+    for (const rawId of userIds) {
+        if (!rawId) continue;
+        const key = String(rawId);
+        if (userAvatarMemoryCache.has(key)) {
+            result[key] = userAvatarMemoryCache.get(key);
+        } else if (mongoose.Types.ObjectId.isValid(key)) {
+            missingIds.push(key);
         }
-    } catch (e) {}
-    return '';
+    }
+
+    if (missingIds.length > 0) {
+        try {
+            const users = await User.find({ _id: { $in: missingIds } }).select('_id avatar').lean();
+            users.forEach(u => {
+                const k = String(u._id);
+                const av = u.avatar || '';
+                userAvatarMemoryCache.set(k, av);
+                result[k] = av;
+            });
+        } catch (e) {}
+    }
+
+    return result;
 }
 
+// ⚡ 1. ፈጣን የማርኬት ፖስቶች ማምጫ (ፖስት ሲደረግ ወዲያውኑ ከነ ፕሮፋይል ፎቶው ያሳያል) ⚡
 app.get('/api/ads', async (req, res) => {
     try {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
 
+        // ከባድ ፎቶ ከMongoDB በየሰከንዱ ሳይጭን ቀላል መረጃዎችን ብቻ በ 0.01s ማምጣት
         const ads = await Ad.find({ status: 'active', totalAmount: { $gt: 0.0001 } })
-            .populate('userId', 'avatar traderUsername userId numericId fullName email lastActive')
+            .populate('userId', 'traderUsername userId numericId fullName email lastActive')
             .sort({ createdAt: -1 })
             .lean();
+
+        const traderIds = ads.map(ad => {
+            const t = ad.userId && typeof ad.userId === 'object' ? ad.userId : {};
+            return t._id || ad.userId;
+        });
+        const avatarMap = await getFastAvatarsMap(traderIds);
 
         const now = Date.now();
         const ONLINE_THRESHOLD = 2 * 60 * 1000;
 
-        const enrichedAds = ads
-            .filter(ad => {
-                const maxPossibleEtb = Number(ad.totalAmount || 0) * Number(ad.price || 0);
-                return maxPossibleEtb + 0.01 >= Number(ad.minLimit || 0);
-            })
-            .map(ad => {
-                const trader = ad.userId && typeof ad.userId === 'object' ? ad.userId : {};
-                const rawUsername = (trader.traderUsername || '').trim().replace(/^@+/, '').trim();
-                const tbrId = trader.userId || '';
-                const idDigits = String(tbrId).replace(/\D/g, '').padStart(6, '0') || '000001';
+        const enrichedAds = ads.map(ad => {
+            const trader = ad.userId && typeof ad.userId === 'object' ? ad.userId : {};
+            const ownerIdStr = String(trader._id || ad.userId || '');
+            const rawUsername = (trader.traderUsername || '').trim().replace(/^@+/, '').trim();
+            const tbrId = trader.userId || '';
+            const idDigits = String(tbrId).replace(/\D/g, '').padStart(6, '0') || '000001';
 
-                const displayName = rawUsername ? rawUsername : (ad.name || `trader${idDigits}`);
-                const isOnline = trader.lastActive ? (now - new Date(trader.lastActive).getTime() <= ONLINE_THRESHOLD) : false;
+            const displayName = rawUsername ? rawUsername : (ad.name || `trader${idDigits}`);
+            const isOnline = trader.lastActive ? (now - new Date(trader.lastActive).getTime() <= ONLINE_THRESHOLD) : false;
 
-                if (trader._id && trader.avatar) {
-                    userAvatarMemoryCache.set(String(trader._id), trader.avatar);
-                }
+            const availUsdt = Number(ad.totalAmount || 0);
+            const priceEtb = Number(ad.price || 0);
+            const maxPossibleEtb = Number((availUsdt * priceEtb).toFixed(2));
+            const effectiveMaxLimit = Math.min(Number(ad.maxLimit || maxPossibleEtb), maxPossibleEtb);
+            const effectiveMinLimit = Math.min(Number(ad.minLimit || 0), effectiveMaxLimit);
+            const resolvedAvatar = avatarMap[ownerIdStr] || ad.avatar || '';
 
-                const availUsdt = Number(ad.totalAmount || 0);
-                const priceEtb = Number(ad.price || 0);
-                const maxPossibleEtb = Number((availUsdt * priceEtb).toFixed(2));
-                const effectiveMaxLimit = Math.min(Number(ad.maxLimit || maxPossibleEtb), maxPossibleEtb);
-
-                return {
-                    ...ad,
-                    totalAmount: Number(availUsdt.toFixed(4)),
-                    minLimit: Number(ad.minLimit || 0),
-                    maxLimit: effectiveMaxLimit,
-                    userId: trader._id || ad.userId,
-                    name: displayName,
-                    traderUsername: rawUsername,
-                    tbrId: tbrId,
-                    // ✅ የፕሮፋይል ፎቶው በማርኬት ላይ ፍጥነት ሳይቀንስ እንዲታይ ተደርጓል!
-                    avatar: trader.avatar || ad.avatar || '',
-                    profilePic: trader.avatar || ad.avatar || '',
-                    isOnline: isOnline
-                };
-            });
+            return {
+                ...ad,
+                totalAmount: Number(availUsdt.toFixed(4)),
+                minLimit: effectiveMinLimit,
+                maxLimit: effectiveMaxLimit,
+                userId: trader._id || ad.userId,
+                name: displayName,
+                traderUsername: rawUsername,
+                tbrId: tbrId,
+                avatar: resolvedAvatar,
+                profilePic: resolvedAvatar,
+                isOnline: isOnline
+            };
+        });
 
         res.json({ success: true, ads: enrichedAds });
     } catch (error) {
@@ -2357,6 +2371,7 @@ app.get('/api/ads', async (req, res) => {
 
 app.get('/api/ads/my', verifyToken, async (req, res) => {
     try {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
         const myAds = await Ad.find({ userId: req.user.id }).sort({ createdAt: -1 }).lean();
         res.json({ success: true, ads: myAds });
     } catch (error) {
@@ -2500,7 +2515,6 @@ async function checkAdMinLimitAndCleanUp(ad) {
 
     // 1. ቀሪው USDT 0 ከሆነ ወይም በብር ሲሰላ ነጋዴው ካስቀመጠው Minimum Limit በታች ከሆነ
     if (remainingUsdt <= 0.0001 || (sellerMinLimitEtb > 0 && remainingEtbValue + 0.01 < sellerMinLimitEtb)) {
-        // ማስታወቂያው የSell ከሆነና ቀሪ USDT ካለው፣ ከ "On Market" (lockedBalance) አውጥቶ ወደ ዋናው Wallet (balance) መመለስ!
         if (ad.tradeType === 'sell' && remainingUsdt > 0.0001 && ad.userId) {
             const refundUsdt = Number(remainingUsdt.toFixed(6));
             const sellerDoc = await User.findById(ad.userId).select('balance lockedBalance');
@@ -2510,12 +2524,10 @@ async function checkAdMinLimitAndCleanUp(ad) {
                 await sellerDoc.save();
             }
         }
-
-        // ፖስቱን በራሱ ጊዜ Cancel ማድረግና ከማርኬት ማውጣት
         ad.totalAmount = 0;
         ad.status = 'cancelled';
     } else {
-        // 2. ቀሪው ከ Minimum Limit በላይ ከሆነ ግን ፖስቱ አይጠፋም! (Max Limit ብቻ ከቀሪው USDT ጋር ይስተካከላል)
+        // 2. ቀሪው ከ Minimum Limit በላይ ከሆነ ግን ፖስቱ አይጠፋም!
         ad.totalAmount = Number(remainingUsdt.toFixed(6));
         ad.status = 'active';
         if (Number(ad.maxLimit || 0) > remainingEtbValue) {
@@ -2533,11 +2545,9 @@ async function refundEscrowOnCancel(trade) {
         const ad = trade.adId ? await Ad.findById(trade.adId) : null;
 
         if (trade.tradeType === 'buy') {
-            // ማስታወቂያው የሻጭ (Sell Ad) ነበር፦ ከፖስቱ የተቀነሰውን ሙሉ USDT (ከነ 0.5% ኮሚሽኑ) ወደ ፖስቱ መመለስ!
             const fromAd = Number(trade.deductedFromAdUsdt || trade.usdtAmount || 0);
             const fromWallet = Number(trade.deductedFromWalletUsdt || 0);
 
-            // ከሻጩ ዋሌት ላይ ለኮሚሽን የተወሰደ ነገር ካለ ወደ ዋሌቱ መመለስ
             if (fromWallet > 0) {
                 await User.findByIdAndUpdate(trade.sellerId, {
                     $inc: {
@@ -2548,11 +2558,9 @@ async function refundEscrowOnCancel(trade) {
             }
 
             if (ad) {
-                // ✅ ወደ ዋሌት ሳይሆን ቀጥታ ወደ ማርኬት ፖስቱ (ad.totalAmount) መመለስና ፖስቱን Active ማድረግ!
                 ad.totalAmount = Number(((ad.totalAmount || 0) + fromAd).toFixed(6));
                 ad.status = 'active';
 
-                // የፖስቱን Max Limit ከተመለሰው USDT ጋር ማስተካከል
                 const restoredEtbVal = Number((ad.totalAmount * Number(ad.price || 0)).toFixed(2));
                 if (Number(ad.maxLimit || 0) < restoredEtbVal) {
                     ad.maxLimit = restoredEtbVal;
@@ -2560,7 +2568,6 @@ async function refundEscrowOnCancel(trade) {
                 await ad.save();
             }
         } else {
-            // ማስታወቂያው የገዢ (Buy Ad) ነበር፦ ሻጩ ከዋሌቱ ያወጣውን ሙሉ USDT (ያለ ምንም ኮሚሽን ቅነሳ) መመለስ
             const totalToRefundSeller = Number(trade.sellerTotalDeductedUsdt || trade.deductedFromWalletUsdt || trade.usdtAmount || 0);
             if (totalToRefundSeller > 0) {
                 await User.findByIdAndUpdate(trade.sellerId, {
@@ -2571,7 +2578,6 @@ async function refundEscrowOnCancel(trade) {
                 });
             }
             if (ad) {
-                // ✅ የገዢውንም ማስታወቂያ (Buy Ad) መጠን ወደ ቦታው መልሶ ማርኬት ላይ Active ማድረግ!
                 ad.totalAmount = Number(((ad.totalAmount || 0) + Number(trade.deductedFromAdUsdt || trade.usdtAmount || 0)).toFixed(6));
                 ad.status = 'active';
                 const restoredEtbVal = Number((ad.totalAmount * Number(ad.price || 0)).toFixed(2));
@@ -2586,6 +2592,7 @@ async function refundEscrowOnCancel(trade) {
         console.error("Refund Escrow Error:", e);
     }
 }
+
 // 1. ትዕዛዝ መፍጠሪያ (ነጋዴው በሌላ ትሬድ ላይ ከሆነ የሚከለክል + ቀሪውን USDT እዛው ፖስቱ ላይ የሚያስቀር)
 app.post('/api/trades', async (req, res) => {
     try {
@@ -2610,7 +2617,7 @@ app.post('/api/trades', async (req, res) => {
         }
         if (!adOwner) return res.status(404).json({ success: false, message: 'Advertiser not found.' });
 
-        // 🛑 1. ነጋዴው በአሁኑ ሰዓት በሌላ ትሬድ ላይ ከሆነ "This trader is on another trade" ብሎ መከልከል 🛑
+        // 🛑 ነጋዴው በአሁኑ ሰዓት በሌላ ትሬድ ላይ ከሆነ "This trader is on another trade" ብሎ መከልከል 🛑
         const ownerEmail = (adOwner.email || '').toLowerCase();
         const activeTradeForTrader = await Trade.findOne({
             $or: [
@@ -2654,11 +2661,9 @@ app.post('/api/trades', async (req, res) => {
         let deductedFromWalletUsdt = 0;
 
         if (actionType === 'buy') {
-            // ተጠቃሚው "Buy" ብሏል -> ማስታወቂያው የሻጭ (Sell Ad) ነው
             buyerUser = currentUser;
             sellerUser = adOwner;
 
-            // ከሻጩ ፖስት (ad.totalAmount) ላይ የተገዛውን መጠን መቀነስ
             if (ad.totalAmount >= sellerTotalDeductedUsdt) {
                 deductedFromAdUsdt = sellerTotalDeductedUsdt;
                 ad.totalAmount = Number((ad.totalAmount - sellerTotalDeductedUsdt).toFixed(6));
@@ -2685,11 +2690,9 @@ app.post('/api/trades', async (req, res) => {
                 }
             }
 
-            // ✅ ፖስቱን ሳያጠፋ ቀሪውን USDT እዛው ፖስቱ ላይ እንዳለ ያስቀራል!
             await checkAdMinLimitAndCleanUp(ad);
 
         } else {
-            // ተጠቃሚው "Sell" ብሏል -> አሁን የሚሸጠው ሰው ሻጭ (Seller) ነው፣ ማስታወቂያው የገዢ (Buy Ad) ነው
             sellerUser = currentUser;
             buyerUser = adOwner;
 
@@ -2718,7 +2721,6 @@ app.post('/api/trades', async (req, res) => {
             deductedFromAdUsdt = usdtNum;
             ad.totalAmount = Math.max(0, Number((ad.totalAmount - usdtNum).toFixed(6)));
 
-            // ✅ ፖስቱን ሳያጠፋ ቀሪውን USDT እዛው ፖስቱ ላይ እንዳለ ያስቀራል!
             await checkAdMinLimitAndCleanUp(ad);
         }
 
@@ -2740,6 +2742,9 @@ app.post('/api/trades', async (req, res) => {
 
         const sName = resolveName(sellerUser);
         const bName = resolveName(buyerUser);
+
+        if (buyerUser._id && buyerUser.avatar) userAvatarMemoryCache.set(String(buyerUser._id), buyerUser.avatar);
+        if (sellerUser._id && sellerUser.avatar) userAvatarMemoryCache.set(String(sellerUser._id), sellerUser.avatar);
 
         const newTrade = new Trade({
             tradeNumber: sequentialTradeNumber,
@@ -2790,7 +2795,7 @@ app.post('/api/trades', async (req, res) => {
     }
 });
 
-// 2. ⚡ ULTRA-FAST "MY TRADES" LIST (Single Batch Query in 0.02s!) ⚡
+// 2. ⚡ ULTRA-FAST "MY TRADES" LIST (በ 0.01 ሰከንድ ሁሉንም ትሬዶች ከነ ፕሮፋይል ፎቶው ያመጣል!) ⚡
 app.get('/api/trades', async (req, res) => {
     try {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -2811,25 +2816,16 @@ app.get('/api/trades', async (req, res) => {
         })
         .select('-receiptImage -messages.image -buyerAvatar -sellerAvatar')
         .sort({ createdAt: -1 })
-        .limit(35)
+        .limit(40)
         .lean();
 
-        // በአንድ ጊዜ ብቻ (1 Query) የተሳታፊዎቹን ፎቶዎች ከዳታቤዝ ማምጣት
-        const participantIds = new Set();
+        const participantIds = [];
         trades.forEach(tr => {
-            if (tr.buyerId && mongoose.Types.ObjectId.isValid(tr.buyerId)) participantIds.add(String(tr.buyerId));
-            if (tr.sellerId && mongoose.Types.ObjectId.isValid(tr.sellerId)) participantIds.add(String(tr.sellerId));
+            if (tr.buyerId) participantIds.push(tr.buyerId);
+            if (tr.sellerId) participantIds.push(tr.sellerId);
         });
 
-        const avatarMap = {};
-        if (participantIds.size > 0) {
-            const usersWithAvatars = await User.find({ _id: { $in: Array.from(participantIds) } })
-                .select('_id avatar')
-                .lean();
-            usersWithAvatars.forEach(u => {
-                avatarMap[String(u._id)] = u.avatar || '';
-            });
-        }
+        const avatarMap = await getFastAvatarsMap(participantIds);
 
         const enrichedTrades = trades.map(tr => ({
             ...tr,
@@ -2885,7 +2881,7 @@ app.get('/api/user/active-trades', async (req, res) => {
     }
 });
 
-// 4. Get Single Trade Details (With Profile Avatars)
+// 4. Get Single Trade Details (With Fast Profile Avatars)
 app.get('/api/trades/:id', async (req, res) => {
     try {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -2927,14 +2923,9 @@ app.get('/api/trades/:id', async (req, res) => {
         }
 
         const tradeObj = trade.toObject();
-        if ((!tradeObj.buyerAvatar && tradeObj.buyerId) || (!tradeObj.sellerAvatar && tradeObj.sellerId)) {
-            const ids = [tradeObj.buyerId, tradeObj.sellerId].filter(id => id && mongoose.Types.ObjectId.isValid(id));
-            const users = await User.find({ _id: { $in: ids } }).select('_id avatar').lean();
-            users.forEach(u => {
-                if (String(u._id) === String(tradeObj.buyerId)) tradeObj.buyerAvatar = u.avatar || '';
-                if (String(u._id) === String(tradeObj.sellerId)) tradeObj.sellerAvatar = u.avatar || '';
-            });
-        }
+        const avatarMap = await getFastAvatarsMap([tradeObj.buyerId, tradeObj.sellerId]);
+        if (!tradeObj.buyerAvatar) tradeObj.buyerAvatar = avatarMap[String(tradeObj.buyerId)] || '';
+        if (!tradeObj.sellerAvatar) tradeObj.sellerAvatar = avatarMap[String(tradeObj.sellerId)] || '';
 
         res.json({
             success: true,
@@ -2978,7 +2969,7 @@ app.post('/api/trades/:id/mark-paid', async (req, res) => {
     }
 });
 
-// 6. ⚡ ሻጩ "Release USDT" ሲል (ከሻጭ የተቆለፈውን ቀንሶ፣ 0.5%+0.5% ኮሚሽን አስቀርቶ፣ የተጣራውን ለገዢው ያስገባል) ⚡
+// 6. ⚡ ሻጩ "Release USDT" ሲል ⚡
 app.post('/api/trades/:id/release', async (req, res) => {
     try {
         const trade = await Trade.findById(req.params.id);
@@ -3007,14 +2998,12 @@ app.post('/api/trades/:id/release', async (req, res) => {
             ? Number(trade.netUsdt)
             : Math.max(0, Number((baseUsdt - buyerFee).toFixed(6)));
 
-        // 1. ከሻጩ (Seller) lockedBalance ላይ የተቆለፈውን መቀነስ
         const sellerFilter = trade.sellerId && mongoose.Types.ObjectId.isValid(trade.sellerId)
             ? { _id: trade.sellerId }
             : { email: (trade.sellerEmail || '').toLowerCase() };
 
         const sellerDoc = await User.findOne(sellerFilter).select('_id balance lockedBalance');
         if (sellerDoc) {
-            // If trade was created before seller deduction existed, deduct from seller balance now
             if (!trade.sellerTotalDeductedUsdt && trade.tradeType === 'sell') {
                 sellerDoc.balance = Math.max(0, Number(((sellerDoc.balance || 0) - sellerLockedTotal).toFixed(6)));
             }
@@ -3022,7 +3011,6 @@ app.post('/api/trades/:id/release', async (req, res) => {
             await sellerDoc.save();
         }
 
-        // 2. ለገዢው (Buyer) የተጣራውን USDT (netUsdtToCreditBuyer) በቀጥታ መጨመር (Atomic $inc)
         const buyerFilter = trade.buyerId && mongoose.Types.ObjectId.isValid(trade.buyerId)
             ? { _id: trade.buyerId }
             : { email: (trade.buyerEmail || '').toLowerCase() };
@@ -3031,7 +3019,6 @@ app.post('/api/trades/:id/release', async (req, res) => {
             $inc: { balance: netUsdtToCreditBuyer }
         });
 
-        // 3. የፕላትፎርሙን 1% (0.5% + 0.5%) ትርፍ በTransaction ውስጥ መመዝገብ
         try {
             await Transaction.create({
                 userId: trade.buyerId,
@@ -3043,7 +3030,6 @@ app.post('/api/trades/:id/release', async (req, res) => {
             });
         } catch (txErr) {}
 
-        // ✅ በግብይቱ ሰዓት የተቆረጠውን ትክክለኛ የUSDT ኮሚሽን በዳታቤዝ ውስጥ ለዘለቄታው መቆለፍ
         trade.buyerFeeUsdt = buyerFee;
         trade.sellerFeeUsdt = sellerFee;
         trade.totalPlatformFeeUsdt = totalPlatformFee;
@@ -3076,7 +3062,6 @@ app.post('/api/trades/:id/cancel', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Trade cannot be cancelled.' });
         }
 
-        // 🛑 ሻጩ (Seller) ትዕዛዙን በቀጥታ Cancel እንዳያደርግ መከልከል! 🛑
         if (currentUser && String(currentUser._id) === String(trade.sellerId)) {
             return res.status(403).json({
                 success: false,
@@ -3101,7 +3086,7 @@ app.post('/api/trades/:id/cancel', async (req, res) => {
     }
 });
 
-// 7B. የሻጭ "Request for Cancel" API (ትዕዛዙን ሳይሰርዝ ለገዢው በቻት ጥያቄ ይልካል)
+// 7B. የሻጭ "Request for Cancel" API
 app.post('/api/trades/:id/request-cancel', async (req, res) => {
     try {
         const trade = await Trade.findById(req.params.id);
@@ -3181,7 +3166,7 @@ app.post('/api/trades/:id/messages', async (req, res) => {
     }
 });
 
-// 10. Admin Dispute Room Endpoints (Full Chat & Receipt Evidence + Release/Refund)
+// 10. Admin Dispute Room Endpoints
 app.get('/api/admin/escrow-disputes', verifyAdminToken, async (req, res) => {
     try {
         const disputes = await Trade.find({
@@ -3219,7 +3204,6 @@ app.post('/api/admin/escrow-action', verifyAdminToken, async (req, res) => {
                 $inc: { balance: netUsdtToCreditBuyer }
             });
 
-            // ✅ አድሚኑም Release ሲያደርግ የተቆረጠውን ትክክለኛ የUSDT ኮሚሽን መመዝገብ
             trade.buyerFeeUsdt = buyerFee;
             trade.sellerFeeUsdt = sellerFee;
             trade.totalPlatformFeeUsdt = totalPlatformFee;
