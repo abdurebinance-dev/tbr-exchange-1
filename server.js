@@ -2285,6 +2285,7 @@ app.get('/api/ads', async (req, res) => {
             return res.json(adsCacheData);
         }
 
+        // ቀሪ USDT እስካለው ድረስ (totalAmount > 0.0001) ማስታወቂያው ከማርኬት አይጠፋም!
         const ads = await Ad.find({ status: 'active', totalAmount: { $gt: 0.0001 } })
             .populate('userId', 'avatar traderUsername userId numericId fullName email lastActive')
             .sort({ createdAt: -1 })
@@ -2292,31 +2293,30 @@ app.get('/api/ads', async (req, res) => {
 
         const ONLINE_THRESHOLD = 2 * 60 * 1000;
 
-        const enrichedAds = ads
-            .filter(ad => {
-                // Only show ads that still have enough USDT to meet their minimum ETB limit
-                const maxEtbPossible = Number(ad.totalAmount || 0) * Number(ad.price || 0);
-                return maxEtbPossible + 0.01 >= Number(ad.minLimit || 0);
-            })
-            .map(ad => {
-                const trader = ad.userId && typeof ad.userId === 'object' ? ad.userId : {};
-                const rawUsername = (trader.traderUsername || '').trim().replace(/^@+/, '').trim();
-                const tbrId = trader.userId || '';
-                const idDigits = String(tbrId).replace(/\D/g, '').padStart(6, '0') || '000001';
+        const enrichedAds = ads.map(ad => {
+            const trader = ad.userId && typeof ad.userId === 'object' ? ad.userId : {};
+            const rawUsername = (trader.traderUsername || '').trim().replace(/^@+/, '').trim();
+            const tbrId = trader.userId || '';
+            const idDigits = String(tbrId).replace(/\D/g, '').padStart(6, '0') || '000001';
 
-                const displayName = rawUsername ? rawUsername : `trader${idDigits}`;
-                const isOnline = trader.lastActive ? (now - new Date(trader.lastActive).getTime() <= ONLINE_THRESHOLD) : false;
+            const displayName = rawUsername ? rawUsername : `trader${idDigits}`;
+            const isOnline = trader.lastActive ? (now - new Date(trader.lastActive).getTime() <= ONLINE_THRESHOLD) : false;
 
-                return {
-                    ...ad,
-                    userId: trader._id || ad.userId,
-                    name: displayName,
-                    traderUsername: rawUsername,
-                    tbrId: tbrId,
-                    avatar: trader.avatar || '',
-                    isOnline: isOnline
-                };
-            });
+            // ቀሪው USDT በብር ሲሰላ ከመጀመሪያው minLimit ካነሰ፣ ሌላ ሰው ቀሪውን መግዛት እንዲችል minLimit ማስተካከል
+            const maxPossibleEtb = Number((Number(ad.totalAmount || 0) * Number(ad.price || 0)).toFixed(2));
+            const effectiveMinLimit = Math.min(Number(ad.minLimit || 0), maxPossibleEtb);
+
+            return {
+                ...ad,
+                minLimit: effectiveMinLimit,
+                userId: trader._id || ad.userId,
+                name: displayName,
+                traderUsername: rawUsername,
+                tbrId: tbrId,
+                avatar: trader.avatar || '',
+                isOnline: isOnline
+            };
+        });
 
         adsCacheData = { success: true, ads: enrichedAds };
         adsCacheTime = now;
@@ -2462,50 +2462,55 @@ async function resolveUserFromRequest(req) {
     return null;
 }
 
-// 🔄 ከማስታወቂያው ላይ የሚቀረው USDT ከ Minimum Limit በታች ከሆነ ለሻጩ ወደ ዋሌቱ መልሶ ከማርኬት ማውጫ 🔄
-async function checkAdMinLimitAndCleanUp(ad, sellerUserId) {
+// 🔄 የተሸጠውን ብቻ ከፖስቱ ላይ ቀንሶ፣ ቀሪውን እዛው ፖስቱ ላይ እንዳለ የሚያስቀር (ፖስቱ አይጠፋም!) 🔄
+async function checkAdMinLimitAndCleanUp(ad) {
     if (!ad) return;
     const remainingUsdt = Number(ad.totalAmount || 0);
-    const remainingEtbValue = remainingUsdt * Number(ad.price || 0);
-    const minLimitEtb = Number(ad.minLimit || 0);
 
-    if (remainingUsdt <= 0.0001 || (minLimitEtb > 0 && remainingEtbValue + 0.01 < minLimitEtb)) {
-        if (ad.tradeType === 'sell' && remainingUsdt > 0.0001 && sellerUserId) {
-            // ቀሪውን USDT ወደ ሻጩ ዋና ዋሌት (balance) በቀጥታ መመለስ!
-            await User.findByIdAndUpdate(sellerUserId, {
-                $inc: {
-                    balance: Number(remainingUsdt.toFixed(6)),
-                    lockedBalance: -Number(remainingUsdt.toFixed(6))
-                }
-            });
-        }
+    if (remainingUsdt <= 0.0001) {
+        // ሙሉው USDT (ለምሳሌ 100/100) ተሸጦ 0 ሲሆን ብቻ ፖስቱ ይዘጋል
         ad.totalAmount = 0;
-        ad.status = 'completed'; // ከማርኬት ላይ ወዲያውኑ ማውጣት
+        ad.status = 'completed';
+    } else {
+        // ቀሪ USDT ካለው (ለምሳሌ ከ100 ላይ 60 ተሸጦ 40 ቢቀር) እዛው ፖስቱ ላይ እንዳለ ይቆያል!
+        ad.totalAmount = Number(remainingUsdt.toFixed(6));
+        ad.status = 'active';
+
+        // ቀሪው 40 USDT በብር ሲሰላ ከመጀመሪያው Min Limit ያነሰ ከሆነ፣ ሌላ ሰው መግዛት እንዲችል Min Limitን ማስተካከል
+        const remainingEtbValue = Number((remainingUsdt * Number(ad.price || 0)).toFixed(2));
+        if (Number(ad.minLimit || 0) > remainingEtbValue) {
+            ad.minLimit = Math.max(1, Math.floor(remainingEtbValue));
+        }
     }
     await ad.save();
     adsCacheData = null;
 }
 
-// 🔄 ትዕዛዝ ሲሰረዝ (Cancel) የሻጩን USDT እና ኮሚሽን በትክክል መመለሻ 🔄
+// 🔄 ትዕዛዝ ሲሰረዝ (Cancel) የተቀነሰውን USDT ተመልሶ እዛው ፖስቱ ላይ እንዲደመር ማድረጊያ 🔄
 async function refundEscrowOnCancel(trade) {
     try {
         const ad = trade.adId ? await Ad.findById(trade.adId) : null;
 
         if (trade.tradeType === 'buy') {
+            // ማስታወቂያው የሻጭ (Sell Ad) ነበር
             const fromAd = Number(trade.deductedFromAdUsdt || trade.usdtAmount || 0);
             const fromWallet = Number(trade.deductedFromWalletUsdt || 0);
 
             if (fromWallet > 0) {
                 await User.findByIdAndUpdate(trade.sellerId, {
-                    $inc: { balance: Number(fromWallet.toFixed(6)) }
+                    $inc: {
+                        balance: Number(fromWallet.toFixed(6)),
+                        lockedBalance: -Number(fromWallet.toFixed(6))
+                    }
                 });
             }
 
-            if (ad && ad.status === 'active') {
+            if (ad && ad.status !== 'cancelled') {
+                // ትዕዛዙ ሲሰረዝ የተቀነሰው USDT ተመልሶ እዛው ፖስቱ (Ad) ላይ ይደመራል!
                 ad.totalAmount = Number(((ad.totalAmount || 0) + fromAd).toFixed(6));
-                await checkAdMinLimitAndCleanUp(ad, trade.sellerId);
+                ad.status = 'active';
+                await ad.save();
             } else if (fromAd > 0) {
-                // ማስታወቂያው ተዘግቶ ከነበረ ቀጥታ ወደ ሻጩ ዋና ዋሌት ይመለስለት
                 await User.findByIdAndUpdate(trade.sellerId, {
                     $inc: {
                         balance: Number(fromAd.toFixed(6)),
@@ -2524,11 +2529,9 @@ async function refundEscrowOnCancel(trade) {
                     }
                 });
             }
-            if (ad) {
+            if (ad && ad.status !== 'cancelled') {
                 ad.totalAmount = Number(((ad.totalAmount || 0) + Number(trade.deductedFromAdUsdt || trade.usdtAmount || 0)).toFixed(6));
-                if ((ad.totalAmount * ad.price) >= ad.minLimit) {
-                    ad.status = 'active';
-                }
+                ad.status = 'active';
                 await ad.save();
             }
         }
@@ -2538,7 +2541,7 @@ async function refundEscrowOnCancel(trade) {
     }
 }
 
-// 1. ትዕዛዝ መፍጠሪያ (ከሻጭም 0.5%፣ ከገዢም 0.5% ቆርጦ፣ ቀሪው ከMin በታች ከሆነ መልሶ ከማርኬት የሚያወጣ)
+// 1. ትዕዛዝ መፍጠሪያ (ነጋዴው በሌላ ትሬድ ላይ ከሆነ የሚከለክል + ቀሪውን USDT እዛው ፖስቱ ላይ የሚያስቀር)
 app.post('/api/trades', async (req, res) => {
     try {
         const { adId, actionType, etbAmount, usdtAmount, paymentMethod } = req.body;
@@ -2546,7 +2549,7 @@ app.post('/api/trades', async (req, res) => {
         if (!currentUser) return res.status(404).json({ success: false, message: 'User not found. Please log in again.' });
 
         const ad = mongoose.Types.ObjectId.isValid(adId) ? await Ad.findById(adId) : null;
-        if (!ad || ad.status !== 'active') {
+        if (!ad || ad.status !== 'active' || ad.totalAmount <= 0.0001) {
             return res.status(400).json({ success: false, message: 'This ad is no longer available.' });
         }
 
@@ -2561,6 +2564,25 @@ app.post('/api/trades', async (req, res) => {
             adOwner = await User.findOne({ userId: String(ad.userId) }).select('-password -kycData -bscPrivateKey');
         }
         if (!adOwner) return res.status(404).json({ success: false, message: 'Advertiser not found.' });
+
+        // 🛑 1. ነጋዴው በአሁኑ ሰዓት በሌላ ትሬድ ላይ ከሆነ "This trader is on another trade" ብሎ መከልከል 🛑
+        const ownerEmail = (adOwner.email || '').toLowerCase();
+        const activeTradeForTrader = await Trade.findOne({
+            $or: [
+                { adId: ad._id },
+                { buyerId: adOwner._id },
+                { sellerId: adOwner._id },
+                ...(ownerEmail ? [{ buyerEmail: ownerEmail }, { sellerEmail: ownerEmail }] : [])
+            ],
+            status: { $in: ['funds_locked', 'payment_sent', 'disputed'] }
+        }).select('_id').lean();
+
+        if (activeTradeForTrader) {
+            return res.status(400).json({
+                success: false,
+                message: 'This trader is on another trade. Please wait until they finish.'
+            });
+        }
 
         const usdtNum = Number(usdtAmount);
         const etbNum = Number(etbAmount);
@@ -2591,12 +2613,11 @@ app.post('/api/trades', async (req, res) => {
             buyerUser = currentUser;
             sellerUser = adOwner;
 
+            // ከሻጩ ፖስት (ad.totalAmount) ላይ የተገዛውን መጠን መቀነስ
             if (ad.totalAmount >= sellerTotalDeductedUsdt) {
-                // ከማስታወቂያው ላይ የንግዱን መጠን + የሻጩን 0.5% ኮሚሽን መቀነስ
                 deductedFromAdUsdt = sellerTotalDeductedUsdt;
                 ad.totalAmount = Number((ad.totalAmount - sellerTotalDeductedUsdt).toFixed(6));
             } else {
-                // ገዢው በማስታወቂያው ላይ ያለውን ሙሉ USDT (Max) ከገዛው
                 deductedFromAdUsdt = Number(ad.totalAmount.toFixed(6));
                 const neededFeeFromWallet = Number((sellerTotalDeductedUsdt - deductedFromAdUsdt).toFixed(6));
                 ad.totalAmount = 0;
@@ -2613,15 +2634,14 @@ app.post('/api/trades', async (req, res) => {
                         }
                     });
                 } else {
-                    // ሻጩ ዋሌት ላይ ተጨማሪ ባላንስ ከሌለው፣ የሻጩ도 0.5% ኮሚሽን ከዚያው ከተቆለፈው USDT ላይ ይቆረጣል
                     deductedFromWalletUsdt = 0;
                     sellerTotalDeductedUsdt = deductedFromAdUsdt;
                     netUsdtForBuyer = Math.max(0, Number((deductedFromAdUsdt - sellerFeeUsdt - buyerFeeUsdt).toFixed(6)));
                 }
             }
 
-            // በማስታወቂያው ላይ የቀረው USDT ከ Minimum Limit በታች ከሆነ ወደ ሻጩ ዋሌት መልሶ ከማርኬት ማውጣት!
-            await checkAdMinLimitAndCleanUp(ad, sellerUser._id);
+            // ✅ ፖስቱን ሳያጠፋ ቀሪውን USDT እዛው ፖስቱ ላይ እንዳለ ያስቀራል!
+            await checkAdMinLimitAndCleanUp(ad);
 
         } else {
             // ተጠቃሚው "Sell" ብሏል -> አሁን የሚሸጠው ሰው ሻጭ (Seller) ነው፣ ማስታወቂያው የገዢ (Buy Ad) ነው
@@ -2636,10 +2656,8 @@ app.post('/api/trades', async (req, res) => {
             }
 
             if (sellerAvail >= sellerTotalDeductedUsdt) {
-                // ከሻጩ ዋሌት ላይ የንግዱን መጠን (usdtNum) + የሻጩን 0.5% ኮሚሽን (sellerFeeUsdt) መቀነስ!
                 deductedFromWalletUsdt = sellerTotalDeductedUsdt;
             } else {
-                // ሻጩ ሙሉ ባላንሱን (Max) እየሸጠ ከሆነ፣ ሙሉውን ቀንሶ የሁለቱንም 0.5% ኮሚሽን ከውስጡ መቁረጥ!
                 deductedFromWalletUsdt = sellerAvail;
                 sellerTotalDeductedUsdt = sellerAvail;
                 netUsdtForBuyer = Math.max(0, Number((sellerAvail - sellerFeeUsdt - buyerFeeUsdt).toFixed(6)));
@@ -2654,7 +2672,9 @@ app.post('/api/trades', async (req, res) => {
 
             deductedFromAdUsdt = usdtNum;
             ad.totalAmount = Math.max(0, Number((ad.totalAmount - usdtNum).toFixed(6)));
-            await checkAdMinLimitAndCleanUp(ad, null);
+
+            // ✅ ፖስቱን ሳያጠፋ ቀሪውን USDT እዛው ፖስቱ ላይ እንዳለ ያስቀራል!
+            await checkAdMinLimitAndCleanUp(ad);
         }
 
         const sellerPayments = Array.isArray(sellerUser.paymentMethods) ? sellerUser.paymentMethods : [];
