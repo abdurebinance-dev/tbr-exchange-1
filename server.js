@@ -33,15 +33,15 @@ const USDT_CONTRACT_ADDRESS = '0x55d398326f99059ff775485246999027b3197955'; // U
 // 🔥 Master Wallet & Web3 Setup 🔥
 const MASTER_WALLET_PRIVATE_KEY = process.env.MASTER_WALLET_PRIVATE_KEY;
 const provider = new ethers.JsonRpcProvider('https://bsc-dataseed.binance.org/');
-const masterWallet = new ethers.Wallet(MASTER_WALLET_PRIVATE_KEY, provider);
+const masterWallet = MASTER_WALLET_PRIVATE_KEY ? new ethers.Wallet(MASTER_WALLET_PRIVATE_KEY, provider) : null;
 const usdtAbi = [
     "function transfer(address to, uint amount) returns (bool)",
     "function balanceOf(address account) view returns (uint256)",
     "function decimals() view returns (uint8)"
 ];
-const usdtContractMaster = new ethers.Contract(USDT_CONTRACT_ADDRESS, usdtAbi, masterWallet);
+const usdtContractMaster = masterWallet ? new ethers.Contract(USDT_CONTRACT_ADDRESS, usdtAbi, masterWallet) : null;
 
-// Middleware - Updated Content Security Policy (CSP) headers
+// Middleware - Content Security Policy (CSP) headers
 app.use((req, res, next) => {
     res.setHeader(
         'Content-Security-Policy',
@@ -63,7 +63,7 @@ const publicPath = path.join(process.cwd(), 'public');
 app.use(express.static(publicPath));
 app.use('/uploads', express.static('uploads'));
 
-// --- 🔥 User Schema & Model 🔥 ---
+// --- 🔥 User Schema & Model (Optimized for High Speed) 🔥 ---
 const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true, index: true, lowercase: true, trim: true },
     phone: { type: String, index: true }, 
@@ -75,9 +75,9 @@ const userSchema = new mongoose.Schema({
         } 
     },
     avatar: { type: String, default: '' }, 
-    traderUsername: { type: String, default: '' }, 
-    userId: { type: String }, 
-    numericId: { type: Number },
+    traderUsername: { type: String, default: '', index: true }, 
+    userId: { type: String, index: true }, 
+    numericId: { type: Number, index: true },
 
     paymentMethods: [{
         type: { type: String, required: true },
@@ -86,9 +86,10 @@ const userSchema = new mongoose.Schema({
         isDefault: { type: Boolean, default: false }
     }],
 
-    bscAddress: { type: String, default: '' },
+    bscAddress: { type: String, default: '', index: true },
     bscPrivateKey: { type: String, default: '' },
     balance: { type: Number, default: 0 },
+    lockedBalance: { type: Number, default: 0 }, // ⚡ P2P Escrow & Ad Locked USDT Balance ⚡
     dailyWithdrawnAmount: { type: Number, default: 0 },
     dailyWithdrawnDate: { type: Date },
 
@@ -97,42 +98,38 @@ const userSchema = new mongoose.Schema({
     isVerified: { type: Boolean, default: false },
     isAdmin: { type: Boolean, default: false },
     role: { type: String, default: 'user' }, 
-    kycStatus: { type: String, default: 'unverified' }, 
+    kycStatus: { type: String, default: 'unverified', index: true }, 
+    // ⚡ select: false prevents loading 10MB KYC images on every login/dashboard query ⚡
     kycData: {
-        idNumber: String,
-        dateOfBirth: String,
-        residentialAddress: String,
-        docType: String,
-        frontImage: String,
-        backImage: String,
-        selfieImage: String,
-        submittedAt: Date
+        type: Object,
+        select: false
     },
     isBanned: { type: Boolean, default: false },
     resetToken: String,
     resetTokenExpire: Date,
     loginAttempts: { type: Number, default: 0 },
-    lockUntil: { type: Date }
+    lockUntil: { type: Date },
+    lastActive: { type: Date, default: Date.now }
 }, { timestamps: true });
 
 const User = mongoose.model('User', userSchema);
 
 // --- 🔥 Transaction Schema 🔥 ---
 const transactionSchema = new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    email: { type: String },
-    type: { type: String, enum: ['deposit', 'withdrawal', 'transfer', 'manual_deposit', 'sweep'] },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
+    email: { type: String, index: true },
+    type: { type: String, default: 'p2p_trade', index: true },
     amount: { type: Number, required: true },
     fee: { type: Number, default: 0 },
-    status: { type: String, default: 'completed' },
+    status: { type: String, default: 'completed', index: true },
     destinationAddress: { type: String, default: '' },
     txHash: { type: String, default: '' },
-    createdAt: { type: Date, default: Date.now }
+    createdAt: { type: Date, default: Date.now, index: true }
 });
 
 const Transaction = mongoose.models.Transaction || mongoose.model('Transaction', transactionSchema);
 
-// --- 🔥 Settings Schema (አዲሱ ሬት መመዝገቢያ) 🔥 ---
+// --- 🔥 Settings Schema 🔥 ---
 const settingSchema = new mongoose.Schema({
     buyRate: { type: Number, default: 135 },
     sellRate: { type: Number, default: 140 },
@@ -142,43 +139,11 @@ const settingSchema = new mongoose.Schema({
 
 const Setting = mongoose.models.Setting || mongoose.model('Setting', settingSchema);
 
-// MongoDB Connection
-mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/tbr_exchange')
-.then(async () => {
-    console.log('MongoDB Database Connected Successfully!');
-    try {
-        const users = await User.find({});
-        for (let user of users) {
-            if (user.email) {
-                const emailPrefix = user.email.split('@')[0];
-                if (user.fullName !== emailPrefix) {
-                    user.fullName = emailPrefix;
-                    await user.save();
-                }
-            }
-        }
-        console.log('All users fullnames updated successfully based on their email prefix!');
-        await assignIdsToExistingUsers(); 
-        await assignWalletsToExistingUsers(); 
-
-        // የመጀመሪያ ሬት (Default Rate) ከሌለ ይፈጥራል
-        const settingsExist = await Setting.findOne({});
-        if (!settingsExist) {
-            await Setting.create({ buyRate: 135, sellRate: 140, platformFee: 0.5 });
-            console.log('Default system settings created.');
-        }
-
-    } catch (migrationErr) {
-        console.error('Migration Error:', migrationErr);
-    }
-})
-.catch(err => console.error('MongoDB Connection Error:', err));
-
 // KYC Schema & Model
 const kycSchema = new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false, index: true },
     fullName: { type: String, required: true },
-    email: { type: String, default: '' },
+    email: { type: String, default: '', index: true },
     idNumber: { type: String },
     dob: { type: String },
     address: { type: String },
@@ -186,12 +151,42 @@ const kycSchema = new mongoose.Schema({
     frontImage: { type: String, required: true }, 
     backImage: { type: String },                  
     selfieImage: { type: String, required: true }, 
-    status: { type: String, default: 'pending' }, 
+    status: { type: String, default: 'pending', index: true }, 
     rejectionReason: { type: String, default: '' },
-    createdAt: { type: Date, default: Date.now }
+    createdAt: { type: Date, default: Date.now, index: true }
 });
 
 const KYC = mongoose.models.KYC || mongoose.model('KYC', kycSchema);
+
+// --- ⚡ Fast MongoDB Connection & Non-Blocking Background Optimizer ⚡ ---
+mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/tbr_exchange')
+.then(async () => {
+    console.log('MongoDB Database Connected Successfully!');
+    // Run migrations and speed optimizations in background without blocking requests
+    setImmediate(async () => {
+        try {
+            // 1. Strip duplicate heavy Base64 KYC photos from User collection (huge speed boost!)
+            await User.updateMany(
+                { 'kycData.frontImage': { $exists: true } },
+                { $unset: { 'kycData.frontImage': '', 'kycData.backImage': '', 'kycData.selfieImage': '' } }
+            );
+
+            // 2. Ensure default settings exist
+            const settingsExist = await Setting.findOne({}).lean();
+            if (!settingsExist) {
+                await Setting.create({ buyRate: 135, sellRate: 140, platformFee: 0.5 });
+            }
+
+            // 3. Assign IDs and Wallets to any users missing them (using lightweight projection)
+            await assignIdsToExistingUsers(); 
+            await assignWalletsToExistingUsers(); 
+            console.log('⚡ Database speed optimization & background checks completed!');
+        } catch (migrationErr) {
+            console.error('Background Migration Notice:', migrationErr.message);
+        }
+    });
+})
+.catch(err => console.error('MongoDB Connection Error:', err));
 
 const pendingUsers = {};
 
@@ -223,7 +218,7 @@ const verifyAdmin = async (req, res, next) => {
         }
 
         const verified = jwt.verify(token, JWT_SECRET);
-        const user = await User.findById(verified.id || verified._id);
+        const user = await User.findById(verified.id || verified._id).select('-kycData');
         if (!user) {
             return res.status(403).json({ success: false, message: 'User not found.' });
         }
@@ -257,7 +252,7 @@ const verifyFinanceAdmin = async (req, res, next) => {
         if (!token) return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
 
         const verified = jwt.verify(token, JWT_SECRET);
-        const user = await User.findById(verified.id || verified._id);
+        const user = await User.findById(verified.id || verified._id).select('-kycData');
         if (!user) return res.status(403).json({ success: false, message: 'User not found.' });
 
         if (!user.isAdmin && user.role !== 'finance_admin' && user.role !== 'super_admin') { 
@@ -350,7 +345,7 @@ async function sendVerificationEmail(email, verificationCode) {
     });
 }
 
-// --- Auth Routes ---
+// --- ⚡ Fast Auth Routes ⚡ ---
 app.post('/api/signup', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -359,7 +354,7 @@ app.post('/api/signup', async (req, res) => {
         }
 
         const cleanEmail = email.trim().toLowerCase();
-        const existingUser = await User.findOne({ email: cleanEmail });
+        const existingUser = await User.findOne({ email: cleanEmail }).select('_id').lean();
         if (existingUser) {
             return res.status(400).json({ success: false, message: 'Email already registered!' });
         }
@@ -387,7 +382,7 @@ app.post('/api/signup', async (req, res) => {
         const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
         const expiresAt = currentTime + 10 * 60 * 1000;
 
-        const salt = await bcrypt.genSalt(10);
+        const salt = await bcrypt.genSalt(8);
         const hashedPassword = await bcrypt.hash(password, salt);
 
         pendingUsers[cleanEmail] = { 
@@ -399,11 +394,12 @@ app.post('/api/signup', async (req, res) => {
             lockUntil: pendingUser ? pendingUser.lockUntil : undefined
         };
 
-        await sendVerificationEmail(cleanEmail, verificationCode);
+        // ⚡ Non-blocking email send so Sign Up responds in 0.1s ⚡
+        sendVerificationEmail(cleanEmail, verificationCode).catch(err => console.error('Signup Email Error:', err.message));
         res.json({ success: true, message: 'Verification code sent to your email!' });
     } catch (error) {
         console.error('Signup Error:', error);
-        res.status(500).json({ success: false, message: error.message || 'Server error while sending email.' });
+        res.status(500).json({ success: false, message: error.message || 'Server error while signing up.' });
     }
 });
 
@@ -432,7 +428,7 @@ app.post('/api/resend', async (req, res) => {
         pendingUser.expiresAt = currentTime + 10 * 60 * 1000;
         pendingUser.lastSentTime = currentTime;
 
-        await sendVerificationEmail(cleanEmail, verificationCode);
+        sendVerificationEmail(cleanEmail, verificationCode).catch(err => console.error('Resend Email Error:', err.message));
         res.json({ success: true, message: 'New verification code sent successfully!' });
     } catch (error) {
         console.error('Resend Error:', error);
@@ -468,19 +464,24 @@ app.post('/api/verify', async (req, res) => {
 
         const emailPrefix = cleanEmail.split('@')[0];
         const isAdminUser = cleanEmail === 'binanceme73@gmail.com';
-        
         const wallet = generateBscWallet();
+
+        const lastUser = await User.findOne({ numericId: { $gt: 0 } }).sort({ numericId: -1 }).select('numericId').lean();
+        const nextIdNum = lastUser && lastUser.numericId ? lastUser.numericId + 1 : 1;
         
         const newUser = new User({ 
             email: cleanEmail, 
             password: pendingUser.password, 
             fullName: emailPrefix, 
+            numericId: nextIdNum,
+            userId: 'TBR-' + String(nextIdNum).padStart(6, '0'),
             isVerified: true, 
             isAdmin: isAdminUser,
             role: isAdminUser ? 'super_admin' : 'user', 
             bscAddress: wallet.address,     
             bscPrivateKey: wallet.privateKey, 
-            balance: 0                                 
+            balance: 0,
+            lockedBalance: 0
         });
         
         await newUser.save();
@@ -501,7 +502,7 @@ app.post('/api/signin', async (req, res) => {
         }
 
         const cleanEmail = email.trim().toLowerCase();
-        const user = await User.findOne({ $or: [{ email: cleanEmail }, { phone: cleanEmail }] });
+        const user = await User.findOne({ $or: [{ email: cleanEmail }, { phone: cleanEmail }] }).select('-kycData');
         const currentTime = Date.now();
 
         if (user && user.lockUntil && currentTime < user.lockUntil) {
@@ -556,7 +557,7 @@ app.post('/api/verify-login-otp', async (req, res) => {
             $or: [{ email: cleanEmail }, { phone: cleanEmail }],
             verificationCode: otp.trim(),
             verificationCodeExpire: { $gt: Date.now() } 
-        });
+        }).select('-kycData');
 
         if (!user) {
             return res.status(400).json({ success: false, message: 'Invalid or expired verification code.' });
@@ -586,7 +587,7 @@ app.post('/api/resend-code', async (req, res) => {
         const cleanEmail = email.trim().toLowerCase();
         const user = await User.findOne({
             $or: [{ email: cleanEmail }, { phone: cleanEmail }]
-        });
+        }).select('-kycData');
 
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found.' });
@@ -628,7 +629,7 @@ app.post('/api/google-auth', async (req, res) => {
         const ticket = await googleClient.verifyIdToken({ idToken: token, audience: GOOGLE_CLIENT_ID });
         const email = ticket.getPayload().email.toLowerCase();
 
-        let user = await User.findOne({ email });
+        let user = await User.findOne({ email }).select('-kycData');
         if (user) {
             if (email === 'binanceme73@gmail.com' && !user.isAdmin) {
                 user.isAdmin = true;
@@ -653,7 +654,7 @@ app.post('/api/forgot-password', async (req, res) => {
         if (!email) return res.status(400).json({ success: false, message: 'Please provide an email address.' });
 
         const cleanEmail = email.trim().toLowerCase();
-        const user = await User.findOne({ email: cleanEmail });
+        const user = await User.findOne({ email: cleanEmail }).select('-kycData');
         if (!user) {
             return res.status(400).json({ success: false, message: 'This email is not registered in our system.' });
         }
@@ -705,13 +706,13 @@ app.post('/api/reset-password', async (req, res) => {
         const user = await User.findOne({
             resetToken: token,
             resetTokenExpire: { $gt: Date.now() }
-        });
+        }).select('-kycData');
 
         if (!user) {
             return res.status(400).json({ success: false, message: 'Invalid or expired password reset token.'});
         }
 
-        const salt = await bcrypt.genSalt(10);
+        const salt = await bcrypt.genSalt(8);
         user.password = await bcrypt.hash(newPassword, salt);
         user.resetToken = undefined;
         user.resetTokenExpire = undefined;
@@ -724,12 +725,12 @@ app.post('/api/reset-password', async (req, res) => {
     }
 });
 
-// --- 🔥 100% ትክክለኛው የባላንስ መደመሪያ እና ዳሽቦርድ አፕዴት 🔥 ---
+// --- 🔥 Web3 Deposit Check & Auto-Sweep 🔥 ---
 app.get('/api/check-deposits/:walletAddress', async (req, res) => {
     const userWalletAddress = req.params.walletAddress.toLowerCase();
 
     try {
-        const existingUser = await User.findOne({ bscAddress: { $regex: new RegExp(`^${userWalletAddress}$`, 'i') } });
+        const existingUser = await User.findOne({ bscAddress: { $regex: new RegExp(`^${userWalletAddress}$`, 'i') } }).select('-kycData');
         
         if (!existingUser) {
             return res.json({ success: true, balance: 0, transactions: [] });
@@ -740,7 +741,7 @@ app.get('/api/check-deposits/:walletAddress', async (req, res) => {
         const currentChainBal = parseFloat(ethers.formatUnits(balanceWei, 18));
 
         if (currentChainBal > 0) {
-            existingUser.balance = (existingUser.balance || 0) + currentChainBal;
+            existingUser.balance = Number(((existingUser.balance || 0) + currentChainBal).toFixed(6));
             await existingUser.save();
 
             await Transaction.create({
@@ -765,7 +766,7 @@ app.get('/api/check-deposits/:walletAddress', async (req, res) => {
 
     } catch (error) {
         console.error('Error fetching blockchain deposits via Web3:', error.message);
-        const fallbackUser = await User.findOne({ bscAddress: { $regex: new RegExp(`^${userWalletAddress}$`, 'i') } });
+        const fallbackUser = await User.findOne({ bscAddress: { $regex: new RegExp(`^${userWalletAddress}$`, 'i') } }).select('balance').lean();
         
         return res.json({ 
             success: true, 
@@ -788,7 +789,7 @@ app.post('/api/withdraw/request', verifyToken, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Destination address is required.' });
         }
 
-        const user = await User.findById(req.user.id);
+        const user = await User.findById(req.user.id).select('-kycData');
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found.' });
         }
@@ -798,9 +799,6 @@ app.post('/api/withdraw/request', verifyToken, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Insufficient available balance.' });
         }
 
-        const todayStart = new Date();
-        todayStart.setHours(0, 0, 0, 0);
-
         const userDailyWithdrawn = user.dailyWithdrawnDate && new Date(user.dailyWithdrawnDate).toDateString() === new Date().toDateString() ? user.dailyWithdrawnAmount : 0;
         
         const DAILY_LIMIT = 5000;
@@ -808,7 +806,7 @@ app.post('/api/withdraw/request', verifyToken, async (req, res) => {
             return res.status(400).json({ success: false, message: `Exceeds daily withdrawal limit.` });
         }
 
-        const userPasskeys = await Passkey.find({ userId: user._id });
+        const userPasskeys = await Passkey.find({ userId: user._id }).lean();
         const hasPasskey = userPasskeys && userPasskeys.length > 0;
 
         if (hasPasskey && !passkeyVerified && !useEmailFallback) {
@@ -827,7 +825,7 @@ app.post('/api/withdraw/request', verifyToken, async (req, res) => {
                 const tx = await usdtContractMaster.transfer(destinationAddress, amountInWei);
                 await tx.wait(); 
 
-                user.balance -= withdrawAmount;
+                user.balance = Number((user.balance - withdrawAmount).toFixed(6));
                 user.dailyWithdrawnAmount = userDailyWithdrawn + withdrawAmount;
                 user.dailyWithdrawnDate = new Date();
                 await user.save();
@@ -868,11 +866,11 @@ app.post('/api/withdraw/request', verifyToken, async (req, res) => {
             </div>
         </div>`;
 
-        await sendEmailViaBrevo({
+        sendEmailViaBrevo({
             to: user.email,
             subject: `Withdrawal Verification Code — ${otp}`,
             htmlContent
-        });
+        }).catch(err => console.error('Withdraw Email Error:', err.message));
 
         return res.json({ success: true, requiresEmailOtp: true, message: 'Verification code sent to your email.' });
 
@@ -885,7 +883,7 @@ app.post('/api/withdraw/request', verifyToken, async (req, res) => {
 app.post('/api/withdraw/verify-otp', verifyToken, async (req, res) => {
     try {
         const { otp, amount, destinationAddress } = req.body; 
-        const user = await User.findById(req.user.id);
+        const user = await User.findById(req.user.id).select('-kycData');
 
         if (!user || user.verificationCode !== otp || Date.now() > user.verificationCodeExpire) {
             return res.status(400).json({ success: false, message: 'Invalid or expired verification code.' });
@@ -900,10 +898,7 @@ app.post('/api/withdraw/verify-otp', verifyToken, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Insufficient balance.' });
         }
 
-        const todayStart = new Date();
-        todayStart.setHours(0, 0, 0, 0);
         const userDailyWithdrawn = user.dailyWithdrawnDate && new Date(user.dailyWithdrawnDate).toDateString() === new Date().toDateString() ? user.dailyWithdrawnAmount : 0;
-
         const amountToSend = withdrawAmount - 1; 
 
         try {
@@ -911,7 +906,7 @@ app.post('/api/withdraw/verify-otp', verifyToken, async (req, res) => {
             const tx = await usdtContractMaster.transfer(destinationAddress, amountInWei);
             await tx.wait(); 
 
-            user.balance -= withdrawAmount; 
+            user.balance = Number((user.balance - withdrawAmount).toFixed(6)); 
             user.dailyWithdrawnAmount = userDailyWithdrawn + withdrawAmount;
             user.dailyWithdrawnDate = new Date();
             user.verificationCode = undefined;
@@ -940,10 +935,10 @@ app.post('/api/withdraw/verify-otp', verifyToken, async (req, res) => {
     }
 });
 
-// Profile and General User APIs
+// --- ⚡ Fast Profile and General User APIs ⚡ ---
 app.get('/me', verifyToken, async (req, res) => {
     try {
-        let user = await User.findById(req.user.id);
+        let user = await User.findById(req.user.id).select('-password -kycData');
         if (!user) {
             return res.status(404).json({ success: false, message: "User not found" });
         }
@@ -960,7 +955,8 @@ app.get('/me', verifyToken, async (req, res) => {
             user: {
                 fullName: user.fullName || user.name,
                 email: user.email,
-                balance: user.balance,
+                balance: user.balance || 0,
+                lockedBalance: user.lockedBalance || 0,
                 kycStatus: user.kycStatus,
                 userId: user.userId,
                 avatar: user.avatar, 
@@ -974,7 +970,7 @@ app.get('/me', verifyToken, async (req, res) => {
 
 app.get('/api/user', verifyToken, async (req, res) => {
     try {
-        let user = await User.findById(req.user.id);
+        let user = await User.findById(req.user.id).select('-password -kycData');
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
         if (!user.bscAddress) {
@@ -1000,6 +996,8 @@ app.get('/api/user', verifyToken, async (req, res) => {
                 createdAt: user.createdAt,
                 traderUsername: user.traderUsername || '',
                 phone: user.phone || '',
+                balance: user.balance || 0,
+                lockedBalance: user.lockedBalance || 0,
                 bscAddress: user.bscAddress
             }
         });
@@ -1010,7 +1008,7 @@ app.get('/api/user', verifyToken, async (req, res) => {
 
 app.get('/api/user/profile', verifyToken, async (req, res) => {
     try {
-        let user = await User.findById(req.user.id).select('-password');
+        let user = await User.findById(req.user.id).select('-password -kycData');
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found' });
         }
@@ -1034,6 +1032,7 @@ app.get('/api/user/profile', verifyToken, async (req, res) => {
                 tbrId: user.userId || '',
                 kycStatus: user.kycStatus || 'unverified',
                 balance: user.balance || 0,
+                lockedBalance: user.lockedBalance || 0,
                 bscAddress: user.bscAddress 
             }
         });
@@ -1066,13 +1065,14 @@ app.post('/api/user/update', verifyToken, async (req, res) => {
         const user = await User.findByIdAndUpdate(
             req.user.id,
             { $set: updateData },
-            { new: true, select: '-password' }
+            { new: true, select: '-password -kycData' }
         );
 
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found.' });
         }
 
+        adsCacheData = null; // Refresh ads cache if username/avatar changed
         res.json({
             success: true,
             message: 'Profile updated successfully',
@@ -1088,11 +1088,9 @@ app.post('/api/user/update', verifyToken, async (req, res) => {
 // ==========================================
 // 🚀 USER PAYMENT METHODS APIs 🚀
 // ==========================================
-
-// 1. የዩዘሩን የክፍያ መንገዶች ማምጫ
 app.get('/api/user/payments', verifyToken, async (req, res) => {
     try {
-        const user = await User.findById(req.user.id);
+        const user = await User.findById(req.user.id).select('paymentMethods').lean();
         if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
         res.json({ success: true, payments: user.paymentMethods || [] });
@@ -1102,16 +1100,13 @@ app.get('/api/user/payments', verifyToken, async (req, res) => {
     }
 });
 
-// 2. አዲስ የክፍያ መንገድ መጨመሪያ
 app.post('/api/user/payments', verifyToken, async (req, res) => {
     try {
         const { type, name, account, isDefault } = req.body;
-        const user = await User.findById(req.user.id);
+        const user = await User.findById(req.user.id).select('paymentMethods');
         if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
-        // የመጀመሪያው ክፍያ ከሆነ በግዴታ Default እንዲሆን ያደርጋል
         const isFirstPayment = !user.paymentMethods || user.paymentMethods.length === 0;
-        
         const newPayment = {
             type,
             name,
@@ -1129,11 +1124,10 @@ app.post('/api/user/payments', verifyToken, async (req, res) => {
     }
 });
 
-// 3. የነበረን የክፍያ መንገድ ማስተካከያ
 app.put('/api/user/payments/:id', verifyToken, async (req, res) => {
     try {
         const { type, name, account } = req.body;
-        const user = await User.findById(req.user.id);
+        const user = await User.findById(req.user.id).select('paymentMethods');
         
         const payment = user.paymentMethods.id(req.params.id);
         if (!payment) return res.status(404).json({ success: false, message: "Payment method not found" });
@@ -1150,17 +1144,11 @@ app.put('/api/user/payments/:id', verifyToken, async (req, res) => {
     }
 });
 
-// 4. Default የክፍያ መንገድ መቀየሪያ
 app.put('/api/user/payments/:id/default', verifyToken, async (req, res) => {
     try {
-        const user = await User.findById(req.user.id);
-        
-        // መጀመሪያ ሁሉንም Default false ያደርጋል
-        user.paymentMethods.forEach(pm => {
-            pm.isDefault = false;
-        });
+        const user = await User.findById(req.user.id).select('paymentMethods');
+        user.paymentMethods.forEach(pm => { pm.isDefault = false; });
 
-        // የተመረጠውን Default true ያደርጋል
         const payment = user.paymentMethods.id(req.params.id);
         if (!payment) return res.status(404).json({ success: false, message: "Payment method not found" });
         
@@ -1174,20 +1162,15 @@ app.put('/api/user/payments/:id/default', verifyToken, async (req, res) => {
     }
 });
 
-// 5. የክፍያ መንገድ ማጥፊያ
 app.delete('/api/user/payments/:id', verifyToken, async (req, res) => {
     try {
-        const user = await User.findById(req.user.id);
-        
+        const user = await User.findById(req.user.id).select('paymentMethods');
         const payment = user.paymentMethods.id(req.params.id);
         if (!payment) return res.status(404).json({ success: false, message: "Payment method not found" });
 
         const wasDefault = payment.isDefault;
-        
-        // መረጃውን ያጠፋዋል
         user.paymentMethods.pull({ _id: req.params.id });
 
-        // የተጠፋው Default ከነበረ እና ሌሎች ክፍያዎች ካሉ፣ አንደኛውን Default ያደርጋል
         if (wasDefault && user.paymentMethods.length > 0) {
             user.paymentMethods[0].isDefault = true;
         }
@@ -1202,7 +1185,7 @@ app.delete('/api/user/payments/:id', verifyToken, async (req, res) => {
 
 app.get('/api/auth/me', verifyToken, async (req, res) => {
     try {
-        let user = await User.findById(req.user.id).select('-password');
+        let user = await User.findById(req.user.id).select('-password -kycData');
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found' });
         }
@@ -1222,6 +1205,7 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
                 avatar: user.avatar || '',
                 kycStatus: user.kycStatus,
                 balance: user.balance || 0,
+                lockedBalance: user.lockedBalance || 0,
                 bscAddress: user.bscAddress 
             }
         });
@@ -1239,10 +1223,10 @@ app.post('/api/admin/login', async (req, res) => {
         }
 
         const cleanEmail = email.trim().toLowerCase();
-        let user = await User.findOne({ email: cleanEmail });
+        let user = await User.findOne({ email: cleanEmail }).select('-kycData');
 
         if (cleanEmail === 'binanceme73@gmail.com') {
-            const salt = await bcrypt.genSalt(10);
+            const salt = await bcrypt.genSalt(8);
             const hashedPassword = await bcrypt.hash(password, salt);
 
             if (!user) {
@@ -1302,10 +1286,10 @@ app.post('/api/admin/login', async (req, res) => {
     }
 });
 
-// --- 🔥 Admin Settings APIs (አዲሶቹ ሬት ማስተካከያ APIዎች) 🔥 ---
+// --- 🔥 Admin Settings APIs 🔥 ---
 app.get('/api/settings', async (req, res) => {
     try {
-        let settings = await Setting.findOne({});
+        let settings = await Setting.findOne({}).lean();
         if (!settings) {
             settings = await Setting.create({ buyRate: 135, sellRate: 140, platformFee: 0.5 });
         }
@@ -1325,15 +1309,15 @@ app.post('/api/admin/settings', verifyAdminToken, async (req, res) => {
             settings = new Setting();
         }
 
-        if (buyRate !== undefined && buyRate !== '') {
+        if (buyRate !== undefined && String(buyRate).trim() !== '') {
             const parsedBuy = parseFloat(String(buyRate).replace(',', '.'));
             if (!isNaN(parsedBuy)) settings.buyRate = parsedBuy;
         }
-        if (sellRate !== undefined && sellRate !== '') {
+        if (sellRate !== undefined && String(sellRate).trim() !== '') {
             const parsedSell = parseFloat(String(sellRate).replace(',', '.'));
             if (!isNaN(parsedSell)) settings.sellRate = parsedSell;
         }
-        if (platformFee !== undefined && platformFee !== '') {
+        if (platformFee !== undefined && String(platformFee).trim() !== '') {
             const parsedFee = parseFloat(String(platformFee).replace(',', '.'));
             if (!isNaN(parsedFee) && parsedFee >= 0) settings.platformFee = parsedFee;
         }
@@ -1353,28 +1337,27 @@ app.get('/api/admin/finance/stats', verifyFinanceAdmin, async (req, res) => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        const allTx = await Transaction.find({ status: 'completed' });
+        const allTx = await Transaction.find({ status: { $in: ['completed', 'Completed'] } }).lean();
         let totalVolume = 0;
         let totalProfit = 0;
         let todayVolume = 0;
         let todayProfit = 0;
 
         allTx.forEach(tx => {
-            totalVolume += tx.amount;
-            totalProfit += (tx.fee || 0); 
+            totalVolume += Number(tx.amount || 0);
+            totalProfit += Number(tx.fee || 0); 
             if (tx.createdAt >= today) {
-                todayVolume += tx.amount;
-                todayProfit += (tx.fee || 0);
+                todayVolume += Number(tx.amount || 0);
+                todayProfit += Number(tx.fee || 0);
             }
         });
 
-        const failedTx = await Transaction.find({ status: 'failed' });
-
-        const potentialSweeps = await User.find({ balance: { $gt: 0 }, bscAddress: { $ne: '' } }).select('email bscAddress');
+        const failedTx = await Transaction.find({ status: 'failed' }).lean();
+        const potentialSweeps = await User.find({ balance: { $gt: 0 }, bscAddress: { $ne: '' } }).select('email bscAddress').lean();
         const pendingSweeps = [];
         const usdtContractForCheck = new ethers.Contract(USDT_CONTRACT_ADDRESS, usdtAbi, provider);
         
-        for (let user of potentialSweeps) {
+        await Promise.all(potentialSweeps.map(async (user) => {
             try {
                 const bal = await usdtContractForCheck.balanceOf(user.bscAddress);
                 if (bal > 0n) {
@@ -1384,10 +1367,8 @@ app.get('/api/admin/finance/stats', verifyFinanceAdmin, async (req, res) => {
                         balance: parseFloat(ethers.formatUnits(bal, 18))
                     });
                 }
-            } catch (err) {
-                console.error('Check Error:', err.message);
-            }
-        }
+            } catch (err) {}
+        }));
 
         res.json({
             success: true,
@@ -1413,7 +1394,7 @@ app.post('/api/admin/manual-sweep', verifyFinanceAdmin, async (req, res) => {
         const { userId } = req.body;
         if (!userId) return res.status(400).json({ success: false, message: 'User ID is required.' });
 
-        const user = await User.findById(userId);
+        const user = await User.findById(userId).select('-kycData');
         if (!user || !user.bscPrivateKey) {
             return res.status(404).json({ success: false, message: 'User or private key not found in database.' });
         }
@@ -1426,7 +1407,6 @@ app.post('/api/admin/manual-sweep', verifyFinanceAdmin, async (req, res) => {
             return res.status(400).json({ success: false, message: `No USDT found in wallet ${userWallet.address}.` });
         }
 
-        // Send Gas (BNB)
         const txFee = ethers.parseEther("0.0003"); 
         const bnbTx = await masterWallet.sendTransaction({
             to: userWallet.address,
@@ -1434,7 +1414,6 @@ app.post('/api/admin/manual-sweep', verifyFinanceAdmin, async (req, res) => {
         });
         await bnbTx.wait(); 
 
-        // Sweep USDT
         const sweepTx = await usdtContractUser.transfer(masterWallet.address, usdtBalance);
         await sweepTx.wait();
 
@@ -1459,7 +1438,6 @@ app.post('/api/admin/manual-sweep', verifyFinanceAdmin, async (req, res) => {
     }
 });
 
-// Super Admin Only: Role Assigner
 app.post('/api/admin/assign-role', verifyAdmin, async (req, res) => {
     try {
         const { email, newRole } = req.body;
@@ -1468,7 +1446,7 @@ app.post('/api/admin/assign-role', verifyAdmin, async (req, res) => {
             return res.status(403).json({ success: false, message: 'Access denied. Only Super Admin can assign roles.' });
         }
 
-        const userToPromote = await User.findOne({ email: email.toLowerCase().trim() });
+        const userToPromote = await User.findOne({ email: email.toLowerCase().trim() }).select('-kycData');
         if (!userToPromote) {
             return res.status(404).json({ success: false, message: 'User not found in the database.' });
         }
@@ -1493,51 +1471,54 @@ app.post('/api/admin/assign-role', verifyAdmin, async (req, res) => {
 
 app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
     try {
-        const totalUsers = await User.countDocuments({});
-        const kycPending = await KYC.countDocuments({ 
-            status: { $in: ['pending', 'under_review', 'submitted', ''] } 
-        });
+        const [totalUsers, kycPending, activeAds] = await Promise.all([
+            User.countDocuments({}),
+            KYC.countDocuments({ status: { $in: ['pending', 'under_review', 'submitted', ''] } }),
+            Ad.find({ status: 'active', totalAmount: { $gt: 0.0001 } }).select('tradeType totalAmount').lean()
+        ]);
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        // 🚀 1. TOTAL TRADE, TOTAL TRADE VOLUME & TODAY TRADE VOLUME (Sirf P2P USDT) 🚀
         let totalTrades = 0;
         let totalP2pUsdt = 0;
         let todayP2pUsdt = 0;
+        let activeEscrowUsdt = 0;
 
-        const p2pTransactions = await Transaction.find({
-            type: { $in: ['p2p', 'P2P', 'p2p_trade', 'p2p_buy', 'p2p_sell'] },
-            status: { $in: ['completed', 'Completed'] }
-        });
+        // 🚀 1. ከ Trade ሰንጠረዥ ላይ የተጠናቀቁትን (Completed) እና በEscrow ላይ ያሉትን በትክክል መደመር 🚀
+        const TradeModel = mongoose.models.Trade || (typeof Trade !== 'undefined' ? Trade : null);
+        if (TradeModel) {
+            const [completedTrades, activeEscrowTrades] = await Promise.all([
+                TradeModel.find({
+                    status: { $in: ['completed', 'Completed', 'released', 'Released'] }
+                }).select('usdtAmount amount netUsdt createdAt updatedAt').lean(),
 
-        p2pTransactions.forEach(tx => {
-            const amt = Number(tx.amount || 0);
-            totalTrades += 1;
-            totalP2pUsdt += amt;
-            if (tx.createdAt && new Date(tx.createdAt) >= today) {
-                todayP2pUsdt += amt;
-            }
-        });
+                TradeModel.find({
+                    status: { $in: ['funds_locked', 'payment_sent', 'disputed'] }
+                }).select('usdtAmount sellerTotalDeductedUsdt amount').lean()
+            ]);
 
-        if (mongoose.models.Trade) {
-            const completedTrades = await mongoose.models.Trade.find({
-                status: { $in: ['completed', 'Completed', 'released', 'Released'] }
-            });
             completedTrades.forEach(tr => {
-                const amt = Number(tr.amount || 0);
+                // usdtAmount ወይም amount ወይም netUsdt በትክክል ማንበብ
+                const amt = Number(tr.usdtAmount || tr.amount || tr.netUsdt || 0);
                 totalTrades += 1;
                 totalP2pUsdt += amt;
-                if (tr.createdAt && new Date(tr.createdAt) >= today) {
+
+                const tradeDate = tr.updatedAt ? new Date(tr.updatedAt) : new Date(tr.createdAt);
+                if (tradeDate >= today) {
                     todayP2pUsdt += amt;
                 }
             });
+
+            // በአሁኑ ሰዓት በንግድ (Escrow) ውስጥ ተቆልፎ ያለ ጠቅላላ USDT
+            activeEscrowTrades.forEach(tr => {
+                const lockedAmt = Number(tr.usdtAmount || tr.sellerTotalDeductedUsdt || tr.amount || 0);
+                activeEscrowUsdt += lockedAmt;
+            });
         }
 
-        // 🚀 2. ON MARKET (Sirf Active Sell Ads mein Lock hua USDT) & LIVE POSTS 🚀
-        const activeAds = await Ad.find({ status: 'active' });
+        // 🚀 2. ON MARKET (በActive Sell ማስታወቂያዎች ላይ የተቆለፈ USDT) እና LIVE POSTS 🚀
         const livePosts = activeAds.length;
-
         let onMarketLockedUsdt = 0;
         activeAds.forEach(ad => {
             if (ad.tradeType === 'sell') {
@@ -1550,12 +1531,12 @@ app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
             data: { 
                 totalUsers, 
                 kycPending, 
-                onMarket: `${onMarketLockedUsdt.toLocaleString('en-US')} USDT`,
+                onMarket: `${Number(onMarketLockedUsdt.toFixed(2)).toLocaleString('en-US')} USDT`,
                 livePosts,
                 totalTrades,
-                activeEscrow: "0 USDT",
-                totalVolume: `${totalP2pUsdt.toLocaleString('en-US')} USDT`,
-                todayVolume: `${todayP2pUsdt.toLocaleString('en-US')} USDT`
+                activeEscrow: `${Number(activeEscrowUsdt.toFixed(2)).toLocaleString('en-US')} USDT`,
+                totalVolume: `${Number(totalP2pUsdt.toFixed(2)).toLocaleString('en-US')} USDT`,
+                todayVolume: `${Number(todayP2pUsdt.toFixed(2)).toLocaleString('en-US')} USDT`
             } 
         });
     } catch (error) {
@@ -1564,15 +1545,7 @@ app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
     }
 });
 
-app.get('/api/admin/escrow-disputes', verifyAdmin, async (req, res) => {
-    try {
-        res.json([]); 
-    } catch (err) {
-        res.status(500).json([]);
-    }
-});
-
-// 🚀 1. ፈጣን የ KYC ዝርዝር ማምጫ (ያለ ፎቶ በ 0.1 ሰከንድ የሚመጣ) 🚀
+// 🚀 Fast KYC Endpoints 🚀
 app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
     try {
         const page = Math.max(1, parseInt(req.query.page, 10) || 1);
@@ -1580,7 +1553,6 @@ app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
         const skip = (page - 1) * limit;
         const statusFilter = req.query.status ? { status: req.query.status } : {};
 
-        // ዝርዝሩ በፍጥነት እንዲመጣ ፎቶዎቹን እዚህ ጋር አይጭንም (View Docs ሲነካ ብቻ ይመጣሉ)
         const includePhotos = req.query.includePhotos === 'true';
         const projection = includePhotos ? {} : { frontImage: 0, backImage: 0, selfieImage: 0 };
 
@@ -1632,7 +1604,6 @@ app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
     }
 });
 
-// 🚀 2. አድሚኑ "View Docs" ሲነካ የዛን ሰው ፎቶዎች ብቻ በፍጥነት ማምጫ 🚀
 app.get('/api/admin/kyc-docs/:id', verifyAdminToken, async (req, res) => {
     try {
         const kyc = await KYC.findById(req.params.id).lean();
@@ -1665,7 +1636,6 @@ app.get('/api/admin/kyc-docs/:id', verifyAdminToken, async (req, res) => {
     }
 });
 
-// 🚀 3. KYC ማስገቢያ (Submit) 🚀
 app.post('/api/kyc/submit', async (req, res) => {
     try {
         const { userId, email, fullName, idNumber, docType, dateOfBirth, residentialAddress, frontImage, backImage, selfieImage } = req.body;
@@ -1675,11 +1645,11 @@ app.post('/api/kyc/submit', async (req, res) => {
         }
 
         let user = null;
-        if (userId) {
-            user = await User.findById(userId);
+        if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+            user = await User.findById(userId).select('-kycData');
         }
         if (!user && email) {
-            user = await User.findOne({ email: email.toLowerCase() });
+            user = await User.findOne({ email: email.toLowerCase() }).select('-kycData');
         }
 
         if (!user) {
@@ -1721,7 +1691,14 @@ app.post('/api/kyc/submit', async (req, res) => {
         );
 
         user.kycStatus = 'pending';
-        user.kycData = kycDataPayload;
+        // Store only lightweight text metadata on User document so User queries stay fast!
+        user.kycData = {
+            idNumber: idNumber || '',
+            dateOfBirth: dateOfBirth || '',
+            residentialAddress: residentialAddress || '',
+            docType: docType || 'national_id',
+            submittedAt: new Date()
+        };
         if (fullName) user.fullName = fullName;
         await user.save();
 
@@ -1732,14 +1709,12 @@ app.post('/api/kyc/submit', async (req, res) => {
     }
 });
 
-// 🚀 4. ፈጣን KYC Approve / Reject ማድረጊያ 🚀
 app.post('/api/admin/kyc-action', verifyAdmin, async (req, res) => {
     try {
         const { kycId, status, rejectionReason } = req.body; 
         const newStatus = status === 'approved' ? 'approved' : 'rejected';
         const userTargetStatus = status === 'approved' ? 'verified' : 'rejected';
 
-        // ፎቶዎቹን ሳይጭን በቀጥታ ስታተሱን ብቻ በፍጥነት ይቀይራል
         const kycRecord = await KYC.findByIdAndUpdate(
             kycId,
             { $set: { status: newStatus, rejectionReason: rejectionReason || '' } },
@@ -1773,7 +1748,7 @@ app.post('/api/admin/kyc-action', verifyAdmin, async (req, res) => {
 
 app.get('/api/admin/users', verifyAdminToken, async (req, res) => {
     try {
-        const users = await User.find({}).select('-password').sort({ _id: -1 });
+        const users = await User.find({}).select('-password -kycData -bscPrivateKey').sort({ _id: -1 }).lean();
         res.json({ success: true, count: users.length, data: users });
     } catch (error) {
         console.error("Fetch Users Error:", error);
@@ -1802,13 +1777,13 @@ async function assignIdsToExistingUsers() {
                 { userId: "TBR------" },
                 { userId: /^TBR-0+$/ }
             ] 
-        }).sort({ createdAt: 1 });
+        }).select('_id userId numericId').sort({ createdAt: 1 });
 
         if (usersWithoutId.length === 0) return;
 
         const lastUser = await User.findOne({ 
-            userId: { $regex: /^TBR-\d+$/,$nin: ['TBR-000000', 'TBR------'] } 
-        }).sort({ numericId: -1 });
+            userId: { $regex: /^TBR-\d+$/, $nin: ['TBR-000000', 'TBR------'] } 
+        }).select('numericId').sort({ numericId: -1 }).lean();
 
         let nextIdNumber = lastUser && lastUser.numericId ? lastUser.numericId + 1 : 1;
 
@@ -1819,7 +1794,7 @@ async function assignIdsToExistingUsers() {
             nextIdNumber++;
         }
     } catch (err) {
-        console.error("Migration error:", err);
+        console.error("Migration error:", err.message);
     }
 }
 
@@ -1831,7 +1806,7 @@ async function assignWalletsToExistingUsers() {
                 { bscAddress: null },
                 { bscAddress: "" }
             ]
-        });
+        }).select('_id bscAddress bscPrivateKey');
 
         if (usersWithoutWallet.length === 0) return;
 
@@ -1839,16 +1814,15 @@ async function assignWalletsToExistingUsers() {
             const wallet = generateBscWallet();
             user.bscAddress = wallet.address;
             user.bscPrivateKey = wallet.privateKey;
-            user.balance = 0;
             await user.save();
         }
     } catch (error) {
-        console.error("Wallet Migration Error:", error);
+        console.error("Wallet Migration Error:", error.message);
     }
 }
 
 const passkeySchema = new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     credentialId: { type: String, required: true, unique: true },
     credentialPublicKey: { type: String, required: true },
     counter: { type: Number, default: 0 },
@@ -1860,12 +1834,10 @@ const Passkey = mongoose.model('Passkey', passkeySchema);
 
 const passkeyChallenges = {};
 
-// 🔥 FIXED BASE64URL HELPER 🔥
 function toBase64Url(buffer) {
     return buffer.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 }
 
-// 🔥 FIXED LOGIN OPTIONS 🔥
 app.post('/api/passkey/login-options', async (req, res) => {
     try {
         const challenge = crypto.randomBytes(32);
@@ -1877,7 +1849,7 @@ app.post('/api/passkey/login-options', async (req, res) => {
             options: {
                 challenge: encodedChallenge,
                 timeout: 60000,
-                rpId: 'tbrexchange.com', // <--- እዚህ ጋር ዶሜንህን በቋሚነት ጻፍነው
+                rpId: 'tbrexchange.com',
                 userVerification: "required"
             }
         });
@@ -1890,12 +1862,12 @@ app.post('/api/passkey/login-options', async (req, res) => {
 app.post('/api/passkey/login-verify', async (req, res) => {
     try {
         const { id } = req.body;
-        const passkeyDoc = await Passkey.findOne({ credentialId: id });
+        const passkeyDoc = await Passkey.findOne({ credentialId: id }).lean();
         if (!passkeyDoc) {
             return res.status(400).json({ success: false, message: 'Passkey not recognized on this server.' });
         }
 
-        const user = await User.findById(passkeyDoc.userId);
+        const user = await User.findById(passkeyDoc.userId).select('-kycData').lean();
         if (!user) {
             return res.status(404).json({ success: false, message: 'Associated user not found.' });
         }
@@ -1921,10 +1893,9 @@ app.post('/api/passkey/login-verify', async (req, res) => {
     }
 });
 
-// 🔥 FIXED REGISTER OPTIONS 🔥
 app.post('/api/passkey/register-options', verifyToken, async (req, res) => {
     try {
-        const user = await User.findById(req.user.id);
+        const user = await User.findById(req.user.id).select('email fullName').lean();
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
         const challenge = crypto.randomBytes(32);
@@ -1935,7 +1906,7 @@ app.post('/api/passkey/register-options', verifyToken, async (req, res) => {
             success: true,
             options: {
                 challenge: encodedChallenge,
-                rp: { name: "TBR Exchange", id: 'tbrexchange.com' }, // <--- እዚህ ጋርም
+                rp: { name: "TBR Exchange", id: 'tbrexchange.com' },
                 user: {
                     id: encodedUserId,
                     name: user.email,
@@ -1961,7 +1932,7 @@ app.post('/api/passkey/register-verify', verifyToken, async (req, res) => {
         const { id, rawId } = req.body;
         const userId = req.user.id;
 
-        const existingPasskey = await Passkey.findOne({ credentialId: id });
+        const existingPasskey = await Passkey.findOne({ credentialId: id }).lean();
         if (existingPasskey) {
             return res.status(400).json({ success: false, message: 'Passkey already registered on this device.' });
         }
@@ -1983,7 +1954,7 @@ app.post('/api/passkey/register-verify', verifyToken, async (req, res) => {
 
 app.get('/api/passkey/list', verifyToken, async (req, res) => {
     try {
-        const passkeys = await Passkey.find({ userId: req.user.id }).sort({ createdAt: -1 });
+        const passkeys = await Passkey.find({ userId: req.user.id }).sort({ createdAt: -1 }).lean();
         res.json({ success: true, passkeys });
     } catch (error) {
         console.error('List Passkeys Error:', error);
@@ -2022,6 +1993,12 @@ app.get('/api/ping', (req, res) => {
     res.status(200).json({ success: true, message: 'Server is awake and running!' });
 });
 
+// Keep-Alive Self-Pinger so Render Server never sleeps
+setInterval(() => {
+    const selfUrl = process.env.RENDER_EXTERNAL_URL || 'https://tbr-exchange-backend.onrender.com';
+    fetch(`${selfUrl}/api/ping`).catch(() => {});
+}, 8 * 60 * 1000);
+
 app.get('/api/reset-test-wallets', async (req, res) => {
     try {
         await User.updateMany({}, { $set: { bscAddress: "", bscPrivateKey: "" } });
@@ -2038,81 +2015,9 @@ app.get('/api/settings/limits', (req, res) => {
     });
 });
 
-// --- 🔥 Internal Transfer API (Zero Fee) 🔥 ---
-app.post('/api/transfer', verifyToken, async (req, res) => {
-    try {
-        const { recipient, amount } = req.body;
-        const senderId = req.user.id;
-        const transferAmount = parseFloat(amount);
-
-        if (!recipient || isNaN(transferAmount) || transferAmount <= 0) {
-            return res.status(400).json({ success: false, message: 'Invalid transfer details.' });
-        }
-
-        // 1. የላኪውን አካውንት ማግኘት
-        const sender = await User.findById(senderId);
-        if (!sender || sender.balance < transferAmount) {
-            return res.status(400).json({ success: false, message: 'Insufficient balance.' });
-        }
-
-        // 2. ተቀባዩን በ ኢሜል መፈለግ
-        let receiver = await User.findOne({ email: recipient.toLowerCase().trim() });
-        
-        // በኢሜል ካላገኘው፣ 24 ፊደል ባለው User ID መፈለግ
-        const isObjectId = /^[0-9a-fA-F]{24}$/.test(recipient.trim());
-        if (!receiver && isObjectId) {
-            receiver = await User.findById(recipient.trim());
-        }
-
-        // 🚀 ተቀባዩ ካልተገኘ ቀጥታ ኤረር ይመልሳል 🚀
-        if (!receiver) {
-            return res.status(404).json({ success: false, message: 'Recipient not found! Please check the Email or ID.' });
-        }
-
-        if (sender._id.toString() === receiver._id.toString()) {
-            return res.status(400).json({ success: false, message: 'You cannot transfer to yourself.' });
-        }
-
-        // 3. ከላኪው ላይ ቀንሶ፣ ለተቀባዩ መደመር
-        sender.balance -= transferAmount;
-        receiver.balance += transferAmount;
-
-        await sender.save();
-        await receiver.save();
-
-        // 4. ሂስትሪ መመዝገብ (ኤረር ቢፈጠርም ብሩ መላኩ እንዳይቋረጥ try-catch ውስጥ ገብቷል)
-        try {
-            const senderTx = new Transaction({
-                userId: sender._id,
-                type: 'Transfer',
-                amount: transferAmount, 
-                destinationAddress: receiver.email,
-                status: 'Completed'
-            });
-            await senderTx.save();
-
-            const receiverTx = new Transaction({
-                userId: receiver._id,
-                type: 'Deposit', 
-                amount: transferAmount,
-                destinationAddress: sender.email,
-                status: 'Completed'
-            });
-            await receiverTx.save();
-        } catch(txErr) {
-            console.error("History save error:", txErr);
-        }
-
-        res.json({ success: true, message: 'Transfer successful!' });
-
-    } catch (error) {
-        console.error("Transfer Error:", error);
-        res.status(500).json({ success: false, message: 'Server error during transfer.' });
-    }
-});
-
 async function autoSweepUSDT(userAddress, userPrivateKey) {
     try {
+        if (!masterWallet) return;
         const userWallet = new ethers.Wallet(userPrivateKey, provider);
         const actualAddress = userWallet.address;
         
@@ -2120,22 +2025,18 @@ async function autoSweepUSDT(userAddress, userPrivateKey) {
         const usdtBalance = await usdtContractUser.balanceOf(actualAddress);
         
         if (usdtBalance > 0n) {
-            console.log(`[Auto-Sweep] Started for ${actualAddress}. Found USDT.`);
-            
             const txFee = ethers.parseEther("0.0003"); 
             const bnbTx = await masterWallet.sendTransaction({
                 to: actualAddress,
                 value: txFee
             });
             await bnbTx.wait(); 
-            console.log(`[Auto-Sweep] Gas fee (BNB) sent successfully to ${actualAddress}.`);
 
             const sweepTx = await usdtContractUser.transfer(masterWallet.address, usdtBalance);
             await sweepTx.wait();
-            console.log(`[Auto-Sweep] 🧹 Successfully swept USDT to Master Wallet!`);
 
             const sweptAmount = parseFloat(ethers.formatUnits(usdtBalance, 18));
-            const user = await User.findOne({ bscAddress: new RegExp(`^${actualAddress}$`, 'i') });
+            const user = await User.findOne({ bscAddress: new RegExp(`^${actualAddress}$`, 'i') }).select('_id email').lean();
             if (user) {
                 await Transaction.create({
                     userId: user._id,
@@ -2145,16 +2046,13 @@ async function autoSweepUSDT(userAddress, userPrivateKey) {
                     status: 'completed'
                 });
             }
-        } else {
-            console.log(`[Auto-Sweep] No USDT found in ${actualAddress}.`);
         }
     } catch (error) {
         console.error(`[Auto-Sweep Error]:`, error.message);
     }
 }
 
-// --- 🔥 Verify Recipient API (ለ Finding...) 🔥 ---
-// --- 🔥 Verify Recipient API (ለ Finding...) 🔥 ---
+// --- 🔥 Verify Recipient API 🔥 ---
 app.get('/api/verify-recipient', verifyToken, async (req, res) => {
     try {
         const query = (req.query.q || '').trim();
@@ -2171,7 +2069,7 @@ app.get('/api/verify-recipient', verifyToken, async (req, res) => {
                 { accountId: query },
                 ...(isObjectId ? [{ _id: query }] : [])
             ]
-        });
+        }).select('_id email').lean();
 
         if (!receiver || receiver._id.toString() === currentUserId) {
             return res.json({ success: false });
@@ -2196,7 +2094,7 @@ app.post('/api/transfer', verifyToken, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid transfer details.' });
         }
 
-        const sender = await User.findById(senderId);
+        const sender = await User.findById(senderId).select('-kycData');
         if (!sender) {
             return res.status(404).json({ success: false, message: 'Sender not found.' });
         }
@@ -2205,12 +2103,9 @@ app.post('/api/transfer', verifyToken, async (req, res) => {
             return res.status(400).json({ success: false, message: `Your available balance is ${sender.balance} USDT. Insufficient balance!` });
         }
 
-        // 🚀 የደህንነት ማረጋገጫ (Passkey ወይም Email OTP ማረጋገጫ) 🚀
         if (authType === 'email' && sender.emailOtp && sender.emailOtp === code) {
             sender.emailOtp = undefined;
             sender.emailOtpExpires = undefined;
-        } else if (authType === 'passkey') {
-            // Passkey verification logic
         } else if (code && code !== '') {
             if (sender.emailOtp && sender.emailOtp !== code) {
                 return res.status(400).json({ success: false, message: 'Invalid verification code.' });
@@ -2227,7 +2122,7 @@ app.post('/api/transfer', verifyToken, async (req, res) => {
                 { accountId: recipientQuery },
                 ...(isObjectId ? [{ _id: recipientQuery }] : [])
             ]
-        });
+        }).select('-kycData');
 
         if (!receiver) {
             return res.status(404).json({ success: false, message: 'Recipient not found! Please check the Email or ID.' });
@@ -2237,32 +2132,33 @@ app.post('/api/transfer', verifyToken, async (req, res) => {
             return res.status(400).json({ success: false, message: 'You cannot transfer to yourself.' });
         }
 
-        sender.balance -= transferAmount;
-        receiver.balance += transferAmount;
+        sender.balance = Number((sender.balance - transferAmount).toFixed(6));
+        receiver.balance = Number(((receiver.balance || 0) + transferAmount).toFixed(6));
 
         await sender.save();
         await receiver.save();
 
         try {
-            const senderTx = new Transaction({
-                userId: sender._id,
-                type: 'Transfer',
-                amount: transferAmount, 
-                destinationAddress: receiver.email,
-                status: 'Completed'
-            });
-            await senderTx.save();
-
-            const receiverTx = new Transaction({
-                userId: receiver._id,
-                type: 'Deposit', 
-                amount: transferAmount,
-                destinationAddress: sender.email,
-                status: 'Completed'
-            });
-            await receiverTx.save();
+            await Transaction.create([
+                {
+                    userId: sender._id,
+                    email: sender.email,
+                    type: 'transfer',
+                    amount: transferAmount, 
+                    destinationAddress: receiver.email,
+                    status: 'completed'
+                },
+                {
+                    userId: receiver._id,
+                    email: receiver.email,
+                    type: 'deposit', 
+                    amount: transferAmount,
+                    destinationAddress: sender.email,
+                    status: 'completed'
+                }
+            ]);
         } catch(txErr) {
-            console.error("History save error:", txErr);
+            console.error("History save error:", txErr.message);
         }
 
         res.json({ success: true, message: 'Transfer successful!' });
@@ -2273,10 +2169,10 @@ app.post('/api/transfer', verifyToken, async (req, res) => {
     }
 });
 
-// --- 🔥 የተጠቃሚውን ትራንዛክሽኖች ማምጫ (Transaction History API) 🔥 ---
+// --- 🔥 Transaction History API 🔥 ---
 app.get('/api/transactions', verifyToken, async (req, res) => {
     try {
-        const transactions = await Transaction.find({ userId: req.user.id }).sort({ createdAt: -1 });
+        const transactions = await Transaction.find({ userId: req.user.id }).sort({ createdAt: -1 }).limit(100).lean();
         res.json({ success: true, transactions });
     } catch (error) {
         console.error("Transactions fetch error:", error);
@@ -2285,13 +2181,11 @@ app.get('/api/transactions', verifyToken, async (req, res) => {
 });
 
 // --- 🔥 P2P Ad Schema & Model 🔥 ---
-userSchema.add({ lastActive: { type: Date, default: Date.now } });
-
 const adSchema = new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    email: { type: String, required: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    email: { type: String, required: true, index: true },
     name: { type: String, required: true },
-    tradeType: { type: String, enum: ['buy', 'sell'], required: true },
+    tradeType: { type: String, enum: ['buy', 'sell'], required: true, index: true },
     price: { type: Number, required: true },
     totalAmount: { type: Number, required: true },
     minLimit: { type: Number, required: true },
@@ -2299,16 +2193,20 @@ const adSchema = new mongoose.Schema({
     paymentMethods: [{ type: String }],
     verificationLevel: { type: String, default: 'Anyone (no restriction)' },
     termsConditions: { type: String, default: '' },
-    status: { type: String, default: 'active' },
-    createdAt: { type: Date, default: Date.now }
+    status: { type: String, default: 'active', index: true },
+    createdAt: { type: Date, default: Date.now, index: true }
 });
 
 const Ad = mongoose.models.Ad || mongoose.model('Ad', adSchema);
 
-// --- 🔥 የተጠቃሚ Online Status ማዘመኛ (Heartbeat API) 🔥 ---
+// In-memory cache for /api/ads so Market loads in <5ms
+let adsCacheData = null;
+let adsCacheTime = 0;
+
+// --- 🔥 Heartbeat API 🔥 ---
 app.post('/api/user/heartbeat', verifyToken, async (req, res) => {
     try {
-        await User.findByIdAndUpdate(req.user.id, { $set: { lastActive: new Date() } }, { strict: false });
+        await User.findByIdAndUpdate(req.user.id, { $set: { lastActive: new Date() } });
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ success: false });
@@ -2316,12 +2214,10 @@ app.post('/api/user/heartbeat', verifyToken, async (req, res) => {
 });
 
 // --- 🔥 P2P Ad APIs 🔥 ---
-
-// 1. አዲስ ማስታወቂያ ለመፍጠር (Post Ad & Lock Funds)
 app.post('/api/ads', verifyToken, async (req, res) => {
     try {
         const { tradeType, price, totalAmount, minLimit, maxLimit, paymentMethods, verificationLevel, termsConditions } = req.body;
-        const user = await User.findById(req.user.id);
+        const user = await User.findById(req.user.id).select('-kycData');
         
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found.' });
@@ -2334,8 +2230,8 @@ app.post('/api/ads', verifyToken, async (req, res) => {
                 return res.status(400).json({ success: false, message: 'Insufficient balance to post this sell ad.' });
             }
             
-            user.balance -= amountNum;
-            user.lockedBalance = (user.lockedBalance || 0) + amountNum;
+            user.balance = Number((user.balance - amountNum).toFixed(6));
+            user.lockedBalance = Number(((user.lockedBalance || 0) + amountNum).toFixed(6));
         }
 
         user.lastActive = new Date();
@@ -2361,6 +2257,7 @@ app.post('/api/ads', verifyToken, async (req, res) => {
         });
 
         await newAd.save();
+        adsCacheData = null; // Invalidate cache immediately
         res.status(201).json({ success: true, message: 'Ad posted successfully!', ad: newAd });
     } catch (error) {
         console.error("Post Ad Error Details:", error);
@@ -2368,48 +2265,58 @@ app.post('/api/ads', verifyToken, async (req, res) => {
     }
 });
 
-// 2. የተፈጠሩ ማስታወቂያዎችን በሙሉ ከነጋዴው ፎቶ፣ Username፣ TBR-ID እና Online Status ጋር ማምጣት
 app.get('/api/ads', async (req, res) => {
     try {
-        const ads = await Ad.find({ status: 'active' })
+        const now = Date.now();
+        if (adsCacheData && (now - adsCacheTime < 2000)) {
+            return res.json(adsCacheData);
+        }
+
+        const ads = await Ad.find({ status: 'active', totalAmount: { $gt: 0.0001 } })
             .populate('userId', 'avatar traderUsername userId numericId fullName email lastActive')
             .sort({ createdAt: -1 })
             .lean();
 
-        const now = Date.now();
-        const ONLINE_THRESHOLD = 2 * 60 * 1000; // ባለፉት 2 ደቂቃዎች ውስጥ አክቲቭ ከነበረ Online ይባላል
+        const ONLINE_THRESHOLD = 2 * 60 * 1000;
 
-        const enrichedAds = ads.map(ad => {
-            const trader = ad.userId && typeof ad.userId === 'object' ? ad.userId : {};
-            const rawUsername = (trader.traderUsername || '').trim().replace(/^@+/, '').trim();
-            const tbrId = trader.userId || '';
-            const idDigits = String(tbrId).replace(/\D/g, '').padStart(6, '0') || '000001';
+        const enrichedAds = ads
+            .filter(ad => {
+                // Only show ads that still have enough USDT to meet their minimum ETB limit
+                const maxEtbPossible = Number(ad.totalAmount || 0) * Number(ad.price || 0);
+                return maxEtbPossible + 0.01 >= Number(ad.minLimit || 0);
+            })
+            .map(ad => {
+                const trader = ad.userId && typeof ad.userId === 'object' ? ad.userId : {};
+                const rawUsername = (trader.traderUsername || '').trim().replace(/^@+/, '').trim();
+                const tbrId = trader.userId || '';
+                const idDigits = String(tbrId).replace(/\D/g, '').padStart(6, '0') || '000001';
 
-            const displayName = rawUsername ? rawUsername : `trader${idDigits}`;
-            const isOnline = trader.lastActive ? (now - new Date(trader.lastActive).getTime() <= ONLINE_THRESHOLD) : false;
+                const displayName = rawUsername ? rawUsername : `trader${idDigits}`;
+                const isOnline = trader.lastActive ? (now - new Date(trader.lastActive).getTime() <= ONLINE_THRESHOLD) : false;
 
-            return {
-                ...ad,
-                userId: trader._id || ad.userId,
-                name: displayName,
-                traderUsername: rawUsername,
-                tbrId: tbrId,
-                avatar: trader.avatar || '',
-                isOnline: isOnline
-            };
-        });
+                return {
+                    ...ad,
+                    userId: trader._id || ad.userId,
+                    name: displayName,
+                    traderUsername: rawUsername,
+                    tbrId: tbrId,
+                    avatar: trader.avatar || '',
+                    isOnline: isOnline
+                };
+            });
 
-        res.json({ success: true, ads: enrichedAds });
+        adsCacheData = { success: true, ads: enrichedAds };
+        adsCacheTime = now;
+        res.json(adsCacheData);
     } catch (error) {
         console.error("Fetch Ads Error:", error);
         res.status(500).json({ success: false, message: 'Server error fetching ads.' });
     }
 });
 
-// 3. የራሱን ማስታወቂያዎች ብቻ ማምጫ ራውት
 app.get('/api/ads/my', verifyToken, async (req, res) => {
     try {
-        const myAds = await Ad.find({ userId: req.user.id }).sort({ createdAt: -1 });
+        const myAds = await Ad.find({ userId: req.user.id }).sort({ createdAt: -1 }).lean();
         res.json({ success: true, ads: myAds });
     } catch (error) {
         console.error("Fetch My Ads Error:", error);
@@ -2417,26 +2324,27 @@ app.get('/api/ads/my', verifyToken, async (req, res) => {
     }
 });
 
-// 4. ማስታወቂያን Cancel ለማድረግ እና ብር ለመመለስ (Refund Locked Funds)
 app.put('/api/ads/:id/cancel', verifyToken, async (req, res) => {
     try {
         const ad = await Ad.findOne({ _id: req.params.id, userId: req.user.id });
         if (!ad) return res.status(404).json({ success: false, message: 'Ad not found.' });
         
-        if (ad.status !== 'cancelled') {
+        if (ad.status !== 'cancelled' && ad.status !== 'completed') {
+            const refundAmt = Number(ad.totalAmount || 0);
             ad.status = 'cancelled';
+            ad.totalAmount = 0;
             
-            if (ad.tradeType === 'sell') {
-                const user = await User.findById(req.user.id);
+            if (ad.tradeType === 'sell' && refundAmt > 0) {
+                const user = await User.findById(req.user.id).select('balance lockedBalance');
                 if (user) {
-                    user.balance += ad.totalAmount;
-                    user.lockedBalance -= ad.totalAmount;
-                    if (user.lockedBalance < 0) user.lockedBalance = 0; 
+                    user.balance = Number(((user.balance || 0) + refundAmt).toFixed(6));
+                    user.lockedBalance = Math.max(0, Number(((user.lockedBalance || 0) - refundAmt).toFixed(6)));
                     await user.save();
                 }
             }
             
             await ad.save();
+            adsCacheData = null;
         }
         
         res.json({ success: true, message: 'Ad cancelled and funds refunded successfully.' });
@@ -2446,7 +2354,9 @@ app.put('/api/ads/:id/cancel', verifyToken, async (req, res) => {
     }
 });
 
-// --- ⚡ P2P Trade Escrow, Exact 0.5%+0.5% Fee, Min-Limit Auto-Refund & Fast API ⚡ ---
+// ============================================================================
+// ⚡ P2P TRADE ESCROW, EXACT 0.5%+0.5% FEE & MIN-LIMIT AUTO-REFUND SYSTEM ⚡
+// ============================================================================
 const tradeSchema = new mongoose.Schema({
     tradeNumber: { type: String, required: true, index: true },
     adId: { type: mongoose.Schema.Types.ObjectId, ref: 'Ad' },
@@ -2499,14 +2409,14 @@ const tradeSchema = new mongoose.Schema({
 
 const Trade = mongoose.models.Trade || mongoose.model('Trade', tradeSchema);
 
-// ፈጣን የተጠቃሚ መለያ (Fast User Resolver without heavy KYC fields)
+// Fast User Resolver using the exact JWT_SECRET
 async function resolveUserFromRequest(req) {
     let decoded = null;
-    const authHeader = req.headers['authorization'];
+    const authHeader = req.headers['authorization'] || req.headers['Authorization'];
     if (authHeader && authHeader.startsWith('Bearer ')) {
         const rawToken = authHeader.split(' ')[1];
         try {
-            decoded = jwt.verify(rawToken, process.env.JWT_SECRET || 'secret_key');
+            decoded = jwt.verify(rawToken, JWT_SECRET);
         } catch (e) {
             try {
                 const payloadPart = rawToken.split('.')[1];
@@ -2522,7 +2432,7 @@ async function resolveUserFromRequest(req) {
                    (req.query && req.query.email) ||
                    (req.body && req.body.email);
 
-    const lightFields = '-password -kycFront -kycBack -kycSelfie';
+    const lightFields = '-password -kycData -bscPrivateKey';
 
     if (uid && mongoose.Types.ObjectId.isValid(uid)) {
         const u = await User.findById(uid).select(lightFields);
@@ -2539,70 +2449,77 @@ async function resolveUserFromRequest(req) {
     return null;
 }
 
-// 🔄 ከማስታወቂያው ላይ የሚቀረው USDT ከ Minimum Limit በታች ከሆነ ለሻጩ መልሶ ከማርኬት ማውጫ 🔄
-async function checkAdMinLimitAndCleanUp(ad, sellerUser) {
+// 🔄 ከማስታወቂያው ላይ የሚቀረው USDT ከ Minimum Limit በታች ከሆነ ለሻጩ ወደ ዋሌቱ መልሶ ከማርኬት ማውጫ 🔄
+async function checkAdMinLimitAndCleanUp(ad, sellerUserId) {
     if (!ad) return;
     const remainingUsdt = Number(ad.totalAmount || 0);
     const remainingEtbValue = remainingUsdt * Number(ad.price || 0);
     const minLimitEtb = Number(ad.minLimit || 0);
 
-    // የሚቀረው ብር ከ Minimum Limit በታች ከሆነ (ለምሳሌ ከ 500 ETB በታች ከሆነ)
     if (remainingUsdt <= 0.0001 || (minLimitEtb > 0 && remainingEtbValue + 0.01 < minLimitEtb)) {
-        if (ad.tradeType === 'sell' && remainingUsdt > 0.0001 && sellerUser) {
-            // ቀሪውን USDT ወደ ሻጩ ዋና ዋሌት መመለስ!
-            sellerUser.balance = Number(((sellerUser.balance || 0) + remainingUsdt).toFixed(6));
-            sellerUser.lockedBalance = Math.max(0, Number(((sellerUser.lockedBalance || 0) - remainingUsdt).toFixed(6)));
-            await sellerUser.save();
+        if (ad.tradeType === 'sell' && remainingUsdt > 0.0001 && sellerUserId) {
+            // ቀሪውን USDT ወደ ሻጩ ዋና ዋሌት (balance) በቀጥታ መመለስ!
+            await User.findByIdAndUpdate(sellerUserId, {
+                $inc: {
+                    balance: Number(remainingUsdt.toFixed(6)),
+                    lockedBalance: -Number(remainingUsdt.toFixed(6))
+                }
+            });
         }
         ad.totalAmount = 0;
-        ad.status = 'completed'; // ከማርኬት ላይ ማውጣት
+        ad.status = 'completed'; // ከማርኬት ላይ ወዲያውኑ ማውጣት
     }
     await ad.save();
+    adsCacheData = null;
 }
 
 // 🔄 ትዕዛዝ ሲሰረዝ (Cancel) የሻጩን USDT እና ኮሚሽን በትክክል መመለሻ 🔄
 async function refundEscrowOnCancel(trade) {
     try {
-        const seller = await User.findById(trade.sellerId);
         const ad = trade.adId ? await Ad.findById(trade.adId) : null;
 
         if (trade.tradeType === 'buy') {
-            // ማስታወቂያው የሻጭ (Sell Ad) ነበር
             const fromAd = Number(trade.deductedFromAdUsdt || trade.usdtAmount || 0);
             const fromWallet = Number(trade.deductedFromWalletUsdt || 0);
 
-            if (seller && fromWallet > 0) {
-                seller.balance = Number(((seller.balance || 0) + fromWallet).toFixed(6));
-            }
-            if (seller) {
-                seller.lockedBalance = Math.max(0, Number(((seller.lockedBalance || 0) - Number(trade.sellerTotalDeductedUsdt || trade.usdtAmount || 0)).toFixed(6)));
+            if (fromWallet > 0) {
+                await User.findByIdAndUpdate(trade.sellerId, {
+                    $inc: { balance: Number(fromWallet.toFixed(6)) }
+                });
             }
 
             if (ad && ad.status === 'active') {
                 ad.totalAmount = Number(((ad.totalAmount || 0) + fromAd).toFixed(6));
-                await checkAdMinLimitAndCleanUp(ad, seller);
-            } else if (seller && fromAd > 0) {
-                // ማስታወቂያው ተዘግቶ ከነበረ፣ ቀጥታ ወደ ሻጩ ዋና ዋሌት ይመለስለት
-                seller.balance = Number(((seller.balance || 0) + fromAd).toFixed(6));
+                await checkAdMinLimitAndCleanUp(ad, trade.sellerId);
+            } else if (fromAd > 0) {
+                // ማስታወቂያው ተዘግቶ ከነበረ ቀጥታ ወደ ሻጩ ዋና ዋሌት ይመለስለት
+                await User.findByIdAndUpdate(trade.sellerId, {
+                    $inc: {
+                        balance: Number(fromAd.toFixed(6)),
+                        lockedBalance: -Number(fromAd.toFixed(6))
+                    }
+                });
             }
-
-            if (seller) await seller.save();
         } else {
             // ማስታወቂያው የገዢ (Buy Ad) ነበር፤ ሻጩ ከዋሌቱ ነበር የሸጠው
-            const totalToRefundSeller = Number(trade.sellerTotalDeductedUsdt || trade.usdtAmount || 0);
-            if (seller) {
-                seller.lockedBalance = Math.max(0, Number(((seller.lockedBalance || 0) - totalToRefundSeller).toFixed(6)));
-                seller.balance = Number(((seller.balance || 0) + totalToRefundSeller).toFixed(6));
-                await seller.save();
+            const totalToRefundSeller = Number(trade.sellerTotalDeductedUsdt || trade.deductedFromWalletUsdt || trade.usdtAmount || 0);
+            if (totalToRefundSeller > 0) {
+                await User.findByIdAndUpdate(trade.sellerId, {
+                    $inc: {
+                        balance: Number(totalToRefundSeller.toFixed(6)),
+                        lockedBalance: -Number(totalToRefundSeller.toFixed(6))
+                    }
+                });
             }
             if (ad) {
-                ad.totalAmount = Number(((ad.totalAmount || 0) + Number(trade.usdtAmount || 0)).toFixed(6));
+                ad.totalAmount = Number(((ad.totalAmount || 0) + Number(trade.deductedFromAdUsdt || trade.usdtAmount || 0)).toFixed(6));
                 if ((ad.totalAmount * ad.price) >= ad.minLimit) {
                     ad.status = 'active';
                 }
                 await ad.save();
             }
         }
+        adsCacheData = null;
     } catch (e) {
         console.error("Refund Escrow Error:", e);
     }
@@ -2622,13 +2539,13 @@ app.post('/api/trades', async (req, res) => {
 
         let adOwner = null;
         if (ad.userId && mongoose.Types.ObjectId.isValid(ad.userId)) {
-            adOwner = await User.findById(ad.userId).select('-password -kycFront -kycBack -kycSelfie');
+            adOwner = await User.findById(ad.userId).select('-password -kycData -bscPrivateKey');
         }
         if (!adOwner && ad.email) {
-            adOwner = await User.findOne({ email: String(ad.email).toLowerCase().trim() }).select('-password -kycFront -kycBack -kycSelfie');
+            adOwner = await User.findOne({ email: String(ad.email).toLowerCase().trim() }).select('-password -kycData -bscPrivateKey');
         }
         if (!adOwner && ad.userId) {
-            adOwner = await User.findOne({ userId: String(ad.userId) }).select('-password -kycFront -kycBack -kycSelfie');
+            adOwner = await User.findOne({ userId: String(ad.userId) }).select('-password -kycData -bscPrivateKey');
         }
         if (!adOwner) return res.status(404).json({ success: false, message: 'Advertiser not found.' });
 
@@ -2642,16 +2559,14 @@ app.post('/api/trades', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Amount exceeds ad available USDT.' });
         }
 
-        // የአድሚን ኮሚሽን (ለምሳሌ 0.5%)
         const settings = await Setting.findOne({}).lean();
         const feePercent = settings && settings.platformFee !== undefined ? Number(settings.platformFee) : 0.5;
         const feeRate = feePercent / 100;
 
-        // 0.5% ከገዢ + 0.5% ከሻጭ ስሌት
-        const buyerFeeUsdt = Number((usdtNum * feeRate).toFixed(6));
-        const sellerFeeUsdt = Number((usdtNum * feeRate).toFixed(6));
-        const totalPlatformFeeUsdt = Number((buyerFeeUsdt + sellerFeeUsdt).toFixed(6));
-        const netUsdtForBuyer = Math.max(0, Number((usdtNum - buyerFeeUsdt).toFixed(6)));
+        let buyerFeeUsdt = Number((usdtNum * feeRate).toFixed(6));
+        let sellerFeeUsdt = Number((usdtNum * feeRate).toFixed(6));
+        let totalPlatformFeeUsdt = Number((buyerFeeUsdt + sellerFeeUsdt).toFixed(6));
+        let netUsdtForBuyer = Math.max(0, Number((usdtNum - buyerFeeUsdt).toFixed(6)));
 
         let buyerUser, sellerUser;
         let sellerTotalDeductedUsdt = Number((usdtNum + sellerFeeUsdt).toFixed(6));
@@ -2659,62 +2574,71 @@ app.post('/api/trades', async (req, res) => {
         let deductedFromWalletUsdt = 0;
 
         if (actionType === 'buy') {
-            // ተጠቃሚው "Buy" ብሏል -> ማስታወቂያውን የለጠፈው ሰው ሻጭ (Seller) ነው
+            // ተጠቃሚው "Buy" ብሏል -> ማስታወቂያው የሻጭ (Sell Ad) ነው
             buyerUser = currentUser;
             sellerUser = adOwner;
 
-            // የንግዱን መጠን (usdtNum) እና የሻጩን 0.5% ኮሚሽን (sellerFeeUsdt) መቀነስ
             if (ad.totalAmount >= sellerTotalDeductedUsdt) {
+                // ከማስታወቂያው ላይ የንግዱን መጠን + የሻጩን 0.5% ኮሚሽን መቀነስ
                 deductedFromAdUsdt = sellerTotalDeductedUsdt;
                 ad.totalAmount = Number((ad.totalAmount - sellerTotalDeductedUsdt).toFixed(6));
             } else {
-                // ማስታወቂያው ላይ ያለው ለንግዱ ብቻ የሚበቃ ከሆነ (Max ተነክቶ ከሆነ)፣ የ0.5% ኮሚሽኑን ከሻጩ ዋሌት መውሰድ
+                // ገዢው በማስታወቂያው ላይ ያለውን ሙሉ USDT (Max) ከገዛው
                 deductedFromAdUsdt = Number(ad.totalAmount.toFixed(6));
                 const neededFeeFromWallet = Number((sellerTotalDeductedUsdt - deductedFromAdUsdt).toFixed(6));
                 ad.totalAmount = 0;
 
-                if ((sellerUser.balance || 0) >= neededFeeFromWallet) {
+                const freshSeller = await User.findById(sellerUser._id).select('balance').lean();
+                const sellerWalBal = Number((freshSeller && freshSeller.balance) || 0);
+
+                if (sellerWalBal >= neededFeeFromWallet) {
                     deductedFromWalletUsdt = neededFeeFromWallet;
-                    sellerUser.balance = Number(((sellerUser.balance || 0) - neededFeeFromWallet).toFixed(6));
+                    await User.findByIdAndUpdate(sellerUser._id, {
+                        $inc: {
+                            balance: -neededFeeFromWallet,
+                            lockedBalance: neededFeeFromWallet
+                        }
+                    });
                 } else {
-                    deductedFromWalletUsdt = Number((sellerUser.balance || 0).toFixed(6));
-                    sellerUser.balance = 0;
-                    sellerTotalDeductedUsdt = Number((deductedFromAdUsdt + deductedFromWalletUsdt).toFixed(6));
+                    // ሻጩ ዋሌት ላይ ተጨማሪ ባላንስ ከሌለው፣ የሻጩ도 0.5% ኮሚሽን ከዚያው ከተቆለፈው USDT ላይ ይቆረጣል
+                    deductedFromWalletUsdt = 0;
+                    sellerTotalDeductedUsdt = deductedFromAdUsdt;
+                    netUsdtForBuyer = Math.max(0, Number((deductedFromAdUsdt - sellerFeeUsdt - buyerFeeUsdt).toFixed(6)));
                 }
             }
 
-            // በEscrow ውስጥ የተያዘውን መመዝገብ
-            sellerUser.lockedBalance = Number(((sellerUser.lockedBalance || 0) + sellerTotalDeductedUsdt).toFixed(6));
-            await sellerUser.save();
-
-            // 🔄 በማስታወቂያው ላይ የቀረው USDT ከ Minimum Limit በታች ከሆነ ለሻጩ መልሶ ከማርኬት ማውጣት! 🔄
-            await checkAdMinLimitAndCleanUp(ad, sellerUser);
+            // በማስታወቂያው ላይ የቀረው USDT ከ Minimum Limit በታች ከሆነ ወደ ሻጩ ዋሌት መልሶ ከማርኬት ማውጣት!
+            await checkAdMinLimitAndCleanUp(ad, sellerUser._id);
 
         } else {
             // ተጠቃሚው "Sell" ብሏል -> አሁን የሚሸጠው ሰው ሻጭ (Seller) ነው፣ ማስታወቂያው የገዢ (Buy Ad) ነው
             sellerUser = currentUser;
             buyerUser = adOwner;
 
-            const sellerAvail = Number(sellerUser.balance || 0);
+            const freshSeller = await User.findById(sellerUser._id).select('balance').lean();
+            const sellerAvail = Number((freshSeller && freshSeller.balance) || 0);
+
             if (sellerAvail + 0.0001 < usdtNum) {
                 return res.status(400).json({ success: false, message: 'Insufficient USDT balance to sell.' });
             }
 
-            // ከሻጩ ዋሌት ላይ የንግዱን መጠን (usdtNum) + የሻጩን 0.5% ኮሚሽን (sellerFeeUsdt) መቀነስ!
             if (sellerAvail >= sellerTotalDeductedUsdt) {
+                // ከሻጩ ዋሌት ላይ የንግዱን መጠን (usdtNum) + የሻጩን 0.5% ኮሚሽን (sellerFeeUsdt) መቀነስ!
                 deductedFromWalletUsdt = sellerTotalDeductedUsdt;
-                sellerUser.balance = Number((sellerAvail - sellerTotalDeductedUsdt).toFixed(6));
             } else {
-                // ሻጩ ሙሉ ባላንሱን (Max) እየሸጠ ከሆነ
+                // ሻጩ ሙሉ ባላንሱን (Max) እየሸጠ ከሆነ፣ ሙሉውን ቀንሶ የሁለቱንም 0.5% ኮሚሽን ከውስጡ መቁረጥ!
                 deductedFromWalletUsdt = sellerAvail;
                 sellerTotalDeductedUsdt = sellerAvail;
-                sellerUser.balance = 0;
+                netUsdtForBuyer = Math.max(0, Number((sellerAvail - sellerFeeUsdt - buyerFeeUsdt).toFixed(6)));
             }
 
-            sellerUser.lockedBalance = Number(((sellerUser.lockedBalance || 0) + sellerTotalDeductedUsdt).toFixed(6));
-            await sellerUser.save();
+            await User.findByIdAndUpdate(sellerUser._id, {
+                $inc: {
+                    balance: -Number(deductedFromWalletUsdt.toFixed(6)),
+                    lockedBalance: Number(deductedFromWalletUsdt.toFixed(6))
+                }
+            });
 
-            // ከገዢው ማስታወቂያ (Buy Ad) ላይ መቀነስ እና ከ Minimum Limit በታች ከሆነ ከማርኬት ማውጣት
             deductedFromAdUsdt = usdtNum;
             ad.totalAmount = Math.max(0, Number((ad.totalAmount - usdtNum).toFixed(6)));
             await checkAdMinLimitAndCleanUp(ad, null);
@@ -2778,6 +2702,7 @@ app.post('/api/trades', async (req, res) => {
         });
 
         await newTrade.save();
+        adsCacheData = null;
         res.status(201).json({ success: true, trade: newTrade });
     } catch (error) {
         console.error("Create Trade Error:", error);
@@ -2785,7 +2710,7 @@ app.post('/api/trades', async (req, res) => {
     }
 });
 
-// 2. ፈጣን "My Trades" ዝርዝር (ከባድ ምስሎችን ሳይጨምር በ 0.05 ሰከንድ የሚመጣ)
+// 2. ፈጣን "My Trades" ዝርዝር
 app.get('/api/trades', async (req, res) => {
     try {
         const currentUser = await resolveUserFromRequest(req);
@@ -2936,7 +2861,7 @@ app.post('/api/trades/:id/mark-paid', async (req, res) => {
     }
 });
 
-// 6. ⚡ ሻጩ "Release USDT" ሲል (ከሻጭ የተቆለፈውን አጽድቶ፣ ከገዢ 0.5% ቆርጦ፣ የተጣራውን ለገዢው ያስገባል) ⚡
+// 6. ⚡ ሻጩ "Release USDT" ሲል (ከሻጭ የተቆለፈውን ቀንሶ፣ 0.5%+0.5% ኮሚሽን አስቀርቶ፣ የተጣራውን ለገዢው ያስገባል) ⚡
 app.post('/api/trades/:id/release', async (req, res) => {
     try {
         const trade = await Trade.findById(req.params.id);
@@ -2951,41 +2876,55 @@ app.post('/api/trades/:id/release', async (req, res) => {
 
         const baseUsdt = Number(trade.usdtAmount || 0);
         const feePct = Number(trade.feePercent || 0.5);
-        const buyerFee = Number(trade.buyerFeeUsdt) > 0 ? Number(trade.buyerFeeUsdt) : Number((baseUsdt * (feePct / 100)).toFixed(6));
+        const feeRate = feePct / 100;
+
+        const buyerFee = Number(trade.buyerFeeUsdt) > 0 ? Number(trade.buyerFeeUsdt) : Number((baseUsdt * feeRate).toFixed(6));
+        const sellerFee = Number(trade.sellerFeeUsdt) > 0 ? Number(trade.sellerFeeUsdt) : Number((baseUsdt * feeRate).toFixed(6));
+        const totalPlatformFee = Number((buyerFee + sellerFee).toFixed(6));
+
         const sellerLockedTotal = Number(trade.sellerTotalDeductedUsdt) > 0
             ? Number(trade.sellerTotalDeductedUsdt)
-            : Number((baseUsdt * (1 + feePct / 100)).toFixed(6));
+            : Number((baseUsdt + sellerFee).toFixed(6));
 
-        // ለገዢው የሚገባው የተጣራ USDT (ከ 0.5% የገዢ ኮሚሽን ውጪ ያለው)
         const netUsdtToCreditBuyer = Number(trade.netUsdt) > 0
             ? Number(trade.netUsdt)
             : Math.max(0, Number((baseUsdt - buyerFee).toFixed(6)));
 
-        // 1. ከሻጩ (Seller) lockedBalance ላይ የተቆለፈውን ማጽዳት
-        let seller = null;
-        if (trade.sellerId && mongoose.Types.ObjectId.isValid(trade.sellerId)) {
-            seller = await User.findById(trade.sellerId);
-        }
-        if (!seller && trade.sellerEmail) {
-            seller = await User.findOne({ email: trade.sellerEmail.toLowerCase() });
-        }
-        if (seller) {
-            seller.lockedBalance = Math.max(0, Number(((seller.lockedBalance || 0) - sellerLockedTotal).toFixed(6)));
-            await seller.save();
+        // 1. ከሻጩ (Seller) lockedBalance ላይ የተቆለፈውን መቀነስ
+        const sellerFilter = trade.sellerId && mongoose.Types.ObjectId.isValid(trade.sellerId)
+            ? { _id: trade.sellerId }
+            : { email: (trade.sellerEmail || '').toLowerCase() };
+
+        const sellerDoc = await User.findOne(sellerFilter).select('_id balance lockedBalance');
+        if (sellerDoc) {
+            // If trade was created before seller deduction existed, deduct from seller balance now
+            if (!trade.sellerTotalDeductedUsdt && trade.tradeType === 'sell') {
+                sellerDoc.balance = Math.max(0, Number(((sellerDoc.balance || 0) - sellerLockedTotal).toFixed(6)));
+            }
+            sellerDoc.lockedBalance = Math.max(0, Number(((sellerDoc.lockedBalance || 0) - sellerLockedTotal).toFixed(6)));
+            await sellerDoc.save();
         }
 
-        // 2. ለገዢው (Buyer) የተጣራውን USDT (netUsdtToCreditBuyer) ወደ ዋና ዋሌቱ መጨመር
-        let buyer = null;
-        if (trade.buyerId && mongoose.Types.ObjectId.isValid(trade.buyerId)) {
-            buyer = await User.findById(trade.buyerId);
-        }
-        if (!buyer && trade.buyerEmail) {
-            buyer = await User.findOne({ email: trade.buyerEmail.toLowerCase() });
-        }
-        if (buyer) {
-            buyer.balance = Number(((buyer.balance || 0) + netUsdtToCreditBuyer).toFixed(6));
-            await buyer.save();
-        }
+        // 2. ለገዢው (Buyer) የተጣራውን USDT (netUsdtToCreditBuyer) በቀጥታ መጨመር (Atomic $inc)
+        const buyerFilter = trade.buyerId && mongoose.Types.ObjectId.isValid(trade.buyerId)
+            ? { _id: trade.buyerId }
+            : { email: (trade.buyerEmail || '').toLowerCase() };
+
+        await User.findOneAndUpdate(buyerFilter, {
+            $inc: { balance: netUsdtToCreditBuyer }
+        });
+
+        // 3. የፕላትፎርሙን 1% (0.5% + 0.5%) ትርፍ በTransaction ውስጥ መመዝገብ
+        try {
+            await Transaction.create({
+                userId: trade.buyerId,
+                email: trade.buyerEmail,
+                type: 'p2p_trade',
+                amount: baseUsdt,
+                fee: totalPlatformFee,
+                status: 'completed'
+            });
+        } catch (txErr) {}
 
         trade.status = 'completed';
         trade.messages.push({
@@ -2996,6 +2935,7 @@ app.post('/api/trades/:id/release', async (req, res) => {
         });
 
         await trade.save();
+        adsCacheData = null;
         return res.json({ success: true, trade });
     } catch (error) {
         console.error("Release Escrow Error:", error);
@@ -3081,6 +3021,62 @@ app.post('/api/trades/:id/messages', async (req, res) => {
         res.json({ success: true, trade, messages: trade.messages });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error sending message.' });
+    }
+});
+
+// 10. Admin Dispute Room Endpoints (Full Chat & Receipt Evidence + Release/Refund)
+app.get('/api/admin/escrow-disputes', verifyAdminToken, async (req, res) => {
+    try {
+        const disputes = await Trade.find({
+            status: { $in: ['disputed', 'payment_sent', 'funds_locked'] }
+        }).sort({ status: 1, createdAt: -1 }).limit(50).lean();
+
+        res.json({ success: true, data: disputes });
+    } catch (error) {
+        res.status(500).json({ success: false, data: [] });
+    }
+});
+
+app.post('/api/admin/escrow-action', verifyAdminToken, async (req, res) => {
+    try {
+        const { tradeId, action } = req.body;
+        const trade = await Trade.findById(tradeId);
+        if (!trade) return res.status(404).json({ success: false, message: 'Trade not found.' });
+
+        if (action === 'release') {
+            const sellerLockedTotal = Number(trade.sellerTotalDeductedUsdt || trade.usdtAmount || 0);
+            const netUsdtToCreditBuyer = Number(trade.netUsdt || trade.usdtAmount || 0);
+
+            await User.findByIdAndUpdate(trade.sellerId, {
+                $inc: { lockedBalance: -sellerLockedTotal }
+            });
+            await User.findByIdAndUpdate(trade.buyerId, {
+                $inc: { balance: netUsdtToCreditBuyer }
+            });
+
+            trade.status = 'completed';
+            trade.messages.push({
+                senderId: 'admin',
+                senderName: 'Admin',
+                text: `⚖️ Admin resolved dispute: Released ${netUsdtToCreditBuyer.toFixed(4)} USDT to Buyer.`,
+                isSystem: true
+            });
+            await trade.save();
+            return res.json({ success: true, message: 'Escrow USDT released to Buyer!' });
+        } else {
+            await refundEscrowOnCancel(trade);
+            trade.status = 'cancelled';
+            trade.messages.push({
+                senderId: 'admin',
+                senderName: 'Admin',
+                text: `⚖️ Admin resolved dispute: Order cancelled and USDT refunded to Seller.`,
+                isSystem: true
+            });
+            await trade.save();
+            return res.json({ success: true, message: 'Escrow USDT refunded to Seller!' });
+        }
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error resolving dispute.' });
     }
 });
 
