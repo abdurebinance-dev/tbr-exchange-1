@@ -2278,10 +2278,8 @@ app.post('/api/ads', verifyToken, async (req, res) => {
     }
 });
 
-// 1. በ server.js ውስጥ app.get('/api/ads', ...) የሚለውን በዚህ ተካው፦
 app.get('/api/ads', async (req, res) => {
     try {
-        // ⚡ ካሽ (Cache) ሳይጠብቅ ሁልጊዜ የቅርብ ጊዜውን ትክክለኛ ቀሪ USDT እና Limit ወዲያውኑ እንዲያመጣ ⚡
         const ads = await Ad.find({ status: 'active', totalAmount: { $gt: 0.0001 } })
             .populate('userId', 'avatar traderUsername userId numericId fullName email lastActive')
             .sort({ createdAt: -1 })
@@ -2290,37 +2288,41 @@ app.get('/api/ads', async (req, res) => {
         const now = Date.now();
         const ONLINE_THRESHOLD = 2 * 60 * 1000;
 
-        const enrichedAds = ads.map(ad => {
-            const trader = ad.userId && typeof ad.userId === 'object' ? ad.userId : {};
-            const rawUsername = (trader.traderUsername || '').trim().replace(/^@+/, '').trim();
-            const tbrId = trader.userId || '';
-            const idDigits = String(tbrId).replace(/\D/g, '').padStart(6, '0') || '000001';
+        const enrichedAds = ads
+            .filter(ad => {
+                // ቀሪው USDT ነጋዴው ካስቀመጠው Minimum Limit በላይ የሆኑትን ብቻ ማርኬት ላይ ማሳየት
+                const maxPossibleEtb = Number(ad.totalAmount || 0) * Number(ad.price || 0);
+                return maxPossibleEtb + 0.01 >= Number(ad.minLimit || 0);
+            })
+            .map(ad => {
+                const trader = ad.userId && typeof ad.userId === 'object' ? ad.userId : {};
+                const rawUsername = (trader.traderUsername || '').trim().replace(/^@+/, '').trim();
+                const tbrId = trader.userId || '';
+                const idDigits = String(tbrId).replace(/\D/g, '').padStart(6, '0') || '000001';
 
-            const displayName = rawUsername ? rawUsername : `trader${idDigits}`;
-            const isOnline = trader.lastActive ? (now - new Date(trader.lastActive).getTime() <= ONLINE_THRESHOLD) : false;
+                const displayName = rawUsername ? rawUsername : `trader${idDigits}`;
+                const isOnline = trader.lastActive ? (now - new Date(trader.lastActive).getTime() <= ONLINE_THRESHOLD) : false;
 
-            // ✅ ቀሪው USDT በብር ሲሰላ (ለምሳሌ 3.52 * 196 = 689.92 ETB) Max Limit እና Min Limit ወዲያውኑ አብረው እንዲቀንሱ ማድረግ!
-            const availUsdt = Number(ad.totalAmount || 0);
-            const priceEtb = Number(ad.price || 0);
-            const maxPossibleEtb = Number((availUsdt * priceEtb).toFixed(2));
+                const availUsdt = Number(ad.totalAmount || 0);
+                const priceEtb = Number(ad.price || 0);
+                const maxPossibleEtb = Number((availUsdt * priceEtb).toFixed(2));
 
-            const currentMax = Number(ad.maxLimit || maxPossibleEtb);
-            const effectiveMaxLimit = Math.min(currentMax, maxPossibleEtb);
-            const effectiveMinLimit = Math.min(Number(ad.minLimit || 0), effectiveMaxLimit);
+                // ነጋዴው ያስቀመጠው Min Limit አይቀየርም! Max Limit ግን ከቀሪው USDT ጋር አብሮ ይቀንሳል
+                const effectiveMaxLimit = Math.min(Number(ad.maxLimit || maxPossibleEtb), maxPossibleEtb);
 
-            return {
-                ...ad,
-                totalAmount: Number(availUsdt.toFixed(4)),
-                minLimit: effectiveMinLimit,
-                maxLimit: effectiveMaxLimit,
-                userId: trader._id || ad.userId,
-                name: displayName,
-                traderUsername: rawUsername,
-                tbrId: tbrId,
-                avatar: trader.avatar || '',
-                isOnline: isOnline
-            };
-        });
+                return {
+                    ...ad,
+                    totalAmount: Number(availUsdt.toFixed(4)),
+                    minLimit: Number(ad.minLimit || 0),
+                    maxLimit: effectiveMaxLimit,
+                    userId: trader._id || ad.userId,
+                    name: displayName,
+                    traderUsername: rawUsername,
+                    tbrId: tbrId,
+                    avatar: trader.avatar || '',
+                    isOnline: isOnline
+                };
+            });
 
         res.json({ success: true, ads: enrichedAds });
     } catch (error) {
@@ -2464,27 +2466,39 @@ async function resolveUserFromRequest(req) {
     return null;
 }
 
-// 🔄 ትሬድ ሲደረግ ከፖስቱ ላይ USDT ሲቀንስ፣ የፖስቱን Max Limit እና Min Limit በዳታቤዝ ውስጥም ወዲያውኑ ማስተካከያ 🔄
+// 🔄 ቀሪው USDT ነጋዴው ካስቀመጠው Minimum በታች ከሆነ ፖስቱን Cancel አድርጎ ቀሪውን ወደ ዋሌት መመለሻ 🔄
 async function checkAdMinLimitAndCleanUp(ad) {
     if (!ad) return;
     const remainingUsdt = Number(ad.totalAmount || 0);
+    const priceEtb = Number(ad.price || 0);
+    const remainingEtbValue = Number((remainingUsdt * priceEtb).toFixed(2));
+    const sellerMinLimitEtb = Number(ad.minLimit || 0);
 
-    if (remainingUsdt <= 0.0001) {
+    // 1. ቀሪው USDT 0 ከሆነ ወይም በብር ሲሰላ ነጋዴው ካስቀመጠው Minimum Limit በታች ከሆነ
+    if (remainingUsdt <= 0.0001 || (sellerMinLimitEtb > 0 && remainingEtbValue + 0.01 < sellerMinLimitEtb)) {
+        // ማስታወቂያው የSell ከሆነና ቀሪ USDT ካለው፣ ከ "On Market" (lockedBalance) አውጥቶ ወደ ዋናው Wallet (balance) መመለስ!
+        if (ad.tradeType === 'sell' && remainingUsdt > 0.0001 && ad.userId) {
+            const refundUsdt = Number(remainingUsdt.toFixed(6));
+            const sellerDoc = await User.findById(ad.userId).select('balance lockedBalance');
+            if (sellerDoc) {
+                sellerDoc.balance = Number(((sellerDoc.balance || 0) + refundUsdt).toFixed(6));
+                sellerDoc.lockedBalance = Math.max(0, Number(((sellerDoc.lockedBalance || 0) - refundUsdt).toFixed(6)));
+                await sellerDoc.save();
+            }
+        }
+
+        // ፖስቱን በራሱ ጊዜ Cancel ማድረግና ከማርኬት ማውጣት
         ad.totalAmount = 0;
-        ad.status = 'completed';
+        ad.status = 'cancelled';
     } else {
+        // 2. ቀሪው ከ Minimum Limit በላይ ከሆነ ግን ፖስቱ አይጠፋም! (Max Limit ብቻ ከቀሪው USDT ጋር ይስተካከላል)
         ad.totalAmount = Number(remainingUsdt.toFixed(6));
         ad.status = 'active';
-
-        // ቀሪው USDT በብር ሲሰላ (ለምሳሌ 3.52 USDT * 196 = 689.92 ETB) Max Limit ወዲያውኑ ወደ 689.92 ETB እንዲወርድ ማድረግ!
-        const remainingEtbValue = Number((remainingUsdt * Number(ad.price || 0)).toFixed(2));
         if (Number(ad.maxLimit || 0) > remainingEtbValue) {
             ad.maxLimit = remainingEtbValue;
         }
-        if (Number(ad.minLimit || 0) > remainingEtbValue) {
-            ad.minLimit = Math.max(1, Math.floor(remainingEtbValue));
-        }
     }
+
     await ad.save();
     adsCacheData = null;
 }
