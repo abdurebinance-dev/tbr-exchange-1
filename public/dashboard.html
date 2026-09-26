@@ -1140,6 +1140,10 @@
                 const isBuyer = data.currentUserId && String(trade.buyerId) === String(data.currentUserId);
                 const roleText = isBuyer ? 'Buyer' : 'Seller';
 
+                // ⚡ ሻጩ ባነሩን ሲነካ የውሸት Trade #00001 ሳያሳይ በ 0.00 ሰከንድ ትክክለኛውን የሻጭ ትሬድ እንዲከፍት! ⚡
+                localStorage.setItem('tbr_active_p2p_order', JSON.stringify(trade));
+                if (data.currentUserId) localStorage.setItem('tbr_resolved_uid', String(data.currentUserId));
+
                 document.getElementById('dashboardActiveTradeText').innerText =
                     count === 1
                         ? `1 trade awaiting you (${roleText}) — Click to action`

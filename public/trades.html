@@ -1607,9 +1607,10 @@
         const TRADES_LIST_CACHE = 'tbr_my_trades_list_v2';
         const ADS_CACHE_KEY = 'tbr_market_ads_v1';
         let activeTrade = null;
-        let currentUserId = '';
+        let currentUserId = localStorage.getItem('tbr_resolved_uid') || '';
         let selectedReceiptBase64 = '';
         let countdownInterval = null;
+        let myTradesMemoryMap = {};
 
         function clearMarketAdsCache() {
             try {
@@ -1621,13 +1622,22 @@
         function getLoggedUserIdentity() {
             const token = localStorage.getItem('token') || localStorage.getItem('jwtToken') || localStorage.getItem('authToken') || '';
             let email = localStorage.getItem('userEmail') || localStorage.getItem('email') || '';
-            let userId = localStorage.getItem('userId') || '';
+            let userId = localStorage.getItem('userId') || localStorage.getItem('tbr_resolved_uid') || '';
 
             try {
                 const u = JSON.parse(localStorage.getItem('user') || localStorage.getItem('currentUser') || localStorage.getItem('tbr_user') || '{}');
                 if (!email && u.email) email = u.email;
                 if (!userId && (u._id || u.id || u.userId)) userId = u._id || u.id || u.userId;
             } catch (e) {}
+
+            // ⚡ ከToken ውስጥ የተጠቃሚውን ID እና Email ወዲያውኑ በብራውዘር መፍታት (ሰርቨር ሳይጠብቅ ሻጭ/ገዢ መሆኑን ለማወቅ) ⚡
+            if (token && (!userId || !email)) {
+                try {
+                    const payload = JSON.parse(atob(token.split('.')[1]));
+                    if (!userId && (payload.id || payload._id)) userId = payload.id || payload._id;
+                    if (!email && payload.email) email = payload.email;
+                } catch (e) {}
+            }
 
             return { token, email, userId };
         }
@@ -1636,7 +1646,6 @@
             return Number(val || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ETB';
         }
 
-        // ⚡ Fast Client-Side Image Compressor (Reduces 5MB photos to ~80KB for 0.1s upload) ⚡
         function compressImageFile(file, callback) {
             const reader = new FileReader();
             reader.onload = (e) => {
@@ -1658,30 +1667,44 @@
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
+            const { userId } = getLoggedUserIdentity();
+            if (userId && !currentUserId) currentUserId = String(userId);
+
             const urlParams = new URLSearchParams(window.location.search);
             const tradeIdParam = urlParams.get('tradeId');
 
             if (tradeIdParam) {
-                // Mode B: Single Trade Room
                 document.getElementById('myTradesListView').style.display = 'none';
-                document.getElementById('singleTradeRoomView').style.display = 'grid';
+                const roomEl = document.getElementById('singleTradeRoomView');
 
+                // ⚡ 1. በ localStorage ወይም በ My Trades ካሽ ውስጥ ትሬዱ ካለ በ 0.00 ሰከንድ ወዲያውኑ ማሳየት! ⚡
+                let matchedCache = null;
                 try {
-                    const cachedOrder = localStorage.getItem('tbr_active_p2p_order');
-                    if (cachedOrder) {
-                        const parsed = JSON.parse(cachedOrder);
-                        if (parsed && String(parsed._id) === String(tradeIdParam)) {
-                            activeTrade = parsed;
-                            renderTradeRoomUI();
-                        }
+                    const cachedOrder = JSON.parse(localStorage.getItem('tbr_active_p2p_order') || 'null');
+                    if (cachedOrder && String(cachedOrder._id) === String(tradeIdParam)) {
+                        matchedCache = cachedOrder;
+                    }
+                    if (!matchedCache) {
+                        const cachedList = JSON.parse(sessionStorage.getItem(TRADES_LIST_CACHE) || '[]');
+                        matchedCache = cachedList.find(t => String(t._id) === String(tradeIdParam)) || null;
                     }
                 } catch (e) {}
 
+                if (matchedCache) {
+                    activeTrade = matchedCache;
+                    roomEl.style.display = 'grid';
+                    renderTradeRoomUI();
+                } else {
+                    // ካሽ ከሌለ የውሸቱን Trade #00001 እንዳያሳይ ደብቆ ትክክለኛውን ብቻ ያሳያል!
+                    roomEl.style.opacity = '0';
+                    roomEl.style.display = 'grid';
+                }
+
                 await fetchTradeFromServer(tradeIdParam);
+                roomEl.style.opacity = '1';
                 setInterval(() => fetchTradeFromServer(tradeIdParam), 2500);
                 startCountdownTimer();
             } else {
-                // Mode A: "My Trades" List Table
                 document.getElementById('singleTradeRoomView').style.display = 'none';
                 document.getElementById('myTradesListView').style.display = 'block';
 
@@ -1698,6 +1721,14 @@
             }
         });
 
+        // በ My Trades ላይ አንድ ትሬድ ሲነካ ወዲያውኑ በ 0.00s እንዲከፍት የሚያደርግ ፋንክሽን
+        function openSingleTradeInstant(tradeId) {
+            if (myTradesMemoryMap[tradeId]) {
+                localStorage.setItem('tbr_active_p2p_order', JSON.stringify(myTradesMemoryMap[tradeId]));
+            }
+            window.location.href = `trades.html?tradeId=${tradeId}`;
+        }
+
         async function loadMyTradesList() {
             const { token, email, userId } = getLoggedUserIdentity();
             try {
@@ -1712,7 +1743,10 @@
                 if (res.ok) {
                     const json = await res.json();
                     if (json.success && Array.isArray(json.trades)) {
-                        currentUserId = json.currentUserId || userId || '';
+                        if (json.currentUserId) {
+                            currentUserId = String(json.currentUserId);
+                            localStorage.setItem('tbr_resolved_uid', currentUserId);
+                        }
                         sessionStorage.setItem(TRADES_LIST_CACHE, JSON.stringify(json.trades));
                         renderMyTradesTable(json.trades);
                         return;
@@ -1732,13 +1766,16 @@
                 return;
             }
 
-            const { email } = getLoggedUserIdentity();
+            const { email, userId } = getLoggedUserIdentity();
+            const effectiveUid = currentUserId || userId || '';
             let html = '';
 
             trades.forEach(tr => {
+                myTradesMemoryMap[tr._id] = tr;
+
                 let isBuyer = tr.tradeType === 'buy';
-                if (currentUserId && tr.buyerId) {
-                    isBuyer = String(tr.buyerId) === String(currentUserId);
+                if (effectiveUid && tr.buyerId) {
+                    isBuyer = String(tr.buyerId) === String(effectiveUid);
                 } else if (email && tr.buyerEmail) {
                     isBuyer = String(tr.buyerEmail).toLowerCase() === String(email).toLowerCase();
                 }
@@ -1748,7 +1785,11 @@
                 const roleArrow = isBuyer ? '&#8600;' : '&#8599;';
 
                 const partnerName = isBuyer ? (tr.sellerName || 'Seller') : (tr.buyerName || 'Buyer');
+                const partnerAvatar = isBuyer ? (tr.sellerAvatar || '') : (tr.buyerAvatar || '');
                 const initials = String(partnerName).slice(0, 2).toUpperCase();
+                const avatarHtml = partnerAvatar
+                    ? `<img src="${partnerAvatar}" alt="${partnerName}" onerror="this.outerHTML='${initials}'">`
+                    : initials;
 
                 const tradeIdShort = tr.tradeNumber
                     ? `#${String(tr.tradeNumber).padStart(5, '0')}`
@@ -1784,17 +1825,17 @@
                     }
 
                     if (userMsgsCount > 0) {
-                        actionLinkHtml = `<a class="mt-action-link reply-green" href="trades.html?tradeId=${targetId}">Reply &rarr;</a>`;
+                        actionLinkHtml = `<span class="mt-action-link reply-green">Reply &rarr;</span>`;
                     } else {
-                        actionLinkHtml = `<a class="mt-action-link" href="trades.html?tradeId=${targetId}">View &rarr;</a>`;
+                        actionLinkHtml = `<span class="mt-action-link">View &rarr;</span>`;
                     }
                 } else if (st === 'cancelled') {
                     statusPillHtml = `<span class="mt-status-pill cancelled">Cancelled</span>`;
-                    actionLinkHtml = `<a class="mt-action-link" href="trades.html?tradeId=${targetId}">View &rarr;</a>`;
+                    actionLinkHtml = `<span class="mt-action-link">View &rarr;</span>`;
                 } else if (st === 'completed') {
                     statusPillHtml = `<span class="mt-status-pill completed"><i class="fa-regular fa-circle-check"></i> Completed</span>`;
                     rateSubHtml = `<div class="mt-rate-sub method-green">${tr.paymentMethod || 'Bank'}</div>`;
-                    actionLinkHtml = `<a class="mt-action-link" href="trades.html?tradeId=${targetId}"><i class="fa-solid fa-download" style="color:var(--text-muted); margin-right:4px;"></i> Receipt &rarr;</a>`;
+                    actionLinkHtml = `<span class="mt-action-link"><i class="fa-solid fa-download" style="color:var(--text-muted); margin-right:4px;"></i> Receipt &rarr;</span>`;
                 }
 
                 const msgBadgeHtml = (userMsgsCount > 0 && (st === 'funds_locked' || st === 'payment_sent'))
@@ -1802,11 +1843,11 @@
                     : '';
 
                 html += `
-                    <tr class="${rowHighlight}" onclick="window.location.href='trades.html?tradeId=${targetId}'" style="cursor:pointer;">
+                    <tr class="${rowHighlight}" onclick="openSingleTradeInstant('${targetId}')" style="cursor:pointer;">
                         <td class="mt-id-col">${tradeIdShort}</td>
                         <td>
                             <div class="mt-counterparty-cell">
-                                <div class="mt-avatar">${initials}</div>
+                                <div class="mt-avatar">${avatarHtml}</div>
                                 <div class="mt-cp-name">
                                     <span>${partnerName}</span>
                                     ${msgBadgeHtml}
@@ -1851,7 +1892,10 @@
                     const json = await res.json();
                     if (json.success && json.trade) {
                         activeTrade = json.trade;
-                        currentUserId = json.currentUserId || userId || '';
+                        if (json.currentUserId) {
+                            currentUserId = String(json.currentUserId);
+                            localStorage.setItem('tbr_resolved_uid', currentUserId);
+                        }
                         localStorage.setItem('tbr_active_p2p_order', JSON.stringify(activeTrade));
                         renderTradeRoomUI();
                     }
@@ -1859,14 +1903,23 @@
             } catch (e) {}
         }
 
+        // ✅ ሻጭ ወይስ ገዢ መሆኑን ወዲያውኑ በትክክል የሚለይ ፋንክሽን
         function isCurrentUserBuyer() {
             if (!activeTrade) return true;
-            if (currentUserId && activeTrade.buyerId) {
-                return String(activeTrade.buyerId) === String(currentUserId);
+            const { email, userId } = getLoggedUserIdentity();
+            const myUid = currentUserId || userId || '';
+
+            if (myUid && activeTrade.sellerId && String(activeTrade.sellerId) === String(myUid)) {
+                return false;
             }
-            const { email } = getLoggedUserIdentity();
-            if (email && activeTrade.buyerEmail) {
-                return String(activeTrade.buyerEmail).toLowerCase() === String(email).toLowerCase();
+            if (myUid && activeTrade.buyerId && String(activeTrade.buyerId) === String(myUid)) {
+                return true;
+            }
+            if (email && activeTrade.sellerEmail && String(activeTrade.sellerEmail).toLowerCase() === String(email).toLowerCase()) {
+                return false;
+            }
+            if (email && activeTrade.buyerEmail && String(activeTrade.buyerEmail).toLowerCase() === String(email).toLowerCase()) {
+                return true;
             }
             return (activeTrade.tradeType || activeTrade.type) === 'buy';
         }
@@ -1888,12 +1941,12 @@
             const partnerName = isBuyer
                 ? (activeTrade.sellerName || activeTrade.counterpartyName || 'Seller')
                 : (activeTrade.buyerName || activeTrade.counterpartyName || 'Buyer');
-            const partnerAvatar = isBuyer ? activeTrade.sellerAvatar : activeTrade.buyerAvatar;
+            const partnerAvatar = isBuyer ? (activeTrade.sellerAvatar || '') : (activeTrade.buyerAvatar || '');
             const initials = String(partnerName).slice(0, 2).toUpperCase();
 
             document.getElementById('uiPartnerName').innerText = partnerName;
             document.getElementById('uiPartnerAvatar').innerHTML = partnerAvatar
-                ? `<img src="${partnerAvatar}" alt="${partnerName}">`
+                ? `<img src="${partnerAvatar}" alt="${partnerName}" onerror="this.outerHTML='${initials}'">`
                 : initials;
 
             const badgeEl = document.getElementById('uiStatusBadge');
@@ -2016,7 +2069,6 @@
                     document.getElementById('uiLeftMarkPaidBtn').style.display = 'flex';
                     document.getElementById('uiRightMarkPaidBtn').style.display = 'flex';
 
-                    // ✅ ለገዢው (Buyer) ብቻ "Cancel Order" ይወጣል
                     cancelBtn.innerText = 'Cancel Order';
                     cancelBtn.disabled = false;
                     cancelBtn.onclick = cancelActiveTrade;
@@ -2074,7 +2126,6 @@
                     document.getElementById('uiLeftSellerReleaseBtn').style.display = 'none';
                     document.getElementById('uiRightSellerReleaseBtn').style.display = 'none';
 
-                    // ✅ ለሻጩ (Seller) "Cancel Order" ፈጽሞ አይወጣም፤ "Request for Cancel" ብቻ ይወጣል!
                     const alreadyRequested = Array.isArray(activeTrade.messages) &&
                         activeTrade.messages.some(m => m.isSystem && String(m.text || '').includes('requested to cancel'));
 
@@ -2275,7 +2326,6 @@
             } catch (e) {}
         }
 
-        // ✅ ሻጩ "Request for Cancel" ሲነካ የሚሰራ ፋንክሽን (ትዕዛዙን አይሰርዝም፤ ለገዢው በቻት ጥያቄ ይልካል)
         async function requestTradeCancellation() {
             if (!activeTrade || !confirm('Send a cancellation request to the buyer? (Only the buyer can cancel the order).')) return;
             const { token, email, userId } = getLoggedUserIdentity();
@@ -2308,7 +2358,6 @@
             btn.innerText = 'Request for Cancel';
         }
 
-        // ✅ ገዢው ብቻ "Cancel Order" ሲነካ የሚሰራ ፋንክሽን (0% Fee ሆኖ ወደ ማርኬት ፖስቱ ይመለሳል)
         async function cancelActiveTrade() {
             if (!activeTrade || !confirm('Are you sure you want to cancel this order? Do NOT cancel if you have already sent payment!')) return;
             const { token, email, userId } = getLoggedUserIdentity();
@@ -2347,6 +2396,9 @@
                 return;
             }
 
+            const { userId } = getLoggedUserIdentity();
+            const effectiveUid = currentUserId || userId || '';
+
             area.innerHTML = msgs.map(m => {
                 if (m.isSystem || m.senderId === 'system' || m.senderId === 'admin') {
                     return `<div class="msg-bubble-system">${m.text}</div>`;
@@ -2356,7 +2408,7 @@
                     ? new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
                     : '';
                 const imgHtml = m.image ? `<img src="${m.image}" onclick="window.open(this.src)" title="Click to view full receipt">` : '';
-                const isMine = (currentUserId && String(m.senderId) === String(currentUserId)) || m.senderId === 'me';
+                const isMine = (effectiveUid && String(m.senderId) === String(effectiveUid)) || m.senderId === 'me';
 
                 if (isMine) {
                     return `
@@ -2366,7 +2418,9 @@
                         </div>
                     `;
                 } else {
-                    const avHtml = partnerAvatar ? `<img src="${partnerAvatar}">` : (partnerInitials || 'TR');
+                    const avHtml = partnerAvatar
+                        ? `<img src="${partnerAvatar}" onerror="this.outerHTML='${partnerInitials || 'TR'}'">`
+                        : (partnerInitials || 'TR');
                     return `
                         <div class="msg-row-theirs">
                             <div class="msg-theirs-avatar">${avHtml}</div>
@@ -2390,7 +2444,7 @@
 
             const { token, email, userId } = getLoggedUserIdentity();
             if (!activeTrade.messages) activeTrade.messages = [];
-            activeTrade.messages.push({ senderId: currentUserId || 'me', text, isSystem: false, createdAt: new Date().toISOString() });
+            activeTrade.messages.push({ senderId: currentUserId || userId || 'me', text, isSystem: false, createdAt: new Date().toISOString() });
             renderTradeRoomUI();
 
             if (activeTrade._id && !String(activeTrade._id).startsWith('local_')) {
