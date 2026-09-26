@@ -80,7 +80,7 @@
         }
 
         /* =========================================================
-           🚀 1. "MY TRADES" LIST VIEW (Exact Match to Screenshot 4543) 🚀
+           🚀 1. "MY TRADES" LIST VIEW 🚀
            ========================================================= */
         .my-trades-container {
             max-width: 1180px;
@@ -677,6 +677,15 @@
             font-size: 12.5px;
             font-weight: 700;
             cursor: pointer;
+            transition: 0.2s;
+        }
+        .secondary-cancel-btn:hover:not(:disabled) {
+            background: #151a22;
+            color: #ffffff;
+        }
+        .secondary-cancel-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
         .appeal-lock-card {
@@ -1206,7 +1215,7 @@
     </div>
 
     <!-- =========================================================
-         🚀 VIEW A: "MY TRADES" LIST VIEW (Screenshot 4543) 🚀
+         🚀 VIEW A: "MY TRADES" LIST VIEW 🚀
          ========================================================= -->
     <div class="my-trades-container" id="myTradesListView">
         <div class="mt-header-row">
@@ -1427,7 +1436,7 @@
                     <i class="fa-solid fa-xmark" style="color:#9ca3af; font-size:16px; margin-top:2px;"></i>
                     <div>
                         <div style="font-size:13.5px; font-weight:800; color:#d1d5db; margin-bottom:5px;">Trade Cancelled</div>
-                        <div style="font-size:12px; color:var(--text-muted);">This trade was cancelled. Escrowed USDT has been returned to the seller.</div>
+                        <div style="font-size:12px; color:var(--text-muted);">This trade was cancelled. Full USDT (0 fee deducted) has been returned directly to the market ad.</div>
                     </div>
                 </div>
             </div>
@@ -1596,10 +1605,18 @@
     <script>
         const API_BASE = 'https://tbr-exchange-backend.onrender.com';
         const TRADES_LIST_CACHE = 'tbr_my_trades_list_v2';
+        const ADS_CACHE_KEY = 'tbr_market_ads_v1';
         let activeTrade = null;
         let currentUserId = '';
         let selectedReceiptBase64 = '';
         let countdownInterval = null;
+
+        function clearMarketAdsCache() {
+            try {
+                sessionStorage.removeItem(ADS_CACHE_KEY);
+                localStorage.removeItem(ADS_CACHE_KEY);
+            } catch (e) {}
+        }
 
         function getLoggedUserIdentity() {
             const token = localStorage.getItem('token') || localStorage.getItem('jwtToken') || localStorage.getItem('authToken') || '';
@@ -1619,6 +1636,27 @@
             return Number(val || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ETB';
         }
 
+        // ⚡ Fast Client-Side Image Compressor (Reduces 5MB photos to ~80KB for 0.1s upload) ⚡
+        function compressImageFile(file, callback) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const maxW = 900;
+                    const scale = img.width > maxW ? (maxW / img.width) : 1;
+                    canvas.width = Math.round(img.width * scale);
+                    canvas.height = Math.round(img.height * scale);
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    callback(canvas.toDataURL('image/jpeg', 0.72));
+                };
+                img.onerror = () => callback(e.target.result);
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
         document.addEventListener('DOMContentLoaded', async () => {
             const urlParams = new URLSearchParams(window.location.search);
             const tradeIdParam = urlParams.get('tradeId');
@@ -1628,7 +1666,6 @@
                 document.getElementById('myTradesListView').style.display = 'none';
                 document.getElementById('singleTradeRoomView').style.display = 'grid';
 
-                // ⚠️ የድሮ የተሳሳተ Trade እንዳያሳይ፣ IDው አንድ አይነት ከሆነ ብቻ ከCache ያሳያል!
                 try {
                     const cachedOrder = localStorage.getItem('tbr_active_p2p_order');
                     if (cachedOrder) {
@@ -1641,10 +1678,10 @@
                 } catch (e) {}
 
                 await fetchTradeFromServer(tradeIdParam);
-                setInterval(() => fetchTradeFromServer(tradeIdParam), 3000);
+                setInterval(() => fetchTradeFromServer(tradeIdParam), 2500);
                 startCountdownTimer();
             } else {
-                // Mode A: "My Trades" List Table (Instant 0ms load from cache + fast sync)
+                // Mode A: "My Trades" List Table
                 document.getElementById('singleTradeRoomView').style.display = 'none';
                 document.getElementById('myTradesListView').style.display = 'block';
 
@@ -1657,7 +1694,7 @@
                 } catch (e) {}
 
                 await loadMyTradesList();
-                setInterval(loadMyTradesList, 4000);
+                setInterval(loadMyTradesList, 3500);
             }
         });
 
@@ -1954,6 +1991,7 @@
 
             const instCard = document.getElementById('uiInstructionsCard');
             const waitingCard = document.getElementById('uiWaitingStatusCard');
+            const cancelBtn = document.getElementById('uiCancelTradeBtn');
 
             if (isBuyer) {
                 document.getElementById('uiBuyerPayDropdown').style.display = 'block';
@@ -1977,7 +2015,12 @@
                     waitingCard.style.display = 'none';
                     document.getElementById('uiLeftMarkPaidBtn').style.display = 'flex';
                     document.getElementById('uiRightMarkPaidBtn').style.display = 'flex';
-                    document.getElementById('uiCancelTradeBtn').style.display = 'block';
+
+                    // ✅ ለገዢው (Buyer) ብቻ "Cancel Order" ይወጣል
+                    cancelBtn.innerText = 'Cancel Order';
+                    cancelBtn.disabled = false;
+                    cancelBtn.onclick = cancelActiveTrade;
+                    cancelBtn.style.display = 'block';
                 } else {
                     instCard.innerHTML = `
                         <div class="inst-row highlight"><div class="inst-num">1</div><div>Your payment has been marked as sent.</div></div>
@@ -1995,9 +2038,10 @@
 
                     document.getElementById('uiLeftMarkPaidBtn').style.display = 'none';
                     document.getElementById('uiRightMarkPaidBtn').style.display = 'none';
-                    document.getElementById('uiCancelTradeBtn').style.display = 'none';
+                    cancelBtn.style.display = 'none';
                 }
             } else {
+                // SELLER VIEW
                 document.getElementById('uiBuyerPayDropdown').style.display = 'none';
                 document.getElementById('uiLeftMarkPaidBtn').style.display = 'none';
                 document.getElementById('uiRightMarkPaidBtn').style.display = 'none';
@@ -2023,13 +2067,21 @@
                     document.getElementById('uiWaitingSub').innerText = `Verify ${etbFormatted} in your bank app and click "I Have Received" below.`;
                     document.getElementById('uiLeftSellerReleaseBtn').style.display = 'flex';
                     document.getElementById('uiRightSellerReleaseBtn').style.display = 'flex';
-                    document.getElementById('uiCancelTradeBtn').style.display = 'none';
+                    cancelBtn.style.display = 'none';
                 } else {
                     document.getElementById('uiWaitingTitle').innerText = "Waiting for buyer's payment";
                     document.getElementById('uiWaitingSub').innerText = `Your ${usdtFormatted} is secured in escrow.`;
                     document.getElementById('uiLeftSellerReleaseBtn').style.display = 'none';
                     document.getElementById('uiRightSellerReleaseBtn').style.display = 'none';
-                    document.getElementById('uiCancelTradeBtn').style.display = 'block';
+
+                    // ✅ ለሻጩ (Seller) "Cancel Order" ፈጽሞ አይወጣም፤ "Request for Cancel" ብቻ ይወጣል!
+                    const alreadyRequested = Array.isArray(activeTrade.messages) &&
+                        activeTrade.messages.some(m => m.isSystem && String(m.text || '').includes('requested to cancel'));
+
+                    cancelBtn.innerText = alreadyRequested ? 'Cancellation Requested ✓' : 'Request for Cancel';
+                    cancelBtn.disabled = alreadyRequested;
+                    cancelBtn.onclick = requestTradeCancellation;
+                    cancelBtn.style.display = 'block';
                 }
             }
 
@@ -2104,9 +2156,8 @@
         function handleModalReceiptSelect(event) {
             const file = event.target.files[0];
             if (!file) return;
-            const reader = new FileReader();
-            reader.onload = () => {
-                selectedReceiptBase64 = reader.result;
+            compressImageFile(file, (compressedBase64) => {
+                selectedReceiptBase64 = compressedBase64;
                 const preview = document.getElementById('cmReceiptPreviewImg');
                 preview.src = selectedReceiptBase64;
                 preview.style.display = 'block';
@@ -2114,8 +2165,7 @@
                 document.getElementById('cmChangeReceiptBtn').style.display = 'inline-flex';
                 document.getElementById('cmUploadedBadge').style.display = 'inline-flex';
                 document.getElementById('cmConfirmSubmitBtn').disabled = false;
-            };
-            reader.readAsDataURL(file);
+            });
         }
 
         async function submitMarkPaidWithReceipt() {
@@ -2164,7 +2214,6 @@
             document.getElementById('sellerReleaseModal').style.display = 'none';
         }
 
-        // ⚡ FIXED: Instant Seller Release USDT Function ⚡
         async function confirmAndReleaseUsdt() {
             if (!activeTrade) return;
             const { token, email, userId } = getLoggedUserIdentity();
@@ -2186,6 +2235,7 @@
                     activeTrade = json.trade;
                     localStorage.setItem('tbr_active_p2p_order', JSON.stringify(activeTrade));
                     sessionStorage.removeItem('tbr_dash_active_banner_v2');
+                    clearMarketAdsCache();
                     closeSellerReleaseModal();
                     renderTradeRoomUI();
                     return;
@@ -2225,8 +2275,42 @@
             } catch (e) {}
         }
 
+        // ✅ ሻጩ "Request for Cancel" ሲነካ የሚሰራ ፋንክሽን (ትዕዛዙን አይሰርዝም፤ ለገዢው በቻት ጥያቄ ይልካል)
+        async function requestTradeCancellation() {
+            if (!activeTrade || !confirm('Send a cancellation request to the buyer? (Only the buyer can cancel the order).')) return;
+            const { token, email, userId } = getLoggedUserIdentity();
+            const btn = document.getElementById('uiCancelTradeBtn');
+            btn.disabled = true;
+            btn.innerText = 'Requesting Cancel...';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/trades/${activeTrade._id}/request-cancel`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                    },
+                    body: JSON.stringify({ email, userId })
+                });
+                const json = await res.json();
+                if (res.ok && json.success) {
+                    activeTrade = json.trade;
+                    localStorage.setItem('tbr_active_p2p_order', JSON.stringify(activeTrade));
+                    renderTradeRoomUI();
+                    return;
+                } else {
+                    alert((json && json.message) || 'Could not send cancellation request.');
+                }
+            } catch (e) {
+                alert('Network error while sending request.');
+            }
+            btn.disabled = false;
+            btn.innerText = 'Request for Cancel';
+        }
+
+        // ✅ ገዢው ብቻ "Cancel Order" ሲነካ የሚሰራ ፋንክሽን (0% Fee ሆኖ ወደ ማርኬት ፖስቱ ይመለሳል)
         async function cancelActiveTrade() {
-            if (!activeTrade || !confirm('Are you sure you want to cancel this order?')) return;
+            if (!activeTrade || !confirm('Are you sure you want to cancel this order? Do NOT cancel if you have already sent payment!')) return;
             const { token, email, userId } = getLoggedUserIdentity();
             if (activeTrade._id && !String(activeTrade._id).startsWith('local_')) {
                 try {
@@ -2243,14 +2327,15 @@
                         activeTrade = json.trade;
                         localStorage.setItem('tbr_active_p2p_order', JSON.stringify(activeTrade));
                         sessionStorage.removeItem('tbr_dash_active_banner_v2');
+                        clearMarketAdsCache();
                         renderTradeRoomUI();
+                        return;
+                    } else {
+                        alert((json && json.message) || 'Cannot cancel trade.');
                         return;
                     }
                 } catch (e) {}
             }
-            activeTrade.status = 'cancelled';
-            localStorage.setItem('tbr_active_p2p_order', JSON.stringify(activeTrade));
-            renderTradeRoomUI();
         }
 
         function renderChatMessages(partnerAvatar, partnerInitials) {
@@ -2331,9 +2416,7 @@
             const file = event.target.files[0];
             if (!file || !activeTrade) return;
             const { token, email, userId } = getLoggedUserIdentity();
-            const reader = new FileReader();
-            reader.onload = async () => {
-                const base64Img = reader.result;
+            compressImageFile(file, async (compressedBase64) => {
                 if (activeTrade._id && !String(activeTrade._id).startsWith('local_')) {
                     await fetch(`${API_BASE}/api/trades/${activeTrade._id}/messages`, {
                         method: 'POST',
@@ -2341,12 +2424,11 @@
                             'Content-Type': 'application/json',
                             ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                         },
-                        body: JSON.stringify({ text: 'Attachment:', image: base64Img, email, userId })
+                        body: JSON.stringify({ text: 'Attachment:', image: compressedBase64, email, userId })
                     });
                     await fetchTradeFromServer(activeTrade._id);
                 }
-            };
-            reader.readAsDataURL(file);
+            });
         }
 
         function togglePaymentDetailsDropdown() {

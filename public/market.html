@@ -1429,7 +1429,7 @@
             // 3. Background heartbeat & periodic sync
             sendHeartbeat();
             setInterval(sendHeartbeat, 30000);
-            setInterval(fetchLiveAdsFromServer, 15000);
+            setInterval(fetchLiveAdsFromServer, 3000);
             setInterval(fetchAdminSettings, 15000);
         });
 
@@ -1455,7 +1455,7 @@
             if (isFetchingAds) return;
             isFetchingAds = true;
             try {
-                const res = await fetch(`${API_BASE}/api/ads`);
+                const res = await fetch(`${API_BASE}/api/ads?t=${Date.now()}`, { cache: 'no-store' });
                 const json = await res.json();
                 if (json && json.success && Array.isArray(json.ads)) {
                     allServerAds = json.ads;

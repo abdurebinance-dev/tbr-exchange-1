@@ -2280,8 +2280,12 @@ app.post('/api/ads', verifyToken, async (req, res) => {
 
 app.get('/api/ads', async (req, res) => {
     try {
+        // ⚡ ብራውዘሩ የድሮ ፖስቶችን Cache አድርጎ እንዳያቆይ መከልከል ⚡
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+
+        // ⚡ ከባድ Base64 avatar ሳይጭን በ 0.02 ሰከንድ ውስጥ ሁሉንም Active ፖስቶች ማምጣት ⚡
         const ads = await Ad.find({ status: 'active', totalAmount: { $gt: 0.0001 } })
-            .populate('userId', 'avatar traderUsername userId numericId fullName email lastActive')
+            .populate('userId', 'traderUsername userId numericId fullName email lastActive')
             .sort({ createdAt: -1 })
             .lean();
 
@@ -2290,7 +2294,6 @@ app.get('/api/ads', async (req, res) => {
 
         const enrichedAds = ads
             .filter(ad => {
-                // ቀሪው USDT ነጋዴው ካስቀመጠው Minimum Limit በላይ የሆኑትን ብቻ ማርኬት ላይ ማሳየት
                 const maxPossibleEtb = Number(ad.totalAmount || 0) * Number(ad.price || 0);
                 return maxPossibleEtb + 0.01 >= Number(ad.minLimit || 0);
             })
@@ -2300,14 +2303,12 @@ app.get('/api/ads', async (req, res) => {
                 const tbrId = trader.userId || '';
                 const idDigits = String(tbrId).replace(/\D/g, '').padStart(6, '0') || '000001';
 
-                const displayName = rawUsername ? rawUsername : `trader${idDigits}`;
+                const displayName = rawUsername ? rawUsername : (ad.name || `trader${idDigits}`);
                 const isOnline = trader.lastActive ? (now - new Date(trader.lastActive).getTime() <= ONLINE_THRESHOLD) : false;
 
                 const availUsdt = Number(ad.totalAmount || 0);
                 const priceEtb = Number(ad.price || 0);
                 const maxPossibleEtb = Number((availUsdt * priceEtb).toFixed(2));
-
-                // ነጋዴው ያስቀመጠው Min Limit አይቀየርም! Max Limit ግን ከቀሪው USDT ጋር አብሮ ይቀንሳል
                 const effectiveMaxLimit = Math.min(Number(ad.maxLimit || maxPossibleEtb), maxPossibleEtb);
 
                 return {
@@ -2319,7 +2320,7 @@ app.get('/api/ads', async (req, res) => {
                     name: displayName,
                     traderUsername: rawUsername,
                     tbrId: tbrId,
-                    avatar: trader.avatar || '',
+                    avatar: '',
                     isOnline: isOnline
                 };
             });
@@ -2503,16 +2504,17 @@ async function checkAdMinLimitAndCleanUp(ad) {
     adsCacheData = null;
 }
 
-// 🔄 ትዕዛዝ ሲሰረዝ (Cancel) የተቀነሰውን USDT ተመልሶ እዛው ፖስቱ ላይ እንዲደመር ማድረጊያ 🔄
+// 🔄 ትዕዛዝ ሲሰረዝ (Cancel)፦ ምንም ኮሚሽን (0 Fee) ሳይቆረጥ ሙሉው USDT ወደ ማርኬት ፖስቱ (On Market) ይመለሳል! 🔄
 async function refundEscrowOnCancel(trade) {
     try {
         const ad = trade.adId ? await Ad.findById(trade.adId) : null;
 
         if (trade.tradeType === 'buy') {
-            // ማስታወቂያው የሻጭ (Sell Ad) ነበር
+            // ማስታወቂያው የሻጭ (Sell Ad) ነበር፦ ከፖስቱ የተቀነሰውን ሙሉ USDT (ከነ 0.5% ኮሚሽኑ) ወደ ፖስቱ መመለስ!
             const fromAd = Number(trade.deductedFromAdUsdt || trade.usdtAmount || 0);
             const fromWallet = Number(trade.deductedFromWalletUsdt || 0);
 
+            // ከሻጩ ዋሌት ላይ ለኮሚሽን የተወሰደ ነገር ካለ ወደ ዋሌቱ መመለስ
             if (fromWallet > 0) {
                 await User.findByIdAndUpdate(trade.sellerId, {
                     $inc: {
@@ -2522,21 +2524,20 @@ async function refundEscrowOnCancel(trade) {
                 });
             }
 
-            if (ad && ad.status !== 'cancelled') {
-                // ትዕዛዙ ሲሰረዝ የተቀነሰው USDT ተመልሶ እዛው ፖስቱ (Ad) ላይ ይደመራል!
+            if (ad) {
+                // ✅ ወደ ዋሌት ሳይሆን ቀጥታ ወደ ማርኬት ፖስቱ (ad.totalAmount) መመለስና ፖስቱን Active ማድረግ!
                 ad.totalAmount = Number(((ad.totalAmount || 0) + fromAd).toFixed(6));
                 ad.status = 'active';
+
+                // የፖስቱን Max Limit ከተመለሰው USDT ጋር ማስተካከል
+                const restoredEtbVal = Number((ad.totalAmount * Number(ad.price || 0)).toFixed(2));
+                if (Number(ad.maxLimit || 0) < restoredEtbVal) {
+                    ad.maxLimit = restoredEtbVal;
+                }
                 await ad.save();
-            } else if (fromAd > 0) {
-                await User.findByIdAndUpdate(trade.sellerId, {
-                    $inc: {
-                        balance: Number(fromAd.toFixed(6)),
-                        lockedBalance: -Number(fromAd.toFixed(6))
-                    }
-                });
             }
         } else {
-            // ማስታወቂያው የገዢ (Buy Ad) ነበር፤ ሻጩ ከዋሌቱ ነበር የሸጠው
+            // ማስታወቂያው የገዢ (Buy Ad) ነበር፦ ሻጩ ከዋሌቱ ያወጣውን ሙሉ USDT (ያለ ምንም ኮሚሽን ቅነሳ) መመለስ
             const totalToRefundSeller = Number(trade.sellerTotalDeductedUsdt || trade.deductedFromWalletUsdt || trade.usdtAmount || 0);
             if (totalToRefundSeller > 0) {
                 await User.findByIdAndUpdate(trade.sellerId, {
@@ -2546,9 +2547,14 @@ async function refundEscrowOnCancel(trade) {
                     }
                 });
             }
-            if (ad && ad.status !== 'cancelled') {
+            if (ad) {
+                // ✅ የገዢውንም ማስታወቂያ (Buy Ad) መጠን ወደ ቦታው መልሶ ማርኬት ላይ Active ማድረግ!
                 ad.totalAmount = Number(((ad.totalAmount || 0) + Number(trade.deductedFromAdUsdt || trade.usdtAmount || 0)).toFixed(6));
                 ad.status = 'active';
+                const restoredEtbVal = Number((ad.totalAmount * Number(ad.price || 0)).toFixed(2));
+                if (Number(ad.maxLimit || 0) < restoredEtbVal) {
+                    ad.maxLimit = restoredEtbVal;
+                }
                 await ad.save();
             }
         }
@@ -2557,7 +2563,6 @@ async function refundEscrowOnCancel(trade) {
         console.error("Refund Escrow Error:", e);
     }
 }
-
 // 1. ትዕዛዝ መፍጠሪያ (ነጋዴው በሌላ ትሬድ ላይ ከሆነ የሚከለክል + ቀሪውን USDT እዛው ፖስቱ ላይ የሚያስቀር)
 app.post('/api/trades', async (req, res) => {
     try {
@@ -2998,9 +3003,10 @@ app.post('/api/trades/:id/release', async (req, res) => {
     }
 });
 
-// 7. Cancel Trade
+// 7. Cancel Trade (ገዢው ብቻ Cancel ማድረግ ይችላል! ሻጩ በቀጥታ Cancel ማድረግ አይችልም)
 app.post('/api/trades/:id/cancel', async (req, res) => {
     try {
+        const currentUser = await resolveUserFromRequest(req);
         const trade = await Trade.findById(req.params.id);
         if (!trade) return res.status(404).json({ success: false, message: 'Trade not found.' });
 
@@ -3008,19 +3014,53 @@ app.post('/api/trades/:id/cancel', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Trade cannot be cancelled.' });
         }
 
+        // 🛑 ሻጩ (Seller) ትዕዛዙን በቀጥታ Cancel እንዳያደርግ መከልከል! 🛑
+        if (currentUser && String(currentUser._id) === String(trade.sellerId)) {
+            return res.status(403).json({
+                success: false,
+                message: 'Seller cannot cancel the order directly. Please use "Request for Cancel".'
+            });
+        }
+
         await refundEscrowOnCancel(trade);
         trade.status = 'cancelled';
         trade.messages.push({
             senderId: 'system',
             senderName: 'System',
-            text: 'This trade was cancelled. Escrowed USDT has been returned to the seller.',
+            text: 'This trade was cancelled by the buyer. Full USDT (with 0 fee deducted) has been returned to the market ad.',
             isSystem: true
         });
 
         await trade.save();
+        adsCacheData = null;
         res.json({ success: true, trade });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error cancelling trade.' });
+    }
+});
+
+// 7B. የሻጭ "Request for Cancel" API (ትዕዛዙን ሳይሰርዝ ለገዢው በቻት ጥያቄ ይልካል)
+app.post('/api/trades/:id/request-cancel', async (req, res) => {
+    try {
+        const trade = await Trade.findById(req.params.id);
+        if (!trade) return res.status(404).json({ success: false, message: 'Trade not found.' });
+
+        if (trade.status === 'completed' || trade.status === 'cancelled') {
+            return res.status(400).json({ success: false, message: 'Trade is already finished.' });
+        }
+
+        trade.messages.push({
+            senderId: 'system',
+            senderName: 'System',
+            text: `⚠️ Seller (${trade.sellerName}) has requested to cancel this order. Buyer, if you have not transferred the payment yet, please click "Cancel Order".`,
+            isSystem: true,
+            createdAt: new Date()
+        });
+
+        await trade.save();
+        res.json({ success: true, trade, message: 'Cancellation request sent to the buyer!' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error requesting cancellation.' });
     }
 });
 
