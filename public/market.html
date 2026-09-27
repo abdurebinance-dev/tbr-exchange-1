@@ -1305,32 +1305,30 @@
 
     <script>
         const API_BASE = '';
-        const ADS_CACHE_KEY = 'tbr_market_ads_v1';
+        // ⚡ ቀላል (2KB) የማርኬት ካሽ ቁልፍ (QuotaExceededError ፈጽሞ እንዳይፈጠርና በ 0.00s እንዲከፍት!) ⚡
+        const LIGHT_ADS_CACHE_KEY = 'tbr_market_light_ads_v5';
+        const AVATAR_THUMB_CACHE_KEY = 'tbr_market_avatars_v5';
         let currentType = 'buy';
 
-        // Admin Settings State (Synced live from /api/settings)
         let systemSettings = {
             buyRate: 195,
             sellRate: 192,
             platformFee: 0.5
         };
 
-        // In-Memory Ads Store
         let allServerAds = [];
+        let avatarThumbMemory = {};
         let currentRenderedAds = [];
         let hasLoadedAdsOnce = false;
         let isFetchingAds = false;
 
-        // Current User Balance & Saved Payment Accounts
         let currentUserBalance = 0;
         let currentUserFullName = '';
         let currentUserSavedPayments = [];
 
-        // Active Modal Order State
         let activeModalAd = null;
         let activeModalSelectedMethod = '';
 
-        // Active Filter States
         let filterOnlineOnly = false;
         let filterAmountETB = null;
         let filterPaymentMethod = 'All Methods';
@@ -1338,6 +1336,70 @@
 
         function getAuthToken() {
             return localStorage.getItem('token') || localStorage.getItem('jwtToken') || localStorage.getItem('authToken') || '';
+        }
+
+        // ⚡ ትላልቅ የፕሮፋይል ፎቶዎችን ወደ 2KB ትንሽ Thumbnail ቀይሮ በካሽ የሚያስቀምጥ (ገጹ በ 0.00s እንዲከፍት) ⚡
+        function cacheSmallAvatarThumb(traderKey, rawDataUrl) {
+            if (!traderKey || !rawDataUrl) return;
+            if (avatarThumbMemory[traderKey]) return;
+
+            if (rawDataUrl.length < 15000) {
+                avatarThumbMemory[traderKey] = rawDataUrl;
+                try {
+                    sessionStorage.setItem(AVATAR_THUMB_CACHE_KEY, JSON.stringify(avatarThumbMemory));
+                } catch (e) {}
+                return;
+            }
+
+            const img = new Image();
+            img.onload = () => {
+                try {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 64;
+                    canvas.height = 64;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, 64, 64);
+                    const smallB64 = canvas.toDataURL('image/jpeg', 0.7);
+                    avatarThumbMemory[traderKey] = smallB64;
+                    sessionStorage.setItem(AVATAR_THUMB_CACHE_KEY, JSON.stringify(avatarThumbMemory));
+                    localStorage.setItem(AVATAR_THUMB_CACHE_KEY, JSON.stringify(avatarThumbMemory));
+                } catch (e) {}
+            };
+            img.src = rawDataUrl;
+        }
+
+        // ⚡ ማስታወቂያዎቹን ያለ ክብደት (2KB ብቻ) በ localStorage እና sessionStorage ውስጥ ማስቀመጥ ⚡
+        function saveLightweightAdsCache(adsArray) {
+            try {
+                const lightAds = adsArray.map(ad => {
+                    const tKey = String(ad.userId || ad.name || ad._id || '');
+                    const rawAv = ad.avatar || ad.profilePic || '';
+                    if (rawAv && tKey) {
+                        cacheSmallAvatarThumb(tKey, rawAv);
+                    }
+                    return {
+                        _id: ad._id,
+                        userId: ad.userId,
+                        name: ad.name,
+                        traderUsername: ad.traderUsername,
+                        tbrId: ad.tbrId,
+                        tradeType: ad.tradeType,
+                        price: ad.price,
+                        totalAmount: ad.totalAmount,
+                        minLimit: ad.minLimit,
+                        maxLimit: ad.maxLimit,
+                        paymentMethods: ad.paymentMethods,
+                        status: ad.status || 'active',
+                        isOnline: ad.isOnline,
+                        ordersCount: ad.ordersCount || 1,
+                        completionRate: ad.completionRate || '100%',
+                        createdAt: ad.createdAt
+                    };
+                });
+                const payload = JSON.stringify(lightAds);
+                sessionStorage.setItem(LIGHT_ADS_CACHE_KEY, payload);
+                localStorage.setItem(LIGHT_ADS_CACHE_KEY, payload);
+            } catch (e) {}
         }
 
         function sendHeartbeat() {
@@ -1368,9 +1430,7 @@
                         }
                     }
                 }
-            } catch (e) {
-                console.error("Failed to fetch admin settings:", e);
-            }
+            } catch (e) {}
         }
 
         async function fetchCurrentUserWalletAndPayments() {
@@ -1397,8 +1457,6 @@
             } catch (e) {}
         }
 
-        const LIVE_ADS_CACHE_KEY = 'tbr_market_instant_cache_v3';
-
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const activeTab = urlParams.get('tab');
@@ -1410,34 +1468,39 @@
                 document.getElementById('buyTabBtn').className = 'toggle-btn';
             }
 
-            // ⚡ 1. Lod di ad dɛm wantɛm insay 0.00 sɛkɔn fɔm cache so loading nɔ go ɛva sho! ⚡
+            // ⚡ 1. ገጹ ሲከፈት፣ Refresh ሲደረግ ወይም ከዳሽቦርድ ስትመለስ በ 0.00 ሰከንድ ወዲያውኑ ከ2KB ካሽ ማሳየት! ⚡
             try {
-                const cached = sessionStorage.getItem(LIVE_ADS_CACHE_KEY);
+                const savedAvatars = sessionStorage.getItem(AVATAR_THUMB_CACHE_KEY) || localStorage.getItem(AVATAR_THUMB_CACHE_KEY);
+                if (savedAvatars) avatarThumbMemory = JSON.parse(savedAvatars) || {};
+
+                const cached = sessionStorage.getItem(LIGHT_ADS_CACHE_KEY) || localStorage.getItem(LIGHT_ADS_CACHE_KEY);
                 if (cached) {
                     const parsed = JSON.parse(cached);
                     if (Array.isArray(parsed) && parsed.length > 0) {
-                        allServerAds = parsed.filter(ad => (!ad.status || ad.status === 'active') && Number(ad.totalAmount || 0) > 0.0001);
+                        allServerAds = parsed.filter(ad =>
+                            (!ad.status || ad.status === 'active') &&
+                            Number(ad.totalAmount || 0) > 0.0001
+                        );
                         hasLoadedAdsOnce = true;
                         renderOrderBook();
                     }
                 }
             } catch (e) {}
 
-            // 2. Fetch fresh live ads na background pan saylɛnt we
-            fetchLiveAdsFromServer(true);
+            // 2. ከበስተጀርባ (Background) ያለ ምንም Loading ስክሪን ትኩስ መረጃ ማምጣት
+            fetchLiveAdsFromServer();
             fetchAdminSettings();
             fetchCurrentUserWalletAndPayments();
 
-            // 3. Auto-sync evri 2 sɛkɔn na background
+            // 3. Auto-sync
             sendHeartbeat();
             setInterval(sendHeartbeat, 30000);
-            setInterval(() => fetchLiveAdsFromServer(true), 2000);
+            setInterval(fetchLiveAdsFromServer, 2500);
             setInterval(fetchAdminSettings, 15000);
 
-            // We yu tɔn bak to Market fɔm Dashboard, update wantɛm witawt loading screen
-            window.addEventListener('focus', () => fetchLiveAdsFromServer(true));
+            window.addEventListener('focus', fetchLiveAdsFromServer);
             document.addEventListener('visibilitychange', () => {
-                if (!document.hidden) fetchLiveAdsFromServer(true);
+                if (!document.hidden) fetchLiveAdsFromServer();
             });
         });
 
@@ -1459,7 +1522,7 @@
             fetchLiveAdsFromServer();
         }
 
- async function fetchLiveAdsFromServer(isBackground = false) {
+        async function fetchLiveAdsFromServer() {
             if (isFetchingAds) return;
             isFetchingAds = true;
             try {
@@ -1472,25 +1535,19 @@
                 });
                 const json = await res.json();
                 if (json && json.success && Array.isArray(json.ads)) {
-                    // Filter out cancelled or empty ads
                     allServerAds = json.ads.filter(ad =>
                         (!ad.status || ad.status === 'active') &&
                         Number(ad.totalAmount || 0) > 0.0001
                     );
 
                     hasLoadedAdsOnce = true;
+                    saveLightweightAdsCache(allServerAds);
                     renderOrderBook();
-
-                    // Sev am na cache so next tɛm yu enta, i de opin insay 0.00s
-                    try {
-                        sessionStorage.setItem(LIVE_ADS_CACHE_KEY, JSON.stringify(allServerAds));
-                    } catch (storageErr) {}
                 } else if (!hasLoadedAdsOnce) {
                     hasLoadedAdsOnce = true;
                     renderOrderBook();
                 }
             } catch (err) {
-                console.error("Error fetching live ads:", err);
                 if (!hasLoadedAdsOnce) {
                     hasLoadedAdsOnce = true;
                     renderOrderBook();
@@ -1499,10 +1556,6 @@
                 isFetchingAds = false;
             }
         }
-
-        // ==========================================
-        // FILTER MODAL FUNCTIONS (Online, Amount, Payment)
-        // ==========================================
 
         function toggleOnlineFilter() {
             filterOnlineOnly = !filterOnlineOnly;
@@ -1649,18 +1702,17 @@
                 (ad.userId && (ad.userId === localUser._id || ad.userId === localUser.id))
             ));
 
-            let avatarUrl = ad.profilePic || ad.avatar || ad.profileImage || ad.photoUrl || (ad.user && (ad.user.profilePic || ad.user.avatar || ad.user.profileImage)) || '';
+            const tKey = String(ad.userId || ad.name || ad._id || '');
+            let avatarUrl = ad.profilePic || ad.avatar || avatarThumbMemory[tKey] || (ad.user && (ad.user.profilePic || ad.user.avatar)) || '';
             if (!avatarUrl && isCurrentUser) {
-                avatarUrl = localUser.profilePic || localUser.avatar || localUser.profileImage ||
-                            localStorage.getItem('userAvatar') || localStorage.getItem('profilePic') ||
-                            localStorage.getItem('tbr_avatar') || localStorage.getItem('avatar') || '';
+                avatarUrl = localUser.profilePic || localUser.avatar ||
+                            localStorage.getItem('userAvatar') || localStorage.getItem('profilePic') || '';
             }
 
             let rawUsername = ad.traderUsername || ad.username || (ad.user && (ad.user.traderUsername || ad.user.username)) || '';
             if (!rawUsername && isCurrentUser) {
                 rawUsername = localUser.traderUsername || localUser.username ||
-                              localStorage.getItem('traderUsername') || localStorage.getItem('tbr_username') ||
-                              localStorage.getItem('username') || '';
+                              localStorage.getItem('traderUsername') || localStorage.getItem('username') || '';
             }
 
             let cleanUsername = String(rawUsername || '').trim().replace(/^@+/, '').trim();
@@ -1672,25 +1724,13 @@
                 return { displayName: cleanUsername, avatarUrl, isOnline };
             }
 
-            let rawId = ad.tbrId || ad.customId || ad.traderId || (ad.user && (ad.user.tbrId || ad.user.customId)) || '';
-            if (!rawId && isCurrentUser) {
-                rawId = localUser.tbrId || localUser.customId || localStorage.getItem('tbrId') || localStorage.getItem('userTbrId') || '';
-            }
-
+            let rawId = ad.tbrId || ad.customId || ad.traderId || '';
             let idDigits = String(rawId || '').replace(/\D/g, '');
-            if (!idDigits && (ad.userId || ad._id || (isCurrentUser && (localUser._id || localUser.id)))) {
-                const fallbackSource = String(ad.userId || (isCurrentUser && (localUser._id || localUser.id)) || ad._id || '');
-                const numericPart = fallbackSource.replace(/\D/g, '');
-                idDigits = numericPart ? numericPart.slice(-6).padStart(6, '0') : '000015';
-            }
-            if (!idDigits) {
-                idDigits = '000015';
-            } else if (idDigits.length < 6) {
-                idDigits = idDigits.padStart(6, '0');
-            }
+            if (!idDigits) idDigits = '000015';
+            else if (idDigits.length < 6) idDigits = idDigits.padStart(6, '0');
 
             return {
-                displayName: `trader${idDigits}`,
+                displayName: ad.name || `trader${idDigits}`,
                 avatarUrl,
                 isOnline
             };
@@ -1768,29 +1808,21 @@
                     pay: payMethods
                 };
             }).filter(t => {
-                if (filterOnlineOnly && !t.isOnline) {
-                    return false;
-                }
+                if (filterOnlineOnly && !t.isOnline) return false;
                 if (filterAmountETB && filterAmountETB > 0) {
                     const maxPossibleETB = t.numericAvail * t.numericPrice;
                     const effectiveMaxETB = t.numericMax > 0 ? Math.min(t.numericMax, maxPossibleETB || t.numericMax) : maxPossibleETB;
-                    if (filterAmountETB < t.numericMin || filterAmountETB > effectiveMaxETB) {
-                        return false;
-                    }
+                    if (filterAmountETB < t.numericMin || filterAmountETB > effectiveMaxETB) return false;
                 }
                 if (filterPaymentMethod && filterPaymentMethod !== 'All Methods') {
                     const targetMethod = filterPaymentMethod.toLowerCase().trim();
                     const hasMethod = t.pay.some(p => String(p).toLowerCase().trim() === targetMethod);
-                    if (!hasMethod) {
-                        return false;
-                    }
+                    if (!hasMethod) return false;
                 }
                 return true;
             }).sort((a, b) => {
                 const priceDiff = isBuy ? (a.numericPrice - b.numericPrice) : (b.numericPrice - a.numericPrice);
-                if (Math.abs(priceDiff) > 0.00001) {
-                    return priceDiff;
-                }
+                if (Math.abs(priceDiff) > 0.00001) return priceDiff;
                 return a.createdTime - b.createdTime;
             });
 
@@ -1811,7 +1843,6 @@
                 const statusTitle = t.isOnline ? 'Online' : 'Offline';
 
                 html += `
-                <!-- PC Table Row View -->
                 <tr class="pc-table-row">
                     <td>
                         <div class="advertiser-cell">
@@ -1844,7 +1875,6 @@
                     </td>
                 </tr>
 
-                <!-- Mobile Card View -->
                 <tr class="mobile-card-row">
                     <td>
                         <div class="m-card">
@@ -1887,10 +1917,6 @@
 
             tbody.innerHTML = html;
         }
-
-        // ==========================================
-        // BUY / SELL MODAL, VALIDATION & ADMIN FEE BREAKDOWN
-        // ==========================================
 
         function formatMoney2(num) {
             return Number(num || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -1955,13 +1981,11 @@
 
             if (isBuy) {
                 usdtFieldGroup.style.display = 'none';
-
                 document.getElementById('tmEtbFieldLabel').innerText = 'You pay (ETB)';
                 document.getElementById('tmEtbRightHint').innerText = `Limit ${minFormatted} - ${maxFormatted} ETB`;
                 document.getElementById('tmEtbInput').placeholder = `${minFormatted} – ${maxFormatted}`;
             } else {
                 usdtFieldGroup.style.display = 'block';
-
                 const effectiveMaxEtb = currentUserBalance > 0
                     ? Math.min(ad.numericMax, currentUserBalance * ad.numericPrice)
                     : ad.numericMax;
@@ -2230,9 +2254,6 @@
                 });
                 const json = await res.json();
                 if (res.ok && json.success && json.trade) {
-                    sessionStorage.removeItem(ADS_CACHE_KEY);
-                    localStorage.removeItem(ADS_CACHE_KEY);
-
                     localStorage.setItem('tbr_active_p2p_order', JSON.stringify(json.trade));
                     closeOrderModal();
                     window.location.href = `trades.html?tradeId=${json.trade._id}`;

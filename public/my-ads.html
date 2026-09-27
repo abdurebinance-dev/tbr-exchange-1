@@ -645,12 +645,18 @@
         let allUserAds = [];
         let currentStatusFilter = 'all';
 
-        // ⚡ የማርኬት ካሽን ወዲያውኑ የሚያጸዳ ፋንክሽን (የተሰረዘ ወይም አዲስ ፖስት በ 0.00 ሰከንድ ማርኬት ላይ እንዲዘመን) ⚡
-        function clearMarketAdsCacheNow() {
+        function clearMarketAdsCacheNow(cancelledAdId) {
             try {
                 sessionStorage.removeItem('tbr_market_ads_v1');
                 localStorage.removeItem('tbr_market_ads_v1');
-                localStorage.setItem('tbr_market_force_refresh', String(Date.now()));
+                if (cancelledAdId) {
+                    const raw = localStorage.getItem('tbr_market_light_ads_v5') || sessionStorage.getItem('tbr_market_light_ads_v5');
+                    if (raw) {
+                        const list = JSON.parse(raw).filter(a => String(a._id) !== String(cancelledAdId));
+                        localStorage.setItem('tbr_market_light_ads_v5', JSON.stringify(list));
+                        sessionStorage.setItem('tbr_market_light_ads_v5', JSON.stringify(list));
+                    }
+                }
             } catch (e) {}
         }
 

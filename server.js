@@ -2314,12 +2314,17 @@ app.get('/api/ads', async (req, res) => {
     try {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
 
+        const now = Date.now();
+        // ⚡ በ 10 ሰከንድ ውስጥ ምንም አዲስ Post/Cancel/Trade ካልተፈጠረ ከRAM ውስጥ በ 0.001 ሰከንድ መመለስ! ⚡
+        if (adsCacheData && (now - adsCacheTime < 10000)) {
+            return res.json(adsCacheData);
+        }
+
         const ads = await Ad.find({ status: 'active', totalAmount: { $gt: 0.0001 } })
             .populate('userId', 'avatar traderUsername userId numericId fullName email lastActive')
             .sort({ createdAt: -1 })
             .lean();
 
-        const now = Date.now();
         const ONLINE_THRESHOLD = 10 * 60 * 1000;
 
         const enrichedAds = ads.map(ad => {
@@ -2352,7 +2357,9 @@ app.get('/api/ads', async (req, res) => {
             };
         });
 
-        res.json({ success: true, ads: enrichedAds });
+        adsCacheData = { success: true, ads: enrichedAds };
+        adsCacheTime = now;
+        res.json(adsCacheData);
     } catch (error) {
         console.error("Fetch Ads Error:", error);
         res.status(500).json({ success: false, message: 'Server error fetching ads.' });
