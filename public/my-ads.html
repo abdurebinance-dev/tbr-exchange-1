@@ -423,12 +423,12 @@
                 </div>
                 
                 <div id="price-error" style="color: var(--red-color); font-size: 12px; margin-top: -10px; margin-bottom: 10px; display: none; font-weight: 600;">
-                    <i class="fa-solid fa-circle-exclamation"></i> Price must be between 170 and 199.
+                    <i class="fa-solid fa-circle-exclamation"></i> Price must be between 170 and 210.
                 </div>
 
                 <div class="market-avg-row">
                     <span>Minimum 170</span>
-                    <span>Max 199</span>
+                    <span>Max 210</span>
                 </div>
 
                 <div class="input-group" style="margin-top: 25px;">
@@ -624,7 +624,7 @@
         <div class="custom-confirm-box">
             <i class="fa-solid fa-circle-exclamation confirm-icon"></i>
             <div class="confirm-title">Cancel Ad</div>
-            <div class="confirm-text">Are you sure you want to cancel this ad? It will be removed from the market.</div>
+            <div class="confirm-text">Are you sure you want to cancel this ad? It will be removed from the market immediately.</div>
             <div class="confirm-actions">
                 <button class="btn-confirm-no" onclick="handleConfirmResult(false)">No, Keep it</button>
                 <button class="btn-confirm-yes" onclick="handleConfirmResult(true)">Yes, Cancel Ad</button>
@@ -645,7 +645,15 @@
         let allUserAds = [];
         let currentStatusFilter = 'all';
 
-        // 🚀 New Main Tabs Logic 🚀
+        // ⚡ የማርኬት ካሽን ወዲያውኑ የሚያጸዳ ፋንክሽን (የተሰረዘ ወይም አዲስ ፖስት በ 0.00 ሰከንድ ማርኬት ላይ እንዲዘመን) ⚡
+        function clearMarketAdsCacheNow() {
+            try {
+                sessionStorage.removeItem('tbr_market_ads_v1');
+                localStorage.removeItem('tbr_market_ads_v1');
+                localStorage.setItem('tbr_market_force_refresh', String(Date.now()));
+            } catch (e) {}
+        }
+
         function switchMainTab(tab) {
             document.getElementById('tab-my-ads').classList.remove('active');
             document.getElementById('tab-boosts').classList.remove('active');
@@ -660,7 +668,7 @@
             } else {
                 document.getElementById('tab-boosts').classList.add('active');
                 document.getElementById('content-boosts').style.display = 'block';
-                document.getElementById('header-action-btn').style.display = 'none'; // Hide "New Ad" button on boosts tab
+                document.getElementById('header-action-btn').style.display = 'none';
             }
         }
 
@@ -974,6 +982,8 @@
                 });
 
                 if (response.ok) {
+                    // ⚡ የማርኬት ካሽን ወዲያውኑ ማጽዳት (አዲሱ ፖስት በ 0.00s ማርኬት ላይ እንዲታይ!) ⚡
+                    clearMarketAdsCacheNow();
                     closeReviewModal();
                     if (currentTradeType === 'buy') {
                         window.location.href = 'market.html?tab=sell';
@@ -1014,13 +1024,20 @@
             }
 
             try {
-                const res = await fetch(`${API_BASE_URL}/api/ads/my`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                const res = await fetch(`${API_BASE_URL}/api/ads/my?t=${Date.now()}`, {
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    cache: 'no-store'
                 });
                 const json = await res.json();
                 
                 if (json.success && json.ads) {
-                    allUserAds = json.ads;
+                    allUserAds = json.ads.map(ad => {
+                        // 0 USDT የሆነ ማስታወቂያ 'active' ብሎ እንዳይቀር ወዲያውኑ 'cancelled' ማድረግ
+                        if (Number(ad.totalAmount || 0) <= 0.0001 && ad.status === 'active') {
+                            return { ...ad, status: 'cancelled', totalAmount: 0 };
+                        }
+                        return ad;
+                    });
                 } else {
                     allUserAds = [];
                 }
@@ -1078,12 +1095,14 @@
                     if (!Array.isArray(payMethods)) payMethods = [payMethods];
                     const payList = payMethods.join('<br>');
 
-                    const statusBadge = ad.status === 'cancelled' 
+                    const isCancelled = ad.status === 'cancelled' || ad.status === 'completed' || Number(ad.totalAmount || 0) <= 0.0001;
+
+                    const statusBadge = isCancelled
                         ? `<span style="background: rgba(255,255,255,0.1); color: var(--text-muted); padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">Cancelled</span>`
                         : `<span style="background: rgba(14,203,129,0.1); color: var(--green-color); padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">Active</span>`;
 
                     let actionMenu = '';
-                    if (ad.status !== 'cancelled') {
+                    if (!isCancelled) {
                         actionMenu = `
                             <div onclick="boostAd('${ad._id}')" style="padding: 10px 16px; font-size: 13px; cursor: pointer; color: #fff; display: flex; align-items: center; transition: 0.2s;" onmouseover="this.style.background='#2b313a'" onmouseout="this.style.background='transparent'">
                                 <i class="fa-solid fa-bolt" style="color: var(--accent-color); margin-right: 10px; width: 14px; text-align: center;"></i> Boost Ad
@@ -1105,20 +1124,20 @@
                     }
 
                     tableHTML += `
-                            <tr style="border-bottom: 1px solid #14151a; font-size: 13px; transition: background 0.2s; ${ad.status === 'cancelled' ? 'opacity: 0.5;' : ''}" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+                            <tr style="border-bottom: 1px solid #14151a; font-size: 13px; transition: background 0.2s; ${isCancelled ? 'opacity: 0.5;' : ''}" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
                                 <td style="padding: 20px 15px;">
                                     <span style="color: ${typeColor}; background: ${typeBg}; padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 11px;">${typeText}</span>
                                 </td>
                                 <td style="padding: 20px 15px; font-weight: 700; color: ${typeColor}; font-size: 15px;">
-                                    ${ad.price.toFixed(2)}<br>
+                                    ${Number(ad.price || 0).toFixed(2)}<br>
                                     <span style="font-size: 11px; color: var(--text-muted); font-weight: 400;">ETB / USDT</span>
                                 </td>
                                 <td style="padding: 20px 15px; font-weight: 600;">
-                                    ${ad.totalAmount.toLocaleString('en-US')} USDT<br>
-                                    <span style="font-size: 11px; color: var(--text-muted); font-weight: 400;">of ${ad.totalAmount.toLocaleString('en-US')} USDT</span>
+                                    ${Number(ad.totalAmount || 0).toLocaleString('en-US')} USDT<br>
+                                    <span style="font-size: 11px; color: var(--text-muted); font-weight: 400;">of ${Number(ad.totalAmount || 0).toLocaleString('en-US')} USDT</span>
                                 </td>
                                 <td style="padding: 20px 15px; font-weight: 500;">
-                                    ${ad.minLimit.toLocaleString('en-US')} - ${ad.maxLimit.toLocaleString('en-US')}<br>
+                                    ${Number(ad.minLimit || 0).toLocaleString('en-US')} - ${Number(ad.maxLimit || 0).toLocaleString('en-US')}<br>
                                     <span style="font-size: 11px; color: var(--text-muted); font-weight: 400;">ETB</span>
                                 </td>
                                 <td style="padding: 20px 15px; font-size: 12px; line-height: 1.6; color: #ccc;">
@@ -1204,9 +1223,20 @@
             }
         }
 
+        // ⚡ ማስታወቂያ Cancel ሲደረግ በ 0.00s በገጹ ላይም በማርኬት ላይም ወዲያውኑ እንዲጠፋ ማድረግ ⚡
         async function cancelAd(id) {
             const confirmed = await showCustomConfirm();
             if (!confirmed) return;
+
+            // 1. ወዲያውኑ በ 0.00 ሰከንድ በስክሪኑ ላይ Cancelled ማድረግና የማርኬት ካሽ ማጽዳት
+            allUserAds = allUserAds.map(ad => {
+                if (String(ad._id) === String(id)) {
+                    return { ...ad, status: 'cancelled', totalAmount: 0 };
+                }
+                return ad;
+            });
+            renderAdsTable();
+            clearMarketAdsCacheNow();
             
             const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
             try {
@@ -1215,10 +1245,21 @@
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 
-                if(response.ok) {
-                    loadUserAds(); 
+                if (response.ok) {
+                    clearMarketAdsCacheNow();
+                    await loadUserAds();
+                    // የተመለሰውን USDT ወዲያውኑ በ Available Balance ላይ ማዘመን
+                    fetch(`${API_BASE_URL}/api/user/profile?t=${Date.now()}`, {
+                        headers: { "Authorization": `Bearer ${token}` }
+                    }).then(r => r.json()).then(res => {
+                        if (res && res.success && res.user) {
+                            userAvailableBalance = res.user.balance || 0;
+                            updateBalanceDisplay();
+                        }
+                    }).catch(() => {});
                 } else {
                     alert("Failed to cancel ad.");
+                    loadUserAds();
                 }
             } catch(e) {
                 console.error("Cancel Error:", e);
@@ -1234,6 +1275,7 @@
         }
 
         async function initPage() {
+            clearMarketAdsCacheNow();
             loadUserAds(); 
             
             const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
