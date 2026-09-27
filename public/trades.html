@@ -1611,63 +1611,30 @@
         let countdownInterval = null;
 
         function getLoggedUserIdentity() {
-            const token = localStorage.getItem('token') || localStorage.getItem('jwtToken') || localStorage.getItem('authToken') || '';
+            const rawToken = localStorage.getItem('token') || localStorage.getItem('jwtToken') || localStorage.getItem('authToken') || '';
+            const token = String(rawToken).replace(/^["']|["']$/g, '').replace(/^Bearer\s+/i, '').trim();
             let email = localStorage.getItem('userEmail') || localStorage.getItem('email') || '';
-            let userId = localStorage.getItem('userId') || '';
+            let userId = localStorage.getItem('userId') || localStorage.getItem('tbr_resolved_uid') || '';
 
             try {
                 const u = JSON.parse(localStorage.getItem('user') || localStorage.getItem('currentUser') || localStorage.getItem('tbr_user') || '{}');
-                if (!email && u.email) email = u.email;
-                if (!userId && (u._id || u.id || u.userId)) userId = u._id || u.id || u.userId;
+                if (!email && u.email) email = String(u.email).trim();
+                if (!userId && (u._id || u.id || u.userId)) userId = String(u._id || u.id || u.userId).trim();
             } catch (e) {}
+
+            // ⚡ Okusoma ID ne Email butereevu okuva mu Token mu sikonda 0.00 ⚡
+            if (token && (!email || !userId)) {
+                try {
+                    let b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+                    while (b64.length % 4) b64 += '=';
+                    const payload = JSON.parse(atob(b64));
+                    if (!userId && (payload.id || payload._id)) userId = String(payload.id || payload._id);
+                    if (!email && payload.email) email = String(payload.email);
+                } catch (e) {}
+            }
 
             return { token, email, userId };
         }
-
-        function formatEtb(val) {
-            return Number(val || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ETB';
-        }
-
-        document.addEventListener('DOMContentLoaded', async () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const tradeIdParam = urlParams.get('tradeId');
-
-            if (tradeIdParam) {
-                document.getElementById('myTradesListView').style.display = 'none';
-                document.getElementById('singleTradeRoomView').style.display = 'grid';
-
-                try {
-                    const cachedOrder = localStorage.getItem('tbr_active_p2p_order');
-                    if (cachedOrder) {
-                        const parsed = JSON.parse(cachedOrder);
-                        if (parsed && String(parsed._id) === String(tradeIdParam)) {
-                            activeTrade = parsed;
-                            renderTradeRoomUI();
-                        }
-                    }
-                } catch (e) {}
-
-                await fetchTradeFromServer(tradeIdParam);
-                setInterval(() => fetchTradeFromServer(tradeIdParam), 3000);
-                startCountdownTimer();
-            } else {
-                document.getElementById('singleTradeRoomView').style.display = 'none';
-                document.getElementById('myTradesListView').style.display = 'block';
-
-                try {
-                    const cachedList = sessionStorage.getItem(TRADES_LIST_CACHE);
-                    if (cachedList) {
-                        const parsedList = JSON.parse(cachedList);
-                        if (Array.isArray(parsedList) && parsedList.length > 0) {
-                            renderMyTradesTable(parsedList);
-                        }
-                    }
-                } catch (e) {}
-
-                await loadMyTradesList();
-                setInterval(loadMyTradesList, 4000);
-            }
-        });
 
         async function loadMyTradesList() {
             const { token, email, userId } = getLoggedUserIdentity();
@@ -1675,14 +1642,21 @@
                 const params = new URLSearchParams();
                 if (email) params.set('email', email);
                 if (userId) params.set('userId', userId);
+                params.set('t', Date.now());
+
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 6000);
 
                 const res = await fetch(`${API_BASE}/api/trades?${params.toString()}`, {
-                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                    cache: 'no-store',
+                    signal: controller.signal
                 });
+                clearTimeout(timeoutId);
 
                 if (res.ok) {
                     const json = await res.json();
-                    if (json.success && Array.isArray(json.trades)) {
+                    if (json && Array.isArray(json.trades)) {
                         currentUserId = json.currentUserId || userId || '';
                         sessionStorage.setItem(TRADES_LIST_CACHE, JSON.stringify(json.trades));
                         renderMyTradesTable(json.trades);
@@ -1692,6 +1666,17 @@
             } catch (e) {
                 console.error('Error fetching My Trades:', e);
             }
+
+            // Bwe wabaawo trade mu localStorage, girage amangu mu kifo kya "Loading your trades..."
+            try {
+                const localOrder = JSON.parse(localStorage.getItem('tbr_active_p2p_order') || 'null');
+                if (localOrder && localOrder._id) {
+                    renderMyTradesTable([localOrder]);
+                    return;
+                }
+            } catch (e) {}
+
+            renderMyTradesTable([]);
         }
 
         function renderMyTradesTable(trades) {

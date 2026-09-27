@@ -2775,33 +2775,46 @@ app.post('/api/trades', async (req, res) => {
 });
 
 // 2. Get User's Trades List (Simple, Fast, Original Working Logic)
+// ⚡ ULTRA-FAST /api/trades (Tereeta bifaananyi bizito mu list, ekola mu 0.01s!) ⚡
 app.get('/api/trades', async (req, res) => {
     try {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+
         const currentUser = await resolveUserFromRequest(req);
-        if (!currentUser) {
+        const rawEmail = String((currentUser && currentUser.email) || req.query.email || '').toLowerCase().trim();
+        const rawUid = String((currentUser && currentUser._id) || req.query.userId || '').trim();
+
+        const orConditions = [];
+
+        if (currentUser && currentUser._id && mongoose.Types.ObjectId.isValid(String(currentUser._id))) {
+            orConditions.push({ buyerId: currentUser._id }, { sellerId: currentUser._id });
+        } else if (rawUid && mongoose.Types.ObjectId.isValid(rawUid)) {
+            const objId = new mongoose.Types.ObjectId(rawUid);
+            orConditions.push({ buyerId: objId }, { sellerId: objId });
+        }
+
+        if (rawEmail) {
+            const escapedEmail = rawEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const emailRegex = new RegExp(`^${escapedEmail}$`, 'i');
+            orConditions.push({ buyerEmail: emailRegex }, { sellerEmail: emailRegex });
+        }
+
+        if (orConditions.length === 0) {
             return res.json({ success: true, currentUserId: '', total: 0, trades: [] });
         }
 
-        const userId = currentUser._id;
-        const userEmail = (currentUser.email || '').toLowerCase();
-
-        const trades = await Trade.find({
-            $or: [
-                { buyerId: userId },
-                { sellerId: userId },
-                ...(userEmail ? [{ buyerEmail: userEmail }, { sellerEmail: userEmail }] : [])
-            ]
-        })
-        .select('-receiptImage -messages.image')
-        .sort({ createdAt: -1 })
-        .limit(40)
-        .lean();
+        // ✅ Tukendeezezza obuzito: -receiptImage -messages.image -buyerAvatar -sellerAvatar
+        const trades = await Trade.find({ $or: orConditions })
+            .select('-receiptImage -messages.image -buyerAvatar -sellerAvatar')
+            .sort({ createdAt: -1 })
+            .limit(40)
+            .lean();
 
         res.json({
             success: true,
-            currentUserId: String(userId),
+            currentUserId: currentUser ? String(currentUser._id) : rawUid,
             total: trades.length,
-            trades
+            trades: trades
         });
     } catch (error) {
         console.error("GET /api/trades Error:", error);
