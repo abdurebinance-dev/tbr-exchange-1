@@ -80,13 +80,13 @@
         }
 
         /* =========================================================
-           🚀 1. "MY TRADES" LIST VIEW 🚀
+           🚀 1. "MY TRADES" LIST VIEW (Default visible - No Black Screen!) 🚀
            ========================================================= */
         .my-trades-container {
             max-width: 1180px;
             margin: 0 auto;
             padding: 24px 20px;
-            display: none;
+            display: block;
         }
         .mt-header-row {
             display: flex;
@@ -1610,31 +1610,105 @@
         let selectedReceiptBase64 = '';
         let countdownInterval = null;
 
+        // ⚡ በ localStorage እና sessionStorage ውስጥ ያሉትን ሁሉንም Keys ፈትሾ Token, Email እና UserID የሚያገኝ ፋንክሽን ⚡
         function getLoggedUserIdentity() {
-            const rawToken = localStorage.getItem('token') || localStorage.getItem('jwtToken') || localStorage.getItem('authToken') || '';
-            const token = String(rawToken).replace(/^["']|["']$/g, '').replace(/^Bearer\s+/i, '').trim();
+            let token = localStorage.getItem('token') || localStorage.getItem('jwtToken') || localStorage.getItem('authToken') || localStorage.getItem('userToken') || '';
             let email = localStorage.getItem('userEmail') || localStorage.getItem('email') || '';
             let userId = localStorage.getItem('userId') || localStorage.getItem('tbr_resolved_uid') || '';
 
-            try {
-                const u = JSON.parse(localStorage.getItem('user') || localStorage.getItem('currentUser') || localStorage.getItem('tbr_user') || '{}');
-                if (!email && u.email) email = String(u.email).trim();
-                if (!userId && (u._id || u.id || u.userId)) userId = String(u._id || u.id || u.userId).trim();
-            } catch (e) {}
+            // 1. ሁሉንም የ localStorage እና sessionStorage ቁልፎች መፈተሽ
+            const storages = [localStorage, sessionStorage];
+            for (const store of storages) {
+                for (let i = 0; i < store.length; i++) {
+                    const key = store.key(i);
+                    if (!key || key === TRADES_LIST_CACHE || key === 'tbr_active_p2p_order') continue;
+                    const val = store.getItem(key) || '';
 
-            // ⚡ Okusoma ID ne Email butereevu okuva mu Token mu sikonda 0.00 ⚡
-            if (token && (!email || !userId)) {
+                    if (!token && val.startsWith('eyJ') && val.split('.').length === 3) {
+                        token = val;
+                    }
+                    if (!email && val.includes('@') && !val.startsWith('{') && val.length < 80) {
+                        email = val.trim();
+                    }
+                    if (val.startsWith('{')) {
+                        try {
+                            const obj = JSON.parse(val);
+                            if (obj && typeof obj === 'object') {
+                                if (!token && obj.token) token = obj.token;
+                                if (!email && obj.email) email = obj.email;
+                                if (!userId && (obj._id || obj.id || obj.userId)) userId = String(obj._id || obj.id || obj.userId);
+                            }
+                        } catch (e) {}
+                    }
+                }
+            }
+
+            token = String(token || '').replace(/^["']|["']$/g, '').replace(/^Bearer\s+/i, '').trim();
+
+            // 2. ከ JWT Token ውስጥ በቀጥታ ID እና Email መፍታት
+            if (token && token.split('.').length === 3) {
                 try {
                     let b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
                     while (b64.length % 4) b64 += '=';
                     const payload = JSON.parse(atob(b64));
-                    if (!userId && (payload.id || payload._id)) userId = String(payload.id || payload._id);
-                    if (!email && payload.email) email = String(payload.email);
+                    if (payload) {
+                        if (!userId && (payload.id || payload._id || payload.userId)) {
+                            userId = String(payload.id || payload._id || payload.userId);
+                        }
+                        if (!email && payload.email) {
+                            email = String(payload.email);
+                        }
+                    }
                 } catch (e) {}
             }
 
-            return { token, email, userId };
+            return { token, email: String(email || '').trim(), userId: String(userId || '').trim() };
         }
+
+        function formatEtb(val) {
+            return Number(val || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ETB';
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const tradeIdParam = urlParams.get('tradeId');
+
+            if (tradeIdParam) {
+                document.getElementById('myTradesListView').style.display = 'none';
+                document.getElementById('singleTradeRoomView').style.display = 'grid';
+
+                try {
+                    const cachedOrder = localStorage.getItem('tbr_active_p2p_order');
+                    if (cachedOrder) {
+                        const parsed = JSON.parse(cachedOrder);
+                        if (parsed && String(parsed._id) === String(tradeIdParam)) {
+                            activeTrade = parsed;
+                            renderTradeRoomUI();
+                        }
+                    }
+                } catch (e) {}
+
+                await fetchTradeFromServer(tradeIdParam);
+                setInterval(() => fetchTradeFromServer(tradeIdParam), 3000);
+                startCountdownTimer();
+            } else {
+                document.getElementById('singleTradeRoomView').style.display = 'none';
+                document.getElementById('myTradesListView').style.display = 'block';
+
+                try {
+                    const cachedList = sessionStorage.getItem(TRADES_LIST_CACHE);
+                    if (cachedList) {
+                        const parsedList = JSON.parse(cachedList);
+                        if (Array.isArray(parsedList) && parsedList.length > 0) {
+                            renderMyTradesTable(parsedList);
+                        }
+                    }
+                } catch (e) {}
+
+                await loadMyTradesList();
+                setInterval(loadMyTradesList, 3500);
+            }
+        });
 
         async function loadMyTradesList() {
             const { token, email, userId } = getLoggedUserIdentity();
@@ -1644,20 +1718,18 @@
                 if (userId) params.set('userId', userId);
                 params.set('t', Date.now());
 
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 6000);
-
                 const res = await fetch(`${API_BASE}/api/trades?${params.toString()}`, {
                     headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-                    cache: 'no-store',
-                    signal: controller.signal
+                    cache: 'no-store'
                 });
-                clearTimeout(timeoutId);
 
                 if (res.ok) {
                     const json = await res.json();
                     if (json && Array.isArray(json.trades)) {
-                        currentUserId = json.currentUserId || userId || '';
+                        if (json.currentUserId) {
+                            currentUserId = String(json.currentUserId);
+                            localStorage.setItem('tbr_resolved_uid', currentUserId);
+                        }
                         sessionStorage.setItem(TRADES_LIST_CACHE, JSON.stringify(json.trades));
                         renderMyTradesTable(json.trades);
                         return;
@@ -1667,11 +1739,11 @@
                 console.error('Error fetching My Trades:', e);
             }
 
-            // Bwe wabaawo trade mu localStorage, girage amangu mu kifo kya "Loading your trades..."
+            // ሰርቨሩ ቢዘገይ በ localStorage ውስጥ ያለውን የቅርብ ትሬድ ማሳየት
             try {
-                const localOrder = JSON.parse(localStorage.getItem('tbr_active_p2p_order') || 'null');
-                if (localOrder && localOrder._id) {
-                    renderMyTradesTable([localOrder]);
+                const fallbackOrder = JSON.parse(localStorage.getItem('tbr_active_p2p_order') || 'null');
+                if (fallbackOrder && fallbackOrder._id) {
+                    renderMyTradesTable([fallbackOrder]);
                     return;
                 }
             } catch (e) {}
@@ -1688,15 +1760,20 @@
                 return;
             }
 
-            const { email } = getLoggedUserIdentity();
+            const { email, userId } = getLoggedUserIdentity();
+            const myId = currentUserId || userId || '';
             let html = '';
 
             trades.forEach(tr => {
                 let isBuyer = tr.tradeType === 'buy';
-                if (currentUserId && tr.buyerId) {
-                    isBuyer = String(tr.buyerId) === String(currentUserId);
-                } else if (email && tr.buyerEmail) {
-                    isBuyer = String(tr.buyerEmail).toLowerCase() === String(email).toLowerCase();
+                if (myId && tr.sellerId && String(tr.sellerId) === String(myId)) {
+                    isBuyer = false;
+                } else if (myId && tr.buyerId && String(tr.buyerId) === String(myId)) {
+                    isBuyer = true;
+                } else if (email && tr.sellerEmail && String(tr.sellerEmail).toLowerCase() === String(email).toLowerCase()) {
+                    isBuyer = false;
+                } else if (email && tr.buyerEmail && String(tr.buyerEmail).toLowerCase() === String(email).toLowerCase()) {
+                    isBuyer = true;
                 }
 
                 const roleLabel = isBuyer ? 'Buy' : 'Sell';
@@ -1803,9 +1880,11 @@
                 const params = new URLSearchParams();
                 if (email) params.set('email', email);
                 if (userId) params.set('userId', userId);
+                params.set('t', Date.now());
 
                 const res = await fetch(`${API_BASE}/api/trades/${tradeId}?${params.toString()}`, {
-                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                    cache: 'no-store'
                 });
                 if (res.ok) {
                     const json = await res.json();
@@ -1821,12 +1900,20 @@
 
         function isCurrentUserBuyer() {
             if (!activeTrade) return true;
-            if (currentUserId && activeTrade.buyerId) {
-                return String(activeTrade.buyerId) === String(currentUserId);
+            const { email, userId } = getLoggedUserIdentity();
+            const myId = currentUserId || userId || '';
+
+            if (myId && activeTrade.sellerId && String(activeTrade.sellerId) === String(myId)) {
+                return false;
             }
-            const { email } = getLoggedUserIdentity();
-            if (email && activeTrade.buyerEmail) {
-                return String(activeTrade.buyerEmail).toLowerCase() === String(email).toLowerCase();
+            if (myId && activeTrade.buyerId && String(activeTrade.buyerId) === String(myId)) {
+                return true;
+            }
+            if (email && activeTrade.sellerEmail && String(activeTrade.sellerEmail).toLowerCase() === String(email).toLowerCase()) {
+                return false;
+            }
+            if (email && activeTrade.buyerEmail && String(activeTrade.buyerEmail).toLowerCase() === String(email).toLowerCase()) {
+                return true;
             }
             return (activeTrade.tradeType || activeTrade.type) === 'buy';
         }
@@ -2296,6 +2383,9 @@
                 return;
             }
 
+            const { userId } = getLoggedUserIdentity();
+            const myId = currentUserId || userId || '';
+
             area.innerHTML = msgs.map(m => {
                 if (m.isSystem || m.senderId === 'system' || m.senderId === 'admin') {
                     return `<div class="msg-bubble-system">${m.text}</div>`;
@@ -2305,7 +2395,7 @@
                     ? new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
                     : '';
                 const imgHtml = m.image ? `<img src="${m.image}" onclick="window.open(this.src)" title="Click to view full receipt">` : '';
-                const isMine = (currentUserId && String(m.senderId) === String(currentUserId)) || m.senderId === 'me';
+                const isMine = (myId && String(m.senderId) === String(myId)) || m.senderId === 'me';
 
                 if (isMine) {
                     return `
@@ -2339,7 +2429,7 @@
 
             const { token, email, userId } = getLoggedUserIdentity();
             if (!activeTrade.messages) activeTrade.messages = [];
-            activeTrade.messages.push({ senderId: currentUserId || 'me', text, isSystem: false, createdAt: new Date().toISOString() });
+            activeTrade.messages.push({ senderId: currentUserId || userId || 'me', text, isSystem: false, createdAt: new Date().toISOString() });
             renderTradeRoomUI();
 
             if (activeTrade._id && !String(activeTrade._id).startsWith('local_')) {
