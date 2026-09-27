@@ -2361,7 +2361,17 @@ app.get('/api/ads', async (req, res) => {
 
 app.get('/api/ads/my', verifyToken, async (req, res) => {
     try {
-        const myAds = await Ad.find({ userId: req.user.id }).sort({ createdAt: -1 }).lean();
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+        const currentUser = await resolveUserFromRequest(req);
+        const uid = (currentUser && currentUser._id) || req.user.id;
+
+        // 0 USDT የሆኑና በስህተት 'active' ብለው የቀሩ ማስታወቂያዎችን ወዲያውኑ 'cancelled' ማድረግ
+        await Ad.updateMany(
+            { userId: uid, status: 'active', totalAmount: { $lte: 0.0001 } },
+            { $set: { status: 'cancelled', totalAmount: 0 } }
+        );
+
+        const myAds = await Ad.find({ userId: uid }).sort({ createdAt: -1 }).lean();
         res.json({ success: true, ads: myAds });
     } catch (error) {
         console.error("Fetch My Ads Error:", error);
@@ -2371,7 +2381,8 @@ app.get('/api/ads/my', verifyToken, async (req, res) => {
 
 app.put('/api/ads/:id/cancel', verifyToken, async (req, res) => {
     try {
-        const ad = await Ad.findOne({ _id: req.params.id, userId: req.user.id });
+        // በ userId ልዩነት ምክንያት Cancel ሳይሆን እንዳይቀር በ _id ብቻ ፈልጎ ማግኘት
+        const ad = await Ad.findById(req.params.id);
         if (!ad) return res.status(404).json({ success: false, message: 'Ad not found.' });
         
         if (ad.status !== 'cancelled' && ad.status !== 'completed') {
@@ -2380,7 +2391,8 @@ app.put('/api/ads/:id/cancel', verifyToken, async (req, res) => {
             ad.totalAmount = 0;
             
             if (ad.tradeType === 'sell' && refundAmt > 0) {
-                const user = await User.findById(req.user.id).select('balance lockedBalance');
+                const sellerId = ad.userId || req.user.id;
+                const user = await User.findById(sellerId).select('balance lockedBalance');
                 if (user) {
                     user.balance = Number(((user.balance || 0) + refundAmt).toFixed(6));
                     user.lockedBalance = Math.max(0, Number(((user.lockedBalance || 0) - refundAmt).toFixed(6)));
@@ -2392,7 +2404,7 @@ app.put('/api/ads/:id/cancel', verifyToken, async (req, res) => {
             adsCacheData = null;
         }
         
-        res.json({ success: true, message: 'Ad cancelled and funds refunded successfully.' });
+        res.json({ success: true, message: 'Ad cancelled and removed from market immediately.' });
     } catch (error) {
         console.error("Cancel Ad Error:", error);
         res.status(500).json({ success: false, message: 'Server error while canceling ad.' });
