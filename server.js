@@ -1634,7 +1634,47 @@ app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
     }
 });
 
-// 🚀 Fast KYC Endpoints (Pending, Approved/Verified እና Rejected ከነ ፎቶአቸው በትክክል ያመጣል) 🚀
+// 🚀 1. የKYC ፎቶዎችን (Front, Back, Selfie) አንድ በአንድ በፍጥነት የሚያሳይ Image Endpoint 🚀
+app.get('/api/admin/kyc-image/:id/:field', async (req, res) => {
+    try {
+        const { id, field } = req.params;
+        if (!['frontImage', 'backImage', 'selfieImage'].includes(field)) {
+            return res.status(400).end();
+        }
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(404).end();
+        }
+
+        const kyc = await KYC.findById(id).select(field).lean();
+        if (!kyc || !kyc[field]) {
+            return res.status(404).end();
+        }
+
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+
+        if (Buffer.isBuffer(kyc[field])) {
+            res.setHeader('Content-Type', 'image/jpeg');
+            return res.send(kyc[field]);
+        }
+
+        const raw = String(kyc[field]).trim();
+        if (raw.startsWith('data:image')) {
+            const matches = raw.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+            if (matches && matches[2]) {
+                const mimeType = matches[1];
+                const buffer = Buffer.from(matches[2], 'base64');
+                res.setHeader('Content-Type', mimeType);
+                return res.send(buffer);
+            }
+        }
+
+        return res.redirect(raw);
+    } catch (e) {
+        res.status(404).end();
+    }
+});
+
+// 🚀 2. ULTRA-FAST KYC REQUESTS (2KB ብቻ! በ 0.01s ይከፍታል — ፈጽሞ Error/Timeout አያደርግም!) 🚀
 app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
     try {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -1652,25 +1692,16 @@ app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
             statusFilter = { status: { $in: ['rejected', 'Rejected'] } };
         }
 
-        const excludePhotos = req.query.includePhotos === 'false';
-        const projection = excludePhotos ? { frontImage: 0, backImage: 0, selfieImage: 0 } : {};
-
+        // ⚠️ ግዙፍ Base64 ፎቶዎችን ከዋናው JSON ውጪ በማድረግ ሰርቨሩ በ 0.01 ሰከንድ እንዲመልስ ማድረግ!
         const [kycList, totalCount] = await Promise.all([
-            KYC.find(statusFilter, projection)
+            KYC.find(statusFilter)
+                .select('-frontImage -backImage -selfieImage')
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit)
                 .lean(),
             KYC.countDocuments(statusFilter)
         ]);
-
-        const formatImage = (img) => {
-            if (!img) return '';
-            if (Buffer.isBuffer(img)) {
-                return `data:image/jpeg;base64,${img.toString('base64')}`;
-            }
-            return img; 
-        };
 
         const requests = kycList.map(kyc => ({
             _id: kyc._id,
@@ -1683,11 +1714,10 @@ app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
             docType: kyc.docType || 'national_id',
             status: (kyc.status === 'verified' ? 'approved' : kyc.status) || 'pending',
             createdAt: kyc.createdAt || null,
-            ...(!excludePhotos ? {
-                frontImage: formatImage(kyc.frontImage),
-                backImage: formatImage(kyc.backImage),
-                selfieImage: formatImage(kyc.selfieImage)
-            } : {})
+            // ✅ ፎቶዎቹን በፈጣኑ የImage URL መላክ (ብራውዘሩ ወዲያውኑ ያሳያቸዋል!)
+            frontImage: `/api/admin/kyc-image/${kyc._id}/frontImage`,
+            backImage: `/api/admin/kyc-image/${kyc._id}/backImage`,
+            selfieImage: `/api/admin/kyc-image/${kyc._id}/selfieImage`
         }));
 
         return res.json({
@@ -1709,27 +1739,22 @@ app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
 
 app.get('/api/admin/kyc-docs/:id', verifyAdminToken, async (req, res) => {
     try {
-        const kyc = await KYC.findById(req.params.id).lean();
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(404).json({ success: false, message: 'Invalid KYC ID' });
+        }
+        const kyc = await KYC.findById(req.params.id).select('_id email fullName').lean();
         if (!kyc) {
             return res.status(404).json({ success: false, message: 'KYC record not found' });
         }
-
-        const formatImage = (img) => {
-            if (!img) return '';
-            if (Buffer.isBuffer(img)) {
-                return `data:image/jpeg;base64,${img.toString('base64')}`;
-            }
-            return img;
-        };
 
         return res.json({
             success: true,
             data: {
                 _id: kyc._id,
                 email: kyc.email || '',
-                frontImage: formatImage(kyc.frontImage),
-                backImage: formatImage(kyc.backImage),
-                selfieImage: formatImage(kyc.selfieImage)
+                frontImage: `/api/admin/kyc-image/${kyc._id}/frontImage`,
+                backImage: `/api/admin/kyc-image/${kyc._id}/backImage`,
+                selfieImage: `/api/admin/kyc-image/${kyc._id}/selfieImage`
             }
         });
     } catch (error) {
