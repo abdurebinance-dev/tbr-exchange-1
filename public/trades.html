@@ -1606,7 +1606,7 @@
         const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
             ? 'http://localhost:5000'
             : 'https://tbr-exchange-backend.onrender.com';
-        const TRADES_LIST_CACHE = 'tbr_my_trades_list_v3';
+        const TRADES_LIST_CACHE = 'tbr_my_trades_list_v4';
         let activeTrade = null;
         let currentUserId = localStorage.getItem('tbr_resolved_uid') || '';
         let selectedReceiptBase64 = '';
@@ -1615,7 +1615,6 @@
         let isFetchingList = false;
         let isFetchingRoom = false;
 
-        // ⚡ የማርኬት እና የዳሽቦርድ ካሽን ወዲያውኑ የሚያጸዳ (Release ወይም Cancel ሲደረግ ባላንስና ማርኬት በ 0.00s እንዲዘመን) ⚡
         function invalidateAllMarketAndBalanceCaches() {
             try {
                 const keysToRemove = [
@@ -1632,7 +1631,6 @@
             } catch (e) {}
         }
 
-        // ⚡ ከ server.js የሚመጡ የፎቶ ሊንኮችን (/api/user-avatar/...) ከ API_BASE ጋር በትክክል የሚያገናኝ ⚡
         function resolveAvatarUrl(rawUrl) {
             if (!rawUrl) return '';
             const str = String(rawUrl).trim();
@@ -1646,7 +1644,69 @@
             return str;
         }
 
-        // ⚡ የደረሰኝ (Receipt) እና የቻት ፎቶዎችን ጥራታቸው ሳይቀንስ ወደ 60KB ቀይሮ በ 0.1s እንዲላኩ የሚያደርግ ⚡
+        // 🔍 ትሬዱ በAdmin የተፈታ (Resolved / Released) ወይስ የተመለሰ (Refunded) መሆኑን በትክክል የሚለይ ፋንክሽን 🔍
+        function detectTradeResolutionState(tr) {
+            if (!tr) return { effectiveStatus: 'funds_locked', isDisputeResolved: false, isDisputeRefunded: false, applicantText: '' };
+
+            const rawStatus = String(tr.status || 'funds_locked').toLowerCase().trim();
+            const msgs = Array.isArray(tr.messages) ? tr.messages : [];
+
+            let adminReleasedMsg = null;
+            let adminRefundedMsg = null;
+            let disputeApplicantMsg = null;
+
+            for (const m of msgs) {
+                const txt = String(m.text || '');
+                if (m.isSystem || m.senderId === 'system' || m.senderId === 'admin') {
+                    if (txt.includes('refunded to the Seller') || txt.includes('refunded to Seller') || txt.includes('Winner: Seller')) {
+                        adminRefundedMsg = txt;
+                    } else if (txt.includes('Released') && txt.includes('Buyer') || txt.includes('Winner: Buyer')) {
+                        adminReleasedMsg = txt;
+                    }
+                    if (txt.includes('applied for a dispute') || txt.includes('Dispute opened')) {
+                        disputeApplicantMsg = txt;
+                    }
+                }
+            }
+
+            let applicantRole = '';
+            if (disputeApplicantMsg) {
+                if (disputeApplicantMsg.toLowerCase().includes('seller')) applicantRole = 'seller';
+                else if (disputeApplicantMsg.toLowerCase().includes('buyer')) applicantRole = 'buyer';
+            } else if (tr.disputeReason) {
+                if (String(tr.disputeReason).toLowerCase().startsWith('seller')) applicantRole = 'seller';
+                else if (String(tr.disputeReason).toLowerCase().startsWith('buyer')) applicantRole = 'buyer';
+            }
+
+            if (rawStatus === 'refunded' || adminRefundedMsg || (rawStatus === 'cancelled' && (tr.disputeReason || disputeApplicantMsg))) {
+                return {
+                    effectiveStatus: 'cancelled',
+                    isDisputeResolved: false,
+                    isDisputeRefunded: true,
+                    adminSummaryText: adminRefundedMsg || '⚖️ Dispute Refunded by Admin — Escrowed USDT has been returned to the Seller.',
+                    applicantRole
+                };
+            }
+
+            if (rawStatus === 'resolved' || adminReleasedMsg || (rawStatus === 'completed' && (tr.disputeReason || disputeApplicantMsg))) {
+                return {
+                    effectiveStatus: 'completed',
+                    isDisputeResolved: true,
+                    isDisputeRefunded: false,
+                    adminSummaryText: adminReleasedMsg || '⚖️ Dispute Resolved by Admin — Escrowed USDT has been released to the Buyer.',
+                    applicantRole
+                };
+            }
+
+            return {
+                effectiveStatus: rawStatus,
+                isDisputeResolved: false,
+                isDisputeRefunded: false,
+                adminSummaryText: '',
+                applicantRole
+            };
+        }
+
         function compressImageFast(file, callback) {
             const reader = new FileReader();
             reader.onload = (e) => {
@@ -1671,7 +1731,6 @@
             reader.readAsDataURL(file);
         }
 
-        // ⚡ በ localStorage እና sessionStorage ውስጥ ያሉትን ሁሉንም Keys ፈትሾ Token, Email እና UserID የሚያገኝ ፋንክሽን ⚡
         function getLoggedUserIdentity() {
             let token = localStorage.getItem('token') || localStorage.getItem('jwtToken') || localStorage.getItem('authToken') || localStorage.getItem('userToken') || '';
             let email = localStorage.getItem('userEmail') || localStorage.getItem('email') || '';
@@ -1728,7 +1787,6 @@
             return Number(val || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ETB';
         }
 
-        // ⚡ ከ My Trades ሰንጠረዥ ላይ አንድ ትሬድ ሲነካ በ 0.00 ሰከንድ ወዲያውኑ Trade Room እንዲከፍት የሚያደርግ ⚡
         function openSingleTradeInstant(tradeId) {
             if (myTradesMemoryMap[tradeId]) {
                 try {
@@ -1746,7 +1804,6 @@
                 document.getElementById('myTradesListView').style.display = 'none';
                 document.getElementById('singleTradeRoomView').style.display = 'grid';
 
-                // 1. በ 0.00 ሰከንድ ወዲያውኑ ከካሽ ማሳየት
                 try {
                     const cachedOrder = JSON.parse(localStorage.getItem('tbr_active_p2p_order') || 'null');
                     if (cachedOrder && String(cachedOrder._id) === String(tradeIdParam)) {
@@ -1895,17 +1952,26 @@
                                 dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
 
                 const userMsgsCount = Array.isArray(tr.messages)
-                    ? tr.messages.filter(m => !m.isSystem && m.senderId !== 'system').length
+                    ? tr.messages.filter(m => !m.isSystem && m.senderId !== 'system' && m.senderId !== 'admin').length
                     : 0;
 
-                const st = tr.status || 'funds_locked';
+                // ✅ Resolved / Refunded / Completed / Cancelled ሁሉንም በትክክል መለየት (ፈጽሞ ባዶ አይሆንም!)
+                const resState = detectTradeResolutionState(tr);
+                const st = resState.effectiveStatus;
                 const targetId = tr._id;
                 let statusPillHtml = '';
                 let actionLinkHtml = '';
                 let rateSubHtml = `<div class="mt-rate-sub">${dateStr}</div>`;
                 let rowHighlight = '';
 
-                if (st === 'funds_locked' || st === 'payment_sent' || st === 'disputed') {
+                if (resState.isDisputeRefunded) {
+                    statusPillHtml = `<span class="mt-status-pill cancelled" style="color:#eab308; border-color:rgba(234,179,8,0.4); background:rgba(234,179,8,0.1);"><i class="fa-solid fa-rotate-left"></i> Refunded</span>`;
+                    actionLinkHtml = `<span class="mt-action-link">View &rarr;</span>`;
+                } else if (resState.isDisputeResolved) {
+                    statusPillHtml = `<span class="mt-status-pill completed"><i class="fa-solid fa-scale-balanced"></i> Resolved</span>`;
+                    rateSubHtml = `<div class="mt-rate-sub method-green">${tr.paymentMethod || 'Bank'}</div>`;
+                    actionLinkHtml = `<span class="mt-action-link"><i class="fa-solid fa-download" style="color:var(--text-muted); margin-right:4px;"></i> Receipt &rarr;</span>`;
+                } else if (st === 'funds_locked' || st === 'payment_sent' || st === 'disputed') {
                     rowHighlight = 'active-row-highlight';
                     if (st === 'funds_locked') {
                         statusPillHtml = `<span class="mt-status-pill locked">Funds Locked</span>`;
@@ -1923,13 +1989,13 @@
                 } else if (st === 'cancelled') {
                     statusPillHtml = `<span class="mt-status-pill cancelled">Cancelled</span>`;
                     actionLinkHtml = `<span class="mt-action-link">View &rarr;</span>`;
-                } else if (st === 'completed') {
+                } else {
                     statusPillHtml = `<span class="mt-status-pill completed"><i class="fa-regular fa-circle-check"></i> Completed</span>`;
                     rateSubHtml = `<div class="mt-rate-sub method-green">${tr.paymentMethod || 'Bank'}</div>`;
                     actionLinkHtml = `<span class="mt-action-link"><i class="fa-solid fa-download" style="color:var(--text-muted); margin-right:4px;"></i> Receipt &rarr;</span>`;
                 }
 
-                const msgBadgeHtml = (userMsgsCount > 0 && (st === 'funds_locked' || st === 'payment_sent'))
+                const msgBadgeHtml = (userMsgsCount > 0 && (st === 'funds_locked' || st === 'payment_sent' || st === 'disputed'))
                     ? `<span class="mt-msg-badge"><i class="fa-regular fa-comment"></i> ${userMsgsCount}</span>`
                     : '';
 
@@ -2038,7 +2104,9 @@
             const usdtFormatted = netUsdtNum.toFixed(2) + ' USDT';
             const payMethod = activeTrade.paymentMethod || 'Commercial Bank of Ethiopia';
             const payDetails = activeTrade.paymentDetails || {};
-            const status = activeTrade.status || 'funds_locked';
+
+            const resState = detectTradeResolutionState(activeTrade);
+            const status = resState.effectiveStatus;
 
             document.getElementById('uiTradeNumber').innerText = `Trade #${tradeNum}`;
 
@@ -2054,7 +2122,13 @@
                 : initials;
 
             const badgeEl = document.getElementById('uiStatusBadge');
-            if (status === 'funds_locked') {
+            if (resState.isDisputeResolved) {
+                badgeEl.innerText = 'Resolved (Released)';
+                badgeEl.className = 'status-pill-badge completed';
+            } else if (resState.isDisputeRefunded) {
+                badgeEl.innerText = 'Refunded';
+                badgeEl.className = 'status-pill-badge payment-sent';
+            } else if (status === 'funds_locked') {
                 badgeEl.innerText = 'Funds Locked';
                 badgeEl.className = 'status-pill-badge';
             } else if (status === 'payment_sent') {
@@ -2075,15 +2149,28 @@
             const compSec = document.getElementById('uiCompletedSection');
             const cancSec = document.getElementById('uiCancelledSection');
 
-            if (status === 'completed') {
+            // ✅ 1. COMPLETED ወይም ADMIN RESOLVED (Released to Buyer) ሲሆን Active ክፍሉን አጥፍቶ ውሳኔውን በግልጽ ማሳየት!
+            if (status === 'completed' || resState.isDisputeResolved) {
                 activeSec.style.display = 'none';
                 cancSec.style.display = 'none';
                 compSec.style.display = 'flex';
 
+                const compTagEl = compSec.querySelector('.comp-tag');
+                if (compTagEl) {
+                    compTagEl.innerText = resState.isDisputeResolved ? '⚖️ DISPUTE RESOLVED BY ADMIN' : 'COMPLETED';
+                }
+
                 document.getElementById('uiCompBigUsdt').innerHTML = `${netUsdtNum.toFixed(2)} <span>USDT</span>`;
-                document.getElementById('uiCompSubNote').innerText = isBuyer
-                    ? `You received ${netUsdtNum.toFixed(2)} USDT`
-                    : `You sold ${Number(activeTrade.usdtAmount || 0).toFixed(2)} USDT`;
+                if (resState.isDisputeResolved) {
+                    document.getElementById('uiCompSubNote').innerText = isBuyer
+                        ? `Admin resolved the dispute in your favor — You received ${netUsdtNum.toFixed(2)} USDT.`
+                        : `Admin resolved the dispute — ${netUsdtNum.toFixed(2)} USDT was released to the Buyer (${activeTrade.buyerName || 'Buyer'}).`;
+                } else {
+                    document.getElementById('uiCompSubNote').innerText = isBuyer
+                        ? `You received ${netUsdtNum.toFixed(2)} USDT`
+                        : `You sold ${Number(activeTrade.usdtAmount || 0).toFixed(2)} USDT`;
+                }
+
                 document.getElementById('uiCompTypeWord').innerText = isBuyer ? 'Buy' : 'Sell';
                 document.getElementById('uiCompBankBadge').innerText = payMethod;
                 document.getElementById('uiCompFiat').innerText = `Br ${Number(activeTrade.etbAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
@@ -2101,7 +2188,8 @@
                 return;
             }
 
-            if (status === 'cancelled') {
+            // ✅ 2. CANCELLED ወይም ADMIN REFUNDED (Returned to Seller) ሲሆን Active ክፍሉን አጥፍቶ ውሳኔውን በግልጽ ማሳየት!
+            if (status === 'cancelled' || resState.isDisputeRefunded) {
                 activeSec.style.display = 'none';
                 compSec.style.display = 'none';
                 cancSec.style.display = 'flex';
@@ -2113,16 +2201,45 @@
                 document.getElementById('uiCancRate').innerText = `${Number(activeTrade.unitPrice || 0).toFixed(2)} / USDT`;
                 document.getElementById('uiCancBank').innerText = payMethod;
 
+                const cancNoticeCard = cancSec.querySelector('.canc-notice-card');
+                if (cancNoticeCard) {
+                    if (resState.isDisputeRefunded) {
+                        cancNoticeCard.innerHTML = `
+                            <i class="fa-solid fa-scale-balanced" style="color:#eab308; font-size:18px; margin-top:2px;"></i>
+                            <div>
+                                <div style="font-size:14px; font-weight:800; color:#eab308; margin-bottom:5px;">Dispute Refunded by Admin</div>
+                                <div style="font-size:12.5px; color:#d1d5db; line-height:1.45;">
+                                    ${isBuyer
+                                        ? `Admin reviewed the dispute and refunded the escrowed USDT to the Seller (<strong>${activeTrade.sellerName || 'Seller'}</strong>). This order is now closed.`
+                                        : `Admin resolved the dispute in your favor! Your escrowed USDT (<strong>${Number(activeTrade.usdtAmount || 0).toFixed(2)} USDT</strong>) has been refunded to you.`}
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        cancNoticeCard.innerHTML = `
+                            <i class="fa-solid fa-xmark" style="color:#9ca3af; font-size:16px; margin-top:2px;"></i>
+                            <div>
+                                <div style="font-size:13.5px; font-weight:800; color:#d1d5db; margin-bottom:5px;">Trade Cancelled</div>
+                                <div style="font-size:12px; color:var(--text-muted);">This trade was cancelled. Full USDT (0 fee deducted) has been returned directly to the market ad.</div>
+                            </div>
+                        `;
+                    }
+                }
+
                 document.getElementById('uiBuyerPayDropdown').style.display = 'none';
                 document.getElementById('uiRightMarkPaidBtn').style.display = 'none';
                 document.getElementById('uiRightSellerReleaseBtn').style.display = 'none';
                 document.getElementById('uiPostTradeBanner').style.display = 'none';
                 document.getElementById('uiChatClosedBanner').style.display = 'block';
+                document.getElementById('uiChatClosedBanner').innerText = resState.isDisputeRefunded
+                    ? 'Dispute refunded by Admin — order & chat closed'
+                    : 'Trade cancelled — chat is closed';
                 document.getElementById('uiChatInputBar').style.display = 'none';
                 renderChatMessages(partnerAvatar, initials);
                 return;
             }
 
+            // 3. ACTIVE TRADE (funds_locked, payment_sent, disputed)
             activeSec.style.display = 'flex';
             compSec.style.display = 'none';
             cancSec.style.display = 'none';
@@ -2149,6 +2266,35 @@
             const instCard = document.getElementById('uiInstructionsCard');
             const waitingCard = document.getElementById('uiWaitingStatusCard');
             const cancelBtn = document.getElementById('uiCancelTradeBtn');
+            const disputeBtn = document.getElementById('uiApplyDisputeBtn');
+            const appealLockCard = document.getElementById('uiAppealLockCard');
+
+            // ✅ ትሬዱ Disputed ላይ ከሆነ በድጋሚ Apply for Dispute እንዳይነካ መቆለፍ እና ማን እንዳመለከተ ማሳየት!
+            if (status === 'disputed') {
+                appealLockCard.style.display = 'none';
+                disputeBtn.style.display = 'flex';
+                disputeBtn.disabled = true;
+                disputeBtn.style.opacity = '0.75';
+                disputeBtn.style.cursor = 'not-allowed';
+
+                const whoApplied = resState.applicantRole; // 'buyer' or 'seller'
+                const iApplied = (isBuyer && whoApplied === 'buyer') || (!isBuyer && whoApplied === 'seller');
+
+                if (iApplied) {
+                    disputeBtn.innerHTML = `<i class="fa-solid fa-circle-check"></i> You have applied for dispute successfully (${isBuyer ? 'Buyer' : 'Seller'} Applied)`;
+                } else if (whoApplied === 'buyer') {
+                    disputeBtn.innerHTML = `<i class="fa-solid fa-scale-balanced"></i> Buyer (${activeTrade.buyerName || 'Buyer'}) is applying for dispute — Under Admin Review`;
+                } else if (whoApplied === 'seller') {
+                    disputeBtn.innerHTML = `<i class="fa-solid fa-scale-balanced"></i> Seller (${activeTrade.sellerName || 'Seller'}) is applying for dispute — Under Admin Review`;
+                } else {
+                    disputeBtn.innerHTML = `<i class="fa-solid fa-scale-balanced"></i> Dispute Submitted — Under Admin Review`;
+                }
+            } else {
+                disputeBtn.disabled = false;
+                disputeBtn.style.opacity = '1';
+                disputeBtn.style.cursor = 'pointer';
+                disputeBtn.innerHTML = `<i class="fa-solid fa-scale-balanced"></i> Apply for Dispute (Appeal to Admin)`;
+            }
 
             if (isBuyer) {
                 document.getElementById('uiBuyerPayDropdown').style.display = 'block';
@@ -2186,10 +2332,10 @@
                     waitingCard.className = 'status-waiting-card';
                     waitingCard.style.display = 'flex';
                     document.getElementById('uiWaitingTitle').innerText = status === 'disputed'
-                        ? 'Dispute under Admin Review'
+                        ? (resState.applicantRole === 'seller' ? 'Seller has applied for dispute (Admin Reviewing)' : 'You applied for dispute — Under Admin Review')
                         : 'Waiting for seller to release';
                     document.getElementById('uiWaitingSub').innerText = status === 'disputed'
-                        ? 'Admin is reviewing your uploaded receipt and chat history.'
+                        ? 'Admin is reviewing the uploaded receipt and chat history.'
                         : 'Your payment is being verified. USDT will be credited once the seller confirms.';
 
                     document.getElementById('uiLeftMarkPaidBtn').style.display = 'none';
@@ -2218,8 +2364,10 @@
                 waitingCard.style.display = 'flex';
 
                 if (status === 'payment_sent' || status === 'disputed') {
-                    document.getElementById('uiWaitingTitle').innerText = 'Buyer uploaded payment receipt!';
-                    document.getElementById('uiWaitingSub').innerText = `Verify ${etbFormatted} in your bank app and click "I Have Received" below.`;
+                    document.getElementById('uiWaitingTitle').innerText = status === 'disputed'
+                        ? (resState.applicantRole === 'buyer' ? 'Buyer has applied for dispute (Admin Reviewing)' : 'You applied for dispute — Under Admin Review')
+                        : 'Buyer uploaded payment receipt!';
+                    document.getElementById('uiWaitingSub').innerText = `Verify ${etbFormatted} in your bank app and click "I Have Received" if payment arrived.`;
                     document.getElementById('uiLeftSellerReleaseBtn').style.display = 'flex';
                     document.getElementById('uiRightSellerReleaseBtn').style.display = 'flex';
                     cancelBtn.style.display = 'none';
@@ -2247,7 +2395,14 @@
             const baseWindowMs = 10 * 60 * 1000;
 
             countdownInterval = setInterval(async () => {
-                if (!activeTrade || activeTrade.status === 'completed' || activeTrade.status === 'cancelled') return;
+                if (!activeTrade) return;
+                const resState = detectTradeResolutionState(activeTrade);
+                const st = resState.effectiveStatus;
+
+                // ✅ ትሬዱ Completed, Cancelled, Resolved ወይም Refunded ከሆነ ሰዓት ቆጣሪው ወዲያውኑ ይቆማል!
+                if (st === 'completed' || st === 'cancelled' || resState.isDisputeResolved || resState.isDisputeRefunded) {
+                    return;
+                }
 
                 const expiresAt = activeTrade.expiresAt ? new Date(activeTrade.expiresAt).getTime() : (Date.now() + baseWindowMs);
                 const remaining = Math.max(0, expiresAt - Date.now());
@@ -2273,14 +2428,20 @@
                 const pct = Math.max(0, Math.min(100, (remaining / totalMs) * 100));
                 document.getElementById('uiTimerBarFill').style.width = `${pct}%`;
 
+                if (st === 'disputed') {
+                    document.getElementById('uiApplyDisputeBtn').style.display = 'flex';
+                    document.getElementById('uiAppealLockCard').style.display = 'none';
+                    return;
+                }
+
                 if (remaining <= 0) {
-                    if (activeTrade.status === 'funds_locked') {
+                    if (st === 'funds_locked') {
                         await fetchTradeFromServer(activeTrade._id);
-                    } else if (activeTrade.status === 'payment_sent') {
+                    } else if (st === 'payment_sent') {
                         document.getElementById('uiApplyDisputeBtn').style.display = 'flex';
                         document.getElementById('uiAppealLockCard').style.display = 'none';
                     }
-                } else if (activeTrade.status !== 'disputed') {
+                } else {
                     document.getElementById('uiApplyDisputeBtn').style.display = 'none';
                     document.getElementById('uiAppealLockCard').style.display = 'flex';
                 }
@@ -2404,11 +2565,19 @@
             btn.innerHTML = `<i class="fa-solid fa-unlock-keyhole"></i> Yes, I Have Received — Release USDT`;
         }
 
+        // ⚡ 1. ያለ ምንም Reason Prompt ወዲያውኑ Dispute የሚልክ እና ድጋሚ እንዳይነካ የሚቆልፍ ⚡
         async function applyForDispute() {
-            if (!activeTrade) return;
+            if (!activeTrade || activeTrade.status === 'disputed') return;
+
+            const disputeBtn = document.getElementById('uiApplyDisputeBtn');
+            disputeBtn.disabled = true;
+            disputeBtn.style.opacity = '0.75';
+            disputeBtn.style.cursor = 'not-allowed';
+            disputeBtn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Submitting Dispute...`;
+
             const { token, email, userId } = getLoggedUserIdentity();
-            const reason = prompt('Describe the issue for Admin Dispute Review:', 'I transferred the ETB and uploaded the receipt, but the seller has not released the USDT.');
-            if (!reason) return;
+            const isBuyer = isCurrentUserBuyer();
+            const roleStr = isBuyer ? 'buyer' : 'seller';
 
             try {
                 const res = await fetch(`${API_BASE}/api/trades/${activeTrade._id}/dispute`, {
@@ -2417,16 +2586,27 @@
                         'Content-Type': 'application/json',
                         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                     },
-                    body: JSON.stringify({ reason, email, userId })
+                    body: JSON.stringify({
+                        role: roleStr,
+                        reason: `${isBuyer ? 'Buyer' : 'Seller'} applied for dispute.`,
+                        email,
+                        userId
+                    })
                 });
                 const json = await res.json();
                 if (res.ok && json.success) {
                     activeTrade = json.trade;
                     localStorage.setItem('tbr_active_p2p_order', JSON.stringify(activeTrade));
+                    invalidateAllMarketAndBalanceCaches();
                     renderTradeRoomUI();
-                    alert('Dispute submitted! Admin now has your full chat history and payment receipt.');
+                    return;
                 }
             } catch (e) {}
+
+            disputeBtn.disabled = false;
+            disputeBtn.style.opacity = '1';
+            disputeBtn.style.cursor = 'pointer';
+            disputeBtn.innerHTML = `<i class="fa-solid fa-scale-balanced"></i> Apply for Dispute (Appeal to Admin)`;
         }
 
         async function requestTradeCancellation() {

@@ -3307,43 +3307,51 @@ app.post('/api/trades/:id/request-cancel', async (req, res) => {
     }
 });
 
-// 8. ⚡ 1-CLICK INSTANT APPLY FOR DISPUTE (For Both Buyer & Seller — No Prompt Needed!) ⚡
+// 8. ⚡ Apply for Dispute (ያለ ምንም Reason Prompt ወዲያውኑ የሚልክ እና ማን እንዳመለከተ የሚመዘግብ) ⚡
 app.post('/api/trades/:id/dispute', async (req, res) => {
     try {
         const currentUser = await resolveUserFromRequest(req);
-        const trade = await Trade.findById(req.params.id).select('-receiptImage');
+        const trade = await Trade.findById(req.params.id);
         if (!trade) return res.status(404).json({ success: false, message: 'Trade not found.' });
 
-        if (trade.status === 'disputed' || trade.status === 'resolved') {
-            return res.json({ success: true, serverTime: Date.now(), trade: attachAccurateTimerData(trade) });
+        // ቀድሞውኑ Dispute ተደርጎ ወይም ተዘግቶ ከሆነ በድጋሚ እንዳይነካ መከልከል
+        if (['disputed', 'completed', 'cancelled', 'resolved', 'refunded'].includes(trade.status)) {
+            return res.json({ success: true, trade, message: 'Dispute is already active or resolved.' });
         }
 
-        const isSeller = currentUser && String(currentUser._id) === String(trade.sellerId);
-        const openerRole = isSeller ? 'seller' : 'buyer';
-        const openerLabel = isSeller ? `Seller (${trade.sellerName})` : `Buyer (${trade.buyerName})`;
+        const callerId = currentUser ? String(currentUser._id) : String(req.body.userId || '');
+        const callerEmail = String((currentUser && currentUser.email) || req.body.email || '').toLowerCase().trim();
 
-        const updatedTrade = await Trade.findByIdAndUpdate(
-            req.params.id,
-            {
-                $set: {
-                    status: 'disputed',
-                    disputeOpenedBy: openerRole,
-                    disputeReason: req.body.reason || `Dispute applied by ${openerLabel}`
-                },
-                $push: {
-                    messages: {
-                        senderId: 'system',
-                        senderName: 'System',
-                        text: `⚖️ ${openerLabel} applied for a dispute! Chat history and payment receipt have been forwarded to the TBR Admin Dispute Room.`,
-                        isSystem: true,
-                        createdAt: new Date()
-                    }
-                }
-            },
-            { new: true, select: '-receiptImage' }
-        );
+        let isSeller = false;
+        if (callerId && trade.sellerId && String(trade.sellerId) === callerId) {
+            isSeller = true;
+        } else if (callerEmail && trade.sellerEmail && String(trade.sellerEmail).toLowerCase() === callerEmail) {
+            isSeller = true;
+        } else if (req.body.role === 'seller') {
+            isSeller = true;
+        }
 
-        res.json({ success: true, serverTime: Date.now(), trade: attachAccurateTimerData(updatedTrade) });
+        const applicantRole = isSeller ? 'Seller' : 'Buyer';
+        const applicantName = isSeller ? (trade.sellerName || 'Seller') : (trade.buyerName || 'Buyer');
+
+        trade.status = 'disputed';
+        trade.disputeReason = `${applicantRole} (${applicantName}) applied for dispute.`;
+
+        trade.messages.push({
+            senderId: 'system',
+            senderName: 'System',
+            text: `⚖️ ${applicantRole} (${applicantName}) applied for a dispute! Chat history and payment receipt have been forwarded to the TBR Admin Dispute Room.`,
+            isSystem: true,
+            createdAt: new Date()
+        });
+
+        await trade.save();
+        res.json({
+            success: true,
+            trade,
+            appliedBy: applicantRole.toLowerCase(),
+            message: 'You have applied for dispute successfully!'
+        });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error opening dispute.' });
     }
@@ -3354,11 +3362,11 @@ app.post('/api/trades/:id/messages', async (req, res) => {
     try {
         const { text, image } = req.body;
         const currentUser = await resolveUserFromRequest(req);
-        const trade = await Trade.findById(req.params.id).select('-receiptImage');
+        const trade = await Trade.findById(req.params.id);
         if (!trade) return res.status(404).json({ success: false, message: 'Trade not found.' });
 
-        if (trade.status === 'cancelled') {
-            return res.status(400).json({ success: false, message: 'Chat is closed for cancelled trades.' });
+        if (['cancelled', 'refunded'].includes(trade.status)) {
+            return res.status(400).json({ success: false, message: 'Chat is closed for cancelled/refunded trades.' });
         }
 
         const senderIdStr = currentUser ? String(currentUser._id) : String(trade.buyerId);
@@ -3375,170 +3383,101 @@ app.post('/api/trades/:id/messages', async (req, res) => {
         });
 
         await trade.save();
-        res.json({ success: true, serverTime: Date.now(), trade: attachAccurateTimerData(trade), messages: trade.messages });
+        res.json({ success: true, trade, messages: trade.messages });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error sending message.' });
     }
 });
 
-// 10. ⚡ ULTRA-FAST ADMIN DISPUTE ROOM ENDPOINTS (Keeps Resolved Disputes Visible & Never Times Out!) ⚡
+// 10. ⚡ Admin Dispute Room Endpoints (በቻት የተላኩ ፎቶዎችን ጭምር ለAdmin የሚያሳይ + ውሳኔ ሲሰጥ የሚቆልፍ) ⚡
 app.get('/api/admin/escrow-disputes', verifyAdminToken, async (req, res) => {
     try {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-
-        // Active disputes + Resolved disputes (so resolved ones stay visible with winner info!)
-        const rawDisputes = await Trade.find({
+        const disputes = await Trade.find({
             $or: [
-                { status: { $in: ['disputed', 'resolved', 'payment_sent', 'funds_locked'] } },
-                { resolvedByAdmin: true }
+                { status: { $in: ['disputed', 'payment_sent', 'funds_locked', 'resolved', 'refunded'] } },
+                { disputeReason: { $exists: true, $ne: '' } }
             ]
         })
-        .select('-receiptImage -messages.image -buyerAvatar -sellerAvatar')
+        .select('-buyerAvatar -sellerAvatar')
         .sort({ createdAt: -1 })
-        .limit(60)
+        .limit(50)
         .lean();
 
-        const priorityOrder = { disputed: 1, payment_sent: 2, funds_locked: 3, resolved: 4, completed: 5, cancelled: 6 };
-        rawDisputes.sort((a, b) => (priorityOrder[a.status] || 9) - (priorityOrder[b.status] || 9));
+        // ✅ በቻት ውስጥ የተላኩ ፎቶዎች (m.image) በ Admin Dispute Evidence Modal ላይ በግልጽ እንዲታዩ ማድረግ
+        const formattedDisputes = disputes.map(d => {
+            const isResolved = d.status === 'resolved' || (d.status === 'completed' && d.disputeReason);
+            const isRefunded = d.status === 'refunded' || (d.status === 'cancelled' && d.disputeReason);
 
-        const formattedDisputes = rawDisputes.map(d => {
-            const isResolved = d.status === 'resolved' || Boolean(d.disputeWinner);
-            const winnerRole = d.disputeWinner || '';
-            const winnerName = winnerRole === 'buyer' ? d.buyerName : (winnerRole === 'seller' ? d.sellerName : '');
-            const resolvedLabel = isResolved
-                ? (winnerRole === 'buyer'
-                    ? `✅ Resolved for Buyer (Winner: ${d.buyerName})`
-                    : `✅ Resolved for Seller (Winner: ${d.sellerName})`)
-                : '';
+            const formattedMessages = Array.isArray(d.messages) ? d.messages.map(m => {
+                let displayText = m.text || '';
+                if (m.image && !displayText.includes('<img')) {
+                    displayText = `${displayText ? displayText + '<br>' : ''}<img src="${m.image}" onclick="window.open(this.src)" style="max-width:220px; max-height:240px; border-radius:8px; margin-top:6px; display:block; cursor:pointer; border:1px solid rgba(240,185,11,0.4);" title="Click to view full photo">`;
+                }
+                return {
+                    ...m,
+                    text: displayText
+                };
+            }) : [];
 
             return {
                 ...d,
-                receiptImage: `/api/trades/${d._id}/receipt-image`,
-                isResolved,
-                winnerRole,
-                winnerName,
-                resolvedForText: resolvedLabel,
-                statusDisplay: isResolved ? `Resolved (${winnerRole === 'buyer' ? 'Buyer Won' : 'Seller Won'})` : d.status
+                status: isResolved ? 'resolved' : (isRefunded ? 'refunded' : d.status),
+                actionLocked: isResolved || isRefunded,
+                resolutionLabel: isResolved ? 'Resolved (Released)' : (isRefunded ? 'Refunded to Seller' : ''),
+                messages: formattedMessages
             };
         });
 
-        res.json({ success: true, data: formattedDisputes, disputes: formattedDisputes });
+        res.json({ success: true, data: formattedDisputes });
     } catch (error) {
         res.status(500).json({ success: false, data: [] });
     }
 });
 
-// ⚡ ATOMIC IDEMPOTENT ADMIN ESCROW RESOLVE (0.01s Speed, Zero Network Error, Never Double-Credits Buyer!) ⚡
-const activeAdminResolutions = new Set();
-
 app.post('/api/admin/escrow-action', verifyAdminToken, async (req, res) => {
-    const tradeId = String((req.body && req.body.tradeId) || '').trim();
-    const action = String((req.body && req.body.action) || '').trim();
-
-    if (!tradeId || !mongoose.Types.ObjectId.isValid(tradeId)) {
-        return res.status(400).json({ success: false, message: 'Invalid Trade ID.' });
-    }
-
-    if (activeAdminResolutions.has(tradeId)) {
-        return res.json({ success: true, alreadyResolved: true, message: 'Resolution in progress...' });
-    }
-
-    activeAdminResolutions.add(tradeId);
-
     try {
-        const existing = await Trade.findById(tradeId).select('-receiptImage -messages.image').lean();
-        if (!existing) {
-            activeAdminResolutions.delete(tradeId);
-            return res.status(404).json({ success: false, message: 'Trade not found.' });
-        }
+        const { tradeId, action } = req.body;
+        const trade = await Trade.findById(tradeId);
+        if (!trade) return res.status(404).json({ success: false, message: 'Trade not found.' });
 
-        // 🛑 1. ቀድሞውኑ Resolve ወይም Complete ከተደረገ በፍጹም ድጋሚ USDT እንዳይልክ መከልከል! 🛑
-        if (existing.status === 'resolved' || existing.status === 'completed' || existing.status === 'cancelled' || existing.resolvedByAdmin) {
-            activeAdminResolutions.delete(tradeId);
-            const prevWinner = existing.disputeWinner === 'buyer' ? `Buyer (${existing.buyerName})` : `Seller (${existing.sellerName})`;
-            return res.json({
-                success: true,
-                alreadyResolved: true,
-                trade: existing,
-                message: `This dispute was already resolved for ${prevWinner}. No duplicate USDT was sent.`
+        // 🛑 አንዴ Resolve ወይም Refund ከተደረገ በኋላ በድጋሚ እንዳይነካ መከልከል! 🛑
+        const alreadyDone = ['completed', 'cancelled', 'resolved', 'refunded'].includes(trade.status) ||
+            (Array.isArray(trade.messages) && trade.messages.some(m => m.isSystem && (String(m.text).includes('Dispute Resolved by Admin') || String(m.text).includes('Admin resolved dispute'))));
+
+        if (alreadyDone) {
+            return res.status(400).json({
+                success: false,
+                message: 'This trade dispute has already been resolved/refunded and cannot be modified again.'
             });
         }
 
-        const isReleaseToBuyer = (action === 'release');
-        const winnerRole = isReleaseToBuyer ? 'buyer' : 'seller';
+        if (action === 'release') {
+            const baseUsdt = Number(trade.usdtAmount || 0);
+            const feePct = Number(trade.feePercent || 0.5);
+            const feeRate = feePct / 100;
 
-        const baseUsdt = Number(existing.usdtAmount || 0);
-        const feePct = Number(existing.feePercent || 0.5);
-        const feeRate = feePct / 100;
+            const buyerFee = Number(trade.buyerFeeUsdt) > 0 ? Number(trade.buyerFeeUsdt) : Number((baseUsdt * feeRate).toFixed(6));
+            const sellerFee = Number(trade.sellerFeeUsdt) > 0 ? Number(trade.sellerFeeUsdt) : Number((baseUsdt * feeRate).toFixed(6));
+            const totalPlatformFee = Number((buyerFee + sellerFee).toFixed(6));
 
-        const buyerFee = Number(existing.buyerFeeUsdt) > 0 ? Number(existing.buyerFeeUsdt) : Number((baseUsdt * feeRate).toFixed(6));
-        const sellerFee = Number(existing.sellerFeeUsdt) > 0 ? Number(existing.sellerFeeUsdt) : Number((baseUsdt * feeRate).toFixed(6));
-        const totalPlatformFee = Number((buyerFee + sellerFee).toFixed(6));
+            const sellerLockedTotal = Number(trade.sellerTotalDeductedUsdt || (baseUsdt + sellerFee));
+            const netUsdtToCreditBuyer = Number(trade.netUsdt || Math.max(0, baseUsdt - buyerFee));
 
-        const sellerLockedTotal = Number(existing.sellerTotalDeductedUsdt || (baseUsdt + sellerFee));
-        const netUsdtToCreditBuyer = Number(existing.netUsdt || Math.max(0, baseUsdt - buyerFee));
-
-        const resolutionMsgText = isReleaseToBuyer
-            ? `⚖️ Dispute Resolved by Admin — Winner: Buyer (${existing.buyerName}) | Loser: Seller (${existing.sellerName}). ${netUsdtToCreditBuyer.toFixed(4)} USDT has been released to the Buyer.`
-            : `⚖️ Dispute Resolved by Admin — Winner: Seller (${existing.sellerName}) | Loser: Buyer (${existing.buyerName}). Order closed and escrowed USDT refunded to the Seller.`;
-
-        // ✅ 2. ATOMIC DATABASE LOCK: መጀመሪያ በዳታቤዝ ላይ status = 'resolved' ማድረግ (አንድ ጊዜ ብቻ እንዲፈጸም!)
-        const lockedTrade = await Trade.findOneAndUpdate(
-            {
-                _id: tradeId,
-                status: { $nin: ['resolved', 'completed', 'cancelled'] },
-                resolvedByAdmin: { $ne: true }
-            },
-            {
-                $set: {
-                    status: 'resolved',
-                    disputeWinner: winnerRole,
-                    resolvedByAdmin: true,
-                    resolvedAt: new Date(),
-                    ...(isReleaseToBuyer ? {
-                        buyerFeeUsdt: buyerFee,
-                        sellerFeeUsdt: sellerFee,
-                        totalPlatformFeeUsdt: totalPlatformFee
-                    } : {})
-                },
-                $push: {
-                    messages: {
-                        senderId: 'admin',
-                        senderName: 'Admin',
-                        text: resolutionMsgText,
-                        isSystem: true,
-                        createdAt: new Date()
-                    }
-                }
-            },
-            { new: true, select: '-receiptImage -messages.image' }
-        ).lean();
-
-        if (!lockedTrade) {
-            activeAdminResolutions.delete(tradeId);
-            return res.json({
-                success: true,
-                alreadyResolved: true,
-                message: 'Already resolved!'
-            });
-        }
-
-        // ✅ 3. አሁን አንድ ጊዜ ብቻ ባላንሱን ማስተካከል
-        if (isReleaseToBuyer) {
-            const sellerDoc = await User.findById(existing.sellerId).select('balance lockedBalance');
+            const sellerDoc = await User.findById(trade.sellerId).select('balance lockedBalance');
             if (sellerDoc) {
                 sellerDoc.lockedBalance = Math.max(0, Number(((sellerDoc.lockedBalance || 0) - sellerLockedTotal).toFixed(6)));
                 await sellerDoc.save();
             }
 
-            await User.findByIdAndUpdate(existing.buyerId, {
+            await User.findByIdAndUpdate(trade.buyerId, {
                 $inc: { balance: Number(netUsdtToCreditBuyer.toFixed(6)) }
             });
 
             try {
                 await Transaction.create({
-                    userId: existing.buyerId,
-                    email: existing.buyerEmail,
+                    userId: trade.buyerId,
+                    email: trade.buyerEmail,
                     type: 'p2p_trade',
                     amount: baseUsdt,
                     fee: totalPlatformFee,
@@ -3546,28 +3485,39 @@ app.post('/api/admin/escrow-action', verifyAdminToken, async (req, res) => {
                 });
             } catch (txErr) {}
 
-            adsCacheData = null;
-            activeAdminResolutions.delete(tradeId);
-            return res.json({
-                success: true,
-                trade: lockedTrade,
-                disputeWinner: 'buyer',
-                message: `Resolved for Buyer (${existing.buyerName})! ${netUsdtToCreditBuyer.toFixed(2)} USDT credited once.`
+            trade.buyerFeeUsdt = buyerFee;
+            trade.sellerFeeUsdt = sellerFee;
+            trade.totalPlatformFeeUsdt = totalPlatformFee;
+            trade.status = 'completed';
+            trade.disputeReason = trade.disputeReason || 'Resolved by Admin';
+
+            trade.messages.push({
+                senderId: 'admin',
+                senderName: 'Admin',
+                text: `⚖️ Dispute Resolved by Admin — Winner: Buyer (${trade.buyerName}) | Loser: Seller (${trade.sellerName}). ${netUsdtToCreditBuyer.toFixed(2)} USDT has been released to the Buyer.`,
+                isSystem: true,
+                createdAt: new Date()
             });
+            await trade.save();
+            adsCacheData = null;
+            return res.json({ success: true, status: 'resolved', trade, message: 'Resolved: Escrow USDT released to Buyer!' });
         } else {
-            await refundEscrowOnCancel(existing);
-            adsCacheData = null;
-            activeAdminResolutions.delete(tradeId);
-            return res.json({
-                success: true,
-                trade: lockedTrade,
-                disputeWinner: 'seller',
-                message: `Resolved for Seller (${existing.sellerName})! Escrowed USDT refunded to Seller.`
+            await refundEscrowOnCancel(trade);
+            trade.status = 'cancelled';
+            trade.disputeReason = trade.disputeReason || 'Refunded by Admin';
+
+            trade.messages.push({
+                senderId: 'admin',
+                senderName: 'Admin',
+                text: `⚖️ Dispute Resolved by Admin — Winner: Seller (${trade.sellerName}) | Loser: Buyer (${trade.buyerName}). Order closed and escrowed USDT has been refunded to the Seller.`,
+                isSystem: true,
+                createdAt: new Date()
             });
+            await trade.save();
+            adsCacheData = null;
+            return res.json({ success: true, status: 'refunded', trade, message: 'Refunded: Escrow USDT returned to Seller!' });
         }
     } catch (error) {
-        activeAdminResolutions.delete(tradeId);
-        console.error("Admin Escrow Action Error:", error);
         res.status(500).json({ success: false, message: 'Error resolving dispute.' });
     }
 });
