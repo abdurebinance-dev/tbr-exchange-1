@@ -1397,6 +1397,8 @@
             } catch (e) {}
         }
 
+        const LIVE_ADS_CACHE_KEY = 'tbr_market_instant_cache_v3';
+
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const activeTab = urlParams.get('tab');
@@ -1408,26 +1410,34 @@
                 document.getElementById('buyTabBtn').className = 'toggle-btn';
             }
 
-            // ⚡ 1. በ localStorage ውስጥ ተጣብቆ የነበረውን የድሮ የተሰረዘ ፖስት (tbr_market_ads_v1) ሙሉ በሙሉ ማጽዳት! ⚡
+            // ⚡ 1. Lod di ad dɛm wantɛm insay 0.00 sɛkɔn fɔm cache so loading nɔ go ɛva sho! ⚡
             try {
-                localStorage.removeItem('tbr_market_ads_v1');
-                sessionStorage.removeItem('tbr_market_ads_v1');
+                const cached = sessionStorage.getItem(LIVE_ADS_CACHE_KEY);
+                if (cached) {
+                    const parsed = JSON.parse(cached);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        allServerAds = parsed.filter(ad => (!ad.status || ad.status === 'active') && Number(ad.totalAmount || 0) > 0.0001);
+                        hasLoadedAdsOnce = true;
+                        renderOrderBook();
+                    }
+                }
             } catch (e) {}
 
-            // 2. Fetch fresh live ads, admin settings & user wallet/payments in parallel
-            fetchLiveAdsFromServer();
+            // 2. Fetch fresh live ads na background pan saylɛnt we
+            fetchLiveAdsFromServer(true);
             fetchAdminSettings();
             fetchCurrentUserWalletAndPayments();
 
-            // 3. Background heartbeat & fast 2-second live sync (Typo ssetInterval fixed!)
+            // 3. Auto-sync evri 2 sɛkɔn na background
             sendHeartbeat();
             setInterval(sendHeartbeat, 30000);
-            setInterval(fetchLiveAdsFromServer, 2000);
+            setInterval(() => fetchLiveAdsFromServer(true), 2000);
             setInterval(fetchAdminSettings, 15000);
 
-            window.addEventListener('focus', fetchLiveAdsFromServer);
+            // We yu tɔn bak to Market fɔm Dashboard, update wantɛm witawt loading screen
+            window.addEventListener('focus', () => fetchLiveAdsFromServer(true));
             document.addEventListener('visibilitychange', () => {
-                if (!document.hidden) fetchLiveAdsFromServer();
+                if (!document.hidden) fetchLiveAdsFromServer(true);
             });
         });
 
@@ -1449,7 +1459,7 @@
             fetchLiveAdsFromServer();
         }
 
-        async function fetchLiveAdsFromServer() {
+ async function fetchLiveAdsFromServer(isBackground = false) {
             if (isFetchingAds) return;
             isFetchingAds = true;
             try {
@@ -1462,14 +1472,20 @@
                 });
                 const json = await res.json();
                 if (json && json.success && Array.isArray(json.ads)) {
-                    // ✅ Active የሆኑ እና ከ 0 USDT በላይ ያላቸውን ብቻ ማሳየት (Cancelled የሆኑ በ 0.00s ይጠፋሉ!)
+                    // Filter out cancelled or empty ads
                     allServerAds = json.ads.filter(ad =>
                         (!ad.status || ad.status === 'active') &&
                         Number(ad.totalAmount || 0) > 0.0001
                     );
+
                     hasLoadedAdsOnce = true;
                     renderOrderBook();
-                } else {
+
+                    // Sev am na cache so next tɛm yu enta, i de opin insay 0.00s
+                    try {
+                        sessionStorage.setItem(LIVE_ADS_CACHE_KEY, JSON.stringify(allServerAds));
+                    } catch (storageErr) {}
+                } else if (!hasLoadedAdsOnce) {
                     hasLoadedAdsOnce = true;
                     renderOrderBook();
                 }
