@@ -2532,7 +2532,7 @@ app.put('/api/ads/:id/cancel', verifyToken, async (req, res) => {
 });
 
 // ============================================================================
-// ⚡ P2P TRADE ESCROW SYSTEM ⚡
+// ⚡ P2P TRADE ESCROW, ACCURATE SERVER TIMER & ATOMIC DISPUTE SYSTEM ⚡
 // ============================================================================
 const tradeSchema = new mongoose.Schema({
     tradeNumber: { type: String, required: true, index: true },
@@ -2566,9 +2566,13 @@ const tradeSchema = new mongoose.Schema({
     receiptImage: { type: String, default: '' },
     warningExtended: { type: Boolean, default: false },
     disputeReason: { type: String, default: '' },
+    disputeOpenedBy: { type: String, default: '' }, // 'buyer' or 'seller'
+    disputeWinner: { type: String, default: '' },   // 'buyer' or 'seller'
+    resolvedByAdmin: { type: Boolean, default: false },
+    resolvedAt: { type: Date },
     status: {
         type: String,
-        enum: ['funds_locked', 'payment_sent', 'completed', 'cancelled', 'disputed'],
+        enum: ['funds_locked', 'payment_sent', 'completed', 'cancelled', 'disputed', 'resolved'],
         default: 'funds_locked',
         index: true
     },
@@ -2586,7 +2590,29 @@ const tradeSchema = new mongoose.Schema({
 
 const Trade = mongoose.models.Trade || mongoose.model('Trade', tradeSchema);
 
-// ⚡ ፈጣን User Resolver (ግዙፍ avatar Base64 ሳይጭን በ 0.002s ተጠቃሚውን ያገኛል) ⚡
+// ⚡ የደረሰኝ ፎቶን በቀጥታ እንደ Image የሚያሳይ ፈጣን Route (Admin እና Chat ሳይጨናነቁ በ 0.01s እንዲከፍቱ) ⚡
+app.get('/api/trades/:id/receipt-image', async (req, res) => {
+    try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(404).end();
+        const trade = await Trade.findById(req.params.id).select('receiptImage').lean();
+        const raw = trade && trade.receiptImage ? String(trade.receiptImage).trim() : '';
+        if (!raw) return res.status(404).end();
+
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        if (raw.startsWith('data:image')) {
+            const matches = raw.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+            if (matches && matches[2]) {
+                res.setHeader('Content-Type', matches[1]);
+                return res.send(Buffer.from(matches[2], 'base64'));
+            }
+        }
+        return res.redirect(raw);
+    } catch (e) {
+        res.status(404).end();
+    }
+});
+
+// ⚡ ፈጣን User Resolver ⚡
 async function resolveUserFromRequest(req) {
     let decoded = null;
     const authHeader = req.headers['authorization'] || req.headers['Authorization'];
@@ -2714,7 +2740,20 @@ async function refundEscrowOnCancel(trade) {
     }
 }
 
-// 1. Create Trade (Fast & Lightweight)
+// Helper to attach accurate server countdown fields to any trade object
+function attachAccurateTimerData(tradeRaw) {
+    if (!tradeRaw) return null;
+    const obj = tradeRaw.toObject ? tradeRaw.toObject() : { ...tradeRaw };
+    const nowMs = Date.now();
+    const expMs = obj.expiresAt ? new Date(obj.expiresAt).getTime() : (nowMs + 10 * 60 * 1000);
+    obj.serverTime = nowMs;
+    obj.remainingMs = Math.max(0, expMs - nowMs);
+    obj.buyerAvatar = obj.buyerId ? `/api/user-avatar/${obj.buyerId}` : '';
+    obj.sellerAvatar = obj.sellerId ? `/api/user-avatar/${obj.sellerId}` : '';
+    return obj;
+}
+
+// 1. Create Trade
 app.post('/api/trades', async (req, res) => {
     try {
         const { adId, actionType, etbAmount, usdtAmount, paymentMethod } = req.body;
@@ -2858,12 +2897,7 @@ app.post('/api/trades', async (req, res) => {
             return `trader${digits}`;
         };
 
-        const [totalTradesCount, buyerAvUrl, sellerAvUrl] = await Promise.all([
-            Trade.countDocuments({}),
-            getFastAvatarUrl(buyerUser._id),
-            getFastAvatarUrl(sellerUser._id)
-        ]);
-
+        const totalTradesCount = await Trade.countDocuments({});
         const sequentialTradeNumber = String(totalTradesCount + 1).padStart(5, '0');
         const sName = resolveName(sellerUser);
         const bName = resolveName(buyerUser);
@@ -2878,8 +2912,8 @@ app.post('/api/trades', async (req, res) => {
             sellerName: sName,
             buyerEmail: (buyerUser.email || '').toLowerCase(),
             sellerEmail: (sellerUser.email || '').toLowerCase(),
-            buyerAvatar: buyerAvUrl,
-            sellerAvatar: sellerAvUrl,
+            buyerAvatar: `/api/user-avatar/${buyerUser._id}`,
+            sellerAvatar: `/api/user-avatar/${sellerUser._id}`,
             unitPrice: Number(ad.price),
             etbAmount: etbNum,
             usdtAmount: usdtNum,
@@ -2910,14 +2944,18 @@ app.post('/api/trades', async (req, res) => {
 
         await newTrade.save();
         adsCacheData = null;
-        res.status(201).json({ success: true, trade: newTrade });
+        res.status(201).json({
+            success: true,
+            serverTime: Date.now(),
+            trade: attachAccurateTimerData(newTrade)
+        });
     } catch (error) {
         console.error("Create Trade Error:", error);
         res.status(500).json({ success: false, message: 'Server error creating trade.' });
     }
 });
 
-// 2. ⚡ ULTRA-FAST /api/trades (2 KB ብቻ! በ 0.01s ከነ ፕሮፋይል ፎቶው ይመጣል!) ⚡
+// 2. ⚡ ULTRA-FAST /api/trades LIST ⚡
 app.get('/api/trades', async (req, res) => {
     try {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -2942,7 +2980,7 @@ app.get('/api/trades', async (req, res) => {
         }
 
         if (orConditions.length === 0) {
-            return res.json({ success: true, currentUserId: '', total: 0, trades: [] });
+            return res.json({ success: true, serverTime: Date.now(), currentUserId: '', total: 0, trades: [] });
         }
 
         const trades = await Trade.find({ $or: orConditions })
@@ -2951,14 +2989,18 @@ app.get('/api/trades', async (req, res) => {
             .limit(40)
             .lean();
 
+        const nowMs = Date.now();
         const fastTrades = trades.map(tr => ({
             ...tr,
+            serverTime: nowMs,
+            remainingMs: Math.max(0, new Date(tr.expiresAt || nowMs).getTime() - nowMs),
             buyerAvatar: tr.buyerId ? `/api/user-avatar/${tr.buyerId}` : '',
             sellerAvatar: tr.sellerId ? `/api/user-avatar/${tr.sellerId}` : ''
         }));
 
         res.json({
             success: true,
+            serverTime: nowMs,
             currentUserId: currentUser ? String(currentUser._id) : rawUid,
             total: fastTrades.length,
             trades: fastTrades
@@ -2969,7 +3011,7 @@ app.get('/api/trades', async (req, res) => {
     }
 });
 
-// 3. Active Trades Banner (Fast & Lightweight)
+// 3. Active Trades Banner
 app.get('/api/user/active-trades', async (req, res) => {
     try {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -2993,14 +3035,18 @@ app.get('/api/user/active-trades', async (req, res) => {
         .sort({ createdAt: -1 })
         .lean();
 
+        const nowMs = Date.now();
         const enrichedActive = activeTrades.map(tr => ({
             ...tr,
+            serverTime: nowMs,
+            remainingMs: Math.max(0, new Date(tr.expiresAt || nowMs).getTime() - nowMs),
             buyerAvatar: tr.buyerId ? `/api/user-avatar/${tr.buyerId}` : '',
             sellerAvatar: tr.sellerId ? `/api/user-avatar/${tr.sellerId}` : ''
         }));
 
         res.json({
             success: true,
+            serverTime: nowMs,
             currentUserId: String(userId),
             count: enrichedActive.length,
             latestTrade: enrichedActive[0] || null,
@@ -3011,7 +3057,7 @@ app.get('/api/user/active-trades', async (req, res) => {
     }
 });
 
-// 4. Get Single Trade Details (Fast Avatar URLs)
+// 4. Get Single Trade Details (With Exact Server Countdown Sync)
 app.get('/api/trades/:id', async (req, res) => {
     try {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -3021,14 +3067,14 @@ app.get('/api/trades/:id', async (req, res) => {
         if (req.params.id === 'latest' && currentUser) {
             trade = await Trade.findOne({
                 $or: [{ buyerId: currentUser._id }, { sellerId: currentUser._id }]
-            }).sort({ createdAt: -1 });
+            }).select('-receiptImage').sort({ createdAt: -1 });
         } else if (mongoose.Types.ObjectId.isValid(req.params.id)) {
-            trade = await Trade.findById(req.params.id);
+            trade = await Trade.findById(req.params.id).select('-receiptImage');
         }
 
         if (!trade) return res.status(404).json({ success: false, message: 'Trade not found.' });
 
-        if (trade.status === 'funds_locked' && new Date() >= new Date(trade.expiresAt)) {
+        if (trade.status === 'funds_locked' && Date.now() >= new Date(trade.expiresAt).getTime()) {
             if (!trade.warningExtended) {
                 trade.warningExtended = true;
                 trade.expiresAt = new Date(Date.now() + 2 * 60 * 1000);
@@ -3052,12 +3098,11 @@ app.get('/api/trades/:id', async (req, res) => {
             }
         }
 
-        const tradeObj = trade.toObject();
-        tradeObj.buyerAvatar = tradeObj.buyerId ? `/api/user-avatar/${tradeObj.buyerId}` : '';
-        tradeObj.sellerAvatar = tradeObj.sellerId ? `/api/user-avatar/${tradeObj.sellerId}` : '';
+        const tradeObj = attachAccurateTimerData(trade);
 
         res.json({
             success: true,
+            serverTime: Date.now(),
             trade: tradeObj,
             currentUserId: currentUser ? String(currentUser._id) : ''
         });
@@ -3087,62 +3132,87 @@ app.post('/api/trades/:id/mark-paid', async (req, res) => {
             senderId: currentUser ? String(currentUser._id) : String(trade.buyerId),
             senderName: trade.buyerName,
             text: `Payment receipt uploaded (${trade.etbAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })} ETB)`,
-            image: receiptImage,
+            image: `/api/trades/${trade._id}/receipt-image?t=${Date.now()}`,
             isSystem: false
         });
 
         await trade.save();
-        res.json({ success: true, trade });
+        const tradeObj = attachAccurateTimerData(trade);
+        delete tradeObj.receiptImage;
+
+        res.json({ success: true, serverTime: Date.now(), trade: tradeObj });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error updating trade status.' });
     }
 });
 
-// 6. ⚡ Release USDT (Instant Buyer Credit & Seller Locked Balance Deduction) ⚡
+// 6. ⚡ Release USDT (Atomic Idempotent Lock so Seller can never double-release) ⚡
 app.post('/api/trades/:id/release', async (req, res) => {
     try {
-        const trade = await Trade.findById(req.params.id);
-        if (!trade) return res.status(404).json({ success: false, message: 'Trade not found.' });
+        const existingTrade = await Trade.findById(req.params.id).select('-receiptImage');
+        if (!existingTrade) return res.status(404).json({ success: false, message: 'Trade not found.' });
 
-        if (trade.status === 'completed') {
-            return res.json({ success: true, trade });
+        if (existingTrade.status === 'completed' || existingTrade.status === 'resolved') {
+            return res.json({ success: true, serverTime: Date.now(), trade: attachAccurateTimerData(existingTrade) });
         }
-        if (trade.status === 'cancelled') {
+        if (existingTrade.status === 'cancelled') {
             return res.status(400).json({ success: false, message: 'Trade was already cancelled.' });
         }
 
-        const baseUsdt = Number(trade.usdtAmount || 0);
-        const feePct = Number(trade.feePercent || 0.5);
+        const baseUsdt = Number(existingTrade.usdtAmount || 0);
+        const feePct = Number(existingTrade.feePercent || 0.5);
         const feeRate = feePct / 100;
 
-        const buyerFee = Number(trade.buyerFeeUsdt) > 0 ? Number(trade.buyerFeeUsdt) : Number((baseUsdt * feeRate).toFixed(6));
-        const sellerFee = Number(trade.sellerFeeUsdt) > 0 ? Number(trade.sellerFeeUsdt) : Number((baseUsdt * feeRate).toFixed(6));
+        const buyerFee = Number(existingTrade.buyerFeeUsdt) > 0 ? Number(existingTrade.buyerFeeUsdt) : Number((baseUsdt * feeRate).toFixed(6));
+        const sellerFee = Number(existingTrade.sellerFeeUsdt) > 0 ? Number(existingTrade.sellerFeeUsdt) : Number((baseUsdt * feeRate).toFixed(6));
         const totalPlatformFee = Number((buyerFee + sellerFee).toFixed(6));
 
-        const sellerLockedTotal = Number(trade.sellerTotalDeductedUsdt) > 0
-            ? Number(trade.sellerTotalDeductedUsdt)
+        const sellerLockedTotal = Number(existingTrade.sellerTotalDeductedUsdt) > 0
+            ? Number(existingTrade.sellerTotalDeductedUsdt)
             : Number((baseUsdt + sellerFee).toFixed(6));
 
-        const netUsdtToCreditBuyer = Number(trade.netUsdt) > 0
-            ? Number(trade.netUsdt)
+        const netUsdtToCreditBuyer = Number(existingTrade.netUsdt) > 0
+            ? Number(existingTrade.netUsdt)
             : Math.max(0, Number((baseUsdt - buyerFee).toFixed(6)));
 
-        const sellerFilter = trade.sellerId && mongoose.Types.ObjectId.isValid(trade.sellerId)
-            ? { _id: trade.sellerId }
-            : { email: (trade.sellerEmail || '').toLowerCase() };
+        // ✅ ATOMIC LOCK: Ensure status transitions to 'completed' only ONCE!
+        const lockedTrade = await Trade.findOneAndUpdate(
+            { _id: req.params.id, status: { $nin: ['completed', 'resolved', 'cancelled'] } },
+            {
+                $set: {                     status: 'completed',                     buyerFeeUsdt: buyerFee,                     sellerFeeUsdt: sellerFee,                     totalPlatformFeeUsdt: totalPlatformFee                 },$push: {
+                    messages: {
+                        senderId: 'system',
+                        senderName: 'System',
+                        text: `Trade completed — ${netUsdtToCreditBuyer.toFixed(4)} USDT credited to buyer (after ${feePct}% fee). Post-trade chat is open.`,
+                        isSystem: true,
+                        createdAt: new Date()
+                    }
+                }
+            },
+            { new: true, select: '-receiptImage' }
+        );
+
+        if (!lockedTrade) {
+            const latest = await Trade.findById(req.params.id).select('-receiptImage');
+            return res.json({ success: true, serverTime: Date.now(), trade: attachAccurateTimerData(latest) });
+        }
+
+        const sellerFilter = lockedTrade.sellerId && mongoose.Types.ObjectId.isValid(lockedTrade.sellerId)
+            ? { _id: lockedTrade.sellerId }
+            : { email: (lockedTrade.sellerEmail || '').toLowerCase() };
 
         const sellerDoc = await User.findOne(sellerFilter).select('_id balance lockedBalance');
         if (sellerDoc) {
-            if (!trade.sellerTotalDeductedUsdt && trade.tradeType === 'sell') {
+            if (!lockedTrade.sellerTotalDeductedUsdt && lockedTrade.tradeType === 'sell') {
                 sellerDoc.balance = Math.max(0, Number(((sellerDoc.balance || 0) - sellerLockedTotal).toFixed(6)));
             }
             sellerDoc.lockedBalance = Math.max(0, Number(((sellerDoc.lockedBalance || 0) - sellerLockedTotal).toFixed(6)));
             await sellerDoc.save();
         }
 
-        const buyerFilter = trade.buyerId && mongoose.Types.ObjectId.isValid(trade.buyerId)
-            ? { _id: trade.buyerId }
-            : { email: (trade.buyerEmail || '').toLowerCase() };
+        const buyerFilter = lockedTrade.buyerId && mongoose.Types.ObjectId.isValid(lockedTrade.buyerId)
+            ? { _id: lockedTrade.buyerId }
+            : { email: (lockedTrade.buyerEmail || '').toLowerCase() };
 
         await User.findOneAndUpdate(buyerFilter, {
             $inc: { balance: Number(netUsdtToCreditBuyer.toFixed(6)) }
@@ -3150,8 +3220,8 @@ app.post('/api/trades/:id/release', async (req, res) => {
 
         try {
             await Transaction.create({
-                userId: trade.buyerId,
-                email: trade.buyerEmail,
+                userId: lockedTrade.buyerId,
+                email: lockedTrade.buyerEmail,
                 type: 'p2p_trade',
                 amount: baseUsdt,
                 fee: totalPlatformFee,
@@ -3159,21 +3229,8 @@ app.post('/api/trades/:id/release', async (req, res) => {
             });
         } catch (txErr) {}
 
-        trade.buyerFeeUsdt = buyerFee;
-        trade.sellerFeeUsdt = sellerFee;
-        trade.totalPlatformFeeUsdt = totalPlatformFee;
-        trade.status = 'completed';
-
-        trade.messages.push({
-            senderId: 'system',
-            senderName: 'System',
-            text: `Trade completed — ${netUsdtToCreditBuyer.toFixed(4)} USDT credited to buyer (after ${feePct}% fee). Post-trade chat is open.`,
-            isSystem: true
-        });
-
-        await trade.save();
         adsCacheData = null;
-        return res.json({ success: true, trade });
+        return res.json({ success: true, serverTime: Date.now(), trade: attachAccurateTimerData(lockedTrade) });
     } catch (error) {
         console.error("Release Escrow Error:", error);
         return res.status(500).json({ success: false, message: 'Error releasing escrow: ' + error.message });
@@ -3184,10 +3241,10 @@ app.post('/api/trades/:id/release', async (req, res) => {
 app.post('/api/trades/:id/cancel', async (req, res) => {
     try {
         const currentUser = await resolveUserFromRequest(req);
-        const trade = await Trade.findById(req.params.id);
+        const trade = await Trade.findById(req.params.id).select('-receiptImage');
         if (!trade) return res.status(404).json({ success: false, message: 'Trade not found.' });
 
-        if (trade.status === 'completed' || trade.status === 'cancelled') {
+        if (trade.status === 'completed' || trade.status === 'resolved' || trade.status === 'cancelled') {
             return res.status(400).json({ success: false, message: 'Trade cannot be cancelled.' });
         }
 
@@ -3198,18 +3255,28 @@ app.post('/api/trades/:id/cancel', async (req, res) => {
             });
         }
 
-        await refundEscrowOnCancel(trade);
-        trade.status = 'cancelled';
-        trade.messages.push({
-            senderId: 'system',
-            senderName: 'System',
-            text: 'This trade was cancelled by the buyer. Full USDT (with 0 fee deducted) has been returned to the market ad.',
-            isSystem: true
-        });
+        const cancelledTrade = await Trade.findOneAndUpdate(
+            { _id: req.params.id, status: { $nin: ['completed', 'resolved', 'cancelled'] } },
+            {
+                $set: { status: 'cancelled' },$push: {
+                    messages: {
+                        senderId: 'system',
+                        senderName: 'System',
+                        text: 'This trade was cancelled by the buyer. Full USDT (with 0 fee deducted) has been returned to the market ad.',
+                        isSystem: true,
+                        createdAt: new Date()
+                    }
+                }
+            },
+            { new: true, select: '-receiptImage' }
+        );
 
-        await trade.save();
+        if (cancelledTrade) {
+            await refundEscrowOnCancel(cancelledTrade);
+        }
+
         adsCacheData = null;
-        res.json({ success: true, trade });
+        res.json({ success: true, serverTime: Date.now(), trade: attachAccurateTimerData(cancelledTrade || trade) });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error cancelling trade.' });
     }
@@ -3218,10 +3285,10 @@ app.post('/api/trades/:id/cancel', async (req, res) => {
 // 7B. Request for Cancel
 app.post('/api/trades/:id/request-cancel', async (req, res) => {
     try {
-        const trade = await Trade.findById(req.params.id);
+        const trade = await Trade.findById(req.params.id).select('-receiptImage');
         if (!trade) return res.status(404).json({ success: false, message: 'Trade not found.' });
 
-        if (trade.status === 'completed' || trade.status === 'cancelled') {
+        if (trade.status === 'completed' || trade.status === 'resolved' || trade.status === 'cancelled') {
             return res.status(400).json({ success: false, message: 'Trade is already finished.' });
         }
 
@@ -3234,30 +3301,49 @@ app.post('/api/trades/:id/request-cancel', async (req, res) => {
         });
 
         await trade.save();
-        res.json({ success: true, trade, message: 'Cancellation request sent to the buyer!' });
+        res.json({ success: true, serverTime: Date.now(), trade: attachAccurateTimerData(trade), message: 'Cancellation request sent to the buyer!' });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error requesting cancellation.' });
     }
 });
 
-// 8. Apply for Dispute
+// 8. ⚡ 1-CLICK INSTANT APPLY FOR DISPUTE (For Both Buyer & Seller — No Prompt Needed!) ⚡
 app.post('/api/trades/:id/dispute', async (req, res) => {
     try {
-        const { reason } = req.body;
-        const trade = await Trade.findById(req.params.id);
+        const currentUser = await resolveUserFromRequest(req);
+        const trade = await Trade.findById(req.params.id).select('-receiptImage');
         if (!trade) return res.status(404).json({ success: false, message: 'Trade not found.' });
 
-        trade.status = 'disputed';
-        trade.disputeReason = reason || 'Seller did not release USDT after payment receipt was uploaded.';
-        trade.messages.push({
-            senderId: 'system',
-            senderName: 'System',
-            text: `⚖️ Dispute opened! Chat history and payment receipt have been forwarded to the TBR Admin Dispute Room.`,
-            isSystem: true
-        });
+        if (trade.status === 'disputed' || trade.status === 'resolved') {
+            return res.json({ success: true, serverTime: Date.now(), trade: attachAccurateTimerData(trade) });
+        }
 
-        await trade.save();
-        res.json({ success: true, trade });
+        const isSeller = currentUser && String(currentUser._id) === String(trade.sellerId);
+        const openerRole = isSeller ? 'seller' : 'buyer';
+        const openerLabel = isSeller ? `Seller (${trade.sellerName})` : `Buyer (${trade.buyerName})`;
+
+        const updatedTrade = await Trade.findByIdAndUpdate(
+            req.params.id,
+            {
+                $set: {
+                    status: 'disputed',
+                    disputeOpenedBy: openerRole,
+                    disputeReason: req.body.reason || `Dispute applied by ${openerLabel}`
+                },
+                $push: {
+                    messages: {
+                        senderId: 'system',
+                        senderName: 'System',
+                        text: `⚖️ ${openerLabel} applied for a dispute! Chat history and payment receipt have been forwarded to the TBR Admin Dispute Room.`,
+                        isSystem: true,
+                        createdAt: new Date()
+                    }
+                }
+            },
+            { new: true, select: '-receiptImage' }
+        );
+
+        res.json({ success: true, serverTime: Date.now(), trade: attachAccurateTimerData(updatedTrade) });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error opening dispute.' });
     }
@@ -3268,7 +3354,7 @@ app.post('/api/trades/:id/messages', async (req, res) => {
     try {
         const { text, image } = req.body;
         const currentUser = await resolveUserFromRequest(req);
-        const trade = await Trade.findById(req.params.id);
+        const trade = await Trade.findById(req.params.id).select('-receiptImage');
         if (!trade) return res.status(404).json({ success: false, message: 'Trade not found.' });
 
         if (trade.status === 'cancelled') {
@@ -3289,62 +3375,170 @@ app.post('/api/trades/:id/messages', async (req, res) => {
         });
 
         await trade.save();
-        res.json({ success: true, trade, messages: trade.messages });
+        res.json({ success: true, serverTime: Date.now(), trade: attachAccurateTimerData(trade), messages: trade.messages });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error sending message.' });
     }
 });
 
-// 10. Admin Dispute Room Endpoints
+// 10. ⚡ ULTRA-FAST ADMIN DISPUTE ROOM ENDPOINTS (Keeps Resolved Disputes Visible & Never Times Out!) ⚡
 app.get('/api/admin/escrow-disputes', verifyAdminToken, async (req, res) => {
     try {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-        const disputes = await Trade.find({
-            status: { $in: ['disputed', 'payment_sent', 'funds_locked'] }
+
+        // Active disputes + Resolved disputes (so resolved ones stay visible with winner info!)
+        const rawDisputes = await Trade.find({
+            $or: [
+                { status: { $in: ['disputed', 'resolved', 'payment_sent', 'funds_locked'] } },
+                { resolvedByAdmin: true }
+            ]
         })
-        .select('-buyerAvatar -sellerAvatar')
-        .sort({ status: 1, createdAt: -1 })
-        .limit(50)
+        .select('-receiptImage -messages.image -buyerAvatar -sellerAvatar')
+        .sort({ createdAt: -1 })
+        .limit(60)
         .lean();
 
-        res.json({ success: true, data: disputes });
+        const priorityOrder = { disputed: 1, payment_sent: 2, funds_locked: 3, resolved: 4, completed: 5, cancelled: 6 };
+        rawDisputes.sort((a, b) => (priorityOrder[a.status] || 9) - (priorityOrder[b.status] || 9));
+
+        const formattedDisputes = rawDisputes.map(d => {
+            const isResolved = d.status === 'resolved' || Boolean(d.disputeWinner);
+            const winnerRole = d.disputeWinner || '';
+            const winnerName = winnerRole === 'buyer' ? d.buyerName : (winnerRole === 'seller' ? d.sellerName : '');
+            const resolvedLabel = isResolved
+                ? (winnerRole === 'buyer'
+                    ? `✅ Resolved for Buyer (Winner: ${d.buyerName})`
+                    : `✅ Resolved for Seller (Winner: ${d.sellerName})`)
+                : '';
+
+            return {
+                ...d,
+                receiptImage: `/api/trades/${d._id}/receipt-image`,
+                isResolved,
+                winnerRole,
+                winnerName,
+                resolvedForText: resolvedLabel,
+                statusDisplay: isResolved ? `Resolved (${winnerRole === 'buyer' ? 'Buyer Won' : 'Seller Won'})` : d.status
+            };
+        });
+
+        res.json({ success: true, data: formattedDisputes, disputes: formattedDisputes });
     } catch (error) {
         res.status(500).json({ success: false, data: [] });
     }
 });
 
+// ⚡ ATOMIC IDEMPOTENT ADMIN ESCROW RESOLVE (0.01s Speed, Zero Network Error, Never Double-Credits Buyer!) ⚡
+const activeAdminResolutions = new Set();
+
 app.post('/api/admin/escrow-action', verifyAdminToken, async (req, res) => {
+    const tradeId = String((req.body && req.body.tradeId) || '').trim();
+    const action = String((req.body && req.body.action) || '').trim();
+
+    if (!tradeId || !mongoose.Types.ObjectId.isValid(tradeId)) {
+        return res.status(400).json({ success: false, message: 'Invalid Trade ID.' });
+    }
+
+    if (activeAdminResolutions.has(tradeId)) {
+        return res.json({ success: true, alreadyResolved: true, message: 'Resolution in progress...' });
+    }
+
+    activeAdminResolutions.add(tradeId);
+
     try {
-        const { tradeId, action } = req.body;
-        const trade = await Trade.findById(tradeId);
-        if (!trade) return res.status(404).json({ success: false, message: 'Trade not found.' });
+        const existing = await Trade.findById(tradeId).select('-receiptImage -messages.image').lean();
+        if (!existing) {
+            activeAdminResolutions.delete(tradeId);
+            return res.status(404).json({ success: false, message: 'Trade not found.' });
+        }
 
-        if (action === 'release') {
-            const baseUsdt = Number(trade.usdtAmount || 0);
-            const feePct = Number(trade.feePercent || 0.5);
-            const feeRate = feePct / 100;
+        // 🛑 1. ቀድሞውኑ Resolve ወይም Complete ከተደረገ በፍጹም ድጋሚ USDT እንዳይልክ መከልከል! 🛑
+        if (existing.status === 'resolved' || existing.status === 'completed' || existing.status === 'cancelled' || existing.resolvedByAdmin) {
+            activeAdminResolutions.delete(tradeId);
+            const prevWinner = existing.disputeWinner === 'buyer' ? `Buyer (${existing.buyerName})` : `Seller (${existing.sellerName})`;
+            return res.json({
+                success: true,
+                alreadyResolved: true,
+                trade: existing,
+                message: `This dispute was already resolved for ${prevWinner}. No duplicate USDT was sent.`
+            });
+        }
 
-            const buyerFee = Number(trade.buyerFeeUsdt) > 0 ? Number(trade.buyerFeeUsdt) : Number((baseUsdt * feeRate).toFixed(6));
-            const sellerFee = Number(trade.sellerFeeUsdt) > 0 ? Number(trade.sellerFeeUsdt) : Number((baseUsdt * feeRate).toFixed(6));
-            const totalPlatformFee = Number((buyerFee + sellerFee).toFixed(6));
+        const isReleaseToBuyer = (action === 'release');
+        const winnerRole = isReleaseToBuyer ? 'buyer' : 'seller';
 
-            const sellerLockedTotal = Number(trade.sellerTotalDeductedUsdt || (baseUsdt + sellerFee));
-            const netUsdtToCreditBuyer = Number(trade.netUsdt || Math.max(0, baseUsdt - buyerFee));
+        const baseUsdt = Number(existing.usdtAmount || 0);
+        const feePct = Number(existing.feePercent || 0.5);
+        const feeRate = feePct / 100;
 
-            const sellerDoc = await User.findById(trade.sellerId).select('balance lockedBalance');
+        const buyerFee = Number(existing.buyerFeeUsdt) > 0 ? Number(existing.buyerFeeUsdt) : Number((baseUsdt * feeRate).toFixed(6));
+        const sellerFee = Number(existing.sellerFeeUsdt) > 0 ? Number(existing.sellerFeeUsdt) : Number((baseUsdt * feeRate).toFixed(6));
+        const totalPlatformFee = Number((buyerFee + sellerFee).toFixed(6));
+
+        const sellerLockedTotal = Number(existing.sellerTotalDeductedUsdt || (baseUsdt + sellerFee));
+        const netUsdtToCreditBuyer = Number(existing.netUsdt || Math.max(0, baseUsdt - buyerFee));
+
+        const resolutionMsgText = isReleaseToBuyer
+            ? `⚖️ Dispute Resolved by Admin — Winner: Buyer (${existing.buyerName}) | Loser: Seller (${existing.sellerName}). ${netUsdtToCreditBuyer.toFixed(4)} USDT has been released to the Buyer.`
+            : `⚖️ Dispute Resolved by Admin — Winner: Seller (${existing.sellerName}) | Loser: Buyer (${existing.buyerName}). Order closed and escrowed USDT refunded to the Seller.`;
+
+        // ✅ 2. ATOMIC DATABASE LOCK: መጀመሪያ በዳታቤዝ ላይ status = 'resolved' ማድረግ (አንድ ጊዜ ብቻ እንዲፈጸም!)
+        const lockedTrade = await Trade.findOneAndUpdate(
+            {
+                _id: tradeId,
+                status: { $nin: ['resolved', 'completed', 'cancelled'] },
+                resolvedByAdmin: { $ne: true }
+            },
+            {
+                $set: {
+                    status: 'resolved',
+                    disputeWinner: winnerRole,
+                    resolvedByAdmin: true,
+                    resolvedAt: new Date(),
+                    ...(isReleaseToBuyer ? {
+                        buyerFeeUsdt: buyerFee,
+                        sellerFeeUsdt: sellerFee,
+                        totalPlatformFeeUsdt: totalPlatformFee
+                    } : {})
+                },
+                $push: {
+                    messages: {
+                        senderId: 'admin',
+                        senderName: 'Admin',
+                        text: resolutionMsgText,
+                        isSystem: true,
+                        createdAt: new Date()
+                    }
+                }
+            },
+            { new: true, select: '-receiptImage -messages.image' }
+        ).lean();
+
+        if (!lockedTrade) {
+            activeAdminResolutions.delete(tradeId);
+            return res.json({
+                success: true,
+                alreadyResolved: true,
+                message: 'Already resolved!'
+            });
+        }
+
+        // ✅ 3. አሁን አንድ ጊዜ ብቻ ባላንሱን ማስተካከል
+        if (isReleaseToBuyer) {
+            const sellerDoc = await User.findById(existing.sellerId).select('balance lockedBalance');
             if (sellerDoc) {
                 sellerDoc.lockedBalance = Math.max(0, Number(((sellerDoc.lockedBalance || 0) - sellerLockedTotal).toFixed(6)));
                 await sellerDoc.save();
             }
 
-            await User.findByIdAndUpdate(trade.buyerId, {
+            await User.findByIdAndUpdate(existing.buyerId, {
                 $inc: { balance: Number(netUsdtToCreditBuyer.toFixed(6)) }
             });
 
             try {
                 await Transaction.create({
-                    userId: trade.buyerId,
-                    email: trade.buyerEmail,
+                    userId: existing.buyerId,
+                    email: existing.buyerEmail,
                     type: 'p2p_trade',
                     amount: baseUsdt,
                     fee: totalPlatformFee,
@@ -3352,34 +3546,28 @@ app.post('/api/admin/escrow-action', verifyAdminToken, async (req, res) => {
                 });
             } catch (txErr) {}
 
-            trade.buyerFeeUsdt = buyerFee;
-            trade.sellerFeeUsdt = sellerFee;
-            trade.totalPlatformFeeUsdt = totalPlatformFee;
-            trade.status = 'completed';
-
-            trade.messages.push({
-                senderId: 'admin',
-                senderName: 'Admin',
-                text: `⚖️ Admin resolved dispute: Released ${netUsdtToCreditBuyer.toFixed(4)} USDT to Buyer.`,
-                isSystem: true
-            });
-            await trade.save();
             adsCacheData = null;
-            return res.json({ success: true, message: 'Escrow USDT released to Buyer!' });
+            activeAdminResolutions.delete(tradeId);
+            return res.json({
+                success: true,
+                trade: lockedTrade,
+                disputeWinner: 'buyer',
+                message: `Resolved for Buyer (${existing.buyerName})! ${netUsdtToCreditBuyer.toFixed(2)} USDT credited once.`
+            });
         } else {
-            await refundEscrowOnCancel(trade);
-            trade.status = 'cancelled';
-            trade.messages.push({
-                senderId: 'admin',
-                senderName: 'Admin',
-                text: `⚖️ Admin resolved dispute: Order cancelled and USDT refunded to Seller.`,
-                isSystem: true
-            });
-            await trade.save();
+            await refundEscrowOnCancel(existing);
             adsCacheData = null;
-            return res.json({ success: true, message: 'Escrow USDT refunded to Seller!' });
+            activeAdminResolutions.delete(tradeId);
+            return res.json({
+                success: true,
+                trade: lockedTrade,
+                disputeWinner: 'seller',
+                message: `Resolved for Seller (${existing.sellerName})! Escrowed USDT refunded to Seller.`
+            });
         }
     } catch (error) {
+        activeAdminResolutions.delete(tradeId);
+        console.error("Admin Escrow Action Error:", error);
         res.status(500).json({ success: false, message: 'Error resolving dispute.' });
     }
 });

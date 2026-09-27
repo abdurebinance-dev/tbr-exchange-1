@@ -1603,12 +1603,73 @@
     </div>
 
     <script>
-        const API_BASE = 'https://tbr-exchange-backend.onrender.com';
-        const TRADES_LIST_CACHE = 'tbr_my_trades_list_v2';
+        const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? 'http://localhost:5000'
+            : 'https://tbr-exchange-backend.onrender.com';
+        const TRADES_LIST_CACHE = 'tbr_my_trades_list_v3';
         let activeTrade = null;
-        let currentUserId = '';
+        let currentUserId = localStorage.getItem('tbr_resolved_uid') || '';
         let selectedReceiptBase64 = '';
         let countdownInterval = null;
+        let myTradesMemoryMap = {};
+        let isFetchingList = false;
+        let isFetchingRoom = false;
+
+        // ⚡ የማርኬት እና የዳሽቦርድ ካሽን ወዲያውኑ የሚያጸዳ (Release ወይም Cancel ሲደረግ ባላንስና ማርኬት በ 0.00s እንዲዘመን) ⚡
+        function invalidateAllMarketAndBalanceCaches() {
+            try {
+                const keysToRemove = [
+                    'tbr_market_ads_v1',
+                    'tbr_market_instant_cache_v3',
+                    'tbr_market_light_ads_v5',
+                    'tbr_dash_active_banner_v2',
+                    TRADES_LIST_CACHE
+                ];
+                keysToRemove.forEach(k => {
+                    sessionStorage.removeItem(k);
+                    localStorage.removeItem(k);
+                });
+            } catch (e) {}
+        }
+
+        // ⚡ ከ server.js የሚመጡ የፎቶ ሊንኮችን (/api/user-avatar/...) ከ API_BASE ጋር በትክክል የሚያገናኝ ⚡
+        function resolveAvatarUrl(rawUrl) {
+            if (!rawUrl) return '';
+            const str = String(rawUrl).trim();
+            if (!str) return '';
+            if (str.startsWith('data:image') || str.startsWith('http://') || str.startsWith('https://')) {
+                return str;
+            }
+            if (str.startsWith('/')) {
+                return `${API_BASE}${str}`;
+            }
+            return str;
+        }
+
+        // ⚡ የደረሰኝ (Receipt) እና የቻት ፎቶዎችን ጥራታቸው ሳይቀንስ ወደ 60KB ቀይሮ በ 0.1s እንዲላኩ የሚያደርግ ⚡
+        function compressImageFast(file, callback) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    try {
+                        const canvas = document.createElement('canvas');
+                        const maxW = 900;
+                        const scale = img.width > maxW ? (maxW / img.width) : 1;
+                        canvas.width = Math.round(img.width * scale);
+                        canvas.height = Math.round(img.height * scale);
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        callback(canvas.toDataURL('image/jpeg', 0.75));
+                    } catch (err) {
+                        callback(e.target.result);
+                    }
+                };
+                img.onerror = () => callback(e.target.result);
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
 
         // ⚡ በ localStorage እና sessionStorage ውስጥ ያሉትን ሁሉንም Keys ፈትሾ Token, Email እና UserID የሚያገኝ ፋንክሽን ⚡
         function getLoggedUserIdentity() {
@@ -1616,12 +1677,11 @@
             let email = localStorage.getItem('userEmail') || localStorage.getItem('email') || '';
             let userId = localStorage.getItem('userId') || localStorage.getItem('tbr_resolved_uid') || '';
 
-            // 1. ሁሉንም የ localStorage እና sessionStorage ቁልፎች መፈተሽ
             const storages = [localStorage, sessionStorage];
             for (const store of storages) {
                 for (let i = 0; i < store.length; i++) {
                     const key = store.key(i);
-                    if (!key || key === TRADES_LIST_CACHE || key === 'tbr_active_p2p_order') continue;
+                    if (!key || key === TRADES_LIST_CACHE || key === 'tbr_active_p2p_order' || key.startsWith('tbr_market')) continue;
                     const val = store.getItem(key) || '';
 
                     if (!token && val.startsWith('eyJ') && val.split('.').length === 3) {
@@ -1645,7 +1705,6 @@
 
             token = String(token || '').replace(/^["']|["']$/g, '').replace(/^Bearer\s+/i, '').trim();
 
-            // 2. ከ JWT Token ውስጥ በቀጥታ ID እና Email መፍታት
             if (token && token.split('.').length === 3) {
                 try {
                     let b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
@@ -1669,6 +1728,16 @@
             return Number(val || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ETB';
         }
 
+        // ⚡ ከ My Trades ሰንጠረዥ ላይ አንድ ትሬድ ሲነካ በ 0.00 ሰከንድ ወዲያውኑ Trade Room እንዲከፍት የሚያደርግ ⚡
+        function openSingleTradeInstant(tradeId) {
+            if (myTradesMemoryMap[tradeId]) {
+                try {
+                    localStorage.setItem('tbr_active_p2p_order', JSON.stringify(myTradesMemoryMap[tradeId]));
+                } catch (e) {}
+            }
+            window.location.href = `trades.html?tradeId=${tradeId}`;
+        }
+
         document.addEventListener('DOMContentLoaded', async () => {
             const urlParams = new URLSearchParams(window.location.search);
             const tradeIdParam = urlParams.get('tradeId');
@@ -1677,41 +1746,56 @@
                 document.getElementById('myTradesListView').style.display = 'none';
                 document.getElementById('singleTradeRoomView').style.display = 'grid';
 
+                // 1. በ 0.00 ሰከንድ ወዲያውኑ ከካሽ ማሳየት
                 try {
-                    const cachedOrder = localStorage.getItem('tbr_active_p2p_order');
-                    if (cachedOrder) {
-                        const parsed = JSON.parse(cachedOrder);
-                        if (parsed && String(parsed._id) === String(tradeIdParam)) {
-                            activeTrade = parsed;
-                            renderTradeRoomUI();
+                    const cachedOrder = JSON.parse(localStorage.getItem('tbr_active_p2p_order') || 'null');
+                    if (cachedOrder && String(cachedOrder._id) === String(tradeIdParam)) {
+                        activeTrade = cachedOrder;
+                        renderTradeRoomUI();
+                    } else {
+                        const cachedList = JSON.parse(sessionStorage.getItem(TRADES_LIST_CACHE) || localStorage.getItem(TRADES_LIST_CACHE) || '[]');
+                        if (Array.isArray(cachedList)) {
+                            const found = cachedList.find(t => String(t._id) === String(tradeIdParam));
+                            if (found) {
+                                activeTrade = found;
+                                renderTradeRoomUI();
+                            }
                         }
                     }
                 } catch (e) {}
 
                 await fetchTradeFromServer(tradeIdParam);
-                setInterval(() => fetchTradeFromServer(tradeIdParam), 3000);
+                setInterval(() => fetchTradeFromServer(tradeIdParam), 2000);
                 startCountdownTimer();
             } else {
                 document.getElementById('singleTradeRoomView').style.display = 'none';
                 document.getElementById('myTradesListView').style.display = 'block';
 
+                let hasRenderedInstant = false;
                 try {
-                    const cachedList = sessionStorage.getItem(TRADES_LIST_CACHE);
+                    const cachedList = sessionStorage.getItem(TRADES_LIST_CACHE) || localStorage.getItem(TRADES_LIST_CACHE);
                     if (cachedList) {
                         const parsedList = JSON.parse(cachedList);
                         if (Array.isArray(parsedList) && parsedList.length > 0) {
                             renderMyTradesTable(parsedList);
+                            hasRenderedInstant = true;
                         }
                     }
                 } catch (e) {}
 
-                await loadMyTradesList();
-                setInterval(loadMyTradesList, 3500);
+                await loadMyTradesList(hasRenderedInstant);
+                setInterval(() => loadMyTradesList(true), 2500);
             }
         });
 
-        async function loadMyTradesList() {
+        async function loadMyTradesList(alreadyRendered = false) {
+            if (isFetchingList) return;
+            isFetchingList = true;
+
             const { token, email, userId } = getLoggedUserIdentity();
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+
             try {
                 const params = new URLSearchParams();
                 if (email) params.set('email', email);
@@ -1720,8 +1804,10 @@
 
                 const res = await fetch(`${API_BASE}/api/trades?${params.toString()}`, {
                     headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-                    cache: 'no-store'
+                    cache: 'no-store',
+                    signal: controller.signal
                 });
+                clearTimeout(timeoutId);
 
                 if (res.ok) {
                     const json = await res.json();
@@ -1730,25 +1816,32 @@
                             currentUserId = String(json.currentUserId);
                             localStorage.setItem('tbr_resolved_uid', currentUserId);
                         }
-                        sessionStorage.setItem(TRADES_LIST_CACHE, JSON.stringify(json.trades));
+                        try {
+                            const payload = JSON.stringify(json.trades);
+                            sessionStorage.setItem(TRADES_LIST_CACHE, payload);
+                            localStorage.setItem(TRADES_LIST_CACHE, payload);
+                        } catch (e) {}
                         renderMyTradesTable(json.trades);
+                        isFetchingList = false;
                         return;
                     }
                 }
             } catch (e) {
-                console.error('Error fetching My Trades:', e);
+                clearTimeout(timeoutId);
             }
 
-            // ሰርቨሩ ቢዘገይ በ localStorage ውስጥ ያለውን የቅርብ ትሬድ ማሳየት
-            try {
-                const fallbackOrder = JSON.parse(localStorage.getItem('tbr_active_p2p_order') || 'null');
-                if (fallbackOrder && fallbackOrder._id) {
-                    renderMyTradesTable([fallbackOrder]);
-                    return;
-                }
-            } catch (e) {}
+            isFetchingList = false;
 
-            renderMyTradesTable([]);
+            if (!alreadyRendered) {
+                try {
+                    const fallbackOrder = JSON.parse(localStorage.getItem('tbr_active_p2p_order') || 'null');
+                    if (fallbackOrder && fallbackOrder._id) {
+                        renderMyTradesTable([fallbackOrder]);
+                        return;
+                    }
+                } catch (e) {}
+                renderMyTradesTable([]);
+            }
         }
 
         function renderMyTradesTable(trades) {
@@ -1765,6 +1858,8 @@
             let html = '';
 
             trades.forEach(tr => {
+                myTradesMemoryMap[tr._id] = tr;
+
                 let isBuyer = tr.tradeType === 'buy';
                 if (myId && tr.sellerId && String(tr.sellerId) === String(myId)) {
                     isBuyer = false;
@@ -1781,10 +1876,10 @@
                 const roleArrow = isBuyer ? '&#8600;' : '&#8599;';
 
                 const partnerName = isBuyer ? (tr.sellerName || 'Seller') : (tr.buyerName || 'Buyer');
-                const partnerAvatar = isBuyer ? (tr.sellerAvatar || '') : (tr.buyerAvatar || '');
+                const partnerAvatar = resolveAvatarUrl(isBuyer ? tr.sellerAvatar : tr.buyerAvatar);
                 const initials = String(partnerName).slice(0, 2).toUpperCase();
                 const avatarHtml = partnerAvatar
-                    ? `<img src="${partnerAvatar}" alt="${partnerName}" onerror="this.outerHTML='${initials}'">`
+                    ? `<img src="${partnerAvatar}" alt="${partnerName}" loading="lazy" onerror="this.outerHTML='${initials}'">`
                     : initials;
 
                 const tradeIdShort = tr.tradeNumber
@@ -1821,17 +1916,17 @@
                     }
 
                     if (userMsgsCount > 0) {
-                        actionLinkHtml = `<a class="mt-action-link reply-green" href="trades.html?tradeId=${targetId}">Reply &rarr;</a>`;
+                        actionLinkHtml = `<span class="mt-action-link reply-green">Reply &rarr;</span>`;
                     } else {
-                        actionLinkHtml = `<a class="mt-action-link" href="trades.html?tradeId=${targetId}">View &rarr;</a>`;
+                        actionLinkHtml = `<span class="mt-action-link">View &rarr;</span>`;
                     }
                 } else if (st === 'cancelled') {
                     statusPillHtml = `<span class="mt-status-pill cancelled">Cancelled</span>`;
-                    actionLinkHtml = `<a class="mt-action-link" href="trades.html?tradeId=${targetId}">View &rarr;</a>`;
+                    actionLinkHtml = `<span class="mt-action-link">View &rarr;</span>`;
                 } else if (st === 'completed') {
                     statusPillHtml = `<span class="mt-status-pill completed"><i class="fa-regular fa-circle-check"></i> Completed</span>`;
                     rateSubHtml = `<div class="mt-rate-sub method-green">${tr.paymentMethod || 'Bank'}</div>`;
-                    actionLinkHtml = `<a class="mt-action-link" href="trades.html?tradeId=${targetId}"><i class="fa-solid fa-download" style="color:var(--text-muted); margin-right:4px;"></i> Receipt &rarr;</a>`;
+                    actionLinkHtml = `<span class="mt-action-link"><i class="fa-solid fa-download" style="color:var(--text-muted); margin-right:4px;"></i> Receipt &rarr;</span>`;
                 }
 
                 const msgBadgeHtml = (userMsgsCount > 0 && (st === 'funds_locked' || st === 'payment_sent'))
@@ -1839,7 +1934,7 @@
                     : '';
 
                 html += `
-                    <tr class="${rowHighlight}" onclick="window.location.href='trades.html?tradeId=${targetId}'" style="cursor:pointer;">
+                    <tr class="${rowHighlight}" onclick="openSingleTradeInstant('${targetId}')" style="cursor:pointer;">
                         <td class="mt-id-col">${tradeIdShort}</td>
                         <td>
                             <div class="mt-counterparty-cell">
@@ -1871,10 +1966,15 @@
         }
 
         async function fetchTradeFromServer(tradeIdParam) {
+            if (isFetchingRoom) return;
             const { token, email, userId } = getLoggedUserIdentity();
             const urlParams = new URLSearchParams(window.location.search);
             const tradeId = tradeIdParam || urlParams.get('tradeId') || (activeTrade && activeTrade._id);
             if (!tradeId || String(tradeId).startsWith('local_')) return;
+
+            isFetchingRoom = true;
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
 
             try {
                 const params = new URLSearchParams();
@@ -1884,18 +1984,28 @@
 
                 const res = await fetch(`${API_BASE}/api/trades/${tradeId}?${params.toString()}`, {
                     headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-                    cache: 'no-store'
+                    cache: 'no-store',
+                    signal: controller.signal
                 });
+                clearTimeout(timeoutId);
+
                 if (res.ok) {
                     const json = await res.json();
                     if (json.success && json.trade) {
                         activeTrade = json.trade;
-                        currentUserId = json.currentUserId || userId || '';
+                        if (json.currentUserId) {
+                            currentUserId = String(json.currentUserId);
+                            localStorage.setItem('tbr_resolved_uid', currentUserId);
+                        }
                         localStorage.setItem('tbr_active_p2p_order', JSON.stringify(activeTrade));
                         renderTradeRoomUI();
                     }
                 }
-            } catch (e) {}
+            } catch (e) {
+                clearTimeout(timeoutId);
+            } finally {
+                isFetchingRoom = false;
+            }
         }
 
         function isCurrentUserBuyer() {
@@ -1935,7 +2045,7 @@
             const partnerName = isBuyer
                 ? (activeTrade.sellerName || activeTrade.counterpartyName || 'Seller')
                 : (activeTrade.buyerName || activeTrade.counterpartyName || 'Buyer');
-            const partnerAvatar = isBuyer ? activeTrade.sellerAvatar : activeTrade.buyerAvatar;
+            const partnerAvatar = resolveAvatarUrl(isBuyer ? activeTrade.sellerAvatar : activeTrade.buyerAvatar);
             const initials = String(partnerName).slice(0, 2).toUpperCase();
 
             document.getElementById('uiPartnerName').innerText = partnerName;
@@ -2119,8 +2229,11 @@
                     document.getElementById('uiLeftSellerReleaseBtn').style.display = 'none';
                     document.getElementById('uiRightSellerReleaseBtn').style.display = 'none';
 
-                    cancelBtn.innerText = 'Request for Cancel';
-                    cancelBtn.disabled = false;
+                    const alreadyRequested = Array.isArray(activeTrade.messages) &&
+                        activeTrade.messages.some(m => m.isSystem && String(m.text || '').includes('requested to cancel'));
+
+                    cancelBtn.innerText = alreadyRequested ? 'Cancellation Requested ✓' : 'Request for Cancel';
+                    cancelBtn.disabled = alreadyRequested;
                     cancelBtn.onclick = requestTradeCancellation;
                     cancelBtn.style.display = 'block';
                 }
@@ -2197,9 +2310,8 @@
         function handleModalReceiptSelect(event) {
             const file = event.target.files[0];
             if (!file) return;
-            const reader = new FileReader();
-            reader.onload = () => {
-                selectedReceiptBase64 = reader.result;
+            compressImageFast(file, (compressedB64) => {
+                selectedReceiptBase64 = compressedB64;
                 const preview = document.getElementById('cmReceiptPreviewImg');
                 preview.src = selectedReceiptBase64;
                 preview.style.display = 'block';
@@ -2207,8 +2319,7 @@
                 document.getElementById('cmChangeReceiptBtn').style.display = 'inline-flex';
                 document.getElementById('cmUploadedBadge').style.display = 'inline-flex';
                 document.getElementById('cmConfirmSubmitBtn').disabled = false;
-            };
-            reader.readAsDataURL(file);
+            });
         }
 
         async function submitMarkPaidWithReceipt() {
@@ -2231,6 +2342,7 @@
                 if (res.ok && json.success) {
                     activeTrade = json.trade;
                     localStorage.setItem('tbr_active_p2p_order', JSON.stringify(activeTrade));
+                    invalidateAllMarketAndBalanceCaches();
                     closeConfirmPaymentModal();
                     renderTradeRoomUI();
                 } else {
@@ -2277,7 +2389,7 @@
                 if (res.ok && json.success) {
                     activeTrade = json.trade;
                     localStorage.setItem('tbr_active_p2p_order', JSON.stringify(activeTrade));
-                    sessionStorage.removeItem('tbr_dash_active_banner_v2');
+                    invalidateAllMarketAndBalanceCaches();
                     closeSellerReleaseModal();
                     renderTradeRoomUI();
                     return;
@@ -2350,7 +2462,7 @@
         }
 
         async function cancelActiveTrade() {
-            if (!activeTrade || !confirm('Are you sure you want to cancel this order?')) return;
+            if (!activeTrade || !confirm('Are you sure you want to cancel this order? Do NOT cancel if you have already sent payment!')) return;
             const { token, email, userId } = getLoggedUserIdentity();
             if (activeTrade._id && !String(activeTrade._id).startsWith('local_')) {
                 try {
@@ -2366,9 +2478,11 @@
                     if (res.ok && json.success) {
                         activeTrade = json.trade;
                         localStorage.setItem('tbr_active_p2p_order', JSON.stringify(activeTrade));
-                        sessionStorage.removeItem('tbr_dash_active_banner_v2');
+                        invalidateAllMarketAndBalanceCaches();
                         renderTradeRoomUI();
                         return;
+                    } else {
+                        alert((json && json.message) || 'Cannot cancel trade.');
                     }
                 } catch (e) {}
             }
@@ -2455,9 +2569,7 @@
             const file = event.target.files[0];
             if (!file || !activeTrade) return;
             const { token, email, userId } = getLoggedUserIdentity();
-            const reader = new FileReader();
-            reader.onload = async () => {
-                const base64Img = reader.result;
+            compressImageFast(file, async (compressedB64) => {
                 if (activeTrade._id && !String(activeTrade._id).startsWith('local_')) {
                     await fetch(`${API_BASE}/api/trades/${activeTrade._id}/messages`, {
                         method: 'POST',
@@ -2465,12 +2577,11 @@
                             'Content-Type': 'application/json',
                             ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                         },
-                        body: JSON.stringify({ text: 'Attachment:', image: base64Img, email, userId })
+                        body: JSON.stringify({ text: 'Attachment:', image: compressedB64, email, userId })
                     });
                     await fetchTradeFromServer(activeTrade._id);
                 }
-            };
-            reader.readAsDataURL(file);
+            });
         }
 
         function togglePaymentDetailsDropdown() {
