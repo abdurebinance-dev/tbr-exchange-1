@@ -2310,7 +2310,6 @@ async function getFastAvatarsMap(userIds) {
     return result;
 }
 
-// ⚡ 1. ፈጣን የማርኬት ፖስቶች ማምጫ (አዲስ ፖስት ሲደረግ ምንም ሳይደብቅ ወዲያውኑ ያሳያል!) ⚡
 app.get('/api/ads', async (req, res) => {
     try {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -2321,7 +2320,7 @@ app.get('/api/ads', async (req, res) => {
             .lean();
 
         const now = Date.now();
-        const ONLINE_THRESHOLD = 5 * 60 * 1000;
+        const ONLINE_THRESHOLD = 10 * 60 * 1000;
 
         const enrichedAds = ads.map(ad => {
             const trader = ad.userId && typeof ad.userId === 'object' ? ad.userId : {};
@@ -2362,7 +2361,6 @@ app.get('/api/ads', async (req, res) => {
 
 app.get('/api/ads/my', verifyToken, async (req, res) => {
     try {
-        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
         const myAds = await Ad.find({ userId: req.user.id }).sort({ createdAt: -1 }).lean();
         res.json({ success: true, ads: myAds });
     } catch (error) {
@@ -2402,7 +2400,7 @@ app.put('/api/ads/:id/cancel', verifyToken, async (req, res) => {
 });
 
 // ============================================================================
-// ⚡ P2P TRADE ESCROW, EXACT 0.5%+0.5% FEE & MIN-LIMIT AUTO-REFUND SYSTEM ⚡
+// ⚡ P2P TRADE ESCROW SYSTEM ⚡
 // ============================================================================
 const tradeSchema = new mongoose.Schema({
     tradeNumber: { type: String, required: true, index: true },
@@ -2418,15 +2416,15 @@ const tradeSchema = new mongoose.Schema({
     sellerAvatar: { type: String, default: '' },
     unitPrice: { type: Number, required: true },
     etbAmount: { type: Number, required: true },
-    usdtAmount: { type: Number, required: true },          // Base Trade USDT (U)
-    feePercent: { type: Number, default: 0.5 },            // e.g. 0.5%
-    buyerFeeUsdt: { type: Number, default: 0 },            // 0.5% deducted from Buyer
-    sellerFeeUsdt: { type: Number, default: 0 },           // 0.5% deducted from Seller
-    totalPlatformFeeUsdt: { type: Number, default: 0 },    // 1.0% total kept by platform
-    sellerTotalDeductedUsdt: { type: Number, default: 0 }, // Total locked/deducted from Seller (U + sellerFee)
-    deductedFromAdUsdt: { type: Number, default: 0 },      // Portion taken from Ad's totalAmount
-    deductedFromWalletUsdt: { type: Number, default: 0 },  // Portion taken from Seller's wallet balance
-    netUsdt: { type: Number, default: 0 },                 // Net USDT Buyer receives (U - buyerFee)
+    usdtAmount: { type: Number, required: true },
+    feePercent: { type: Number, default: 0.5 },
+    buyerFeeUsdt: { type: Number, default: 0 },
+    sellerFeeUsdt: { type: Number, default: 0 },
+    totalPlatformFeeUsdt: { type: Number, default: 0 },
+    sellerTotalDeductedUsdt: { type: Number, default: 0 },
+    deductedFromAdUsdt: { type: Number, default: 0 },
+    deductedFromWalletUsdt: { type: Number, default: 0 },
+    netUsdt: { type: Number, default: 0 },
     paymentMethod: { type: String, required: true },
     paymentDetails: {
         accountName: { type: String, default: '' },
@@ -2456,7 +2454,6 @@ const tradeSchema = new mongoose.Schema({
 
 const Trade = mongoose.models.Trade || mongoose.model('Trade', tradeSchema);
 
-// Fast User Resolver using the exact JWT_SECRET
 async function resolveUserFromRequest(req) {
     let decoded = null;
     const authHeader = req.headers['authorization'] || req.headers['Authorization'];
@@ -2481,8 +2478,8 @@ async function resolveUserFromRequest(req) {
 
     const lightFields = '-password -kycData -bscPrivateKey';
 
-    if (uid && mongoose.Types.ObjectId.isValid(uid)) {
-        const u = await User.findById(uid).select(lightFields);
+    if (uid && mongoose.Types.ObjectId.isValid(String(uid))) {
+        const u = await User.findById(String(uid)).select(lightFields);
         if (u) return u;
     }
     if (uemail) {
@@ -2496,7 +2493,6 @@ async function resolveUserFromRequest(req) {
     return null;
 }
 
-// 🔄 ቀሪው USDT ነጋዴው ካስቀመጠው Minimum በታች ከሆነ ፖስቱን Cancel አድርጎ ቀሪውን ወደ ዋሌት መመለሻ 🔄
 async function checkAdMinLimitAndCleanUp(ad) {
     if (!ad) return;
     const remainingUsdt = Number(ad.totalAmount || 0);
@@ -2504,7 +2500,6 @@ async function checkAdMinLimitAndCleanUp(ad) {
     const remainingEtbValue = Number((remainingUsdt * priceEtb).toFixed(2));
     const sellerMinLimitEtb = Number(ad.minLimit || 0);
 
-    // 1. ቀሪው USDT 0 ከሆነ ወይም በብር ሲሰላ ነጋዴው ካስቀመጠው Minimum Limit በታች ከሆነ
     if (remainingUsdt <= 0.0001 || (sellerMinLimitEtb > 0 && remainingEtbValue + 0.01 < sellerMinLimitEtb)) {
         if (ad.tradeType === 'sell' && remainingUsdt > 0.0001 && ad.userId) {
             const refundUsdt = Number(remainingUsdt.toFixed(6));
@@ -2518,7 +2513,6 @@ async function checkAdMinLimitAndCleanUp(ad) {
         ad.totalAmount = 0;
         ad.status = 'cancelled';
     } else {
-        // 2. ቀሪው ከ Minimum Limit በላይ ከሆነ ግን ፖስቱ አይጠፋም!
         ad.totalAmount = Number(remainingUsdt.toFixed(6));
         ad.status = 'active';
         if (Number(ad.maxLimit || 0) > remainingEtbValue) {
@@ -2530,7 +2524,6 @@ async function checkAdMinLimitAndCleanUp(ad) {
     adsCacheData = null;
 }
 
-// 🔄 ትዕዛዝ ሲሰረዝ (Cancel)፦ ምንም ኮሚሽን (0 Fee) ሳይቆረጥ ሙሉው USDT ወደ ማርኬት ፖስቱ (On Market) ይመለሳል! 🔄
 async function refundEscrowOnCancel(trade) {
     try {
         const ad = trade.adId ? await Ad.findById(trade.adId) : null;
@@ -2551,7 +2544,6 @@ async function refundEscrowOnCancel(trade) {
             if (ad) {
                 ad.totalAmount = Number(((ad.totalAmount || 0) + fromAd).toFixed(6));
                 ad.status = 'active';
-
                 const restoredEtbVal = Number((ad.totalAmount * Number(ad.price || 0)).toFixed(2));
                 if (Number(ad.maxLimit || 0) < restoredEtbVal) {
                     ad.maxLimit = restoredEtbVal;
@@ -2584,7 +2576,7 @@ async function refundEscrowOnCancel(trade) {
     }
 }
 
-// 1. ትዕዛዝ መፍጠሪያ (ነጋዴው በሌላ ትሬድ ላይ ከሆነ የሚከለክል + ቀሪውን USDT እዛው ፖስቱ ላይ የሚያስቀር)
+// 1. Create Trade
 app.post('/api/trades', async (req, res) => {
     try {
         const { adId, actionType, etbAmount, usdtAmount, paymentMethod } = req.body;
@@ -2608,7 +2600,6 @@ app.post('/api/trades', async (req, res) => {
         }
         if (!adOwner) return res.status(404).json({ success: false, message: 'Advertiser not found.' });
 
-        // 🛑 ነጋዴው በአሁኑ ሰዓት በሌላ ትሬድ ላይ ከሆነ "This trader is on another trade" ብሎ መከልከል 🛑
         const ownerEmail = (adOwner.email || '').toLowerCase();
         const activeTradeForTrader = await Trade.findOne({
             $or: [
@@ -2734,9 +2725,6 @@ app.post('/api/trades', async (req, res) => {
         const sName = resolveName(sellerUser);
         const bName = resolveName(buyerUser);
 
-        if (buyerUser._id && buyerUser.avatar) userAvatarMemoryCache.set(String(buyerUser._id), buyerUser.avatar);
-        if (sellerUser._id && sellerUser.avatar) userAvatarMemoryCache.set(String(sellerUser._id), sellerUser.avatar);
-
         const newTrade = new Trade({
             tradeNumber: sequentialTradeNumber,
             adId: ad._id,
@@ -2786,81 +2774,34 @@ app.post('/api/trades', async (req, res) => {
     }
 });
 
-// ⚡ 2. 100% ትክክለኛ እና ፈጣን "MY TRADES" ማምጫ (ሁሉንም ትሬዶች ሳይترك ያመጣል!) ⚡
+// 2. Get User's Trades List (Simple, Fast, Original Working Logic)
 app.get('/api/trades', async (req, res) => {
     try {
-        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-
-        let currentUser = await resolveUserFromRequest(req);
-        
-        // ከ Header ወይም ከ Query ላይ Token መፈለግ
-        let token = req.headers['authorization'] || req.headers['Authorization'] || req.headers['token'] || req.headers['x-auth-token'];
-        if (token && String(token).startsWith('Bearer ')) {
-            token = String(token).split(' ')[1];
-        }
-
-        let tokenUid = null;
-        let tokenEmail = null;
-
-        if (token) {
-            try {
-                const decoded = jwt.verify(token, JWT_SECRET);
-                if (decoded) {
-                    tokenUid = decoded.id || decoded._id || decoded.userId;
-                    tokenEmail = decoded.email;
-                }
-            } catch (e) {
-                try {
-                    const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString('utf8'));
-                    if (payload) {
-                        tokenUid = payload.id || payload._id || payload.userId;
-                        tokenEmail = payload.email;
-                    }
-                } catch (e2) {}
-            }
-        }
-
-        const queryEmail = (req.query.email || tokenEmail || '').toLowerCase().trim();
-        const queryUid = String(req.query.userId || tokenUid || (currentUser && currentUser._id) || '').trim();
-
-        if (!currentUser && queryEmail) {
-            currentUser = await User.findOne({ email: new RegExp(`^${queryEmail}$`, 'i') }).select('-password -kycData').lean();
-        }
-        if (!currentUser && queryUid && mongoose.Types.ObjectId.isValid(queryUid)) {
-            currentUser = await User.findById(queryUid).select('-password -kycData').lean();
-        }
-
-        const userObjId = currentUser ? currentUser._id : (mongoose.Types.ObjectId.isValid(queryUid) ? new mongoose.Types.ObjectId(queryUid) : null);
-        const targetEmail = currentUser ? String(currentUser.email).toLowerCase() : queryEmail;
-
-        if (!userObjId && !targetEmail && !queryUid) {
+        const currentUser = await resolveUserFromRequest(req);
+        if (!currentUser) {
             return res.json({ success: true, currentUserId: '', total: 0, trades: [] });
         }
 
-        // በ ObjectId፣ በ String ID እና በ Email (Capital/Small ሳይለይ) ሁሉንም ትሬዶች መፈለግ
-        const orConditions = [];
-        if (userObjId) {
-            orConditions.push({ buyerId: userObjId }, { sellerId: userObjId });
-        }
-        if (queryUid) {
-            orConditions.push({ buyerId: queryUid }, { sellerId: queryUid });
-        }
-        if (targetEmail) {
-            const emailRegex = new RegExp(`^${targetEmail}$`, 'i');
-            orConditions.push({ buyerEmail: emailRegex }, { sellerEmail: emailRegex });
-        }
+        const userId = currentUser._id;
+        const userEmail = (currentUser.email || '').toLowerCase();
 
-        const trades = await Trade.find({ $or: orConditions })
-            .select('-receiptImage -messages.image')
-            .sort({ createdAt: -1 })
-            .limit(50)
-            .lean();
+        const trades = await Trade.find({
+            $or: [
+                { buyerId: userId },
+                { sellerId: userId },
+                ...(userEmail ? [{ buyerEmail: userEmail }, { sellerEmail: userEmail }] : [])
+            ]
+        })
+        .select('-receiptImage -messages.image')
+        .sort({ createdAt: -1 })
+        .limit(40)
+        .lean();
 
         res.json({
             success: true,
-            currentUserId: String(userObjId || queryUid),
+            currentUserId: String(userId),
             total: trades.length,
-            trades: trades
+            trades
         });
     } catch (error) {
         console.error("GET /api/trades Error:", error);
@@ -2868,10 +2809,9 @@ app.get('/api/trades', async (req, res) => {
     }
 });
 
-// 3. ⚡ FAST DASHBOARD ACTIVE TRADES BANNER ⚡
+// 3. Active Trades Banner
 app.get('/api/user/active-trades', async (req, res) => {
     try {
-        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
         const currentUser = await resolveUserFromRequest(req);
         if (!currentUser) {
             return res.json({ success: true, count: 0, trades: [] });
@@ -2888,7 +2828,7 @@ app.get('/api/user/active-trades', async (req, res) => {
             ],
             status: { $in: ['funds_locked', 'payment_sent', 'disputed'] }
         })
-        .select('-receiptImage -messages.image -buyerAvatar -sellerAvatar')
+        .select('-receiptImage -messages.image')
         .sort({ createdAt: -1 })
         .lean();
 
@@ -2904,10 +2844,9 @@ app.get('/api/user/active-trades', async (req, res) => {
     }
 });
 
-// 4. Get Single Trade Details (With Fast Profile Avatars)
+// 4. Get Single Trade Details
 app.get('/api/trades/:id', async (req, res) => {
     try {
-        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
         const currentUser = await resolveUserFromRequest(req);
         let trade = null;
 
@@ -2945,14 +2884,9 @@ app.get('/api/trades/:id', async (req, res) => {
             }
         }
 
-        const tradeObj = trade.toObject();
-        const avatarMap = await getFastAvatarsMap([tradeObj.buyerId, tradeObj.sellerId]);
-        if (!tradeObj.buyerAvatar) tradeObj.buyerAvatar = avatarMap[String(tradeObj.buyerId)] || '';
-        if (!tradeObj.sellerAvatar) tradeObj.sellerAvatar = avatarMap[String(tradeObj.sellerId)] || '';
-
         res.json({
             success: true,
-            trade: tradeObj,
+            trade,
             currentUserId: currentUser ? String(currentUser._id) : ''
         });
     } catch (error) {
@@ -2960,7 +2894,7 @@ app.get('/api/trades/:id', async (req, res) => {
     }
 });
 
-// 5. ገዢው የደረሰኝ ፎቶ ጭኖ "Yes, I've Transferred" ሲል
+// 5. Mark Paid
 app.post('/api/trades/:id/mark-paid', async (req, res) => {
     try {
         const { receiptImage } = req.body;
@@ -2992,7 +2926,7 @@ app.post('/api/trades/:id/mark-paid', async (req, res) => {
     }
 });
 
-// 6. ⚡ ሻጩ "Release USDT" ሲል ⚡
+// 6. Release USDT
 app.post('/api/trades/:id/release', async (req, res) => {
     try {
         const trade = await Trade.findById(req.params.id);
@@ -3074,7 +3008,7 @@ app.post('/api/trades/:id/release', async (req, res) => {
     }
 });
 
-// 7. Cancel Trade (ገዢው ብቻ Cancel ማድረግ ይችላል! ሻጩ በቀጥታ Cancel ማድረግ አይችልም)
+// 7. Cancel Trade
 app.post('/api/trades/:id/cancel', async (req, res) => {
     try {
         const currentUser = await resolveUserFromRequest(req);
@@ -3109,7 +3043,7 @@ app.post('/api/trades/:id/cancel', async (req, res) => {
     }
 });
 
-// 7B. የሻጭ "Request for Cancel" API
+// 7B. Request for Cancel
 app.post('/api/trades/:id/request-cancel', async (req, res) => {
     try {
         const trade = await Trade.findById(req.params.id);

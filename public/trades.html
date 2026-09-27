@@ -1603,232 +1603,94 @@
     </div>
 
     <script>
-        const API_BASE = window.location.origin.includes('localhost') ? 'http://localhost:5000' : 'https://tbr-exchange-backend.onrender.com';
+        const API_BASE = 'https://tbr-exchange-backend.onrender.com';
         const TRADES_LIST_CACHE = 'tbr_my_trades_list_v2';
-        const ADS_CACHE_KEY = 'tbr_market_ads_v1';
         let activeTrade = null;
-        let currentUserId = localStorage.getItem('tbr_resolved_uid') || '';
+        let currentUserId = '';
         let selectedReceiptBase64 = '';
         let countdownInterval = null;
-        let myTradesMemoryMap = {};
-
-        function clearMarketAdsCache() {
-            try {
-                sessionStorage.removeItem(ADS_CACHE_KEY);
-                localStorage.removeItem(ADS_CACHE_KEY);
-            } catch (e) {}
-        }
-
-        function decodeJwtSafe(token) {
-            try {
-                const clean = String(token || '').replace(/^["']|["']$/g, '').replace(/^Bearer\s+/i, '').trim();
-                const part = clean.split('.')[1];
-                if (!part) return null;
-                let base64 = part.replace(/-/g, '+').replace(/_/g, '/');
-                while (base64.length % 4) base64 += '=';
-                return JSON.parse(atob(base64));
-            } catch (e) {
-                return null;
-            }
-        }
 
         function getLoggedUserIdentity() {
-            const rawToken = localStorage.getItem('token') || localStorage.getItem('jwtToken') || localStorage.getItem('authToken') || localStorage.getItem('userToken') || '';
-            const token = String(rawToken).replace(/^["']|["']$/g, '').replace(/^Bearer\s+/i, '').trim();
+            const token = localStorage.getItem('token') || localStorage.getItem('jwtToken') || localStorage.getItem('authToken') || '';
             let email = localStorage.getItem('userEmail') || localStorage.getItem('email') || '';
-            let userId = localStorage.getItem('userId') || localStorage.getItem('tbr_resolved_uid') || '';
+            let userId = localStorage.getItem('userId') || '';
 
             try {
                 const u = JSON.parse(localStorage.getItem('user') || localStorage.getItem('currentUser') || localStorage.getItem('tbr_user') || '{}');
-                if (!email && u.email) email = String(u.email).trim();
-                if (!userId && (u._id || u.id || u.userId)) userId = String(u._id || u.id || u.userId).trim();
+                if (!email && u.email) email = u.email;
+                if (!userId && (u._id || u.id || u.userId)) userId = u._id || u.id || u.userId;
             } catch (e) {}
-
-            if (token && (!userId || !email)) {
-                const payload = decodeJwtSafe(token);
-                if (payload) {
-                    if (!userId && (payload.id || payload._id || payload.userId)) {
-                        userId = String(payload.id || payload._id || payload.userId);
-                    }
-                    if (!email && payload.email) {
-                        email = String(payload.email);
-                    }
-                }
-            }
 
             return { token, email, userId };
-        }
-
-        // ⚡ ተጠቃሚው ኢሜይሉ ወይም UserIDው በlocalStorage ውስጥ ከጠፋ፣ ከሰርቨሩ በ 0.02s አምጥቶ የሚያስቀምጥ ፋንክሽን ⚡
-        async function ensureUserIdentityResolved() {
-            const ident = getLoggedUserIdentity();
-            if ((ident.email && ident.userId) || !ident.token) return ident;
-
-            try {
-                const res = await fetch(`${API_BASE}/api/user/profile`, {
-                    headers: { 'Authorization': 'Bearer ' + ident.token },
-                    cache: 'no-store'
-                });
-                if (res.ok) {
-                    const json = await res.json();
-                    if (json && json.user) {
-                        const u = json.user;
-                        if (u.id || u._id) {
-                            currentUserId = String(u.id || u._id);
-                            localStorage.setItem('tbr_resolved_uid', currentUserId);
-                            localStorage.setItem('userId', currentUserId);
-                        }
-                        if (u.email) {
-                            localStorage.setItem('userEmail', u.email);
-                            localStorage.setItem('email', u.email);
-                        }
-                    }
-                }
-            } catch (e) {}
-            return getLoggedUserIdentity();
         }
 
         function formatEtb(val) {
             return Number(val || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ETB';
         }
 
-        function compressImageFile(file, callback) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = new Image();
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    const maxW = 900;
-                    const scale = img.width > maxW ? (maxW / img.width) : 1;
-                    canvas.width = Math.round(img.width * scale);
-                    canvas.height = Math.round(img.height * scale);
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    callback(canvas.toDataURL('image/jpeg', 0.72));
-                };
-                img.onerror = () => callback(e.target.result);
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-
         document.addEventListener('DOMContentLoaded', async () => {
-            const { userId } = getLoggedUserIdentity();
-            if (userId && !currentUserId) currentUserId = String(userId);
-
             const urlParams = new URLSearchParams(window.location.search);
             const tradeIdParam = urlParams.get('tradeId');
 
             if (tradeIdParam) {
                 document.getElementById('myTradesListView').style.display = 'none';
-                const roomEl = document.getElementById('singleTradeRoomView');
-                roomEl.style.display = 'grid';
+                document.getElementById('singleTradeRoomView').style.display = 'grid';
 
-                let matchedCache = null;
                 try {
-                    const cachedOrder = JSON.parse(localStorage.getItem('tbr_active_p2p_order') || 'null');
-                    if (cachedOrder && String(cachedOrder._id) === String(tradeIdParam)) {
-                        matchedCache = cachedOrder;
-                    }
-                    if (!matchedCache) {
-                        const cachedList = JSON.parse(sessionStorage.getItem(TRADES_LIST_CACHE) || '[]');
-                        if (Array.isArray(cachedList)) {
-                            matchedCache = cachedList.find(t => String(t._id) === String(tradeIdParam)) || null;
+                    const cachedOrder = localStorage.getItem('tbr_active_p2p_order');
+                    if (cachedOrder) {
+                        const parsed = JSON.parse(cachedOrder);
+                        if (parsed && String(parsed._id) === String(tradeIdParam)) {
+                            activeTrade = parsed;
+                            renderTradeRoomUI();
                         }
                     }
                 } catch (e) {}
 
-                if (matchedCache) {
-                    activeTrade = matchedCache;
-                    renderTradeRoomUI();
-                }
-
-                await ensureUserIdentityResolved();
                 await fetchTradeFromServer(tradeIdParam);
-                setInterval(() => fetchTradeFromServer(tradeIdParam), 2500);
+                setInterval(() => fetchTradeFromServer(tradeIdParam), 3000);
                 startCountdownTimer();
             } else {
                 document.getElementById('singleTradeRoomView').style.display = 'none';
                 document.getElementById('myTradesListView').style.display = 'block';
 
-                let hasRenderedCache = false;
                 try {
-                    const cachedList = JSON.parse(sessionStorage.getItem(TRADES_LIST_CACHE) || 'null');
-                    if (Array.isArray(cachedList) && cachedList.length > 0) {
-                        renderMyTradesTable(cachedList);
-                        hasRenderedCache = true;
-                    } else {
-                        // አዲስ የተከፈተ ትሬድ በ localStorage ውስጥ ካለ ወዲያውኑ ማሳየት
-                        const latestLocal = JSON.parse(localStorage.getItem('tbr_active_p2p_order') || 'null');
-                        if (latestLocal && latestLocal._id) {
-                            renderMyTradesTable([latestLocal]);
-                            hasRenderedCache = true;
+                    const cachedList = sessionStorage.getItem(TRADES_LIST_CACHE);
+                    if (cachedList) {
+                        const parsedList = JSON.parse(cachedList);
+                        if (Array.isArray(parsedList) && parsedList.length > 0) {
+                            renderMyTradesTable(parsedList);
                         }
                     }
                 } catch (e) {}
 
-                await ensureUserIdentityResolved();
-                await loadMyTradesList(hasRenderedCache);
-                setInterval(() => loadMyTradesList(true), 3000);
+                await loadMyTradesList();
+                setInterval(loadMyTradesList, 4000);
             }
         });
 
-        function openSingleTradeInstant(tradeId) {
-            if (myTradesMemoryMap[tradeId]) {
-                localStorage.setItem('tbr_active_p2p_order', JSON.stringify(myTradesMemoryMap[tradeId]));
-            }
-            window.location.href = `trades.html?tradeId=${tradeId}`;
-        }
-
-        async function loadMyTradesList(alreadyHasUI) {
+        async function loadMyTradesList() {
             const { token, email, userId } = getLoggedUserIdentity();
             try {
                 const params = new URLSearchParams();
                 if (email) params.set('email', email);
                 if (userId) params.set('userId', userId);
-                params.set('t', Date.now());
 
                 const res = await fetch(`${API_BASE}/api/trades?${params.toString()}`, {
-                    headers: token ? { 'Authorization': 'Bearer ' + token } : {},
-                    cache: 'no-store'
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
                 });
 
                 if (res.ok) {
                     const json = await res.json();
-                    if (json && Array.isArray(json.trades)) {
-                        if (json.currentUserId) {
-                            currentUserId = String(json.currentUserId);
-                            localStorage.setItem('tbr_resolved_uid', currentUserId);
-                        }
-
-                        let finalTrades = json.trades;
-
-                        // በቅርቡ የተከፈተ ትሬድ በlocalStorage ካለና በዝርዝሩ ውስጥ ገና ካልገባ አብሮ እንዲታይ ማድረግ
-                        try {
-                            const localActive = JSON.parse(localStorage.getItem('tbr_active_p2p_order') || 'null');
-                            if (localActive && localActive._id && !finalTrades.some(t => String(t._id) === String(localActive._id))) {
-                                const myE = (email || '').toLowerCase();
-                                const myU = String(currentUserId || userId || '');
-                                const belongsToMe =
-                                    (myU && (String(localActive.buyerId) === myU || String(localActive.sellerId) === myU)) ||
-                                    (myE && (String(localActive.buyerEmail || '').toLowerCase() === myE || String(localActive.sellerEmail || '').toLowerCase() === myE));
-                                if (belongsToMe) {
-                                    finalTrades = [localActive, ...finalTrades];
-                                }
-                            }
-                        } catch (e) {}
-
-                        sessionStorage.setItem(TRADES_LIST_CACHE, JSON.stringify(finalTrades));
-                        renderMyTradesTable(finalTrades);
+                    if (json.success && Array.isArray(json.trades)) {
+                        currentUserId = json.currentUserId || userId || '';
+                        sessionStorage.setItem(TRADES_LIST_CACHE, JSON.stringify(json.trades));
+                        renderMyTradesTable(json.trades);
                         return;
                     }
                 }
             } catch (e) {
                 console.error('Error fetching My Trades:', e);
-            }
-
-            if (!alreadyHasUI) {
-                renderMyTradesTable([]);
             }
         }
 
@@ -1841,22 +1703,15 @@
                 return;
             }
 
-            const { email, userId } = getLoggedUserIdentity();
-            const effectiveUid = currentUserId || userId || '';
+            const { email } = getLoggedUserIdentity();
             let html = '';
 
             trades.forEach(tr => {
-                myTradesMemoryMap[tr._id] = tr;
-
                 let isBuyer = tr.tradeType === 'buy';
-                if (effectiveUid && tr.sellerId && String(tr.sellerId) === String(effectiveUid)) {
-                    isBuyer = false;
-                } else if (effectiveUid && tr.buyerId && String(tr.buyerId) === String(effectiveUid)) {
-                    isBuyer = true;
-                } else if (email && tr.sellerEmail && String(tr.sellerEmail).toLowerCase() === String(email).toLowerCase()) {
-                    isBuyer = false;
-                } else if (email && tr.buyerEmail && String(tr.buyerEmail).toLowerCase() === String(email).toLowerCase()) {
-                    isBuyer = true;
+                if (currentUserId && tr.buyerId) {
+                    isBuyer = String(tr.buyerId) === String(currentUserId);
+                } else if (email && tr.buyerEmail) {
+                    isBuyer = String(tr.buyerEmail).toLowerCase() === String(email).toLowerCase();
                 }
 
                 const roleLabel = isBuyer ? 'Buy' : 'Sell';
@@ -1904,17 +1759,17 @@
                     }
 
                     if (userMsgsCount > 0) {
-                        actionLinkHtml = `<span class="mt-action-link reply-green">Reply &rarr;</span>`;
+                        actionLinkHtml = `<a class="mt-action-link reply-green" href="trades.html?tradeId=${targetId}">Reply &rarr;</a>`;
                     } else {
-                        actionLinkHtml = `<span class="mt-action-link">View &rarr;</span>`;
+                        actionLinkHtml = `<a class="mt-action-link" href="trades.html?tradeId=${targetId}">View &rarr;</a>`;
                     }
                 } else if (st === 'cancelled') {
                     statusPillHtml = `<span class="mt-status-pill cancelled">Cancelled</span>`;
-                    actionLinkHtml = `<span class="mt-action-link">View &rarr;</span>`;
+                    actionLinkHtml = `<a class="mt-action-link" href="trades.html?tradeId=${targetId}">View &rarr;</a>`;
                 } else if (st === 'completed') {
                     statusPillHtml = `<span class="mt-status-pill completed"><i class="fa-regular fa-circle-check"></i> Completed</span>`;
                     rateSubHtml = `<div class="mt-rate-sub method-green">${tr.paymentMethod || 'Bank'}</div>`;
-                    actionLinkHtml = `<span class="mt-action-link"><i class="fa-solid fa-download" style="color:var(--text-muted); margin-right:4px;"></i> Receipt &rarr;</span>`;
+                    actionLinkHtml = `<a class="mt-action-link" href="trades.html?tradeId=${targetId}"><i class="fa-solid fa-download" style="color:var(--text-muted); margin-right:4px;"></i> Receipt &rarr;</a>`;
                 }
 
                 const msgBadgeHtml = (userMsgsCount > 0 && (st === 'funds_locked' || st === 'payment_sent'))
@@ -1922,7 +1777,7 @@
                     : '';
 
                 html += `
-                    <tr class="${rowHighlight}" onclick="openSingleTradeInstant('${targetId}')" style="cursor:pointer;">
+                    <tr class="${rowHighlight}" onclick="window.location.href='trades.html?tradeId=${targetId}'" style="cursor:pointer;">
                         <td class="mt-id-col">${tradeIdShort}</td>
                         <td>
                             <div class="mt-counterparty-cell">
@@ -1963,20 +1818,15 @@
                 const params = new URLSearchParams();
                 if (email) params.set('email', email);
                 if (userId) params.set('userId', userId);
-                params.set('t', Date.now());
 
                 const res = await fetch(`${API_BASE}/api/trades/${tradeId}?${params.toString()}`, {
-                    headers: token ? { 'Authorization': 'Bearer ' + token } : {},
-                    cache: 'no-store'
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
                 });
                 if (res.ok) {
                     const json = await res.json();
                     if (json.success && json.trade) {
                         activeTrade = json.trade;
-                        if (json.currentUserId) {
-                            currentUserId = String(json.currentUserId);
-                            localStorage.setItem('tbr_resolved_uid', currentUserId);
-                        }
+                        currentUserId = json.currentUserId || userId || '';
                         localStorage.setItem('tbr_active_p2p_order', JSON.stringify(activeTrade));
                         renderTradeRoomUI();
                     }
@@ -1986,20 +1836,12 @@
 
         function isCurrentUserBuyer() {
             if (!activeTrade) return true;
-            const { email, userId } = getLoggedUserIdentity();
-            const myUid = currentUserId || userId || '';
-
-            if (myUid && activeTrade.sellerId && String(activeTrade.sellerId) === String(myUid)) {
-                return false;
+            if (currentUserId && activeTrade.buyerId) {
+                return String(activeTrade.buyerId) === String(currentUserId);
             }
-            if (myUid && activeTrade.buyerId && String(activeTrade.buyerId) === String(myUid)) {
-                return true;
-            }
-            if (email && activeTrade.sellerEmail && String(activeTrade.sellerEmail).toLowerCase() === String(email).toLowerCase()) {
-                return false;
-            }
-            if (email && activeTrade.buyerEmail && String(activeTrade.buyerEmail).toLowerCase() === String(email).toLowerCase()) {
-                return true;
+            const { email } = getLoggedUserIdentity();
+            if (email && activeTrade.buyerEmail) {
+                return String(activeTrade.buyerEmail).toLowerCase() === String(email).toLowerCase();
             }
             return (activeTrade.tradeType || activeTrade.type) === 'buy';
         }
@@ -2021,7 +1863,7 @@
             const partnerName = isBuyer
                 ? (activeTrade.sellerName || activeTrade.counterpartyName || 'Seller')
                 : (activeTrade.buyerName || activeTrade.counterpartyName || 'Buyer');
-            const partnerAvatar = isBuyer ? (activeTrade.sellerAvatar || '') : (activeTrade.buyerAvatar || '');
+            const partnerAvatar = isBuyer ? activeTrade.sellerAvatar : activeTrade.buyerAvatar;
             const initials = String(partnerName).slice(0, 2).toUpperCase();
 
             document.getElementById('uiPartnerName').innerText = partnerName;
@@ -2173,7 +2015,6 @@
                     cancelBtn.style.display = 'none';
                 }
             } else {
-                // SELLER VIEW
                 document.getElementById('uiBuyerPayDropdown').style.display = 'none';
                 document.getElementById('uiLeftMarkPaidBtn').style.display = 'none';
                 document.getElementById('uiRightMarkPaidBtn').style.display = 'none';
@@ -2206,11 +2047,8 @@
                     document.getElementById('uiLeftSellerReleaseBtn').style.display = 'none';
                     document.getElementById('uiRightSellerReleaseBtn').style.display = 'none';
 
-                    const alreadyRequested = Array.isArray(activeTrade.messages) &&
-                        activeTrade.messages.some(m => m.isSystem && String(m.text || '').includes('requested to cancel'));
-
-                    cancelBtn.innerText = alreadyRequested ? 'Cancellation Requested ✓' : 'Request for Cancel';
-                    cancelBtn.disabled = alreadyRequested;
+                    cancelBtn.innerText = 'Request for Cancel';
+                    cancelBtn.disabled = false;
                     cancelBtn.onclick = requestTradeCancellation;
                     cancelBtn.style.display = 'block';
                 }
@@ -2287,8 +2125,9 @@
         function handleModalReceiptSelect(event) {
             const file = event.target.files[0];
             if (!file) return;
-            compressImageFile(file, (compressedBase64) => {
-                selectedReceiptBase64 = compressedBase64;
+            const reader = new FileReader();
+            reader.onload = () => {
+                selectedReceiptBase64 = reader.result;
                 const preview = document.getElementById('cmReceiptPreviewImg');
                 preview.src = selectedReceiptBase64;
                 preview.style.display = 'block';
@@ -2296,7 +2135,8 @@
                 document.getElementById('cmChangeReceiptBtn').style.display = 'inline-flex';
                 document.getElementById('cmUploadedBadge').style.display = 'inline-flex';
                 document.getElementById('cmConfirmSubmitBtn').disabled = false;
-            });
+            };
+            reader.readAsDataURL(file);
         }
 
         async function submitMarkPaidWithReceipt() {
@@ -2311,7 +2151,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                     },
                     body: JSON.stringify({ receiptImage: selectedReceiptBase64, email, userId })
                 });
@@ -2357,7 +2197,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                     },
                     body: JSON.stringify({ email, userId })
                 });
@@ -2366,7 +2206,6 @@
                     activeTrade = json.trade;
                     localStorage.setItem('tbr_active_p2p_order', JSON.stringify(activeTrade));
                     sessionStorage.removeItem('tbr_dash_active_banner_v2');
-                    clearMarketAdsCache();
                     closeSellerReleaseModal();
                     renderTradeRoomUI();
                     return;
@@ -2392,7 +2231,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                     },
                     body: JSON.stringify({ reason, email, userId })
                 });
@@ -2418,7 +2257,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                     },
                     body: JSON.stringify({ email, userId })
                 });
@@ -2439,7 +2278,7 @@
         }
 
         async function cancelActiveTrade() {
-            if (!activeTrade || !confirm('Are you sure you want to cancel this order? Do NOT cancel if you have already sent payment!')) return;
+            if (!activeTrade || !confirm('Are you sure you want to cancel this order?')) return;
             const { token, email, userId } = getLoggedUserIdentity();
             if (activeTrade._id && !String(activeTrade._id).startsWith('local_')) {
                 try {
@@ -2447,7 +2286,7 @@
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+                            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                         },
                         body: JSON.stringify({ email, userId })
                     });
@@ -2456,11 +2295,7 @@
                         activeTrade = json.trade;
                         localStorage.setItem('tbr_active_p2p_order', JSON.stringify(activeTrade));
                         sessionStorage.removeItem('tbr_dash_active_banner_v2');
-                        clearMarketAdsCache();
                         renderTradeRoomUI();
-                        return;
-                    } else {
-                        alert((json && json.message) || 'Cannot cancel trade.');
                         return;
                     }
                 } catch (e) {}
@@ -2476,9 +2311,6 @@
                 return;
             }
 
-            const { userId } = getLoggedUserIdentity();
-            const effectiveUid = currentUserId || userId || '';
-
             area.innerHTML = msgs.map(m => {
                 if (m.isSystem || m.senderId === 'system' || m.senderId === 'admin') {
                     return `<div class="msg-bubble-system">${m.text}</div>`;
@@ -2488,7 +2320,7 @@
                     ? new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
                     : '';
                 const imgHtml = m.image ? `<img src="${m.image}" onclick="window.open(this.src)" title="Click to view full receipt">` : '';
-                const isMine = (effectiveUid && String(m.senderId) === String(effectiveUid)) || m.senderId === 'me';
+                const isMine = (currentUserId && String(m.senderId) === String(currentUserId)) || m.senderId === 'me';
 
                 if (isMine) {
                     return `
@@ -2498,9 +2330,7 @@
                         </div>
                     `;
                 } else {
-                    const avHtml = partnerAvatar
-                        ? `<img src="${partnerAvatar}" onerror="this.outerHTML='${partnerInitials || 'TR'}'">`
-                        : (partnerInitials || 'TR');
+                    const avHtml = partnerAvatar ? `<img src="${partnerAvatar}" onerror="this.outerHTML='${partnerInitials || 'TR'}'">` : (partnerInitials || 'TR');
                     return `
                         <div class="msg-row-theirs">
                             <div class="msg-theirs-avatar">${avHtml}</div>
@@ -2524,7 +2354,7 @@
 
             const { token, email, userId } = getLoggedUserIdentity();
             if (!activeTrade.messages) activeTrade.messages = [];
-            activeTrade.messages.push({ senderId: currentUserId || userId || 'me', text, isSystem: false, createdAt: new Date().toISOString() });
+            activeTrade.messages.push({ senderId: currentUserId || 'me', text, isSystem: false, createdAt: new Date().toISOString() });
             renderTradeRoomUI();
 
             if (activeTrade._id && !String(activeTrade._id).startsWith('local_')) {
@@ -2533,7 +2363,7 @@
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+                            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                         },
                         body: JSON.stringify({ text, email, userId })
                     });
@@ -2550,19 +2380,22 @@
             const file = event.target.files[0];
             if (!file || !activeTrade) return;
             const { token, email, userId } = getLoggedUserIdentity();
-            compressImageFile(file, async (compressedBase64) => {
+            const reader = new FileReader();
+            reader.onload = async () => {
+                const base64Img = reader.result;
                 if (activeTrade._id && !String(activeTrade._id).startsWith('local_')) {
                     await fetch(`${API_BASE}/api/trades/${activeTrade._id}/messages`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+                            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                         },
-                        body: JSON.stringify({ text: 'Attachment:', image: compressedBase64, email, userId })
+                        body: JSON.stringify({ text: 'Attachment:', image: base64Img, email, userId })
                     });
                     await fetchTradeFromServer(activeTrade._id);
                 }
-            });
+            };
+            reader.readAsDataURL(file);
         }
 
         function togglePaymentDetailsDropdown() {
