@@ -62,7 +62,7 @@
             color: var(--accent-gold);
             background: rgba(240, 185, 11, 0.08);
         }
-        
+
         .nav-right { display: flex; align-items: center; gap: 12px; }
         .dashboard-shortcut-btn {
             background: rgba(240, 185, 11, 0.1);
@@ -163,7 +163,7 @@
             border-collapse: collapse;
             text-align: left;
         }
-        
+
         th, td {
             padding: 20px 16px;
             border-bottom: 1px solid #181a20;
@@ -1103,7 +1103,7 @@
 
     <!-- Main Market Section -->
     <div class="market-container">
-        
+
         <div class="trade-toggle-wrap">
             <button id="buyTabBtn" class="toggle-btn active buy-active" onclick="switchTradeType('buy')">Buy</button>
             <button id="sellTabBtn" class="toggle-btn" onclick="switchTradeType('sell')">Sell</button>
@@ -1315,7 +1315,7 @@
             platformFee: 0.5
         };
 
-        // In-Memory Ads Store for 0ms Instant Tab/Filter Switching
+        // In-Memory Ads Store
         let allServerAds = [];
         let currentRenderedAds = [];
         let hasLoadedAdsOnce = false;
@@ -1408,29 +1408,27 @@
                 document.getElementById('buyTabBtn').className = 'toggle-btn';
             }
 
-            // 1. Instant 0ms render from cache
+            // ⚡ 1. በ localStorage ውስጥ ተጣብቆ የነበረውን የድሮ የተሰረዘ ፖስት (tbr_market_ads_v1) ሙሉ በሙሉ ማጽዳት! ⚡
             try {
-                const cached = sessionStorage.getItem(ADS_CACHE_KEY) || localStorage.getItem(ADS_CACHE_KEY);
-                if (cached) {
-                    const parsed = JSON.parse(cached);
-                    if (Array.isArray(parsed) && parsed.length > 0) {
-                        allServerAds = parsed;
-                        hasLoadedAdsOnce = true;
-                        renderOrderBook();
-                    }
-                }
+                localStorage.removeItem('tbr_market_ads_v1');
+                sessionStorage.removeItem('tbr_market_ads_v1');
             } catch (e) {}
 
             // 2. Fetch fresh live ads, admin settings & user wallet/payments in parallel
-            fetchAdminSettings();
             fetchLiveAdsFromServer();
+            fetchAdminSettings();
             fetchCurrentUserWalletAndPayments();
 
-            // 3. Background heartbeat & periodic sync
+            // 3. Background heartbeat & fast 2-second live sync (Typo ssetInterval fixed!)
             sendHeartbeat();
             setInterval(sendHeartbeat, 30000);
-            ssetInterval(fetchLiveAdsFromServer, 2000);
+            setInterval(fetchLiveAdsFromServer, 2000);
             setInterval(fetchAdminSettings, 15000);
+
+            window.addEventListener('focus', fetchLiveAdsFromServer);
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) fetchLiveAdsFromServer();
+            });
         });
 
         function switchTradeType(type) {
@@ -1455,18 +1453,22 @@
             if (isFetchingAds) return;
             isFetchingAds = true;
             try {
-                const res = await fetch(`${API_BASE}/api/ads?t=${Date.now()}`, { cache: 'no-store' });
+                const res = await fetch(`${API_BASE}/api/ads?t=${Date.now()}`, {
+                    cache: 'no-store',
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache'
+                    }
+                });
                 const json = await res.json();
                 if (json && json.success && Array.isArray(json.ads)) {
-                    allServerAds = json.ads;
+                    // ✅ Active የሆኑ እና ከ 0 USDT በላይ ያላቸውን ብቻ ማሳየት (Cancelled የሆኑ በ 0.00s ይጠፋሉ!)
+                    allServerAds = json.ads.filter(ad =>
+                        (!ad.status || ad.status === 'active') &&
+                        Number(ad.totalAmount || 0) > 0.0001
+                    );
                     hasLoadedAdsOnce = true;
                     renderOrderBook();
-
-                    try {
-                        const cachePayload = JSON.stringify(json.ads);
-                        sessionStorage.setItem(ADS_CACHE_KEY, cachePayload);
-                        localStorage.setItem(ADS_CACHE_KEY, cachePayload);
-                    } catch (storageErr) {}
                 } else {
                     hasLoadedAdsOnce = true;
                     renderOrderBook();
@@ -1708,6 +1710,8 @@
             } catch (e) {}
 
             const filteredAds = allServerAds.filter(ad => {
+                if (ad.status && ad.status !== 'active') return false;
+                if (Number(ad.totalAmount || 0) <= 0.0001) return false;
                 if (isBuy) return ad.tradeType === 'sell';
                 else return ad.tradeType === 'buy';
             }).map(ad => {
@@ -1721,7 +1725,6 @@
                 const numericPrice = typeof ad.price === 'number' ? ad.price : parseFloat(ad.price || 0);
                 const numericAvail = Number(ad.totalAmount || 0);
 
-                // ✅ በማርኬት ሰንጠረዥም ሆነ በሞዳሉ ውስጥ Limit ከቀሪው USDT (numericAvail * numericPrice) እንዳይበልጥ ወዲያውኑ ማስተካከል!
                 const maxPossibleEtb = Number((numericAvail * numericPrice).toFixed(2));
                 const rawMax = Number(ad.maxLimit || maxPossibleEtb);
                 const numericMax = rawMax > 0 ? Math.min(rawMax, maxPossibleEtb) : maxPossibleEtb;
@@ -1845,7 +1848,7 @@
                                     <div class="m-currency">ETB / USDT</div>
                                 </div>
                             </div>
-                            
+
                             <div class="m-middle-row">
                                 <div>Limit: ${t.min} - ${t.max} ETB</div>
                                 <div class="avail">Avail: ${t.avail} USDT</div>
@@ -1887,13 +1890,11 @@
             const minFormatted = formatMoney2(ad.numericMin);
             const maxFormatted = formatMoney2(ad.numericMax);
 
-            // 1. Header & Price
             document.getElementById('tmHeaderTitle').innerText = isBuy ? 'Buy USDT' : 'Sell USDT';
             const priceEl = document.getElementById('tmUnitPrice');
             priceEl.innerText = priceDisplay;
             priceEl.className = isBuy ? 'tm-price-big buy-color' : 'tm-price-big sell-color';
 
-            // 2. Sub-limits line
             const subLimitsEl = document.getElementById('tmSubLimits');
             if (isBuy) {
                 subLimitsEl.innerHTML = `
@@ -1912,7 +1913,6 @@
                 `;
             }
 
-            // 3. Trader Avatar, Online Dot, Name, Completion, Orders
             const firstLetter = (ad.name || 'T').replace(/^@/, '').charAt(0).toUpperCase();
             document.getElementById('tmTraderAvatar').innerHTML = ad.avatarUrl
                 ? `<img src="${ad.avatarUrl}" alt="${ad.name}" onerror="this.outerHTML='${firstLetter}'">`
@@ -1922,7 +1922,6 @@
             document.getElementById('tmTraderComp').innerText = ad.comp || '100%';
             document.getElementById('tmTraderOrders').innerText = ad.orders || 1;
 
-            // 4. Payment Method Label & Pills
             document.getElementById('tmMethodSectionLabel').innerText = isBuy
                 ? 'Payment method — select one'
                 : 'Your receive account — buyer will send ETB here';
@@ -1931,7 +1930,6 @@
             activeModalSelectedMethod = methods[0];
             renderModalPaymentPills();
 
-            // 5. Input Labels, Placeholders & Focus Colors
             const etbBox = document.getElementById('tmEtbInputBox');
             const usdtBox = document.getElementById('tmUsdtInputBox');
             const usdtFieldGroup = document.getElementById('tmUsdtFieldGroup');
@@ -1965,7 +1963,6 @@
             document.getElementById('tmOrderErrorMsg').style.display = 'none';
             document.getElementById('tmFeeSummaryBox').style.display = 'none';
 
-            // 6. Confirm Button Starts Disabled
             const confirmBtn = document.getElementById('tmConfirmOrderBtn');
             confirmBtn.innerText = isBuy ? 'Confirm Buy' : 'Confirm Sell';
             confirmBtn.className = isBuy ? 'tm-submit-btn buy-btn' : 'tm-submit-btn sell-btn';
@@ -2037,7 +2034,6 @@
             }
         }
 
-        // Live Fee Calculation Display (Uses systemSettings.platformFee from Admin)
         function updateFeeSummaryDisplay() {
             const summaryBox = document.getElementById('tmFeeSummaryBox');
             const etbNum = parseFloat(document.getElementById('tmEtbInput').value);
@@ -2191,50 +2187,13 @@
             const isBuy = currentType === 'buy';
             const etbAmount = parseFloat(document.getElementById('tmEtbInput').value);
             const usdtAmount = parseFloat(document.getElementById('tmUsdtInput').value);
-            const feePercent = Number(systemSettings.platformFee || 0.5);
-            const feeUsdt = usdtAmount * (feePercent / 100);
-            const netUsdt = Math.max(0, usdtAmount - feeUsdt);
 
             const confirmBtn = document.getElementById('tmConfirmOrderBtn');
+            const errEl = document.getElementById('tmOrderErrorMsg');
+            errEl.style.display = 'none';
+
             confirmBtn.disabled = true;
-            confirmBtn.innerText = 'Locking Escrow...';
-
-            const matchedSellerPay = currentUserSavedPayments.find(pm =>
-                String(pm.type || '').toLowerCase().trim() === String(activeModalSelectedMethod || '').toLowerCase().trim()
-            ) || currentUserSavedPayments[0] || {};
-
-            const fallbackOrder = {
-                _id: 'local_' + Date.now(),
-                tradeNumber: '00001',
-                adId: activeModalAd.adId,
-                tradeType: isBuy ? 'buy' : 'sell',
-                buyerName: isBuy ? (currentUserFullName || 'Buyer') : activeModalAd.name,
-                sellerName: isBuy ? activeModalAd.name : (currentUserFullName || 'Seller'),
-                counterpartyName: activeModalAd.name,
-                counterpartyAvatar: activeModalAd.avatarUrl || '',
-                unitPrice: activeModalAd.numericPrice,
-                etbAmount: etbAmount,
-                usdtAmount: usdtAmount,
-                feePercent: feePercent,
-                feeUsdt: feeUsdt,
-                netUsdt: netUsdt,
-                paymentMethod: activeModalSelectedMethod,
-                paymentDetails: {
-                    accountName: isBuy ? activeModalAd.name : (matchedSellerPay.name || currentUserFullName || 'Account Holder'),
-                    accountNumber: isBuy ? '1000570640058' : (matchedSellerPay.account || '-'),
-                    bankName: activeModalSelectedMethod
-                },
-                status: 'funds_locked',
-                messages: [{
-                    senderId: 'system',
-                    senderName: 'System',
-                    text: `Welcome! Trading with ${activeModalAd.name}`,
-                    isSystem: true
-                }],
-                expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
-                createdAt: new Date().toISOString()
-            };
-            localStorage.setItem('tbr_active_p2p_order', JSON.stringify(fallbackOrder));
+            confirmBtn.innerText = 'Checking Trader Status...';
 
             try {
                 const res = await fetch(`${API_BASE}/api/trades`, {
@@ -2262,13 +2221,20 @@
                     closeOrderModal();
                     window.location.href = `trades.html?tradeId=${json.trade._id}`;
                     return;
+                } else {
+                    const msg = (json && json.message) ? json.message : 'Unable to start trade right now.';
+                    errEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> <span>${msg}</span>`;
+                    errEl.style.display = 'flex';
+                    confirmBtn.disabled = false;
+                    confirmBtn.innerText = isBuy ? 'Confirm Buy' : 'Confirm Sell';
+                    return;
                 }
             } catch (e) {
-                console.error('Trade API fallback:', e);
+                errEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> <span>Network error. Please try again.</span>`;
+                errEl.style.display = 'flex';
+                confirmBtn.disabled = false;
+                confirmBtn.innerText = isBuy ? 'Confirm Buy' : 'Confirm Sell';
             }
-
-            closeOrderModal();
-            window.location.href = `trades.html?tradeId=${fallbackOrder._id}`;
         }
     </script>
 </body>
