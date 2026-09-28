@@ -860,6 +860,15 @@ app.get('/api/check-deposits/:walletAddress', async (req, res) => {
                 destinationAddress: userWalletAddress
             });
 
+            notifyUser({
+    userId: existingUser._id,
+    email: existingUser.email,
+    title: 'Deposit Confirmed',
+    message: `Your deposit of ${currentChainBal.toFixed(2)} USDT has been credited to your wallet.`,
+    type: 'deposit',
+    link: 'wallet.html'
+});
+
             if (existingUser.bscPrivateKey) {
                 autoSweepUSDT(userWalletAddress, existingUser.bscPrivateKey);
             }
@@ -953,6 +962,15 @@ app.post('/api/withdraw/request', verifyToken, async (req, res) => {
                     destinationAddress: destinationAddress
                 });
 
+                notifyUser({
+    userId: user._id,
+    email: user.email,
+    title: 'Withdrawal Completed',
+    message: `Your withdrawal of ${amountToSend.toFixed(2)} USDT has been sent to ${destinationAddress}.`,
+    type: 'withdrawal',
+    link: 'wallet.html'
+});
+
                 return res.json({ 
                     success: true, 
                     balance: user.balance,
@@ -1037,6 +1055,15 @@ app.post('/api/withdraw/verify-otp', verifyToken, async (req, res) => {
                 status: 'completed',
                 destinationAddress: destinationAddress
             });
+
+            notifyUser({
+    userId: user._id,
+    email: user.email,
+    title: 'Withdrawal Completed',
+    message: `Your withdrawal of ${amountToSend.toFixed(2)} USDT has been sent to ${destinationAddress}.`,
+    type: 'withdrawal',
+    link: 'wallet.html'
+});
 
             res.json({ success: true, balance: user.balance, message: `Withdrawal of ${amountToSend.toFixed(2)} USDT Sent via Blockchain!` });
         } catch (txError) {
@@ -2351,6 +2378,23 @@ app.post('/api/transfer', verifyToken, async (req, res) => {
             ]);
         } catch(txErr) {}
 
+        notifyUser({
+    userId: sender._id,
+    email: sender.email,
+    title: 'USDT Transferred',
+    message: `You sent ${exactAmt.toFixed(2)} USDT to ${receiver.email}.`,
+    type: 'transfer',
+    link: 'wallet.html'
+});
+notifyUser({
+    userId: receiver._id,
+    email: receiver.email,
+    title: 'USDT Received',
+    message: `You received ${exactAmt.toFixed(2)} USDT from ${sender.email}.`,
+    type: 'deposit',
+    link: 'wallet.html'
+});
+
         res.json({
             success: true,
             balance: updatedSender ? updatedSender.balance : Number((sender.balance - exactAmt).toFixed(6)),
@@ -2997,6 +3041,24 @@ app.post('/api/trades', async (req, res) => {
             serverTime: Date.now(),
             trade: attachAccurateTimerData(newTrade)
         });
+
+notifyUser({
+    userId: buyerUser._id,
+    email: buyerUser.email,
+    title: `Trade #${sequentialTradeNumber} Opened`,
+    message: `You opened a Buy order for ${usdtNum.toFixed(2)} USDT (${etbNum.toLocaleString('en-US')} ETB) with ${sName}.`,
+    type: 'trade',
+    link: `trades.html?tradeId=${newTrade._id}`
+});
+notifyUser({
+    userId: sellerUser._id,
+    email: sellerUser.email,
+    title: `New P2P Order #${sequentialTradeNumber}`,
+    message: `${bName} started a trade for ${usdtNum.toFixed(2)} USDT (${etbNum.toLocaleString('en-US')} ETB). Escrow is locked.`,
+    type: 'trade',
+    link: `trades.html?tradeId=${newTrade._id}`
+});
+
     } catch (error) {
         console.error("Create Trade Error:", error);
         res.status(500).json({ success: false, message: 'Server error creating trade.' });
@@ -3188,6 +3250,15 @@ app.post('/api/trades/:id/mark-paid', async (req, res) => {
         const tradeObj = attachAccurateTimerData(trade);
         delete tradeObj.receiptImage;
 
+        notifyUser({
+    userId: trade.sellerId,
+    email: trade.sellerEmail,
+    title: `Payment Sent — Trade #${trade.tradeNumber}`,
+    message: `Buyer (${trade.buyerName}) uploaded payment receipt for ${Number(trade.etbAmount).toLocaleString('en-US')} ETB. Verify and release USDT.`,
+    type: 'trade',
+    link: `trades.html?tradeId=${trade._id}`
+});
+
         res.json({ success: true, serverTime: Date.now(), trade: tradeObj });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error updating trade status.' });
@@ -3349,6 +3420,23 @@ app.post('/api/trades/:id/request-cancel', async (req, res) => {
         });
 
         await trade.save();
+notifyUser({
+    userId: trade.sellerId,
+    email: trade.sellerEmail,
+    title: `Trade #${trade.tradeNumber} Cancelled`,
+    message: `Trade #${trade.tradeNumber} was cancelled. Escrowed USDT has been returned.`,
+    type: 'trade',
+    link: `trades.html?tradeId=${trade._id}`
+});
+notifyUser({
+    userId: trade.buyerId,
+    email: trade.buyerEmail,
+    title: `Trade #${trade.tradeNumber} Cancelled`,
+    message: `You cancelled Trade #${trade.tradeNumber}.`,
+    type: 'trade',
+    link: `trades.html?tradeId=${trade._id}`
+});
+
         res.json({ success: true, serverTime: Date.now(), trade: attachAccurateTimerData(trade), message: 'Cancellation request sent to the buyer!' });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error requesting cancellation.' });
@@ -3641,6 +3729,123 @@ app.post('/api/admin/escrow-action', verifyAdminToken, async (req, res) => {
         }
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error resolving dispute.' });
+    }
+});
+
+// ============================================================================
+// 🔔 PROFESSIONAL NOTIFICATION SYSTEM (IN-APP + EMAIL VIA BREVO) 🔔
+// ============================================================================
+const notificationSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
+    email: { type: String, index: true, lowercase: true, trim: true },
+    title: { type: String, required: true },
+    message: { type: String, required: true },
+    type: { type: String, default: 'info' }, // deposit, withdrawal, transfer, trade, dispute, kyc
+    link: { type: String, default: 'dashboard.html' },
+    isRead: { type: Boolean, default: false, index: true },
+    createdAt: { type: Date, default: Date.now, index: true }
+});
+
+const Notification = mongoose.models.Notification || mongoose.model('Notification', notificationSchema);
+
+// ⚡ ፍጥነት ሳይቀንስ (በ0ms) ወደ ዳታቤዝ የሚመዘግብ እና ኢሜይል የሚልክ Helper ፋንክሽን ⚡
+async function notifyUser({ userId, email, title, message, type = 'info', link = 'dashboard.html', sendEmail = true }) {
+    setImmediate(async () => {
+        try {
+            let targetEmail = email ? String(email).toLowerCase().trim() : '';
+            let targetUid = userId;
+
+            if ((!targetEmail || !targetUid) && (userId || email)) {
+                const u = await User.findOne({
+                    $or: [
+                        ...(userId && mongoose.Types.ObjectId.isValid(userId) ? [{ _id: userId }] : []),
+                        ...(targetEmail ? [{ email: targetEmail }] : [])
+                    ]
+                }).select('_id email').lean();
+                if (u) {
+                    targetUid = u._id;
+                    targetEmail = u.email;
+                }
+            }
+
+            if (!targetUid && !targetEmail) return;
+
+            await Notification.create({
+                userId: targetUid,
+                email: targetEmail,
+                title,
+                message,
+                type,
+                link,
+                isRead: false
+            });
+
+            if (sendEmail && targetEmail && BREVO_API_KEY) {
+                const htmlContent = `
+                <div style="background-color:#0b0e11; padding:32px 16px; font-family:sans-serif; color:#ffffff;">
+                    <div style="max-width:520px; margin:auto; background-color:#151a21; border:1px solid #232d3f; border-radius:12px; padding:24px;">
+                        <h2 style="color:#f0b90b; margin:0 0 12px 0; font-size:20px;">TBR Exchange</h2>
+                        <h3 style="color:#ffffff; margin:0 0 10px 0; font-size:16px;">${title}</h3>
+                        <p style="color:#d1d5db; font-size:14px; line-height:1.6; margin:0 0 20px 0;">${message}</p>
+                        <a href="https://tbrexchange.com/${link}" style="background:#f0b90b; color:#000; text-decoration:none; padding:10px 20px; border-radius:8px; font-weight:bold; font-size:13px; display:inline-block;">Open TBR Exchange</a>
+                    </div>
+                </div>`;
+
+                await sendEmailViaBrevo({
+                    to: targetEmail,
+                    subject: `TBR Exchange — ${title}`,
+                    htmlContent
+                }).catch(() => {});
+            }
+        } catch (err) {
+            console.error('Notification Error:', err.message);
+        }
+    });
+}
+
+// 1. ኖቲፊኬሽኖችን ማምጫ (የመጨረሻዎቹን 5 እና "See All" ሁሉንም)
+app.get('/api/notifications', async (req, res) => {
+    try {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+        const currentUser = await resolveUserFromRequest(req);
+        if (!currentUser) {
+            return res.json({ success: true, unreadCount: 0, latestFive: [], allNotifications: [] });
+        }
+
+        const orQuery = [{ userId: currentUser._id }];
+        if (currentUser.email) {
+            orQuery.push({ email: currentUser.email.toLowerCase() });
+        }
+
+        const [allNotifications, unreadCount] = await Promise.all([
+            Notification.find({ $or: orQuery }).sort({ createdAt: -1 }).limit(100).lean(),
+            Notification.countDocuments({ $or: orQuery, isRead: false })
+        ]);
+
+        res.json({
+            success: true,
+            unreadCount,
+            latestFive: allNotifications.slice(0, 5),
+            allNotifications
+        });
+    } catch (e) {
+        res.status(500).json({ success: false, unreadCount: 0, latestFive: [], allNotifications: [] });
+    }
+});
+
+// 2. ኖቲፊኬሽን ሲከፈት "ተነቧል" (Mark as Read) ማድረጊያ
+app.post('/api/notifications/mark-read', async (req, res) => {
+    try {
+        const currentUser = await resolveUserFromRequest(req);
+        if (!currentUser) return res.json({ success: false });
+
+        const orQuery = [{ userId: currentUser._id }];
+        if (currentUser.email) orQuery.push({ email: currentUser.email.toLowerCase() });
+
+        await Notification.updateMany({ $or: orQuery, isRead: false }, {$set: { isRead: true } });
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ success: false });
     }
 });
 
