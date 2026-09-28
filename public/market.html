@@ -2273,6 +2273,73 @@
                 confirmBtn.innerText = isBuy ? 'Confirm Buy' : 'Confirm Sell';
             }
         }
+
+(function syncRealMarketTraderStats() {
+        const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? 'http://localhost:5000'
+            : 'https://tbr-exchange-backend.onrender.com';
+
+        let traderStatsMap = {};
+
+        function applyRealStatsToMarketDOM() {
+            if (Object.keys(traderStatsMap).length === 0) return;
+
+            document.querySelectorAll('tr, .ad-card, .market-card, .offer-row').forEach(row => {
+                const textElements = row.querySelectorAll('div, span, small, p, strong, b');
+                let traderName = '';
+
+                textElements.forEach(el => {
+                    const t = (el.innerText || '').trim().toLowerCase();
+                    if (traderStatsMap[t]) {
+                        traderName = t;
+                    }
+                });
+
+                if (traderName && traderStatsMap[traderName]) {
+                    const st = traderStatsMap[traderName];
+                    textElements.forEach(el => {
+                        if (el.children.length === 0) {
+                            const txt = (el.innerText || '').trim();
+                            if (/^\d+\s*(trades|orders)\s*[·•|-]\s*\d+(\.\d+)?%$/i.test(txt)) {
+                                const targetText = `${st.totalTrades} trades · ${st.completionRate}`;
+                                if (el.innerText !== targetText) {
+                                    el.innerText = targetText;
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        async function loadRealAdsStats() {
+            try {
+                const res = await fetch(`${API_BASE}/api/ads?t=${Date.now()}`, { cache: 'no-store' });
+                if (!res.ok) return;
+                const json = await res.json();
+                const ads = (json && json.ads) || [];
+                ads.forEach(ad => {
+                    const key = String(ad.name || ad.traderUsername || '').toLowerCase().trim();
+                    if (key) {
+                        traderStatsMap[key] = {
+                            totalTrades: ad.totalTrades ?? ad.tradesCount ?? 0,
+                            completionRate: ad.completionRate || '100%'
+                        };
+                    }
+                });
+                applyRealStatsToMarketDOM();
+            } catch (e) {}
+        }
+
+        const observer = new MutationObserver(() => applyRealStatsToMarketDOM());
+        document.addEventListener('DOMContentLoaded', () => {
+            loadRealAdsStats();
+            setInterval(loadRealAdsStats, 4000);
+            observer.observe(document.body, { childList: true, subtree: true });
+        });
+        loadRealAdsStats();
+    })();
+
     </script>
 </body>
 </html>

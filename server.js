@@ -966,7 +966,7 @@ app.post('/api/reset-password', async (req, res) => {
 // 🔥 FAST WEB3 DEPOSIT CHECK & AUTO-SWEEP (100% PROTECTED FROM DOUBLE CREDIT) 🔥
 // ============================================================================
 const activeDepositChecks = new Set();
-const recentDepositLocks = new Map(); // Locks wallet during sweep so it can NEVER credit twice!
+const recentDepositLocks = new Map();
 
 app.get('/api/check-deposits/:walletAddress', async (req, res) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -985,7 +985,6 @@ app.get('/api/check-deposits/:walletAddress', async (req, res) => {
             return res.json({ success: true, balance: 0, lockedBalance: 0, transactions: [] });
         }
 
-        // 🛑 1. Check active check OR 60-second sweep lock so same deposit is NEVER added twice!
         const lastLockTime = recentDepositLocks.get(userWalletAddress) || 0;
         if (activeDepositChecks.has(userWalletAddress) || (Date.now() - lastLockTime < 60000)) {
             return res.json({
@@ -1009,7 +1008,6 @@ app.get('/api/check-deposits/:walletAddress', async (req, res) => {
         let updatedBalance = Number(existingUser.balance || 0);
 
         if (exactDepositAmt > 0.0001) {
-            // 🛑 2. Database duplicate guard: check if same deposit was already credited within last 90 seconds
             const recentDuplicate = await Transaction.findOne({
                 userId: existingUser._id,
                 type: 'deposit',
@@ -1031,7 +1029,6 @@ app.get('/api/check-deposits/:walletAddress', async (req, res) => {
                 });
             }
 
-            // ✅ 3. Lock wallet for 60s immediately and credit user ONCE
             recentDepositLocks.set(userWalletAddress, Date.now());
 
             const updatedDoc = await User.findByIdAndUpdate(
@@ -1269,8 +1266,79 @@ app.post('/api/withdraw/verify-otp', verifyToken, async (req, res) => {
 });
 
 // ============================================================================
-// ⚡ ULTRA-FAST PROFILE, BALANCE & "ON MARKET" ENDPOINTS (0.005s, ZERO BASE64) ⚡
+// ⚡ ULTRA-FAST PROFILE, REAL P2P STATS & BALANCE ENDPOINTS ⚡
 // ============================================================================
+async function getRealUserTradeStats(userId, userEmail) {
+    try {
+        const cleanEmail = String(userEmail || '').toLowerCase().trim();
+        const orQuery = [];
+
+        if (userId && mongoose.Types.ObjectId.isValid(String(userId))) {
+            const objId = new mongoose.Types.ObjectId(String(userId));
+            orQuery.push({ buyerId: objId }, { sellerId: objId });
+        }
+        if (cleanEmail) {
+            orQuery.push({ buyerEmail: cleanEmail }, { sellerEmail: cleanEmail });
+        }
+
+        if (orQuery.length === 0) {
+            return { totalTrades: 0, volumeUsdt: 0, volume: '0 USDT', completionRate: '100%', reputation: '100%' };
+        }
+
+        const userTrades = await Trade.find({ $or: orQuery })
+            .select('status usdtAmount amount netUsdt disputeWinner buyerId sellerId buyerEmail sellerEmail')
+            .lean();
+
+        let completedCount = 0;
+        let cancelledCount = 0;
+        let totalVolumeUsdt = 0;
+        let disputesLost = 0;
+
+        userTrades.forEach(tr => {
+            const st = String(tr.status || '').toLowerCase().trim();
+            const amt = Number(tr.usdtAmount || tr.amount || tr.netUsdt || 0);
+
+            if (['completed', 'resolved', 'released'].includes(st)) {
+                completedCount += 1;
+                totalVolumeUsdt += amt;
+            } else if (['cancelled', 'refunded'].includes(st)) {
+                cancelledCount += 1;
+            }
+
+            if (tr.disputeWinner) {
+                const isBuyer = (userId && String(tr.buyerId) === String(userId)) || (cleanEmail && String(tr.buyerEmail).toLowerCase() === cleanEmail);
+                if ((isBuyer && tr.disputeWinner === 'seller') || (!isBuyer && tr.disputeWinner === 'buyer')) {
+                    disputesLost += 1;
+                }
+            }
+        });
+
+        const totalFinished = completedCount + cancelledCount;
+        const completionPct = totalFinished > 0
+            ? Math.round((completedCount / totalFinished) * 100)
+            : 100;
+
+        const reputationPct = completedCount > 0
+            ? Math.max(0, Math.min(100, Math.round(((completedCount - disputesLost) / completedCount) * 100)))
+            : 100;
+
+        const formattedVol = Number(totalVolumeUsdt.toFixed(2)).toLocaleString('en-US', {
+            minimumFractionDigits: totalVolumeUsdt % 1 === 0 ? 0 : 2,
+            maximumFractionDigits: 2
+        }) + ' USDT';
+
+        return {
+            totalTrades: completedCount,
+            volumeUsdt: Number(totalVolumeUsdt.toFixed(2)),
+            volume: formattedVol,
+            completionRate: `${completionPct}%`,
+            reputation: `${reputationPct}%`
+        };
+    } catch (err) {
+        return { totalTrades: 0, volumeUsdt: 0, volume: '0 USDT', completionRate: '100%', reputation: '100%' };
+    }
+}
+
 async function getFastUserProfilePayload(userId) {
     let user = await User.findById(userId)
         .select('-password -kycData -avatar -bscPrivateKey')
@@ -1287,12 +1355,11 @@ async function getFastUserProfilePayload(userId) {
     let resolvedFullName = (user.fullName || '').trim();
     const isVerifiedUser = ['verified', 'approved'].includes(String(user.kycStatus || '').toLowerCase());
 
-    // ⚡ Only query KYC fullName (excluding heavy photos!) if user.fullName is not yet a full name ⚡
     if (isVerifiedUser && (!resolvedFullName.includes(' ') || resolvedFullName.toLowerCase() === emailPrefix.toLowerCase() || resolvedFullName.toLowerCase() === 'yimam')) {
         const kycDoc = await KYC.findOne({
             $or: [{ userId: user._id }, { email: user.email }]
         })
-        .select('fullName') // ⚠️ CRITICAL SPEED FIX: Never load frontImage/backImage/selfieImage here!
+        .select('fullName')
         .sort({ createdAt: -1 })
         .lean();
 
@@ -1314,7 +1381,10 @@ async function getFastUserProfilePayload(userId) {
     const finalFullName = hasValidVerifiedName ? resolvedFullName : emailPrefix;
     const firstNameOnly = hasValidVerifiedName ? resolvedFullName.trim().split(/\s+/)[0] : emailPrefix;
 
-    const avatarUrl = await getFastAvatarUrl(user._id);
+    const [avatarUrl, tradeStats] = await Promise.all([
+        getFastAvatarUrl(user._id),
+        getRealUserTradeStats(user._id, user.email)
+    ]);
 
     return {
         id: user._id,
@@ -1337,7 +1407,12 @@ async function getFastUserProfilePayload(userId) {
         createdAt: user.createdAt,
         balance: Number(Number(user.balance || 0).toFixed(6)),
         lockedBalance: Number(Number(user.lockedBalance || 0).toFixed(6)),
-        bscAddress: user.bscAddress
+        bscAddress: user.bscAddress,
+        totalTrades: tradeStats.totalTrades,
+        volume: tradeStats.volume,
+        volumeUsdt: tradeStats.volumeUsdt,
+        completionRate: tradeStats.completionRate,
+        reputation: tradeStats.reputation
     };
 }
 
@@ -2669,7 +2744,7 @@ app.post('/api/ads', verifyToken, async (req, res) => {
     }
 });
 
-// ⚡ 1. ULTRA-FAST LIVE MARKET ADS (RAM-Cached for 2.5s -> 0.0005s response time!) ⚡
+// ⚡ 1. ULTRA-FAST LIVE MARKET ADS (With Real Trade Counts & Completion Rate for Each Trader!) ⚡
 app.get('/api/ads', async (req, res) => {
     try {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -2681,11 +2756,40 @@ app.get('/api/ads', async (req, res) => {
             return res.json({ success: true, ads: adsCacheData });
         }
 
-        const ads = await Ad.find({ status: 'active', totalAmount: { $gt: 0.0001 } })
-            .select('-avatar -profilePic')
-            .populate('userId', 'traderUsername userId numericId fullName email lastActive')
-            .sort({ createdAt: -1 })
-            .lean();
+        const [ads, allFinishedTrades] = await Promise.all([
+            Ad.find({ status: 'active', totalAmount: { $gt: 0.0001 } })
+                .select('-avatar -profilePic')
+                .populate('userId', 'traderUsername userId numericId fullName email lastActive kycStatus')
+                .sort({ createdAt: -1 })
+                .lean(),
+            Trade.find({ status: { $in: ['completed', 'resolved', 'released', 'cancelled', 'refunded'] } })
+                .select('buyerId sellerId buyerEmail sellerEmail status usdtAmount')
+                .lean()
+        ]);
+
+        const statsByUser = {};
+        const addStat = (key, isCompleted, usdtAmt) => {
+            if (!key) return;
+            const k = String(key).toLowerCase().trim();
+            if (!statsByUser[k]) statsByUser[k] = { completed: 0, cancelled: 0, volume: 0 };
+            if (isCompleted) {
+                statsByUser[k].completed += 1;
+                statsByUser[k].volume += Number(usdtAmt || 0);
+            } else {
+                statsByUser[k].cancelled += 1;
+            }
+        };
+
+        allFinishedTrades.forEach(tr => {
+            const st = String(tr.status || '').toLowerCase();
+            const isComp = ['completed', 'resolved', 'released'].includes(st);
+            const amt = Number(tr.usdtAmount || 0);
+
+            if (tr.buyerId) addStat(String(tr.buyerId), isComp, amt);
+            if (tr.sellerId) addStat(String(tr.sellerId), isComp, amt);
+            if (tr.buyerEmail) addStat(tr.buyerEmail, isComp, amt);
+            if (tr.sellerEmail) addStat(tr.sellerEmail, isComp, amt);
+        });
 
         const ONLINE_THRESHOLD = 10 * 60 * 1000;
 
@@ -2702,6 +2806,7 @@ app.get('/api/ads', async (req, res) => {
         const enrichedAds = ads.map(ad => {
             const trader = ad.userId && typeof ad.userId === 'object' ? ad.userId : {};
             const ownerIdStr = String(trader._id || ad.userId || '');
+            const ownerEmailStr = String(trader.email || ad.email || '').toLowerCase().trim();
             const rawUsername = (trader.traderUsername || '').trim().replace(/^@+/, '').trim();
             const tbrId = trader.userId || '';
             const idDigits = String(tbrId).replace(/\D/g, '').padStart(6, '0') || '000001';
@@ -2717,6 +2822,10 @@ app.get('/api/ads', async (req, res) => {
 
             const fastAvatarUrl = avatarUrlMap[ownerIdStr] || '';
 
+            const uStat = statsByUser[ownerIdStr.toLowerCase()] || statsByUser[ownerEmailStr] || { completed: 0, cancelled: 0, volume: 0 };
+            const totalFinished = uStat.completed + uStat.cancelled;
+            const compRateNum = totalFinished > 0 ? Math.round((uStat.completed / totalFinished) * 100) : 100;
+
             return {
                 ...ad,
                 totalAmount: Number(availUsdt.toFixed(4)),
@@ -2728,7 +2837,13 @@ app.get('/api/ads', async (req, res) => {
                 tbrId: tbrId,
                 avatar: fastAvatarUrl,
                 profilePic: fastAvatarUrl,
-                isOnline: isOnline
+                isOnline: isOnline,
+                tradesCount: uStat.completed,
+                totalTrades: uStat.completed,
+                completedTrades: uStat.completed,
+                orders: uStat.completed,
+                completionRate: `${compRateNum}%`,
+                rate: `${compRateNum}%`
             };
         });
 
@@ -2943,7 +3058,6 @@ async function refundEscrowOnCancel(trade) {
     }
 }
 
-// ⚡ Converts any base64 chat images to lightweight URLs so 2s polling is 1KB! ⚡
 function attachAccurateTimerData(tradeRaw) {
     if (!tradeRaw) return null;
     const obj = tradeRaw.toObject ? tradeRaw.toObject() : { ...tradeRaw };
@@ -3287,7 +3401,7 @@ app.get('/api/user/active-trades', async (req, res) => {
     }
 });
 
-// 4. Get Single Trade Details (Excludes heavy Base64 images -> 0.01s response!)
+// 4. Get Single Trade Details
 app.get('/api/trades/:id', async (req, res) => {
     try {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -3385,7 +3499,7 @@ app.post('/api/trades/:id/mark-paid', async (req, res) => {
     }
 });
 
-// 6. ⚡ Release USDT (Atomic Idempotent Lock + Instant Notifications) ⚡
+// 6. ⚡ Release USDT ⚡
 app.post('/api/trades/:id/release', async (req, res) => {
     try {
         const existingTrade = await Trade.findById(req.params.id).select('-receiptImage');
@@ -3498,7 +3612,7 @@ app.post('/api/trades/:id/release', async (req, res) => {
     }
 });
 
-// 7. Cancel Trade (With Proper Notifications)
+// 7. Cancel Trade
 app.post('/api/trades/:id/cancel', async (req, res) => {
     try {
         const currentUser = await resolveUserFromRequest(req);
@@ -3561,7 +3675,7 @@ app.post('/api/trades/:id/cancel', async (req, res) => {
     }
 });
 
-// 7B. Request for Cancel (Fixed notification message)
+// 7B. Request for Cancel
 app.post('/api/trades/:id/request-cancel', async (req, res) => {
     try {
         const trade = await Trade.findById(req.params.id).select('-receiptImage');
@@ -3596,7 +3710,7 @@ app.post('/api/trades/:id/request-cancel', async (req, res) => {
     }
 });
 
-// 8. ⚡ Apply for Dispute (Excludes heavy receiptImage & notifies both parties) ⚡
+// 8. ⚡ Apply for Dispute ⚡
 app.post('/api/trades/:id/dispute', async (req, res) => {
     try {
         const currentUser = await resolveUserFromRequest(req);
@@ -3656,7 +3770,7 @@ app.post('/api/trades/:id/dispute', async (req, res) => {
     }
 });
 
-// 9. Send Chat Message or Image (Excludes heavy receiptImage for instant chat speed)
+// 9. Send Chat Message or Image
 app.post('/api/trades/:id/messages', async (req, res) => {
     try {
         const { text, image } = req.body;
