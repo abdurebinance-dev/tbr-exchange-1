@@ -1066,19 +1066,40 @@ async function getFastUserProfilePayload(userId) {
         await User.updateOne({ _id: user._id }, { $set: { bscAddress: wallet.address, bscPrivateKey: wallet.privateKey } });
     }
 
+    const emailPrefix = user.email ? user.email.split('@')[0] : 'User';
+    let resolvedFullName = (user.fullName || '').trim();
+    const isVerifiedUser = ['verified', 'approved'].includes(String(user.kycStatus || '').toLowerCase());
+
+    // ⚡ ተጠቃሚው Verified ሆኖ ግን ስሙ አሁንም የኢሜይሉ ከሆነ፣ ከ KYC ዳታቤዝ ውስጥ ሙሉ ስሙን ማምጣት ⚡
+    if (isVerifiedUser && (!resolvedFullName || resolvedFullName.toLowerCase() === emailPrefix.toLowerCase() || resolvedFullName.toLowerCase() === 'user')) {
+        const kycDoc = await KYC.findOne({
+            $or: [{ userId: user._id }, { email: user.email }]
+        }).select('fullName').lean();
+
+        if (kycDoc && kycDoc.fullName && kycDoc.fullName.trim()) {
+            resolvedFullName = kycDoc.fullName.trim();
+            await User.updateOne({ _id: user._id }, { $set: { fullName: resolvedFullName } });
+        }
+    }
+
+    const finalFullName = (isVerifiedUser && resolvedFullName) ? resolvedFullName : emailPrefix;
+    const firstNameOnly = (isVerifiedUser && resolvedFullName) ? resolvedFullName.split(/\s+/)[0] : emailPrefix;
     const avatarUrl = await getFastAvatarUrl(user._id);
 
     return {
         id: user._id,
         _id: user._id,
         email: user.email,
-        fullName: user.fullName || (user.email ? user.email.split('@')[0] : 'User'),
+        fullName: finalFullName,
+        firstName: firstNameOnly,
+        kycFullName: resolvedFullName || finalFullName,
         avatar: avatarUrl,
         profilePic: avatarUrl,
         traderUsername: user.traderUsername || '',
         phone: user.phone || '',
         userId: user.userId || '',
         tbrId: user.userId || '',
+        numericId: user.numericId,
         isAdmin: user.isAdmin,
         role: user.role,
         kycStatus: user.kycStatus || 'unverified',
@@ -1849,7 +1870,7 @@ app.post('/api/admin/kyc-action', verifyAdmin, async (req, res) => {
         const kycRecord = await KYC.findByIdAndUpdate(
             kycId,
             { $set: { status: newStatus, rejectionReason: rejectionReason || '' } },
-            { new: true, select: 'userId email status' }
+            { new: true, select: 'userId email fullName status' }
         );
 
         if (!kycRecord) {
@@ -1864,10 +1885,16 @@ app.post('/api/admin/kyc-action', verifyAdmin, async (req, res) => {
             return res.status(404).json({ success: false, message: 'KYC record not found.' });
         }
 
+        // ✅ Approve ሲደረግ በKYC ላይ የተሞላውን ሙሉ ስም ወደ User fullName መገልበጥ
+        const userUpdateFields = { kycStatus: userTargetStatus };
+        if (newStatus === 'approved' && kycRecord.fullName && kycRecord.fullName.trim()) {
+            userUpdateFields.fullName = kycRecord.fullName.trim();
+        }
+
         if (kycRecord.userId) {
-            await User.findByIdAndUpdate(kycRecord.userId, { $set: { kycStatus: userTargetStatus } });
+            await User.findByIdAndUpdate(kycRecord.userId, { $set: userUpdateFields });
         } else if (kycRecord.email) {
-            await User.findOneAndUpdate({ email: kycRecord.email.toLowerCase() }, { $set: { kycStatus: userTargetStatus } });
+            await User.findOneAndUpdate({ email: kycRecord.email.toLowerCase() }, { $set: userUpdateFields });
         }
 
         res.json({ success: true, message: `KYC status updated to ${newStatus} successfully.` });
