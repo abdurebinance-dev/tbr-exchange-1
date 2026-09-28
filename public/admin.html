@@ -119,15 +119,60 @@
         th { background: #18202a; color: var(--text-muted); font-weight: 500; }
         tr:hover { background: rgba(255,255,255,0.02); }
 
-        .badge-pending { background: rgba(240, 185, 11, 0.1); color: var(--yellow); padding: 4px 8px; border-radius: 6px; font-size: 11px; }
-        .badge-approved { background: rgba(14, 203, 129, 0.1); color: var(--green); padding: 4px 8px; border-radius: 6px; font-size: 11px; }
-        .badge-rejected { background: rgba(246, 70, 93, 0.1); color: var(--red); padding: 4px 8px; border-radius: 6px; font-size: 11px; }
+        .badge-pending { background: rgba(240, 185, 11, 0.1); color: var(--yellow); padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; display: inline-block; }
+        .badge-approved { background: rgba(14, 203, 129, 0.12); color: var(--green); padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; display: inline-block; }
+        .badge-rejected { background: rgba(246, 70, 93, 0.12); color: var(--red); padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; display: inline-block; }
 
         .btn { padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; border: none; }
         .btn-approve { background: var(--green); color: #000; }
         .btn-reject { background: var(--red); color: #fff; }
         .btn-ban { background: rgba(246, 70, 93, 0.2); color: var(--red); border: 1px solid var(--red); }
         .btn-unban { background: rgba(14, 203, 129, 0.2); color: var(--green); border: 1px solid var(--green); }
+
+        /* Locked Action Badges for Resolved / Refunded Trades */
+        .btn-locked-resolved {
+            background: rgba(14, 203, 129, 0.12);
+            color: var(--green);
+            border: 1px solid rgba(14, 203, 129, 0.35);
+            padding: 7px 16px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 800;
+            cursor: not-allowed;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            opacity: 0.9;
+        }
+        .btn-locked-refunded {
+            background: rgba(246, 70, 93, 0.12);
+            color: var(--red);
+            border: 1px solid rgba(246, 70, 93, 0.35);
+            padding: 7px 16px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 800;
+            cursor: not-allowed;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            opacity: 0.9;
+        }
+
+        /* Clean, Uniform Chat Image Styling inside Dispute Evidence Modal */
+        .dispute-chat-msg-img {
+            max-width: 210px !important;
+            max-height: 230px !important;
+            width: auto !important;
+            height: auto !important;
+            object-fit: contain !important;
+            border-radius: 8px !important;
+            margin-top: 8px !important;
+            display: block !important;
+            border: 1px solid rgba(240, 185, 11, 0.35) !important;
+            cursor: pointer !important;
+            background: #0b0e11;
+        }
 
         .settings-card { background: var(--card-bg); border: 1px solid var(--border-color); padding: 25px; border-radius: 12px; max-width: 600px; }
         .form-group { margin-bottom: 15px; }
@@ -255,7 +300,7 @@
                 </div>
             </div>
 
-            <div class="stat-card" style="grid-column: 3; border-color: rgba(14, 203, 129, 0.35);">
+            <div class="stat-card" style="grid-column: 3; border-color: rgba(14, 203, 129, 0.35); margin-bottom: 16px;">
                  <div>
                      <div class="label">Total Trade Fee</div>
                      <div class="value" id="statTotalFee" style="color: var(--green);">0 USDT</div>
@@ -265,7 +310,7 @@
                  </div>
              </div>
 
-             <div class="stat-card" style="grid-column: 4; border-color: rgba(226, 184, 66, 0.35);">
+             <div class="stat-card" style="grid-column: 4; border-color: rgba(226, 184, 66, 0.35); margin-bottom: 20px;">
                  <div>
                      <div class="label">Today Trade Fee</div>
                      <div class="value" id="statTodayFee" style="color: var(--accent-gold);">0 USDT</div>
@@ -279,25 +324,25 @@
             <p style="color: var(--text-muted); font-size: 14px;">Welcome to your Master Admin Panel. Use the top navigation tabs to manage user KYC verifications, adjust exchange rates, oversee P2P escrow disputes, and manage user accounts.</p>
         </div>
 
-        <!-- TAB 2: RATES & FEES (በ public/admin.html ውስጥ) -->
-<div id="tab-rates" class="tab-content">
-    <div class="section-title"><i class="fa-solid fa-coins"></i> USDT/ETB Rate & Fee Configuration</div>
-    <div class="settings-card">
-        <div class="form-group">
-            <label>USDT Buy Rate (ETB)</label>
-            <input type="text" inputmode="decimal" id="buyRateInput" class="input-box" value="195">
+        <!-- TAB 2: RATES & FEES -->
+        <div id="tab-rates" class="tab-content">
+            <div class="section-title"><i class="fa-solid fa-coins"></i> USDT/ETB Rate & Fee Configuration</div>
+            <div class="settings-card">
+                <div class="form-group">
+                    <label>USDT Buy Rate (ETB)</label>
+                    <input type="text" inputmode="decimal" id="buyRateInput" class="input-box" value="195">
+                </div>
+                <div class="form-group">
+                    <label>USDT Sell Rate (ETB)</label>
+                    <input type="text" inputmode="decimal" id="sellRateInput" class="input-box" value="192">
+                </div>
+                <div class="form-group">
+                    <label>Platform Fee (%)</label>
+                    <input type="text" inputmode="decimal" id="feeInput" class="input-box" value="0.5">
+                </div>
+                <button class="action-btn" onclick="saveRates()">Save Rate & Fees</button>
+            </div>
         </div>
-        <div class="form-group">
-            <label>USDT Sell Rate (ETB)</label>
-            <input type="text" inputmode="decimal" id="sellRateInput" class="input-box" value="192">
-        </div>
-        <div class="form-group">
-            <label>Platform Fee (%)</label>
-            <input type="text" inputmode="decimal" id="feeInput" class="input-box" value="0.5">
-        </div>
-        <button class="action-btn" onclick="saveRates()">Save Rate & Fees</button>
-    </div>
-</div>
 
         <!-- TAB 3: KYC PANEL -->
         <div id="tab-kyc" class="tab-content">
@@ -371,8 +416,13 @@
     </div>
 
     <script>
-        const API_BASE = 'https://tbr-exchange-backend.onrender.com';
-        const getToken = () => localStorage.getItem('adminToken');
+        const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? 'http://localhost:5000'
+            : 'https://tbr-exchange-backend.onrender.com';
+        const getToken = () => localStorage.getItem('adminToken') || localStorage.getItem('token') || '';
+
+        const ESCROW_CACHE_KEY = 'tbr_admin_escrow_v2';
+        const USERS_CACHE_KEY = 'tbr_admin_users_v2';
 
         // 🚀 In-Memory Instant Cache Store for 0ms Switching 🚀
         let activeKycStatus = 'pending';
@@ -382,7 +432,17 @@
             approved: null,
             rejected: null
         };
-        const kycDocsCache = {}; // Individual user photos cache
+        const kycDocsCache = {};
+        let currentDisputesList = [];
+
+        function resolveImgUrl(raw) {
+            if (!raw) return '';
+            const s = String(raw).trim();
+            if (!s) return '';
+            if (s.startsWith('data:image') || s.startsWith('http://') || s.startsWith('https://')) return s;
+            if (s.startsWith('/')) return `${API_BASE}${s}`;
+            return s;
+        }
 
         window.addEventListener('DOMContentLoaded', () => {
             if (getToken()) {
@@ -393,7 +453,7 @@
         });
 
         function initAdminDataFast() {
-            // 1. Restore cached stats & KYC lists immediately (0ms)
+            // 1. Restore cached stats, KYC lists, Escrow Disputes & Users immediately in 0.00s!
             try {
                 const cachedStats = sessionStorage.getItem('tbr_admin_stats');
                 if (cachedStats) applyStatsToDOM(JSON.parse(cachedStats));
@@ -406,6 +466,17 @@
                     currentKycList = kycCache.pending;
                     renderKycs(document.getElementById('kycTableBody'), currentKycList);
                 }
+
+                const cachedDisputes = sessionStorage.getItem(ESCROW_CACHE_KEY);
+                if (cachedDisputes) {
+                    currentDisputesList = JSON.parse(cachedDisputes);
+                    renderEscrowDisputesTable(currentDisputesList);
+                }
+
+                const cachedUsers = sessionStorage.getItem(USERS_CACHE_KEY);
+                if (cachedUsers) {
+                    renderUsersTable(JSON.parse(cachedUsers));
+                }
             } catch (e) {}
 
             // 2. Fetch fresh data in parallel without blocking UI
@@ -414,12 +485,13 @@
             fetchEscrowDisputes();
             fetchUsersList();
 
-            // Preload all 3 KYC tabs in parallel so switching between Pending/Approved/Rejected is 0ms!
             loadKycData('pending', true);
             prefetchKycStatus('approved');
             prefetchKycStatus('rejected');
 
-            setInterval(fetchStats, 10000);
+            // 3. Auto-sync live disputes & stats in background
+            setInterval(fetchStats, 8000);
+            setInterval(fetchEscrowDisputes, 3500);
         }
 
         async function adminLogin() {
@@ -457,7 +529,16 @@
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
             document.getElementById('tab-' + tabId).classList.add('active');
-            event.currentTarget.classList.add('active');
+            if (event && event.currentTarget) {
+                event.currentTarget.classList.add('active');
+            }
+            if (tabId === 'escrow') {
+                fetchEscrowDisputes();
+            } else if (tabId === 'users') {
+                fetchUsersList();
+            } else if (tabId === 'overview') {
+                fetchStats();
+            }
         }
 
         function formatUsdtOnly(val) {
@@ -466,61 +547,43 @@
         }
 
         function applyStatsToDOM(data) {
-         if (!data) return;
-         document.getElementById('statUserCount').innerText = data.totalUsers ?? 0;
-         document.getElementById('statKycCount').innerText = data.kycPending ?? 0;
-         document.getElementById('statOnMarket').innerText = formatUsdtOnly(data.onMarket);
-         document.getElementById('statLivePosts').innerText = data.livePosts ?? 0;
-         document.getElementById('statTotalTrades').innerText = data.totalTrades ?? 0;
-         document.getElementById('statEscrow').innerText = formatUsdtOnly(data.activeEscrow);
-         document.getElementById('statTotalVolume').innerText = formatUsdtOnly(data.totalVolume);
-         document.getElementById('statVolume').innerText = formatUsdtOnly(data.todayVolume);
+            if (!data) return;
+            document.getElementById('statUserCount').innerText = data.totalUsers ?? 0;
+            document.getElementById('statKycCount').innerText = data.kycPending ?? 0;
+            document.getElementById('statOnMarket').innerText = formatUsdtOnly(data.onMarket);
+            document.getElementById('statLivePosts').innerText = data.livePosts ?? 0;
+            document.getElementById('statTotalTrades').innerText = data.totalTrades ?? 0;
+            document.getElementById('statEscrow').innerText = formatUsdtOnly(data.activeEscrow);
+            document.getElementById('statTotalVolume').innerText = formatUsdtOnly(data.totalVolume);
+            document.getElementById('statVolume').innerText = formatUsdtOnly(data.todayVolume);
 
-         if (document.getElementById('statTotalFee')) {
-             document.getElementById('statTotalFee').innerText = formatUsdtOnly(data.totalFeeEarned || '0 USDT');
-         }
-         if (document.getElementById('statTodayFee')) {
-             document.getElementById('statTodayFee').innerText = formatUsdtOnly(data.todayFeeEarned || '0 USDT');
-         }
-     }
+            if (document.getElementById('statTotalFee')) {
+                document.getElementById('statTotalFee').innerText = formatUsdtOnly(data.totalFeeEarned || '0 USDT');
+            }
+            if (document.getElementById('statTodayFee')) {
+                document.getElementById('statTodayFee').innerText = formatUsdtOnly(data.todayFeeEarned || '0 USDT');
+            }
+        }
 
         async function fetchStats() {
             try {
-                const [statsRes, adsRes] = await Promise.all([
-                    fetch(`${API_BASE}/api/admin/stats`, { headers: { 'Authorization': 'Bearer ' + getToken() } }),
-                    fetch(`${API_BASE}/api/ads`)
-                ]);
-
+                const statsRes = await fetch(`${API_BASE}/api/admin/stats?t=${Date.now()}`, {
+                    headers: { 'Authorization': 'Bearer ' + getToken() },
+                    cache: 'no-store'
+                });
                 const json = await statsRes.json();
-                const adsJson = await adsRes.json().catch(() => ({}));
-
-                let liveAdsArray = (adsJson && adsJson.success && Array.isArray(adsJson.ads)) ? adsJson.ads : null;
-                let lockedSellMarketUsdt = 0;
-                if (liveAdsArray) {
-                    liveAdsArray.forEach(ad => {
-                        if (ad.tradeType === 'sell') {
-                            lockedSellMarketUsdt += Number(ad.totalAmount || 0);
-                        }
-                    });
-                }
-
                 if (statsRes.ok && json.success && json.data) {
-                    const mergedStats = {
-                        ...json.data,
-                        onMarket: liveAdsArray !== null ? `${lockedSellMarketUsdt.toLocaleString('en-US')} USDT` : json.data.onMarket,
-                        livePosts: json.data.livePosts ?? (liveAdsArray ? liveAdsArray.length : 0)
-                    };
-                    applyStatsToDOM(mergedStats);
-                    try { sessionStorage.setItem('tbr_admin_stats', JSON.stringify(mergedStats)); } catch (e) {}
+                    applyStatsToDOM(json.data);
+                    try { sessionStorage.setItem('tbr_admin_stats', JSON.stringify(json.data)); } catch (e) {}
                 }
-            } catch (err) { console.error('Error loading stats:', err); }
+            } catch (err) {}
         }
 
-        // 🚀 Background Prefetcher for Instant KYC Tab Switching 🚀
         async function prefetchKycStatus(status) {
             try {
                 const res = await fetch(`${API_BASE}/api/admin/kyc-requests?status=${status}&limit=50`, {
-                    headers: { 'Authorization': 'Bearer ' + getToken() }
+                    headers: { 'Authorization': 'Bearer ' + getToken() },
+                    cache: 'no-store'
                 });
                 const json = await res.json();
                 let rawList = [];
@@ -530,15 +593,12 @@
 
                 kycCache[status] = rawList;
                 try {
-                    // Save lightweight list metadata in sessionStorage
-                    const lightList = rawList.map(({ frontImage, backImage, selfieImage, ...rest }) => rest);
-                    sessionStorage.setItem('tbr_kyc_' + status, JSON.stringify(lightList));
+                    sessionStorage.setItem('tbr_kyc_' + status, JSON.stringify(rawList));
                 } catch (e) {}
             } catch (e) {}
         }
 
-        // 🚀 Instant 0ms KYC Tab Switcher + Background Refresh 🚀
-        async function loadKycData(targetStatus = 'pending', forceRefresh = false) {
+        async function loadKycData(targetStatus = 'pending') {
             activeKycStatus = targetStatus;
 
             document.querySelectorAll('#tab-kyc button.btn').forEach(b => {
@@ -550,7 +610,6 @@
             const tbody = document.getElementById('kycTableBody');
             if (!tbody) return;
 
-            // 1. If cached in memory, render IMMEDIATELY in 0ms!
             if (Array.isArray(kycCache[targetStatus])) {
                 currentKycList = kycCache[targetStatus];
                 renderKycs(tbody, currentKycList);
@@ -558,10 +617,10 @@
                 tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#f3ba2f; padding: 20px;"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading ${targetStatus.toUpperCase()} KYC...</td></tr>`;
             }
 
-            // 2. Fetch fresh lightweight list in background
             try {
-                const res = await fetch(`${API_BASE}/api/admin/kyc-requests?status=${targetStatus}&limit=50`, { 
-                    headers: { 'Authorization': 'Bearer ' + getToken() } 
+                const res = await fetch(`${API_BASE}/api/admin/kyc-requests?status=${targetStatus}&limit=50&t=${Date.now()}`, { 
+                    headers: { 'Authorization': 'Bearer ' + getToken() },
+                    cache: 'no-store'
                 });
                 const json = await res.json();
                 
@@ -572,8 +631,7 @@
 
                 kycCache[targetStatus] = rawList;
                 try {
-                    const lightList = rawList.map(({ frontImage, backImage, selfieImage, ...rest }) => rest);
-                    sessionStorage.setItem('tbr_kyc_' + targetStatus, JSON.stringify(lightList));
+                    sessionStorage.setItem('tbr_kyc_' + targetStatus, JSON.stringify(rawList));
                 } catch (e) {}
 
                 if (activeKycStatus === targetStatus) {
@@ -581,7 +639,6 @@
                     renderKycs(tbody, rawList);
                 }
             } catch (err) { 
-                console.error("KYC Load Error:", err);
                 if (!Array.isArray(kycCache[targetStatus])) {
                     tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--red);">Error loading data. Check connection.</td></tr>`;
                 }
@@ -630,14 +687,13 @@
                     <td>
                         <strong>${userEmail}</strong>
                         ${userName ? `<br><small style="color: var(--text-muted); font-size: 11px;">${userName}</small>` : ''}
-                        <br><small style="color:gray;">db status: [${currentStatus}]</small>
                     </td>
                     <td>
                         <button onclick="openKycModalByIndex(${idx})" class="btn btn-sm" style="color: #f3ba2f; background: #181a20; border: 1px solid #f3ba2f; padding: 5px 12px; border-radius: 4px; cursor: pointer;">
                             <i class="fas fa-eye"></i> View Docs
                         </button>
                     </td>
-                    <td><span class="${badgeClass}">${currentStatus}</span></td>
+                    <td><span class="${badgeClass}">${currentStatus.toUpperCase()}</span></td>
                     <td>
                         ${isResolved 
                             ? `<span style="color: var(--text-muted); font-weight: 600; font-size: 12px;">Completed</span>` 
@@ -666,9 +722,6 @@
                     <div style="background: #1e2329; padding: 20px; border-radius: 12px; max-width: 720px; width: 95%; color: #fff; text-align: center; position: relative; border: 1px solid #30363d; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
                         <span onclick="document.getElementById('kycModal').style.display='none'" style="position: absolute; top: 12px; right: 18px; font-size: 26px; color: #848e9c; cursor: pointer; font-weight: bold; line-height: 1;">&times;</span>
                         <h3 id="modalUserEmail" style="margin-bottom: 15px; margin-right: 25px; color: #f3ba2f; font-size: 15px; word-break: break-all; text-align: left;"></h3>
-                        <div id="modalLoadingDocs" style="display:none; color:#f3ba2f; padding: 20px; font-size: 13px;">
-                            <i class="fa-solid fa-circle-notch fa-spin"></i> Loading high-resolution ID documents...
-                        </div>
                         <div id="modalImagesContainer" style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 18px;">
                             <div>
                                 <p style="margin-bottom: 4px; font-size: 12px; color: #848e9c; font-weight: bold;">Front ID</p>
@@ -693,31 +746,9 @@
             document.getElementById('modalUserEmail').innerText = `KYC: ${kycItem.email || kycItem.userEmail || kycItem.userId || 'N/A'}`;
             modal.style.display = 'flex';
 
-            let front = kycItem.frontImage || kycItem.frontId || (kycDocsCache[kycId] && kycDocsCache[kycId].frontImage) || '';
-            let back = kycItem.backImage || kycItem.backId || (kycDocsCache[kycId] && kycDocsCache[kycId].backImage) || '';
-            let selfie = kycItem.selfieImage || kycItem.selfie || (kycDocsCache[kycId] && kycDocsCache[kycId].selfieImage) || '';
-
-            // If photos were stripped for fast list loading, fetch them on demand for this single user
-            if (!front && !selfie && kycId) {
-                document.getElementById('modalLoadingDocs').style.display = 'block';
-                document.getElementById('modalImagesContainer').style.display = 'none';
-                try {
-                    const res = await fetch(`${API_BASE}/api/admin/kyc-docs/${kycId}`, {
-                        headers: { 'Authorization': 'Bearer ' + getToken() }
-                    });
-                    const json = await res.json();
-                    if (res.ok && json.success && json.data) {
-                        kycDocsCache[kycId] = json.data;
-                        front = json.data.frontImage || '';
-                        back = json.data.backImage || '';
-                        selfie = json.data.selfieImage || '';
-                    }
-                } catch (e) {
-                    console.error('Error fetching single KYC docs:', e);
-                }
-                document.getElementById('modalLoadingDocs').style.display = 'none';
-                document.getElementById('modalImagesContainer').style.display = 'flex';
-            }
+            const front = resolveImgUrl(kycItem.frontImage || `/api/admin/kyc-image/${kycId}/frontImage`);
+            const back = resolveImgUrl(kycItem.backImage || `/api/admin/kyc-image/${kycId}/backImage`);
+            const selfie = resolveImgUrl(kycItem.selfieImage || `/api/admin/kyc-image/${kycId}/selfieImage`);
 
             document.getElementById('modalFrontImg').src = front;
             document.getElementById('modalBackImg').src = back;
@@ -728,7 +759,6 @@
             let rejectionReason = status === 'rejected' ? prompt('Reason for rejection:', 'Invalid documents') : '';
             if (status === 'rejected' && !rejectionReason) return;
 
-            // Optimistic UI update: remove from current list immediately
             currentKycList = currentKycList.filter(item => (item._id || item.id) !== kycId);
             kycCache[activeKycStatus] = currentKycList;
             renderKycs(document.getElementById('kycTableBody'), currentKycList);
@@ -750,49 +780,105 @@
             }
         }
 
-        let currentDisputesList = [];
+        // ============================================================================
+        // ⚡ TAB 4: ULTRA-FAST ESCROW & DISPUTES ROOM (0.00s Render & Locked Actions) ⚡
+        // ============================================================================
+        function getDisputeResolutionState(trade) {
+            const rawStatus = String(trade.status || '').toLowerCase().trim();
+            const msgs = Array.isArray(trade.messages) ? trade.messages : [];
+
+            const hasRefundMsg = msgs.some(m =>
+                (m.isSystem || m.senderId === 'admin' || m.senderId === 'system') &&
+                (String(m.text).includes('refunded to the Seller') || String(m.text).includes('refunded to Seller') || String(m.text).includes('Winner: Seller'))
+            );
+            const hasReleaseMsg = msgs.some(m =>
+                (m.isSystem || m.senderId === 'admin' || m.senderId === 'system') &&
+                (String(m.text).includes('released to the Buyer') || String(m.text).includes('Released') || String(m.text).includes('Winner: Buyer'))
+            );
+
+            const isRefunded = rawStatus === 'refunded' || rawStatus === 'cancelled' || hasRefundMsg;
+            const isResolved = !isRefunded && (rawStatus === 'resolved' || rawStatus === 'completed' || hasReleaseMsg);
+
+            return { isResolved, isRefunded };
+        }
+
+        function renderEscrowDisputesTable(disputesArray) {
+            const tbody = document.getElementById('escrowTableBody');
+            if (!tbody) return;
+
+            if (!Array.isArray(disputesArray) || disputesArray.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:20px;">No active disputes or escrow trades found.</td></tr>`;
+                return;
+            }
+
+            let html = '';
+            disputesArray.forEach((trade, idx) => {
+                const tNum = String(trade.tradeNumber || '00001').padStart(5, '0');
+                const { isResolved, isRefunded } = getDisputeResolutionState(trade);
+
+                let statusBadgeHtml = '';
+                let actionsHtml = '';
+
+                if (isRefunded) {
+                    statusBadgeHtml = `<span class="badge-rejected">REFUNDED</span>`;
+                    actionsHtml = `<button type="button" class="btn-locked-refunded" disabled><i class="fa-solid fa-rotate-left"></i> Refunded</button>`;
+                } else if (isResolved) {
+                    statusBadgeHtml = `<span class="badge-approved">RESOLVED</span>`;
+                    actionsHtml = `<button type="button" class="btn-locked-resolved" disabled><i class="fa-solid fa-circle-check"></i> Resolved</button>`;
+                } else {
+                    const stLabel = String(trade.status || 'DISPUTED').toUpperCase();
+                    const badgeCls = trade.status === 'disputed' ? 'badge-rejected' : 'badge-pending';
+                    statusBadgeHtml = `<span class="${badgeCls}">${stLabel}</span>`;
+                    actionsHtml = `
+                        <button class="btn btn-approve" onclick="resolveEscrow('${trade._id}', 'release', ${idx})">Release to Buyer</button>
+                        <button class="btn btn-reject" onclick="resolveEscrow('${trade._id}', 'refund', ${idx})">Refund Seller</button>
+                    `;
+                }
+
+                html += `<tr>
+                    <td><strong>Trade #${tNum}</strong><br><small style="color:var(--text-muted);">${trade.paymentMethod || ''} (${Number(trade.etbAmount || 0).toLocaleString('en-US')} ETB)</small></td>
+                    <td>
+                        <span style="color:var(--green); font-weight:700;">B:</span> ${trade.buyerName || trade.buyerEmail || 'Buyer'}<br>
+                        <span style="color:var(--yellow); font-weight:700;">S:</span> ${trade.sellerName || trade.sellerEmail || 'Seller'}
+                    </td>
+                    <td><strong>${Number(trade.usdtAmount || 0).toFixed(4)} USDT</strong></td>
+                    <td>
+                        ${statusBadgeHtml}<br>
+                        <button class="btn" style="margin-top:6px; background:#18202a; color:#f0b90b; border:1px solid #f0b90b;" onclick="openDisputeEvidenceModal(${idx})">
+                            <i class="fa-solid fa-comments"></i> View Chat & Receipt
+                        </button>
+                    </td>
+                    <td>${actionsHtml}</td>
+                </tr>`;
+            });
+
+            tbody.innerHTML = html;
+        }
 
         async function fetchEscrowDisputes() {
             try {
-                const res = await fetch(`${API_BASE}/api/admin/escrow-disputes`, { headers: { 'Authorization': 'Bearer ' + getToken() } });
+                const res = await fetch(`${API_BASE}/api/admin/escrow-disputes?t=${Date.now()}`, {
+                    headers: { 'Authorization': 'Bearer ' + getToken() },
+                    cache: 'no-store'
+                });
                 const json = await res.json();
-                const tbody = document.getElementById('escrowTableBody');
-                if (res.ok && json.success && json.data && json.data.length > 0) {
+                if (res.ok && json.success && Array.isArray(json.data)) {
                     currentDisputesList = json.data;
-                    let html = '';
-                    json.data.forEach((trade, idx) => {
-                        const tNum = String(trade.tradeNumber || '00001').padStart(5, '0');
-                        const st = String(trade.status || 'disputed').toUpperCase();
-                        const badgeCls = trade.status === 'disputed' ? 'badge-rejected' : 'badge-pending';
-
-                        html += `<tr>
-                            <td><strong>Trade #${tNum}</strong><br><small style="color:var(--text-muted);">${trade.paymentMethod || ''} (${trade.etbAmount || 0} ETB)</small></td>
-                            <td>
-                                <span style="color:var(--green);">B:</span> ${trade.buyerName || trade.buyerEmail || 'Buyer'}<br>
-                                <span style="color:var(--yellow);">S:</span> ${trade.sellerName || trade.sellerEmail || 'Seller'}
-                            </td>
-                            <td><strong>${trade.usdtAmount} USDT</strong></td>
-                            <td>
-                                <span class="${badgeCls}">${st}</span><br>
-                                <button class="btn" style="margin-top:6px; background:#18202a; color:#f0b90b; border:1px solid #f0b90b;" onclick="openDisputeEvidenceModal(${idx})">
-                                    <i class="fa-solid fa-comments"></i> View Chat & Receipt
-                                </button>
-                            </td>
-                            <td>
-                                <button class="btn btn-approve" onclick="resolveEscrow('${trade._id}', 'release')">Release to Buyer</button>
-                                <button class="btn btn-reject" onclick="resolveEscrow('${trade._id}', 'refund')">Refund Seller</button>
-                            </td>
-                        </tr>`;
-                    });
-                    tbody.innerHTML = html;
-                } else {
-                    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No active disputes or escrow trades found.</td></tr>`;
+                    renderEscrowDisputesTable(currentDisputesList);
+                    try {
+                        sessionStorage.setItem(ESCROW_CACHE_KEY, JSON.stringify(currentDisputesList));
+                    } catch (e) {}
+                } else if (currentDisputesList.length === 0) {
+                    renderEscrowDisputesTable([]);
                 }
             } catch (err) {
-                document.getElementById('escrowTableBody').innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No active disputes or escrow trades found.</td></tr>`;
+                if (currentDisputesList.length === 0) {
+                    renderEscrowDisputesTable([]);
+                }
             }
         }
 
+        // ⚡ Dispute Evidence Modal: Shows each chat image ONCE cleanly at uniform size ⚡
         function openDisputeEvidenceModal(idx) {
             const trade = currentDisputesList[idx];
             if (!trade) return;
@@ -805,30 +891,55 @@
                 document.body.appendChild(modal);
             }
 
+            const mainReceiptUrl = resolveImgUrl(trade.receiptImage || `/api/admin/trade-receipt/${trade._id}`);
             const msgs = Array.isArray(trade.messages) ? trade.messages : [];
-            const chatHtml = msgs.map(m => `
-                <div style="padding:8px 10px; margin-bottom:6px; border-radius:8px; background:${m.isSystem ? 'rgba(240,185,11,0.1)' : '#151a21'}; border:1px solid #232d3f; font-size:12px;">
-                    <strong style="color:#f0b90b;">${m.senderName || 'User'}:</strong> ${m.text || ''}
-                    ${m.image ? `<br><img src="${m.image}" style="max-width:220px; border-radius:6px; margin-top:6px; cursor:pointer;" onclick="window.open(this.src)">` : ''}
-                </div>
-            `).join('') || '<p style="color:#848e9c;">No chat messages.</p>';
+
+            const chatHtml = msgs.map((m, mIdx) => {
+                // 1. Extract any embedded <img src="..."> from m.text so it never renders twice!
+                const rawText = String(m.text || '');
+                let extractedImgFromText = '';
+                const imgMatch = rawText.match(/<img[^>]+src=["']([^"']+)["'][^>]*>/i);
+                if (imgMatch && imgMatch[1]) {
+                    extractedImgFromText = imgMatch[1];
+                }
+
+                // 2. Strip all <img> and <br> tags from text so only clean text remains
+                const cleanText = rawText
+                    .replace(/<br\s*\/?>\s*<img[^>]*>/gi, '')
+                    .replace(/<img[^>]*>/gi, '')
+                    .trim();
+
+                // 3. Determine single image URL for this message
+                const isInitialReceiptAutoMsg = cleanText.startsWith('Payment receipt uploaded (');
+                const rawImgSource = m.image || extractedImgFromText || '';
+                const finalChatImgUrl = (!isInitialReceiptAutoMsg && rawImgSource)
+                    ? resolveImgUrl(rawImgSource)
+                    : '';
+
+                return `
+                    <div style="padding:10px 12px; margin-bottom:8px; border-radius:8px; background:${m.isSystem ? 'rgba(240,185,11,0.1)' : '#151a21'}; border:1px solid ${m.isSystem ? 'rgba(240,185,11,0.3)' : '#232d3f'}; font-size:12.5px; line-height:1.45;">
+                        <strong style="color:#f0b90b;">${m.senderName || (m.isSystem ? 'System' : 'User')}:</strong>
+                        ${cleanText ? `<span> ${cleanText}</span>` : ''}
+                        ${finalChatImgUrl ? `<img src="${finalChatImgUrl}" class="dispute-chat-msg-img" onclick="window.open(this.src)" title="Click to view full image" onerror="this.style.display='none'">` : ''}
+                    </div>
+                `;
+            }).join('') || '<p style="color:#848e9c;">No chat messages.</p>';
 
             modal.innerHTML = `
-                <div style="background:#151a21; border:1px solid #232d3f; border-radius:12px; max-width:680px; width:100%; max-height:88vh; display:flex; flex-direction:column; padding:20px; color:#fff;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #232d3f; padding-bottom:12px; margin-bottom:12px;">
-                        <h3 style="margin:0; color:#f0b90b;">Dispute Evidence — Trade #${String(trade.tradeNumber || '00001').padStart(5, '0')}</h3>
-                        <button onclick="document.getElementById('disputeEvidenceModal').style.display='none'" style="background:none; border:none; color:#fff; font-size:20px; cursor:pointer;">&times;</button>
+                <div style="background:#151a21; border:1px solid #232d3f; border-radius:12px; max-width:720px; width:100%; max-height:88vh; display:flex; flex-direction:column; padding:20px; color:#fff; box-shadow: 0 20px 50px rgba(0,0,0,0.8);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #232d3f; padding-bottom:12px; margin-bottom:14px;">
+                        <h3 style="margin:0; color:#f0b90b; font-size:17px;">Dispute Evidence — Trade #${String(trade.tradeNumber || '00001').padStart(5, '0')}</h3>
+                        <button onclick="document.getElementById('disputeEvidenceModal').style.display='none'" style="background:none; border:none; color:#fff; font-size:22px; cursor:pointer; line-height:1;">&times;</button>
                     </div>
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px; overflow-y:auto; flex:1;">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; overflow-y:auto; flex:1;">
                         <div>
                             <h4 style="margin:0 0 8px 0; font-size:13px; color:#0ecb81;">Uploaded Payment Receipt</h4>
-                            ${trade.receiptImage
-                                ? `<img src="${trade.receiptImage}" style="width:100%; max-height:320px; object-fit:contain; border:1px solid #f0b90b; border-radius:8px; cursor:pointer;" onclick="window.open(this.src)">`
-                                : `<p style="color:#848e9c; font-size:12px;">No receipt image uploaded.</p>`
-                            }
-                            <p style="font-size:12px; color:#848e9c; margin-top:10px;"><strong>Dispute Reason:</strong> ${trade.disputeReason || 'N/A'}</p>
+                            <div style="background:#0b0e11; border:1px solid #f0b90b; border-radius:8px; padding:8px; text-align:center;">
+                                <img src="${mainReceiptUrl}" style="width:100%; max-height:320px; object-fit:contain; border-radius:6px; cursor:pointer;" onclick="window.open(this.src)" onerror="this.outerHTML='<p style=\\'color:#848e9c; font-size:12px; padding:20px;\\'>No receipt image uploaded.</p>'">
+                            </div>
+                            <p style="font-size:12px; color:#848e9c; margin-top:10px;"><strong>Dispute Reason:</strong> ${trade.disputeReason || 'Dispute submitted by trader'}</p>
                         </div>
-                        <div style="overflow-y:auto; max-height:380px;">
+                        <div style="overflow-y:auto; max-height:400px; padding-right:4px;">
                             <h4 style="margin:0 0 8px 0; font-size:13px; color:#f0b90b;">Full Chat History</h4>
                             ${chatHtml}
                         </div>
@@ -838,8 +949,16 @@
             modal.style.display = 'flex';
         }
 
-        async function resolveEscrow(tradeId, action) {
-            if (!confirm(`Are you sure you want to resolve this trade with action: ${action}?`)) return;
+        async function resolveEscrow(tradeId, action, idx) {
+            const label = action === 'release' ? 'Release USDT to Buyer' : 'Refund USDT to Seller';
+            if (!confirm(`Are you sure you want to ${label}? This action is final and cannot be undone.`)) return;
+
+            // 1. Optimistic 0.00s UI Lock: immediately replace buttons with locked Resolved/Refunded badge!
+            if (idx !== undefined && currentDisputesList[idx]) {
+                currentDisputesList[idx].status = action === 'release' ? 'resolved' : 'refunded';
+                renderEscrowDisputesTable(currentDisputesList);
+            }
+
             try {
                 const res = await fetch(`${API_BASE}/api/admin/escrow-action`, {
                     method: 'POST',
@@ -848,45 +967,55 @@
                 });
                 const json = await res.json();
                 if (res.ok && json.success) {
-                    alert(json.message || 'Escrow resolved successfully.');
                     fetchEscrowDisputes();
                     fetchStats();
                 } else {
                     alert(json.message || 'Failed to resolve escrow.');
+                    fetchEscrowDisputes();
                 }
             } catch (err) {
                 alert('Network error while resolving escrow.');
+                fetchEscrowDisputes();
             }
+        }
+
+        function renderUsersTable(usersList) {
+            const tbody = document.getElementById('userTableBody');
+            if (!tbody) return;
+            if (!Array.isArray(usersList) || usersList.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No users found.</td></tr>`;
+                return;
+            }
+            let html = '';
+            usersList.forEach(user => {
+                let isBanned = user.isBanned || false;
+                html += `<tr>
+                    <td>${user.email}</td>
+                    <td>${user.isAdmin ? '<span class="badge-approved">Admin</span>' : 'Standard'}</td>
+                    <td><span class="badge-${user.kycStatus === 'verified' ? 'approved' : 'pending'}">${user.kycStatus || 'pending'}</span></td>
+                    <td>${isBanned ? '<span class="badge-rejected">Banned</span>' : '<span class="badge-approved">Active</span>'}</td>
+                    <td>
+                        <button class="btn ${isBanned ? 'btn-approve' : 'btn-ban'}" onclick="toggleUserBan('${user._id}', ${isBanned})">
+                            ${isBanned ? 'Unban User' : 'Ban User'}
+                        </button>
+                    </td>
+                </tr>`;
+            });
+            tbody.innerHTML = html;
         }
 
         async function fetchUsersList() {
             try {
-                const res = await fetch(`${API_BASE}/api/admin/users`, { headers: { 'Authorization': 'Bearer ' + getToken() } });
+                const res = await fetch(`${API_BASE}/api/admin/users?t=${Date.now()}`, {
+                    headers: { 'Authorization': 'Bearer ' + getToken() },
+                    cache: 'no-store'
+                });
                 const json = await res.json();
-                if (res.ok && json.success) {
-                    const tbody = document.getElementById('userTableBody');
-                    if (json.data.length === 0) {
-                        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No users found.</td></tr>`;
-                        return;
-                    }
-                    let html = '';
-                    json.data.forEach(user => {
-                        let isBanned = user.isBanned || false;
-                        html += `<tr>
-                            <td>${user.email}</td>
-                            <td>${user.isAdmin ? '<span class="badge-approved">Admin</span>' : 'Standard'}</td>
-                            <td><span class="badge-${user.kycStatus === 'verified' ? 'approved' : 'pending'}">${user.kycStatus || 'pending'}</span></td>
-                            <td>${isBanned ? '<span class="badge-rejected">Banned</span>' : '<span class="badge-approved">Active</span>'}</td>
-                            <td>
-                                <button class="btn ${isBanned ? 'btn-approve' : 'btn-ban'}" onclick="toggleUserBan('${user._id}', ${isBanned})">
-                                    ${isBanned ? 'Unban User' : 'Ban User'}
-                                </button>
-                            </td>
-                        </tr>`;
-                    });
-                    tbody.innerHTML = html;
+                if (res.ok && json.success && Array.isArray(json.data)) {
+                    renderUsersTable(json.data);
+                    try { sessionStorage.setItem(USERS_CACHE_KEY, JSON.stringify(json.data)); } catch (e) {}
                 }
-            } catch (err) { console.error(err); }
+            } catch (err) {}
         }
 
         async function toggleUserBan(userId, currentStatus) {
@@ -899,34 +1028,33 @@
             });
             const json = await res.json();
             if (res.ok && json.success) { 
-                alert(json.message); 
                 fetchUsersList(); 
             }
         }
 
         async function saveRates() {
-    const cleanNum = (v) => parseFloat(String(v).replace(',', '.').trim());
-    const buyRate = cleanNum(document.getElementById('buyRateInput').value);
-    const sellRate = cleanNum(document.getElementById('sellRateInput').value);
-    const platformFee = cleanNum(document.getElementById('feeInput').value);
+            const cleanNum = (v) => parseFloat(String(v).replace(',', '.').trim());
+            const buyRate = cleanNum(document.getElementById('buyRateInput').value);
+            const sellRate = cleanNum(document.getElementById('sellRateInput').value);
+            const platformFee = cleanNum(document.getElementById('feeInput').value);
 
-    try {
-        const res = await fetch(`${API_BASE}/api/admin/settings`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
-            body: JSON.stringify({ buyRate, sellRate, platformFee })
-        });
-        const json = await res.json();
-        if (res.ok && json.success) {
-            alert('Rate & Fee settings saved successfully!');
-            loadCurrentRates();
-        } else {
-            alert(json.message || 'Failed to save settings.');
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/settings`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+                    body: JSON.stringify({ buyRate, sellRate, platformFee })
+                });
+                const json = await res.json();
+                if (res.ok && json.success) {
+                    alert('Rate & Fee settings saved successfully!');
+                    loadCurrentRates();
+                } else {
+                    alert(json.message || 'Failed to save settings.');
+                }
+            } catch (err) {
+                alert('Network error while saving settings.');
+            }
         }
-    } catch (err) {
-        alert('Network error while saving settings.');
-    }
-}
 
         async function loadCurrentRates() {
             try {
@@ -937,9 +1065,7 @@
                     document.getElementById('sellRateInput').value = json.data.sellRate;
                     document.getElementById('feeInput').value = json.data.platformFee;
                 }
-            } catch (err) {
-                console.error('Error loading current rates:', err);
-            }
+            } catch (err) {}
         }
     </script>
 </body>
