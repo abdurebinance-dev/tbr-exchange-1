@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notifications - TBR Exchange</title>
+    <link rel="preconnect" href="https://tbr-exchange-backend.onrender.com" crossorigin>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #050709;
+            --card-bg: #11151c;
+            --card-hover: #161c26;
+            --border-color: #1e2530;
+            --accent-gold: #f0b90b;
+            --green: #0ecb81;
+            --red: #f6465d;
+            --blue: #3b82f6;
+            --text-main: #ffffff;
+            --text-muted: #848e9c;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            padding-top: 60px;
+            padding-bottom: 80px;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Top Navbar */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: #0b0e11;
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+        }
+        .nav-left { display: flex; align-items: center; gap: 20px; }
+        .logo-link {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            color: var(--accent-gold);
+            font-weight: 800;
+            font-size: 18px;
+        }
+        .logo-link img { height: 26px; width: auto; object-fit: contain; }
+        .nav-links { display: flex; gap: 14px; }
+        .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: 6px;
+            transition: 0.2s;
+        }
+        .nav-links a:hover, .nav-links a.active {
+            color: var(--accent-gold);
+            background: rgba(240, 185, 11, 0.08);
+        }
+        .back-dash-btn {
+            background: rgba(240, 185, 11, 0.1);
+            color: var(--accent-gold);
+            border: 1px solid rgba(240, 185, 11, 0.25);
+            padding: 6px 13px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Main Container */
+        .notif-container {
+            max-width: 780px;
+            margin: 0 auto;
+            padding: 20px 16px;
+        }
+
+        .notif-top-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .notif-title-box h1 {
+            font-size: 22px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 4px;
+        }
+        .notif-title-box p {
+            font-size: 12.5px;
+            color: var(--text-muted);
+        }
+        .mark-read-btn {
+            background: #141922;
+            border: 1px solid #263040;
+            color: #d1d5db;
+            padding: 7px 13px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: 0.15s;
+        }
+        .mark-read-btn:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+
+        /* Filter Pills */
+        .filter-row {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+            margin-bottom: 14px;
+        }
+        .filter-pill {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 7px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: 0.15s;
+        }
+        .filter-pill.active {
+            background: rgba(240, 185, 11, 0.14);
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+
+        /* Notification List Card */
+        .notif-list-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            overflow: hidden;
+        }
+        .notif-item {
+            padding: 15px 16px;
+            border-bottom: 1px solid #181f29;
+            display: flex;
+            align-items: flex-start;
+            gap: 13px;
+            cursor: pointer;
+            transition: background 0.15s;
+            position: relative;
+        }
+        .notif-item:last-child { border-bottom: none; }
+        .notif-item:hover { background: var(--card-hover); }
+        .notif-item.unread {
+            background: rgba(240, 185, 11, 0.04);
+        }
+        .notif-item.unread::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3.5px;
+            background: var(--accent-gold);
+        }
+
+        .n-icon-box {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        .n-icon-deposit { background: rgba(14, 203, 129, 0.12); color: var(--green); border: 1px solid rgba(14, 203, 129, 0.3); }
+        .n-icon-withdrawal { background: rgba(246, 70, 93, 0.12); color: var(--red); border: 1px solid rgba(246, 70, 93, 0.3); }
+        .n-icon-transfer { background: rgba(59, 130, 246, 0.12); color: var(--blue); border: 1px solid rgba(59, 130, 246, 0.3); }
+        .n-icon-trade { background: rgba(240, 185, 11, 0.12); color: var(--accent-gold); border: 1px solid rgba(240, 185, 11, 0.3); }
+
+        .n-content { flex: 1; min-width: 0; }
+        .n-top-line {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+        .n-title {
+            font-size: 13.5px;
+            font-weight: 800;
+            color: #ffffff;
+        }
+        .n-time {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-family: monospace;
+            white-space: nowrap;
+        }
+        .n-desc {
+            font-size: 12.5px;
+            color: #b0b8c4;
+            line-height: 1.45;
+        }
+
+        /* See All Button Footer */
+        .see-all-footer {
+            padding: 14px 16px;
+            background: #0d1117;
+            border-top: 1px solid var(--border-color);
+            text-align: center;
+        }
+        .see-all-btn {
+            width: 100%;
+            background: rgba(240, 185, 11, 0.12);
+            border: 1px solid rgba(240, 185, 11, 0.35);
+            color: var(--accent-gold);
+            padding: 11px 18px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 800;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: 0.2s;
+        }
+        .see-all-btn:hover {
+            background: var(--accent-gold);
+            color: #000000;
+        }
+
+        /* Mobile Bottom Navigation Bar */
+        .mobile-bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: #0b0e11;
+            border-top: 1px solid var(--border-color);
+            display: none;
+            justify-content: space-around;
+            align-items: center;
+            padding: 8px 4px 10px 4px;
+            z-index: 1200;
+        }
+        .mbn-item {
+            color: #848e9c;
+            text-decoration: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            font-size: 10.5px;
+            font-weight: 600;
+            flex: 1;
+        }
+        .mbn-item i { font-size: 16px; }
+        .mbn-item.active { color: var(--accent-gold); }
+
+        @media (max-width: 768px) {
+            .nav-links { display: none; }
+            .mobile-bottom-nav { display: flex; }
+            .notif-title-box h1 { font-size: 19px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Navbar -->
+    <div class="navbar">
+        <div class="nav-left">
+            <a href="dashboard.html" class="logo-link">
+                <img src="logo.png" alt="TBR" onerror="this.outerHTML='<span>TBR</span>'">
+            </a>
+            <div class="nav-links">
+                <a href="dashboard.html"><i class="fa-solid fa-house"></i> Dashboard</a>
+                <a href="market.html"><i class="fa-solid fa-store"></i> Market</a>
+                <a href="my-ads.html"><i class="fa-solid fa-bullhorn"></i> My Ads</a>
+                <a href="trades.html"><i class="fa-solid fa-right-left"></i> Trades</a>
+                <a href="wallet.html"><i class="fa-solid fa-wallet"></i> Wallet</a>
+            </div>
+        </div>
+        <a href="dashboard.html" class="back-dash-btn">
+            <i class="fa-solid fa-arrow-left"></i> Dashboard
+        </a>
+    </div>
+
+    <div class="notif-container">
+        <div class="notif-top-header">
+            <div class="notif-title-box">
+                <h1><i class="fa-solid fa-bell" style="color:var(--accent-gold);"></i> Notifications</h1>
+                <p id="notifSubCountText">Showing your latest 5 notifications</p>
+            </div>
+            <button type="button" class="mark-read-btn" onclick="markAllNotificationsRead()">
+                <i class="fa-solid fa-check-double"></i> Mark all read
+            </button>
+        </div>
+
+        <!-- Filter Tabs -->
+        <div class="filter-row">
+            <button class="filter-pill active" onclick="setNotifFilter('all', this)">All</button>
+            <button class="filter-pill" onclick="setNotifFilter('trade', this)">P2P Trades</button>
+            <button class="filter-pill" onclick="setNotifFilter('deposit', this)">Deposits</button>
+            <button class="filter-pill" onclick="setNotifFilter('withdrawal', this)">Withdrawals & Transfers</button>
+        </div>
+
+        <!-- Notifications List -->
+        <div class="notif-list-card">
+            <div id="notifItemsWrapper">
+                <div style="padding:35px 16px; text-align:center; color:var(--text-muted); font-size:13px;">
+                    <i class="fa-solid fa-circle-notch fa-spin"></i> Loading notifications...
+                </div>
+            </div>
+
+            <div class="see-all-footer" id="seeAllFooterBox" style="display:none;">
+                <button type="button" class="see-all-btn" id="seeAllToggleBtn" onclick="toggleSeeAllMode()">
+                    <span>See All Notifications</span>
+                    <i class="fa-solid fa-chevron-down"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Bottom Navigation -->
+    <div class="mobile-bottom-nav">
+        <a href="dashboard.html" class="mbn-item">
+            <i class="fa-solid fa-house"></i>
+            <span>Home</span>
+        </a>
+        <a href="wallet.html" class="mbn-item">
+            <i class="fa-solid fa-wallet"></i>
+            <span>Wallet</span>
+        </a>
+        <a href="market.html" class="mbn-item">
+            <i class="fa-solid fa-store"></i>
+            <span>Market</span>
+        </a>
+        <a href="trades.html" class="mbn-item">
+            <i class="fa-solid fa-comments"></i>
+            <span>Chat</span>
+        </a>
+        <a href="profile.html" class="mbn-item">
+            <i class="fa-solid fa-user"></i>
+            <span>Profile</span>
+        </a>
+    </div>
+
+    <script>
+        const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? 'http://localhost:5000'
+            : 'https://tbr-exchange-backend.onrender.com';
+        const NOTIF_CACHE_KEY = 'tbr_unified_notifs_cache_v1';
+
+        let masterNotifications = [];
+        let activeFilter = 'all';
+        let showAllExpanded = false; // Default: show latest 5 only!
+
+        function getLoggedUserIdentity() {
+            let token = localStorage.getItem('token') || localStorage.getItem('jwtToken') || localStorage.getItem('authToken') || '';
+            let email = localStorage.getItem('userEmail') || localStorage.getItem('email') || '';
+            let userId = localStorage.getItem('userId') || localStorage.getItem('tbr_resolved_uid') || '';
+
+            token = String(token || '').replace(/^["']|["']$/g, '').replace(/^Bearer\s+/i, '').trim();
+            if (token && token.split('.').length === 3) {
+                try {
+                    let b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+                    while (b64.length % 4) b64 += '=';
+                    const payload = JSON.parse(atob(b64));
+                    if (payload) {
+                        if (!userId && (payload.id || payload._id)) userId = String(payload.id || payload._id);
+                        if (!email && payload.email) email = String(payload.email);
+                    }
+                } catch (e) {}
+            }
+            return { token, email: String(email || '').trim(), userId: String(userId || '').trim() };
+        }
+
+        function formatTimeAgo(dateInput) {
+            if (!dateInput) return '';
+            const d = new Date(dateInput);
+            const diffSec = Math.floor((Date.now() - d.getTime()) / 1000);
+            if (diffSec < 60) return 'Just now';
+            if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+            if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' · ' +
+                   d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+        }
+
+        function getIconMarkup(type) {
+            if (type === 'deposit') {
+                return `<div class="n-icon-box n-icon-deposit"><i class="fa-solid fa-arrow-down"></i></div>`;
+            }
+            if (type === 'withdrawal') {
+                return `<div class="n-icon-box n-icon-withdrawal"><i class="fa-solid fa-arrow-up"></i></div>`;
+            }
+            if (type === 'transfer') {
+                return `<div class="n-icon-box n-icon-transfer"><i class="fa-solid fa-paper-plane"></i></div>`;
+            }
+            return `<div class="n-icon-box n-icon-trade"><i class="fa-solid fa-right-left"></i></div>`;
+        }
+
+        function setNotifFilter(filterType, btnEl) {
+            activeFilter = filterType;
+            document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+            if (btnEl) btnEl.classList.add('active');
+            renderNotificationsDOM();
+        }
+
+        function toggleSeeAllMode() {
+            showAllExpanded = !showAllExpanded;
+            renderNotificationsDOM();
+        }
+
+        function renderNotificationsDOM() {
+            const wrapper = document.getElementById('notifItemsWrapper');
+            const footerBox = document.getElementById('seeAllFooterBox');
+            const toggleBtn = document.getElementById('seeAllToggleBtn');
+            const subCountText = document.getElementById('notifSubCountText');
+
+            let filtered = masterNotifications.filter(item => {
+                if (activeFilter === 'all') return true;
+                if (activeFilter === 'withdrawal') return item.type === 'withdrawal' || item.type === 'transfer';
+                return item.type === activeFilter;
+            });
+
+            if (filtered.length === 0) {
+                wrapper.innerHTML = `
+                    <div style="padding:45px 20px; text-align:center; color:var(--text-muted);">
+                        <i class="fa-regular fa-bell-slash" style="font-size:28px; margin-bottom:10px; display:block; color:#3a4454;"></i>
+                        <div style="font-size:14px; font-weight:700; color:#d1d5db; margin-bottom:4px;">No notifications found</div>
+                        <div style="font-size:12px;">Your deposits, withdrawals, transfers, and P2P trade updates will appear here.</div>
+                    </div>
+                `;
+                footerBox.style.display = 'none';
+                subCountText.innerText = '0 notifications';
+                return;
+            }
+
+            // Show ONLY latest 5 by default, or ALL when "See All" is clicked!
+            const visibleList = showAllExpanded ? filtered : filtered.slice(0, 5);
+
+            subCountText.innerText = showAllExpanded
+                ? `Showing all ${filtered.length} notifications`
+                : `Showing latest ${visibleList.length} of ${filtered.length} notifications`;
+
+            if (filtered.length > 5) {
+                footerBox.style.display = 'block';
+                toggleBtn.innerHTML = showAllExpanded
+                    ? `<span>Show Latest 5 Only</span> <i class="fa-solid fa-chevron-up"></i>`
+                    : `<span>See All Notifications (${filtered.length})</span> <i class="fa-solid fa-chevron-down"></i>`;
+            } else {
+                footerBox.style.display = 'none';
+            }
+
+            wrapper.innerHTML = visibleList.map(n => `
+                <div class="notif-item ${n.isRead ? '' : 'unread'}" onclick="window.location.href='${n.link || 'dashboard.html'}'">
+                    ${getIconMarkup(n.type)}
+                    <div class="n-content">
+                        <div class="n-top-line">
+                            <span class="n-title">${n.title}</span>
+                            <span class="n-time">${formatTimeAgo(n.createdAt)}</span>
+                        </div>
+                        <div class="n-desc">${n.message}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ⚡ Combines DB Notifications + Real Transactions (Deposits/Withdrawals) + Real P2P Trades ⚡
+        async function fetchAndBuildAllNotifications() {
+            const { token, email, userId } = getLoggedUserIdentity();
+            const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+            const params = new URLSearchParams();
+            if (email) params.set('email', email);
+            if (userId) params.set('userId', userId);
+            params.set('t', Date.now());
+
+            try {
+                const [notifRes, txRes, tradesRes] = await Promise.all([
+                    fetch(`${API_BASE}/api/notifications?${params.toString()}`, { headers, cache: 'no-store' }).catch(() => null),
+                    fetch(`${API_BASE}/api/transactions?${params.toString()}`, { headers, cache: 'no-store' }).catch(() => null),
+                    fetch(`${API_BASE}/api/trades?${params.toString()}`, { headers, cache: 'no-store' }).catch(() => null)
+                ]);
+
+                const combinedMap = new Map();
+
+                // 1. Direct Notifications from /api/notifications
+                if (notifRes && notifRes.ok) {
+                    const nJson = await notifRes.json();
+                    const list = nJson.allNotifications || [];
+                    list.forEach(n => {
+                        combinedMap.set(`notif_${n._id}`, {
+                            id: String(n._id),
+                            title: n.title,
+                            message: n.message,
+                            type: n.type || 'info',
+                            link: n.link || 'dashboard.html',
+                            isRead: Boolean(n.isRead),
+                            createdAt: n.createdAt || new Date().toISOString()
+                        });
+                    });
+                }
+
+                // 2. Real Wallet Transactions (Deposits, Withdrawals, Transfers)
+                if (txRes && txRes.ok) {
+                    const txJson = await txRes.json();
+                    const txs = txJson.transactions || [];
+                    txs.forEach(tx => {
+                        if (tx.type === 'sweep') return;
+                        const amt = Number(tx.amount || 0).toFixed(2);
+                        let title = 'Wallet Transaction';
+                        let msg = `${amt} USDT transaction completed.`;
+                        let nType = 'deposit';
+
+                        if (tx.type === 'deposit') {
+                            title = 'Deposit Confirmed';
+                            msg = `+${amt} USDT has been credited to your wallet${tx.destinationAddress ? ' from ' + tx.destinationAddress : ''}.`;
+                            nType = 'deposit';
+                        } else if (tx.type === 'withdrawal') {
+                            title = 'Withdrawal Completed';
+                            msg = `-${amt} USDT was sent to ${tx.destinationAddress || 'external wallet'}.`;
+                            nType = 'withdrawal';
+                        } else if (tx.type === 'transfer') {
+                            title = 'USDT Transfer Sent';
+                            msg = `You transferred ${amt} USDT to ${tx.destinationAddress || 'recipient'}.`;
+                            nType = 'transfer';
+                        } else if (tx.type === 'p2p_trade') {
+                            return; // Handled in detail by trades list below
+                        }
+
+                        combinedMap.set(`tx_${tx._id}`, {
+                            id: `tx_${tx._id}`,
+                            title,
+                            message: msg,
+                            type: nType,
+                            link: 'wallet.html',
+                            isRead: true,
+                            createdAt: tx.createdAt || new Date().toISOString()
+                        });
+                    });
+                }
+
+                // 3. Real P2P Trades (Opened, Payment Sent, Completed, Cancelled, Disputed)
+                if (tradesRes && tradesRes.ok) {
+                    const trJson = await tradesRes.json();
+                    const trades = trJson.trades || [];
+                    const myId = trJson.currentUserId || userId || '';
+
+                    trades.forEach(tr => {
+                        const tNum = String(tr.tradeNumber || '00001').padStart(5, '0');
+                        const usdt = Number(tr.netUsdt || tr.usdtAmount || 0).toFixed(2);
+                        const etb = Number(tr.etbAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+                        const isBuyer = (myId && String(tr.buyerId) === String(myId)) ||
+                                        (email && tr.buyerEmail && String(tr.buyerEmail).toLowerCase() === email.toLowerCase());
+                        const partner = isBuyer ? (tr.sellerName || 'Seller') : (tr.buyerName || 'Buyer');
+                        const st = String(tr.status || 'funds_locked').toLowerCase();
+
+                        let title = `Trade #${tNum} — Funds Locked`;
+                        let msg = `P2P ${isBuyer ? 'Buy' : 'Sell'} order for ${usdt} USDT (${etb} ETB) with ${partner}.`;
+                        let isUnread = false;
+
+                        if (st === 'completed' || st === 'resolved') {
+                            title = `Trade #${tNum} Completed`;
+                            msg = isBuyer
+                                ? `+${usdt} USDT received in your wallet from trade with ${partner}.`
+                                : `You sold ${ Number(tr.usdtAmount || 0).toFixed(2) } USDT (${etb} ETB) to ${partner}.`;
+                        } else if (st === 'payment_sent') {
+                            title = `Trade #${tNum} — Payment Sent`;
+                            msg = isBuyer
+                                ? `You uploaded payment receipt (${etb} ETB). Waiting for ${partner} to release USDT.`
+                                : `${partner} uploaded payment receipt (${etb} ETB). Please verify and release USDT!`;
+                            isUnread = !isBuyer;
+                        } else if (st === 'disputed') {
+                            title = `Trade #${tNum} — Disputed`;
+                            msg = `Trade #${tNum} (${usdt} USDT) is currently under Admin dispute review.`;
+                            isUnread = true;
+                        } else if (st === 'cancelled' || st === 'refunded') {
+                            title = `Trade #${tNum} Cancelled`;
+                            msg = `Order for ${usdt} USDT with ${partner} was closed/cancelled.`;
+                        } else {
+                            isUnread = true;
+                        }
+
+                        combinedMap.set(`trade_${tr._id}`, {
+                            id: `trade_${tr._id}`,
+                            title,
+                            message: msg,
+                            type: 'trade',
+                            link: `trades.html?tradeId=${tr._id}`,
+                            isRead: !isUnread,
+                            createdAt: tr.updatedAt || tr.createdAt || new Date().toISOString()
+                        });
+                    });
+                }
+
+                const sorted = Array.from(combinedMap.values()).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                masterNotifications = sorted;
+                try {
+                    sessionStorage.setItem(NOTIF_CACHE_KEY, JSON.stringify(sorted));
+                } catch (e) {}
+                renderNotificationsDOM();
+            } catch (e) {
+                if (masterNotifications.length === 0) renderNotificationsDOM();
+            }
+        }
+
+        async function markAllNotificationsRead() {
+            masterNotifications = masterNotifications.map(n => ({ ...n, isRead: true }));
+            renderNotificationsDOM();
+            const { token, email, userId } = getLoggedUserIdentity();
+            try {
+                await fetch(`${API_BASE}/api/notifications/mark-read?email=${encodeURIComponent(email)}&userId=${encodeURIComponent(userId)}`, {
+                    method: 'POST',
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                });
+            } catch (e) {}
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                const cached = sessionStorage.getItem(NOTIF_CACHE_KEY);
+                if (cached) {
+                    masterNotifications = JSON.parse(cached);
+                    renderNotificationsDOM();
+                }
+            } catch (e) {}
+            fetchAndBuildAllNotifications();
+            setInterval(fetchAndBuildAllNotifications, 4000);
+        });
+    </script>
+</body>
+</html>
