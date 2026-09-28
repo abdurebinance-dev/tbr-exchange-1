@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Profile - TBR Exchange</title>
+    <link rel="preconnect" href="https://tbr-exchange-backend.onrender.com" crossorigin>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
@@ -105,8 +106,8 @@
         }
 
         .profile-avatar {
-            width: 70px;
-            height: 70px;
+            width: 72px;
+            height: 72px;
             background: linear-gradient(135deg, #f0b90b, #ff8c00);
             border-radius: 50%;
             display: flex;
@@ -117,8 +118,11 @@
             color: #000;
             background-size: cover;
             background-position: center;
+            background-repeat: no-repeat;
             overflow: hidden;
             flex-shrink: 0;
+            border: 2px solid rgba(212, 175, 55, 0.5);
+            background-color: rgba(212, 175, 55, 0.2);
         }
 
         .profile-details h2 {
@@ -208,6 +212,7 @@
             color: #fff;
             font-size: 18px;
             font-weight: bold;
+            font-family: monospace;
         }
 
         /* KYC Banner Styles */
@@ -306,7 +311,6 @@
             .nav-links a {
                 font-size: 13px;
             }
-            /* Hide Trades, Wallet, Top Traders & Right Icons ONLY on Mobile */
             .nav-links a.mobile-hide-link,
             .nav-right {
                 display: none !important;
@@ -361,7 +365,7 @@
         <!-- Profile Header -->
         <div class="profile-header">
             <div class="profile-user-info">
-                <div class="profile-avatar" id="avatarInitial" style="background-color: rgba(212, 175, 55, 0.25); border: 2px solid rgba(212, 175, 55, 0.5);"></div>
+                <div class="profile-avatar" id="avatarInitial"></div>
                 <div class="profile-details">
                     <h2 id="profileName"></h2>
                     <p id="profileEmail"></p>
@@ -430,14 +434,21 @@
     </div>
 
     <script>
-        const API_BASE = 'https://tbr-exchange-backend.onrender.com';
+        const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? 'http://localhost:5000'
+            : 'https://tbr-exchange-backend.onrender.com';
 
+        // ⚡ በ Settings ላይ የተቀየረ ፎቶ በ Profile ላይ ወዲያውኑ እንዲመጣ የሚያደርግ ፈጣን አገናኝ ⚡
         function resolveProfileAvatarUrl(raw) {
             if (!raw || raw === 'null' || raw === 'undefined') return '';
-            const str = String(raw).trim();
+            let str = String(raw).trim();
             if (!str) return '';
-            if (str.startsWith('data:image') || str.startsWith('http://') || str.startsWith('https://')) return str;
-            if (str.startsWith('/')) return `${API_BASE}${str}`;
+            if (str.startsWith('data:image')) return str;
+            if (str.startsWith('/')) str = `${API_BASE}${str}`;
+            if (str.includes('/api/user-avatar/')) {
+                const sep = str.includes('?') ? '&' : '?';
+                return `${str}${sep}t=${Date.now()}`;
+            }
             return str;
         }
 
@@ -490,7 +501,6 @@
             const kycStatus = String(localStorage.getItem('kycStatus') || 'not_submitted').toLowerCase();
             const rejectionReason = localStorage.getItem('kycRejectionReason') || 'Document check failed';
 
-            // ✅ በKYC የተሞላው ሙሉ ስም
             const verifiedFullName = (
                 localStorage.getItem('kycFullName') ||
                 localStorage.getItem('fullName') ||
@@ -500,16 +510,15 @@
 
             const isVerified = (kycStatus === 'approved' || kycStatus === 'verified');
 
-            // ✅ Verified ከሆነ ሙሉ ስሙን (Full Name)፣ ካልሆነ ደግሞ የኢሜይል መጠሪያውን ማሳየት!
-            const displayName = (isVerified && verifiedFullName)
-                ? verifiedFullName
-                : emailPrefix;
+            // ✅ Verified ከሆነ ሙሉ ስም (Full Name)፣ ካልሆነ የኢሜይል ስም
+            const displayName = (isVerified && verifiedFullName) ? verifiedFullName : emailPrefix;
 
             const userId = getStoredId();
             const savedAvatar = resolveProfileAvatarUrl(
                 localStorage.getItem('userAvatar') || localStorage.getItem('profilePicture') || localStorage.getItem('profilePic')
             );
             
+            // ✅ ትክክለኛ የስታቲስቲክስ መረጃዎች
             const totalTrades = localStorage.getItem('totalTrades') || '0';
             const volume = localStorage.getItem('volume') || '0 USDT';
             const completionRate = localStorage.getItem('completionRate') || '100%';
@@ -626,7 +635,30 @@
                         if (user.firstName) {
                             localStorage.setItem('firstName', user.firstName);
                         }
-                        
+
+                        // ✅ ከሰርቨር የመጡትን 4ቱን የስታቲስቲክስ ቁጥሮች ወዲያውኑ ማዘመን
+                        if (user.totalTrades !== undefined) {
+                            localStorage.setItem('totalTrades', String(user.totalTrades));
+                            document.getElementById('statTotalTrades').innerText = user.totalTrades;
+                        }
+                        if (user.volume !== undefined) {
+                            localStorage.setItem('volume', String(user.volume));
+                            document.getElementById('statVolume').innerText = user.volume;
+                        }
+                        if (user.completionRate !== undefined) {
+                            localStorage.setItem('completionRate', String(user.completionRate));
+                            document.getElementById('statCompletionRate').innerText = user.completionRate;
+                        }
+                        if (user.reputation !== undefined) {
+                            localStorage.setItem('reputation', String(user.reputation));
+                            document.getElementById('statReputation').innerText = user.reputation;
+                        }
+                        if (user.createdAt) {
+                            const year = String(new Date(user.createdAt).getFullYear());
+                            localStorage.setItem('memberSince', year);
+                            document.getElementById('memberSince').innerText = year;
+                        }
+
                         let newId = "";
                         if (user.numericId) {
                             newId = 'TBR-' + String(user.numericId).padStart(6, '0');
@@ -639,12 +671,17 @@
                         if (newId !== "") {
                             localStorage.setItem('tbrId', newId);
                             localStorage.setItem('tbrExchangeId', newId);
+                            document.getElementById('userUniqueId').innerText = newId;
                         }
                         
+                        // ✅ በ Settings ላይ የተቀየረ ፎቶ ካለ ወዲያውኑ አድሶ ማስቀመጥ
                         if (user.avatar && user.avatar !== 'null' && user.avatar.trim() !== '') {
                             const fullAvUrl = resolveProfileAvatarUrl(user.avatar);
                             localStorage.setItem('userAvatar', fullAvUrl);
                             localStorage.setItem('profilePicture', fullAvUrl);
+                            const avatarBox = document.getElementById('avatarInitial');
+                            avatarBox.style.backgroundImage = `url('${fullAvUrl}')`;
+                            avatarBox.innerText = "";
                         }
 
                         updateProfileUI(); 
@@ -652,6 +689,17 @@
                 }
             } catch (e) {}
         }
+
+        // ⚡ ተጠቃሚው ከ Settings ፎቶ ቀይሮ ወደዚህ ገጽ ሲመለስ (Back ሲል) ወዲያውኑ የሚያድስ ⚡
+        window.addEventListener('pageshow', () => {
+            updateProfileUI();
+            syncWithServer();
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updateProfileUI();
+            syncWithServer();
+        });
 
         updateProfileUI(); 
         syncWithServer();  
