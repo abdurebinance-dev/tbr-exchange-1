@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TBR Exchange - Buy & Sell USDT with Ethiopian Birr | P2P Exchange</title>
+    <link rel="preconnect" href="https://tbr-exchange-backend.onrender.com" crossorigin>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#080808">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="TBR Exchange">
+    <link rel="apple-touch-icon" href="/logo.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body {
@@ -234,7 +241,7 @@
             font-size: 36px;
             font-weight: bold;
             color: #fff;
-            margin-bottom: 5px; /* 🚀 የተቀነሰ ማርጂን 🚀 */
+            margin-bottom: 5px;
             display: flex;
             align-items: baseline;
             gap: 10px;
@@ -510,65 +517,64 @@
             }
         }
 
-.active-trade-alert-banner {
-        max-width: 1160px;
-        width: calc(100% - 32px);
-        margin: 14px auto 12px auto;
-        padding: 13px 18px;
-        background: rgba(240, 185, 11, 0.14);
-        border: 1px solid rgba(240, 185, 11, 0.55);
-        border-radius: 12px;
-        display: none;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        cursor: pointer;
-        text-decoration: none;
-        transition: all 0.2s ease;
-        box-sizing: border-box;
-        position: relative;
-        z-index: 950;
-    }
-    .active-trade-alert-banner:hover {
-        background: rgba(240, 185, 11, 0.22);
-        border-color: #f0b90b;
-        transform: translateY(-1px);
-    }
-    .atb-left {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        color: #f0b90b;
-        font-size: 13.5px;
-        font-weight: 800;
-    }
-    .atb-pulse-dot {
-        width: 9px;
-        height: 9px;
-        border-radius: 50%;
-        background: #f0b90b;
-        box-shadow: 0 0 0 0 rgba(240, 185, 11, 0.7);
-        animation: pulseTradeDot 1.5s infinite;
-        flex-shrink: 0;
-    }
-    @keyframes pulseTradeDot {
-        0% { box-shadow: 0 0 0 0 rgba(240, 185, 11, 0.7); }
-        70% { box-shadow: 0 0 0 8px rgba(240, 185, 11, 0); }
-        100% { box-shadow: 0 0 0 0 rgba(240, 185, 11, 0); }
-    }
-    .atb-right {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        color: #000000;
-        font-size: 12px;
-        font-weight: 800;
-        background: #f0b90b;
-        padding: 6px 14px;
-        border-radius: 20px;
-        white-space: nowrap;
-    }
-
+        .active-trade-alert-banner {
+            max-width: 1160px;
+            width: calc(100% - 32px);
+            margin: 14px auto 12px auto;
+            padding: 13px 18px;
+            background: rgba(240, 185, 11, 0.14);
+            border: 1px solid rgba(240, 185, 11, 0.55);
+            border-radius: 12px;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+            position: relative;
+            z-index: 950;
+        }
+        .active-trade-alert-banner:hover {
+            background: rgba(240, 185, 11, 0.22);
+            border-color: #f0b90b;
+            transform: translateY(-1px);
+        }
+        .atb-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #f0b90b;
+            font-size: 13.5px;
+            font-weight: 800;
+        }
+        .atb-pulse-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #f0b90b;
+            box-shadow: 0 0 0 0 rgba(240, 185, 11, 0.7);
+            animation: pulseTradeDot 1.5s infinite;
+            flex-shrink: 0;
+        }
+        @keyframes pulseTradeDot {
+            0% { box-shadow: 0 0 0 0 rgba(240, 185, 11, 0.7); }
+            70% { box-shadow: 0 0 0 8px rgba(240, 185, 11, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(240, 185, 11, 0); }
+        }
+        .atb-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #000000;
+            font-size: 12px;
+            font-weight: 800;
+            background: #f0b90b;
+            padding: 6px 14px;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
     </style>
 </head>
 <body>
@@ -593,7 +599,7 @@
             </a>
 
             <i id="theme-toggle" class="fa-solid fa-moon" style="color: #d4af37; cursor: pointer;" title="Toggle Theme"></i>
-            <a href="notifications.html" style="color: inherit; text-decoration: none;"><i class="fa-regular fa-bell" style="cursor: pointer;"></i></a>
+            <a href="notifications.html" id="navbarBellLink" style="color: inherit; text-decoration: none; position: relative;"><i class="fa-regular fa-bell" style="cursor: pointer;"></i></a>
             
             <div id="profile-icon-btn" style="cursor: pointer; display: flex; align-items: center;">
                 <i class="fa-solid fa-bars" style="color: #d4af37; font-size: 20px;"></i>
@@ -623,7 +629,7 @@
                 <a href="help.html" class="dropdown-item">
                     <i class="fa-solid fa-circle-question"></i> Help Center
                 </a>
-                <a href="download.html" class="dropdown-item">
+                <a href="#install-app" id="dropdownDownloadAppLink" class="dropdown-item">
                     <i class="fa-solid fa-mobile-screen"></i> Download App
                 </a>
 
@@ -769,7 +775,7 @@
             <i class="fa-store fa-solid"></i>
             <span>Market</span>
         </a>
-        <a href="chat.html">
+        <a href="trades.html">
             <i class="fa-solid fa-comments"></i>
             <span>Chat</span>
         </a>
@@ -779,10 +785,327 @@
         </a>
     </div>
 
+    <!-- 🔔 COMPACT TOAST & BELL NOTIFICATION DROPDOWN (LATEST 5 + SEE ALL) 🔔 -->
+    <style>
+        #tbrCompactToastContainer {
+            position: fixed;
+            top: 64px;
+            right: 16px;
+            z-index: 99999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-width: 320px;
+            width: calc(100% - 32px);
+            pointer-events: none;
+        }
+        .tbr-compact-toast {
+            background: #141922;
+            border: 1px solid rgba(240, 185, 11, 0.45);
+            border-left: 4px solid #0ecb81;
+            border-radius: 10px;
+            padding: 10px 13px;
+            color: #ffffff;
+            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.75);
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            pointer-events: auto;
+            cursor: pointer;
+            animation: tbrToastIn 0.22s ease-out;
+        }
+        @keyframes tbrToastIn {
+            from { opacity: 0; transform: translateY(-10px) scale(0.96); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .tbr-toast-icon {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: rgba(14, 203, 129, 0.15);
+            color: #0ecb81;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+        .tbr-toast-title {
+            font-size: 12.5px;
+            font-weight: 800;
+            color: #f0b90b;
+            margin-bottom: 2px;
+        }
+        .tbr-toast-msg {
+            font-size: 11.5px;
+            color: #d1d5db;
+            line-height: 1.35;
+        }
+        .tbr-bell-badge {
+            position: absolute;
+            top: -5px;
+            right: -6px;
+            background: #f6465d;
+            color: #ffffff;
+            font-size: 9.5px;
+            font-weight: 800;
+            min-width: 16px;
+            height: 16px;
+            padding: 0 4px;
+            border-radius: 10px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            border: 1.5px solid #0b0e11;
+        }
+        #tbrNotifPanelOverlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 99990;
+            display: none;
+            justify-content: flex-end;
+            align-items: flex-start;
+            padding: 58px 14px 14px 14px;
+        }
+        .tbr-notif-card {
+            background: #11151c;
+            border: 1px solid #232c3b;
+            border-radius: 14px;
+            width: 100%;
+            max-width: 370px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 18px 45px rgba(0, 0, 0, 0.85);
+        }
+        .tbr-notif-header {
+            padding: 13px 16px;
+            border-bottom: 1px solid #1e2532;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #151a23;
+        }
+        .tbr-notif-header h4 {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 800;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .tbr-notif-list {
+            overflow-y: auto;
+            flex: 1;
+        }
+        .tbr-notif-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid #181f2a;
+            display: flex;
+            gap: 11px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .tbr-notif-item:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+        .tbr-notif-item.unread {
+            background: rgba(240, 185, 11, 0.05);
+        }
+        .tbr-notif-item-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            background: rgba(240, 185, 11, 0.12);
+            color: #f0b90b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            flex-shrink: 0;
+        }
+        .tbr-notif-item-title {
+            font-size: 12.5px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 3px;
+            display: flex;
+            justify-content: space-between;
+            gap: 6px;
+        }
+        .tbr-notif-item-time {
+            font-size: 10px;
+            color: #6c7583;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        .tbr-notif-item-msg {
+            font-size: 11.5px;
+            color: #9ca3af;
+            line-height: 1.4;
+        }
+        .tbr-notif-footer {
+            padding: 10px 14px;
+            border-top: 1px solid #1e2532;
+            background: #0d1117;
+            text-align: center;
+        }
+        .tbr-see-all-btn {
+            width: 100%;
+            background: rgba(240, 185, 11, 0.12);
+            border: 1px solid rgba(240, 185, 11, 0.35);
+            color: #f0b90b;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+        .tbr-see-all-btn:hover {
+            background: #f0b90b;
+            color: #000000;
+        }
+    </style>
+
+    <div id="tbrCompactToastContainer"></div>
+
+    <div id="tbrNotifPanelOverlay" onclick="if(event.target===this) closeTbrNotifPanel()">
+        <div class="tbr-notif-card">
+            <div class="tbr-notif-header">
+                <h4><i class="fa-solid fa-bell" style="color:#f0b90b;"></i> <span id="tbrNotifHeaderTitle">Latest 5 Notifications</span></h4>
+                <button onclick="closeTbrNotifPanel()" style="background:none; border:none; color:#848e9c; font-size:18px; cursor:pointer; line-height:1;">&times;</button>
+            </div>
+            <div class="tbr-notif-list" id="tbrNotifListBody">
+                <div style="padding:28px 16px; text-align:center; color:#848e9c; font-size:12.5px;">No notifications yet.</div>
+            </div>
+            <div class="tbr-notif-footer" id="tbrNotifFooter">
+                <button type="button" class="tbr-see-all-btn" id="tbrSeeAllBtn" onclick="toggleSeeAllNotifications()">
+                    See All
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 📲 TBR EXCHANGE MOBILE APP (PWA) INSTALLER BANNER 📲 -->
+    <style>
+        #tbrInstallAppBanner {
+            position: fixed;
+            bottom: 74px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 24px);
+            max-width: 420px;
+            background: linear-gradient(135deg, #161c26 0%, #11151c 100%);
+            border: 1px solid rgba(240, 185, 11, 0.45);
+            border-radius: 14px;
+            padding: 12px 15px;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            z-index: 99995;
+            box-shadow: 0 14px 35px rgba(0, 0, 0, 0.85);
+        }
+        .tbr-app-left {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+        }
+        .tbr-app-logo {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: #0b0e11;
+            border: 1px solid rgba(240, 185, 11, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .tbr-app-logo img {
+            width: 26px;
+            height: 26px;
+            object-fit: contain;
+        }
+        .tbr-app-title {
+            font-size: 13px;
+            font-weight: 800;
+            color: #ffffff;
+            margin-bottom: 2px;
+        }
+        .tbr-app-sub {
+            font-size: 11px;
+            color: #848e9c;
+        }
+        .tbr-app-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .tbr-install-btn {
+            background: #f0b90b;
+            color: #000000;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 800;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .tbr-install-close {
+            background: none;
+            border: none;
+            color: #848e9c;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 2px 4px;
+            line-height: 1;
+        }
+    </style>
+
+    <div id="tbrInstallAppBanner">
+        <div class="tbr-app-left">
+            <div class="tbr-app-logo">
+                <img src="logo.png" alt="TBR" onerror="this.outerHTML='<strong style=color:#f0b90b>TBR</strong>'">
+            </div>
+            <div>
+                <div class="tbr-app-title">TBR Exchange App</div>
+                <div class="tbr-app-sub">Install fast mobile app on your phone</div>
+            </div>
+        </div>
+        <div class="tbr-app-actions">
+            <button type="button" class="tbr-install-btn" id="tbrTriggerInstallBtn">Install</button>
+            <button type="button" class="tbr-install-close" onclick="dismissTbrAppBanner()">&times;</button>
+        </div>
+    </div>
+
     <script>
         let isBalanceHidden = false;
         let actualBalance = localStorage.getItem("user_balance_val") || "0.00";
         const API_BASE = 'https://tbr-exchange-backend.onrender.com';
+
+        // Helper to get token or fallback user identity for new signups
+        function getDashboardIdentity() {
+            let token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('jwt') || localStorage.getItem('jwtToken') || '';
+            let email = localStorage.getItem('userEmail') || localStorage.getItem('email') || '';
+            let userId = localStorage.getItem('userId') || localStorage.getItem('tbr_resolved_uid') || '';
+
+            try {
+                const u = JSON.parse(localStorage.getItem('user') || localStorage.getItem('currentUser') || '{}');
+                if (!token && u.token) token = u.token;
+                if (!email && u.email) email = u.email;
+                if (!userId && (u._id || u.id || u.userId)) userId = u._id || u.id || u.userId;
+            } catch (e) {}
+
+            return { token: String(token || '').replace(/^Bearer\s+/i, '').trim(), email: String(email || '').trim(), userId: String(userId || '').trim() };
+        }
 
         // 1. መጀመሪያ ሲከፈት ያለውን ባላንስ ያሳያል
         document.addEventListener('DOMContentLoaded', () => {
@@ -870,27 +1193,29 @@
             }
         });
 
-        // 2. ዳታዎችን ማምጣት እና ማስተካከል 
+        // 2. ዳታዎችን ማምጣት እና ማስተካከል (Parallel execution for 0.00s instant balance!)
         async function loadDashboardData() {
-            await syncWithServer();
+            const { token } = getDashboardIdentity();
+            await Promise.all([
+                syncWithServer(),
+                fetchMyAdsBalance(token)
+            ]);
             checkDepositSilently();
             setInterval(checkDepositSilently, 15000);
-            
-            // 🚀 Fetch Locked Ads Balance 🚀
-            const token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem("jwt");
-            if (token) fetchMyAdsBalance(token);
         }
 
         function updateDashboardUI() {
-            const userEmail = localStorage.getItem('userEmail');
+            const userEmail = localStorage.getItem('userEmail') || localStorage.getItem('email');
             if (!userEmail) return;
 
             const kycStatus = (localStorage.getItem('kycStatus') || 'not_submitted').toLowerCase();
-            let storedName = localStorage.getItem('userName') || localStorage.getItem('fullName') || localStorage.getItem('name') || '';
-            
-            let rawName = storedName || userEmail.split('@')[0];
+            const isVerified = (kycStatus === 'verified' || kycStatus === 'approved' || kycStatus === 'true');
+            const emailPrefix = userEmail.split('@')[0];
+
+            let storedName = localStorage.getItem('kycFullName') || localStorage.getItem('fullName') || localStorage.getItem('userName') || localStorage.getItem('name') || '';
+            let rawName = (isVerified && storedName) ? storedName : emailPrefix;
             const fullNameUpper = rawName.toUpperCase();
-            const firstName = rawName.trim().split(' ')[0].toUpperCase();
+            const firstName = (isVerified && storedName) ? storedName.trim().split(/\s+/)[0].toUpperCase() : emailPrefix.toUpperCase();
 
             const hour = new Date().getHours();
             let timeGreeting = "EVENING";
@@ -917,7 +1242,7 @@
                 } else if (kycStatus === 'pending' || kycStatus === 'under_review') {
                     badgeEl.classList.add('pending');
                     badgeEl.innerHTML = `<i class="fa-solid fa-clock"></i> Under Review`;
-                } else if (kycStatus === 'verified' || kycStatus === 'approved' || kycStatus === 'true') {
+                } else if (isVerified) {
                     badgeEl.classList.add('approved');
                     badgeEl.innerHTML = `<i class="fa-solid fa-circle-check"></i> Verified`;
                 } else if (kycStatus === 'rejected') {
@@ -932,23 +1257,41 @@
 
         async function syncWithServer() {
             try {
-                const token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem("jwt");
-                if (!token) return;
+                const { token, email, userId } = getDashboardIdentity();
+                if (!token && !email && !userId) return;
+
+                const params = new URLSearchParams();
+                if (email) params.set('email', email);
+                if (userId) params.set('userId', userId);
+                params.set('t', Date.now());
                 
-                const res = await fetch(`${API_BASE}/api/user/profile`, { 
-                    headers: { 'Authorization': `Bearer ${token}` } 
+                const res = await fetch(`${API_BASE}/api/user/profile?${params.toString()}`, { 
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                    cache: 'no-store'
                 });
                 
                 if (res.ok) {
                     const data = await res.json(); 
-                    if (data.success && data.user) {
-                        const userObj = data.user;
+                    const userObj = data.user || data.data || data;
+                    if (userObj && (userObj.email || userObj._id)) {
+                        if (userObj._id) {
+                            localStorage.setItem('userId', String(userObj._id));
+                            localStorage.setItem('tbr_resolved_uid', String(userObj._id));
+                        }
                         if (userObj.email) localStorage.setItem('userEmail', userObj.email);
-                        if (userObj.fullName || userObj.name) localStorage.setItem('userName', userObj.fullName || userObj.name);
+                        if (userObj.fullName || userObj.name) {
+                            localStorage.setItem('userName', userObj.fullName || userObj.name);
+                            localStorage.setItem('fullName', userObj.fullName || userObj.name);
+                            localStorage.setItem('kycFullName', userObj.fullName || userObj.name);
+                        }
+                        if (userObj.firstName) localStorage.setItem('firstName', userObj.firstName);
                         if (userObj.kycStatus) localStorage.setItem('kycStatus', userObj.kycStatus);
                         if (userObj.bscAddress) localStorage.setItem('user_bsc_address', userObj.bscAddress);
+                        if (userObj.tbrId || userObj.userId) {
+                            localStorage.setItem('tbrId', userObj.tbrId || userObj.userId);
+                        }
                         
-                        // ዳታቤዝ ላይ ያለውን ትክክለኛ ባላንስ ይወስዳል
+                        // ዳታቤዝ ላይ ያለውን ትክክለኛ ባላንስ ወዲያውኑ ያሳያል
                         if (userObj.balance !== undefined) {
                             actualBalance = Number(userObj.balance).toFixed(2);
                             localStorage.setItem("user_balance_val", actualBalance); 
@@ -960,9 +1303,6 @@
                         }
                         updateDashboardUI();
                     }
-                } else {
-                    localStorage.clear();
-                    window.location.href = 'signin.html';
                 }
             } catch (e) {
                 console.error('Background sync failed:', e);
@@ -972,8 +1312,14 @@
         // 🚀 Fetch Locked Ads Balance Logic 🚀
         async function fetchMyAdsBalance(token) {
             try {
-                const res = await fetch(`${API_BASE}/api/ads/my`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                const { email, userId } = getDashboardIdentity();
+                const params = new URLSearchParams();
+                if (email) params.set('email', email);
+                if (userId) params.set('userId', userId);
+
+                const res = await fetch(`${API_BASE}/api/ads/my?${params.toString()}`, {
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                    cache: 'no-store'
                 });
                 
                 if (res.ok) {
@@ -1009,22 +1355,17 @@
         async function checkDepositSilently() {
             try {
                 const bscAddress = localStorage.getItem('user_bsc_address');
-                if (!bscAddress || bscAddress.startsWith("Error")) return;
+                if (!bscAddress || bscAddress.startsWith("Error") || !bscAddress.startsWith("0x")) return;
 
                 const depositRes = await fetch(`${API_BASE}/api/check-deposits/${bscAddress}`, {
-                    method: 'GET'
+                    method: 'GET',
+                    cache: 'no-store'
                 });
                 const depositData = await depositRes.json();
 
-                if (depositData.success) {
-                    let finalBal = 0;
-                    if (depositData.balance !== undefined) {
-                        finalBal = parseFloat(depositData.balance);
-                    } else if (depositData.transactions && depositData.transactions.length > 0) {
-                        finalBal = parseFloat(depositData.transactions[0].value);
-                    }
-
-                    if (finalBal >= parseFloat(actualBalance) && finalBal > 0) {
+                if (depositData && depositData.success && depositData.balance !== undefined) {
+                    const finalBal = parseFloat(depositData.balance);
+                    if (!isNaN(finalBal)) {
                         actualBalance = finalBal.toFixed(2);
                         localStorage.setItem("user_balance_val", actualBalance);
                         
@@ -1077,236 +1418,419 @@
         }
 
         (function initActiveTradeDashboardAlert() {
-        const API_URL = 'https://tbr-exchange-backend.onrender.com';
-        const BANNER_CACHE_KEY = 'tbr_dash_active_banner_v2';
+            const API_URL = 'https://tbr-exchange-backend.onrender.com';
+            const BANNER_CACHE_KEY = 'tbr_dash_active_banner_v2';
 
-        function createBannerIfMissing() {
-            let banner = document.getElementById('dashboardActiveTradeBanner');
-            if (banner) return banner;
+            function createBannerIfMissing() {
+                let banner = document.getElementById('dashboardActiveTradeBanner');
+                if (banner) return banner;
 
-            banner = document.createElement('a');
-            banner.id = 'dashboardActiveTradeBanner';
-            banner.className = 'active-trade-alert-banner';
-            banner.href = 'trades.html';
-            banner.innerHTML = `
-                <div class="atb-left">
-                    <span class="atb-pulse-dot"></span>
-                    <span id="dashboardActiveTradeText">1 trade awaiting you for action</span>
-                </div>
-                <div class="atb-right">
-                    <span id="dashboardActiveTradeNum">Open Trade</span>
-                    <i class="fa-solid fa-arrow-right" style="font-size: 11px;"></i>
-                </div>
-            `;
+                banner = document.createElement('a');
+                banner.id = 'dashboardActiveTradeBanner';
+                banner.className = 'active-trade-alert-banner';
+                banner.href = 'trades.html';
+                banner.innerHTML = `
+                    <div class="atb-left">
+                        <span class="atb-pulse-dot"></span>
+                        <span id="dashboardActiveTradeText">1 trade awaiting you for action</span>
+                    </div>
+                    <div class="atb-right">
+                        <span id="dashboardActiveTradeNum">Open Trade</span>
+                        <i class="fa-solid fa-arrow-right" style="font-size: 11px;"></i>
+                    </div>
+                `;
 
-            const mainContainer = document.querySelector('.dashboard-container') ||
-                                  document.querySelector('.main-content') ||
-                                  document.querySelector('.container') ||
-                                  document.querySelector('main');
-            if (mainContainer) {
-                mainContainer.prepend(banner);
-            } else {
-                const nav = document.querySelector('.navbar') || document.querySelector('nav') || document.querySelector('header');
-                banner.style.marginTop = '74px';
-                if (nav && nav.nextElementSibling) {
-                    nav.parentNode.insertBefore(banner, nav.nextElementSibling);
+                const mainContainer = document.querySelector('.dashboard-container') ||
+                                      document.querySelector('.main-content') ||
+                                      document.querySelector('.container') ||
+                                      document.querySelector('main');
+                if (mainContainer) {
+                    mainContainer.prepend(banner);
                 } else {
-                    document.body.prepend(banner);
-                }
-            }
-            return banner;
-        }
-
-        function getLoggedUserIdentity() {
-            const token = localStorage.getItem('token') || localStorage.getItem('jwtToken') || localStorage.getItem('authToken') || '';
-            let email = localStorage.getItem('userEmail') || localStorage.getItem('email') || '';
-            let userId = localStorage.getItem('userId') || '';
-
-            try {
-                const u = JSON.parse(localStorage.getItem('user') || localStorage.getItem('currentUser') || localStorage.getItem('tbr_user') || '{}');
-                if (!email && u.email) email = u.email;
-                if (!userId && (u._id || u.id || u.userId)) userId = u._id || u.id || u.userId;
-            } catch (e) {}
-
-            return { token, email, userId };
-        }
-
-        function applyBannerData(data) {
-            const banner = createBannerIfMissing();
-            if (data && data.count > 0 && data.latestTrade) {
-                const count = data.count;
-                const trade = data.latestTrade;
-                const tradeNum = String(trade.tradeNumber || '00001').padStart(5, '0');
-                const isBuyer = data.currentUserId && String(trade.buyerId) === String(data.currentUserId);
-                const roleText = isBuyer ? 'Buyer' : 'Seller';
-
-                // ⚡ ሻጩ ባነሩን ሲነካ የውሸት Trade #00001 ሳያሳይ በ 0.00 ሰከንድ ትክክለኛውን የሻጭ ትሬድ እንዲከፍት! ⚡
-                localStorage.setItem('tbr_active_p2p_order', JSON.stringify(trade));
-                if (data.currentUserId) localStorage.setItem('tbr_resolved_uid', String(data.currentUserId));
-
-                document.getElementById('dashboardActiveTradeText').innerText =
-                    count === 1
-                        ? `1 trade awaiting you (${roleText}) — Click to action`
-                        : `${count} trades awaiting you — Click to view`;
-                document.getElementById('dashboardActiveTradeNum').innerText = `Trade #${tradeNum}`;
-                banner.href = `trades.html?tradeId=${trade._id}`;
-                banner.style.display = 'flex';
-            } else {
-                banner.style.display = 'none';
-            }
-        }
-
-        async function checkActiveTradesForUser() {
-            const { token, email, userId } = getLoggedUserIdentity();
-            if (!token && !email && !userId) return;
-
-            try {
-                const params = new URLSearchParams();
-                if (email) params.set('email', email);
-                if (userId) params.set('userId', userId);
-
-                const res = await fetch(`${API_URL}/api/user/active-trades?${params.toString()}`, {
-                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-                });
-
-                if (res.ok) {
-                    const json = await res.json();
-                    if (json.success) {
-                        sessionStorage.setItem(BANNER_CACHE_KEY, JSON.stringify(json));
-                        applyBannerData(json);
+                    const nav = document.querySelector('.navbar') || document.querySelector('nav') || document.querySelector('header');
+                    banner.style.marginTop = '74px';
+                    if (nav && nav.nextElementSibling) {
+                        nav.parentNode.insertBefore(banner, nav.nextElementSibling);
+                    } else {
+                        document.body.prepend(banner);
                     }
                 }
-            } catch (e) {}
-        }
+                return banner;
+            }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            // 1. በ 0 ሰከንድ (ወዲያውኑ) ከ Cache ማሳየት (ሪፍሬሽ ሲደረግ እንዳይዘገይ)
-            try {
-                const cached = sessionStorage.getItem(BANNER_CACHE_KEY);
-                if (cached) applyBannerData(JSON.parse(cached));
-            } catch (e) {}
+            function applyBannerData(data) {
+                const banner = createBannerIfMissing();
+                if (data && data.count > 0 && data.latestTrade) {
+                    const count = data.count;
+                    const trade = data.latestTrade;
+                    const tradeNum = String(trade.tradeNumber || '00001').padStart(5, '0');
+                    const isBuyer = data.currentUserId && String(trade.buyerId) === String(data.currentUserId);
+                    const roleText = isBuyer ? 'Buyer' : 'Seller';
 
-            // 2. ወዲያውኑ ከሰርቨር ማረጋገጥ
-            checkActiveTradesForUser();
-            setInterval(checkActiveTradesForUser, 3000);
-        });
-    })();
+                    localStorage.setItem('tbr_active_p2p_order', JSON.stringify(trade));
+                    if (data.currentUserId) localStorage.setItem('tbr_resolved_uid', String(data.currentUserId));
 
-document.addEventListener('DOMContentLoaded', () => {
-        document.querySelectorAll('a, button, div, span, li').forEach(el => {
-            const txt = (el.innerText || '').trim().toLowerCase();
-            const hasCommentIcon = el.querySelector('.fa-comment, .fa-comments, .fa-comment-dots, .fa-message');
-            if ((txt === 'chat' || (txt.startsWith('chat') && txt.length <= 8)) && (hasCommentIcon || el.tagName === 'A' || el.onclick)) {
-                const target = el.closest('a, button') || el;
-                if (target.tagName === 'A') {
-                    target.setAttribute('href', 'trades.html');
+                    document.getElementById('dashboardActiveTradeText').innerText =
+                        count === 1
+                            ? `1 trade awaiting you (${roleText}) — Click to action`
+                            : `${count} trades awaiting you — Click to view`;
+                    document.getElementById('dashboardActiveTradeNum').innerText = `Trade #${tradeNum}`;
+                    banner.href = `trades.html?tradeId=${trade._id}`;
+                    banner.style.display = 'flex';
+                } else {
+                    banner.style.display = 'none';
                 }
-                target.style.cursor = 'pointer';
-                target.onclick = (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    window.location.href = 'trades.html';
-                };
-            }
-        });
-    });
-
-   // ⚡ በ Dashboard ላይ፦ ገና Verified ካልሆነ በኢሜይሉ፣ Verified ከሆነ ግን በመጀመሪያ ስሙ ብቻ (ለምሳሌ MORNING, ABDURAHMAN) እንዲጠራ የሚያደርግ ⚡
-    (function syncDashboardFirstNameGreeting() {
-        const API_BASE = 'https://tbr-exchange-backend.onrender.com';
-
-        // የድሮ የተሳሳተ "Yimam" በ localStorage ውስጥ ተይዞ ከነበረ ወዲያውኑ ማጽዳት
-        ['firstName', 'fullName', 'kycFullName', 'userName', 'name'].forEach(k => {
-            const val = (localStorage.getItem(k) || '').trim().toLowerCase();
-            if (val === 'yimam') localStorage.removeItem(k);
-        });
-
-        function getDashboardFirstName() {
-            const email = localStorage.getItem('userEmail') || localStorage.getItem('email') || '';
-            const emailPrefix = email ? email.split('@')[0] : 'USER';
-            const kycStatus = String(localStorage.getItem('kycStatus') || 'unverified').toLowerCase();
-            const isVerified = (kycStatus === 'verified' || kycStatus === 'approved');
-
-            if (!isVerified) {
-                return emailPrefix.toUpperCase();
             }
 
-            const fullKyc = (
-                localStorage.getItem('kycFullName') ||
-                localStorage.getItem('fullName') ||
-                localStorage.getItem('firstName') ||
-                localStorage.getItem('userName') ||
-                emailPrefix
-            ).trim();
+            async function checkActiveTradesForUser() {
+                const { token, email, userId } = getDashboardIdentity();
+                if (!token && !email && !userId) return;
 
-            // ✅ ሁሌም የመጀመሪያውን ስም (1ኛውን ቃል) ብቻ መውሰድ (ለምሳሌ ከ "Abdurahman Ashebir Yimam" -> "ABDURAHMAN")
-            const firstWord = fullKyc.split(/\s+/)[0] || emailPrefix;
-            return firstWord.toUpperCase();
-        }
+                try {
+                    const params = new URLSearchParams();
+                    if (email) params.set('email', email);
+                    if (userId) params.set('userId', userId);
+                    params.set('t', Date.now());
 
-        function updateDashboardGreetingDOM() {
-            const firstName = getDashboardFirstName();
-            if (!firstName) return;
+                    const res = await fetch(`${API_URL}/api/user/active-trades?${params.toString()}`, {
+                        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                    });
 
-            document.querySelectorAll('div, span, h1, h2, h3, p').forEach(el => {
-                if (el.children.length === 0) {
-                    const txt = (el.innerText || '').trim();
-                    const match = txt.match(/^(GOOD\s+MORNING|GOOD\s+AFTERNOON|GOOD\s+EVENING|MORNING|AFTERNOON|EVENING|NIGHT|WELCOME|HELLO)\s*,\s*(.+)$/i);
-                    if (match && match[2].trim().toUpperCase() !== firstName) {
-                        el.innerText = `${match[1].toUpperCase()}, ${firstName}`;
-                    }
-                } else if (el.children.length === 1 && (el.children[0].tagName === 'SPAN' || el.children[0].tagName === 'STRONG' || el.children[0].tagName === 'B')) {
-                    const txt = (el.innerText || '').trim();
-                    if (/^(GOOD\s+)?(MORNING|AFTERNOON|EVENING|NIGHT)\s*,/i.test(txt)) {
-                        if (el.children[0].innerText.trim().toUpperCase() !== firstName) {
-                            el.children[0].innerText = firstName;
+                    if (res.ok) {
+                        const json = await res.json();
+                        if (json.success) {
+                            sessionStorage.setItem(BANNER_CACHE_KEY, JSON.stringify(json));
+                            applyBannerData(json);
                         }
                     }
+                } catch (e) {}
+            }
+
+            document.addEventListener('DOMContentLoaded', () => {
+                try {
+                    const cached = sessionStorage.getItem(BANNER_CACHE_KEY);
+                    if (cached) applyBannerData(JSON.parse(cached));
+                } catch (e) {}
+
+                checkActiveTradesForUser();
+                setInterval(checkActiveTradesForUser, 3000);
+            });
+        })();
+
+        // 📱 በስልክ ላይ ከታች ያለው "Chat" በተን ሲነካ በቀጥታ ወደ trades.html እንዲወስድ የሚያደርግ 📱
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('a, button, div, span, li').forEach(el => {
+                const txt = (el.innerText || '').trim().toLowerCase();
+                const hasCommentIcon = el.querySelector('.fa-comment, .fa-comments, .fa-comment-dots, .fa-message');
+                if ((txt === 'chat' || (txt.startsWith('chat') && txt.length <= 8)) && (hasCommentIcon || el.tagName === 'A' || el.onclick)) {
+                    const target = el.closest('a, button') || el;
+                    if (target.tagName === 'A') {
+                        target.setAttribute('href', 'trades.html');
+                    }
+                    target.style.cursor = 'pointer';
+                    target.onclick = (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        window.location.href = 'trades.html';
+                    };
                 }
             });
-        }
+        });
 
-        async function syncProfileForDashboard() {
-            try {
-                const token = localStorage.getItem('token') || localStorage.getItem('authToken');
-                if (!token) return;
-                const res = await fetch(`${API_BASE}/api/user/profile?t=${Date.now()}`, {
-                    headers: { 'Authorization': `Bearer ${token}` },
-                    cache: 'no-store'
-                });
-                if (res.ok) {
-                    const json = await res.json();
-                    const u = json.user || json.data;
-                    if (u) {
-                        if (u.email) localStorage.setItem('userEmail', u.email);
-                        if (u.kycStatus) localStorage.setItem('kycStatus', u.kycStatus);
-                        if (u.fullName) {
-                            localStorage.setItem('fullName', u.fullName);
-                            localStorage.setItem('kycFullName', u.fullName);
-                            localStorage.setItem('userName', u.fullName);
-                        }
-                        if (u.firstName) {
-                            localStorage.setItem('firstName', u.firstName);
-                        }
-                        updateDashboardGreetingDOM();
+        // ⚡ በ Dashboard ላይ፦ ገና Verified ካልሆነ በኢሜይሉ፣ Verified ከሆነ ግን በመጀመሪያ ስሙ ብቻ እንዲጠራ የሚያደርግ ⚡
+        (function syncDashboardFirstNameGreeting() {
+            ['firstName', 'fullName', 'kycFullName', 'userName', 'name'].forEach(k => {
+                const val = (localStorage.getItem(k) || '').trim().toLowerCase();
+                if (val === 'yimam') localStorage.removeItem(k);
+            });
+
+            function getDashboardFirstName() {
+                const email = localStorage.getItem('userEmail') || localStorage.getItem('email') || '';
+                const emailPrefix = email ? email.split('@')[0] : 'USER';
+                const kycStatus = String(localStorage.getItem('kycStatus') || 'unverified').toLowerCase();
+                const isVerified = (kycStatus === 'verified' || kycStatus === 'approved');
+
+                if (!isVerified) {
+                    return emailPrefix.toUpperCase();
+                }
+
+                const fullKyc = (
+                    localStorage.getItem('kycFullName') ||
+                    localStorage.getItem('fullName') ||
+                    localStorage.getItem('firstName') ||
+                    localStorage.getItem('userName') ||
+                    emailPrefix
+                ).trim();
+
+                const firstWord = fullKyc.split(/\s+/)[0] || emailPrefix;
+                return firstWord.toUpperCase();
+            }
+
+            function updateDashboardGreetingDOM() {
+                const firstName = getDashboardFirstName();
+                if (!firstName || firstName === 'USER') return;
+
+                const greetingEl = document.getElementById('userGreeting');
+                if (greetingEl) {
+                    const spanEl = greetingEl.querySelector('.user-name');
+                    if (spanEl && spanEl.innerText.trim().toUpperCase() !== firstName) {
+                        spanEl.innerText = firstName;
                     }
                 }
-            } catch (e) {}
-        }
+            }
 
-        // የዳሽቦርዱ ሌላ ስክሪፕት ስሙን ቢቀይረው እንኳን ወዲያውኑ በ 0ms ወደ First Name የሚመልስ Observer
-        const observer = new MutationObserver(() => updateDashboardGreetingDOM());
-        document.addEventListener('DOMContentLoaded', () => {
+            const observer = new MutationObserver(() => updateDashboardGreetingDOM());
+            document.addEventListener('DOMContentLoaded', () => {
+                updateDashboardGreetingDOM();
+                observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+            });
             updateDashboardGreetingDOM();
-            syncProfileForDashboard();
-            observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-        });
-        updateDashboardGreetingDOM();
-        syncProfileForDashboard();
-    })();
+        })();
 
-    
+        // 🔔 NOTIFICATION CENTER (BELL DROPDOWN LATEST 5 + SEE ALL + COMPACT TOAST) 🔔
+        (function initTbrNotificationCenter() {
+            let latestFiveNotifs = [];
+            let allUserNotifs = [];
+            let showingAllMode = false;
+            let seenNotifIds = new Set(JSON.parse(localStorage.getItem('tbr_seen_toast_ids') || '[]'));
+            let initialLoadDone = false;
 
+            function getAuthHeaders() {
+                const { token } = getDashboardIdentity();
+                return token ? { 'Authorization': `Bearer ${token}` } : {};
+            }
+
+            function getUserIdentityParams() {
+                const { email, userId } = getDashboardIdentity();
+                const p = new URLSearchParams();
+                if (email) p.set('email', email);
+                if (userId) p.set('userId', userId);
+                p.set('t', Date.now());
+                return p.toString();
+            }
+
+            function getIconForType(type) {
+                if (type === 'deposit') return '<i class="fa-solid fa-arrow-down" style="color:#0ecb81;"></i>';
+                if (type === 'withdrawal') return '<i class="fa-solid fa-arrow-up" style="color:#f6465d;"></i>';
+                if (type === 'transfer') return '<i class="fa-solid fa-paper-plane" style="color:#3b82f6;"></i>';
+                if (type === 'trade') return '<i class="fa-solid fa-right-left" style="color:#f0b90b;"></i>';
+                return '<i class="fa-solid fa-bell" style="color:#f0b90b;"></i>';
+            }
+
+            function formatShortTime(dateStr) {
+                if (!dateStr) return '';
+                const d = new Date(dateStr);
+                return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' +
+                       d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+            }
+
+            function showCompactToast(notif) {
+                const container = document.getElementById('tbrCompactToastContainer');
+                if (!container) return;
+
+                const toast = document.createElement('div');
+                toast.className = 'tbr-compact-toast';
+                toast.onclick = () => {
+                    if (notif.link) window.location.href = notif.link;
+                };
+                toast.innerHTML = `
+                    <div class="tbr-toast-icon">${getIconForType(notif.type)}</div>
+                    <div style="flex:1;">
+                        <div class="tbr-toast-title">${notif.title}</div>
+                        <div class="tbr-toast-msg">${notif.message}</div>
+                    </div>
+                `;
+                container.appendChild(toast);
+
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    toast.style.transition = 'opacity 0.25s ease';
+                    setTimeout(() => toast.remove(), 260);
+                }, 4500);
+            }
+
+            function bindBellIcons() {
+                document.querySelectorAll('a[href*="notification"], .fa-bell').forEach(el => {
+                    const clickable = el.closest('a, button') || el;
+                    clickable.style.position = 'relative';
+                    clickable.style.cursor = 'pointer';
+
+                    if (!clickable.querySelector('.tbr-bell-badge')) {
+                        const badge = document.createElement('span');
+                        badge.className = 'tbr-bell-badge';
+                        badge.innerText = '0';
+                        clickable.appendChild(badge);
+                    }
+
+                    clickable.onclick = (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        openTbrNotifPanel();
+                    };
+                });
+            }
+
+            function updateBellBadges(count) {
+                document.querySelectorAll('.tbr-bell-badge').forEach(b => {
+                    if (count > 0) {
+                        b.innerText = count > 99 ? '99+' : count;
+                        b.style.display = 'inline-flex';
+                    } else {
+                        b.style.display = 'none';
+                    }
+                });
+            }
+
+            function renderNotifList() {
+                const listEl = document.getElementById('tbrNotifListBody');
+                const titleEl = document.getElementById('tbrNotifHeaderTitle');
+                const seeAllBtn = document.getElementById('tbrSeeAllBtn');
+                if (!listEl) return;
+
+                const itemsToShow = showingAllMode ? allUserNotifs : latestFiveNotifs;
+                titleEl.innerText = showingAllMode
+                    ? `All Notifications (${allUserNotifs.length})`
+                    : `Latest 5 Notifications`;
+
+                if (seeAllBtn) {
+                    seeAllBtn.innerText = showingAllMode
+                        ? 'Show Latest 5 Only'
+                        : `See All (${allUserNotifs.length})`;
+                }
+
+                if (!itemsToShow || itemsToShow.length === 0) {
+                    listEl.innerHTML = `<div style="padding:30px 16px; text-align:center; color:#848e9c; font-size:12.5px;">No notifications yet.</div>`;
+                    return;
+                }
+
+                listEl.innerHTML = itemsToShow.map(n => `
+                    <div class="tbr-notif-item ${n.isRead ? '' : 'unread'}" onclick="window.location.href='${n.link || 'dashboard.html'}'">
+                        <div class="tbr-notif-item-icon">${getIconForType(n.type)}</div>
+                        <div style="flex:1;">
+                            <div class="tbr-notif-item-title">
+                                <span>${n.title}</span>
+                                <span class="tbr-notif-item-time">${formatShortTime(n.createdAt)}</span>
+                            </div>
+                            <div class="tbr-notif-item-msg">${n.message}</div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            window.openTbrNotifPanel = async function() {
+                showingAllMode = false;
+                renderNotifList();
+                document.getElementById('tbrNotifPanelOverlay').style.display = 'flex';
+                updateBellBadges(0);
+
+                try {
+                    await fetch(`${API_BASE}/api/notifications/mark-read?${getUserIdentityParams()}`, {
+                        method: 'POST',
+                        headers: getAuthHeaders()
+                    });
+                } catch (e) {}
+            };
+
+            window.closeTbrNotifPanel = function() {
+                document.getElementById('tbrNotifPanelOverlay').style.display = 'none';
+            };
+
+            window.toggleSeeAllNotifications = function() {
+                showingAllMode = !showingAllMode;
+                renderNotifList();
+            };
+
+            async function pollNotifications() {
+                try {
+                    const res = await fetch(`${API_BASE}/api/notifications?${getUserIdentityParams()}`, {
+                        headers: getAuthHeaders(),
+                        cache: 'no-store'
+                    });
+                    if (!res.ok) return;
+                    const json = await res.json();
+                    if (!json || !json.success) return;
+
+                    latestFiveNotifs = json.latestFive || [];
+                    allUserNotifs = json.allNotifications || [];
+                    updateBellBadges(json.unreadCount || 0);
+
+                    if (allUserNotifs.length > 0) {
+                        const newest = allUserNotifs[0];
+                        if (!seenNotifIds.has(String(newest._id))) {
+                            if (initialLoadDone && !newest.isRead) {
+                                showCompactToast(newest);
+                            }
+                            allUserNotifs.slice(0, 15).forEach(n => seenNotifIds.add(String(n._id)));
+                            localStorage.setItem('tbr_seen_toast_ids', JSON.stringify([...seenNotifIds].slice(-50)));
+                        }
+                    }
+                    initialLoadDone = true;
+
+                    if (document.getElementById('tbrNotifPanelOverlay').style.display === 'flex') {
+                        renderNotifList();
+                    }
+                } catch (e) {}
+            }
+
+            document.addEventListener('DOMContentLoaded', () => {
+                bindBellIcons();
+                pollNotifications();
+                setInterval(pollNotifications, 4000);
+            });
+            bindBellIcons();
+            pollNotifications();
+        })();
+
+        // 📲 PWA MOBILE APP INSTALLER LOGIC 📲
+        (function setupTbrPwaInstaller() {
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('/sw.js').catch(() => {});
+                });
+            }
+
+            let deferredPrompt = null;
+            const banner = document.getElementById('tbrInstallAppBanner');
+            const installBtn = document.getElementById('tbrTriggerInstallBtn');
+            const dropdownDownloadLink = document.getElementById('dropdownDownloadAppLink');
+
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+            const wasDismissed = sessionStorage.getItem('tbr_app_banner_dismissed') === '1';
+
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                if (!isStandalone && !wasDismissed && banner) {
+                    banner.style.display = 'flex';
+                }
+            });
+
+            async function triggerPwaInstall(e) {
+                if (e) e.preventDefault();
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    if (outcome === 'accepted' && banner) {
+                        banner.style.display = 'none';
+                    }
+                    deferredPrompt = null;
+                } else {
+                    alert('To install TBR Exchange App on your phone:\n\n• Android (Chrome): Tap the top-right menu (⋮) and select "Install app" or "Add to Home screen".\n• iPhone (Safari): Tap the Share icon and select "Add to Home Screen".');
+                }
+            }
+
+            if (installBtn) {
+                installBtn.addEventListener('click', triggerPwaInstall);
+            }
+            if (dropdownDownloadLink) {
+                dropdownDownloadLink.addEventListener('click', triggerPwaInstall);
+            }
+
+            window.dismissTbrAppBanner = function() {
+                sessionStorage.setItem('tbr_app_banner_dismissed', '1');
+                if (banner) banner.style.display = 'none';
+            };
+        })();
     </script>
 </body>
 </html>
