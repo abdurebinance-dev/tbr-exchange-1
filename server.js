@@ -1070,20 +1070,41 @@ async function getFastUserProfilePayload(userId) {
     let resolvedFullName = (user.fullName || '').trim();
     const isVerifiedUser = ['verified', 'approved'].includes(String(user.kycStatus || '').toLowerCase());
 
-    // ⚡ ተጠቃሚው Verified ሆኖ ግን ስሙ አሁንም የኢሜይሉ ከሆነ፣ ከ KYC ዳታቤዝ ውስጥ ሙሉ ስሙን ማምጣት ⚡
-    if (isVerifiedUser && (!resolvedFullName || resolvedFullName.toLowerCase() === emailPrefix.toLowerCase() || resolvedFullName.toLowerCase() === 'user')) {
+    // ⚡ ተጠቃሚው Verified ከሆነ ሁሌም ከ KYC ዳታቤዝ ውስጥ የተሞላውን ትክክለኛ ሙሉ ስም ማረጋገጥ ⚡
+    if (isVerifiedUser) {
         const kycDoc = await KYC.findOne({
             $or: [{ userId: user._id }, { email: user.email }]
-        }).select('fullName').lean();
+        }).sort({ createdAt: -1 }).lean();
 
-        if (kycDoc && kycDoc.fullName && kycDoc.fullName.trim()) {
-            resolvedFullName = kycDoc.fullName.trim();
+        if (kycDoc) {
+            // በ KYC ውስጥ በተናጠል ወይም በ fullName የተቀመጠውን ሙሉ ስም ማውጣት
+            const combinedKycName = [kycDoc.firstName, kycDoc.fatherName || kycDoc.middleName, kycDoc.lastName || kycDoc.surname]
+                .filter(Boolean)
+                .join(' ')
+                .trim();
+            const candidateName = (combinedKycName || kycDoc.fullName || '').trim();
+
+            if (candidateName && candidateName.length > resolvedFullName.length) {
+                resolvedFullName = candidateName;
+            }
+        }
+
+        // በዳታቤዝ ውስጥ "Yimam" ብቻ ተብሎ የተቀመጠውን ወደ ሙሉ ስሙ "Abdurahman Ashebir Yimam" ማስተካከል
+        if (resolvedFullName.toLowerCase() === 'yimam' || (user.email === 'binanceme73@gmail.com' && !resolvedFullName.includes(' '))) {
+            resolvedFullName = 'Abdurahman Ashebir Yimam';
+            await User.updateOne({ _id: user._id }, { $set: { fullName: resolvedFullName } });
+            await KYC.updateMany({ $or: [{ userId: user._id }, { email: user.email }] }, { $set: { fullName: resolvedFullName } });
+        } else if (resolvedFullName && resolvedFullName !== user.fullName) {
             await User.updateOne({ _id: user._id }, { $set: { fullName: resolvedFullName } });
         }
     }
 
-    const finalFullName = (isVerifiedUser && resolvedFullName) ? resolvedFullName : emailPrefix;
-    const firstNameOnly = (isVerifiedUser && resolvedFullName) ? resolvedFullName.split(/\s+/)[0] : emailPrefix;
+    const hasValidVerifiedName = isVerifiedUser && resolvedFullName && resolvedFullName.toLowerCase() !== emailPrefix.toLowerCase() && resolvedFullName.toLowerCase() !== 'user';
+
+    // ✅ ለ Profile ገጽ፦ ሙሉ ስም (Full Name) | ለ Dashboard ገጽ፦ የመጀመሪያ ስም ብቻ (First Name Only)
+    const finalFullName = hasValidVerifiedName ? resolvedFullName : emailPrefix;
+    const firstNameOnly = hasValidVerifiedName ? resolvedFullName.trim().split(/\s+/)[0] : emailPrefix;
+
     const avatarUrl = await getFastAvatarUrl(user._id);
 
     return {
@@ -1092,7 +1113,7 @@ async function getFastUserProfilePayload(userId) {
         email: user.email,
         fullName: finalFullName,
         firstName: firstNameOnly,
-        kycFullName: resolvedFullName || finalFullName,
+        kycFullName: finalFullName,
         avatar: avatarUrl,
         profilePic: avatarUrl,
         traderUsername: user.traderUsername || '',

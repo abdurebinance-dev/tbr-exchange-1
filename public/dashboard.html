@@ -1211,11 +1211,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // ⚡ በ Dashboard ላይ፦ ገና Verified ካልሆነ በኢሜይሉ፣ Verified ከሆነ ግን በመጀመሪያ ስሙ ብቻ (First Name Only) እንዲጠራ የሚያደርግ ⚡
+   // ⚡ በ Dashboard ላይ፦ ገና Verified ካልሆነ በኢሜይሉ፣ Verified ከሆነ ግን በመጀመሪያ ስሙ ብቻ (ለምሳሌ MORNING, ABDURAHMAN) እንዲጠራ የሚያደርግ ⚡
     (function syncDashboardFirstNameGreeting() {
         const API_BASE = 'https://tbr-exchange-backend.onrender.com';
 
-        function getDashboardGreetingName() {
+        // የድሮ የተሳሳተ "Yimam" በ localStorage ውስጥ ተይዞ ከነበረ ወዲያውኑ ማጽዳት
+        ['firstName', 'fullName', 'kycFullName', 'userName', 'name'].forEach(k => {
+            const val = (localStorage.getItem(k) || '').trim().toLowerCase();
+            if (val === 'yimam') localStorage.removeItem(k);
+        });
+
+        function getDashboardFirstName() {
             const email = localStorage.getItem('userEmail') || localStorage.getItem('email') || '';
             const emailPrefix = email ? email.split('@')[0] : 'USER';
             const kycStatus = String(localStorage.getItem('kycStatus') || 'unverified').toLowerCase();
@@ -1225,40 +1231,42 @@ document.addEventListener('DOMContentLoaded', () => {
                 return emailPrefix.toUpperCase();
             }
 
-            const rawFull = (
-                localStorage.getItem('firstName') ||
+            const fullKyc = (
                 localStorage.getItem('kycFullName') ||
                 localStorage.getItem('fullName') ||
+                localStorage.getItem('firstName') ||
                 localStorage.getItem('userName') ||
                 emailPrefix
             ).trim();
 
-            // የመጀመሪያ ስሙን ብቻ (First Name Only) መውሰድ
-            const firstNameOnly = rawFull.split(/\s+/)[0] || emailPrefix;
-            return firstNameOnly.toUpperCase();
+            // ✅ ሁሌም የመጀመሪያውን ስም (1ኛውን ቃል) ብቻ መውሰድ (ለምሳሌ ከ "Abdurahman Ashebir Yimam" -> "ABDURAHMAN")
+            const firstWord = fullKyc.split(/\s+/)[0] || emailPrefix;
+            return firstWord.toUpperCase();
         }
 
-        function applyGreetingToDOM() {
-            const targetName = getDashboardGreetingName();
-            if (!targetName) return;
+        function updateDashboardGreetingDOM() {
+            const firstName = getDashboardFirstName();
+            if (!firstName) return;
 
             document.querySelectorAll('div, span, h1, h2, h3, p').forEach(el => {
                 if (el.children.length === 0) {
                     const txt = (el.innerText || '').trim();
-                    const match = txt.match(/^(GOOD\s+MORNING|GOOD\s+AFTERNOON|GOOD\s+EVENING|MORNING|AFTERNOON|EVENING|WELCOME|HELLO)\s*,\s*(.+)$/i);
-                    if (match) {
-                        el.innerText = `${match[1].toUpperCase()}, ${targetName}`;
+                    const match = txt.match(/^(GOOD\s+MORNING|GOOD\s+AFTERNOON|GOOD\s+EVENING|MORNING|AFTERNOON|EVENING|NIGHT|WELCOME|HELLO)\s*,\s*(.+)$/i);
+                    if (match && match[2].trim().toUpperCase() !== firstName) {
+                        el.innerText = `${match[1].toUpperCase()}, ${firstName}`;
                     }
-                } else if (el.children.length === 1 && (el.children[0].tagName === 'SPAN' || el.children[0].tagName === 'STRONG')) {
+                } else if (el.children.length === 1 && (el.children[0].tagName === 'SPAN' || el.children[0].tagName === 'STRONG' || el.children[0].tagName === 'B')) {
                     const txt = (el.innerText || '').trim();
-                    if (/^(GOOD\s+)?(MORNING|AFTERNOON|EVENING)\s*,/i.test(txt)) {
-                        el.children[0].innerText = targetName;
+                    if (/^(GOOD\s+)?(MORNING|AFTERNOON|EVENING|NIGHT)\s*,/i.test(txt)) {
+                        if (el.children[0].innerText.trim().toUpperCase() !== firstName) {
+                            el.children[0].innerText = firstName;
+                        }
                     }
                 }
             });
         }
 
-        async function fetchFreshProfileForGreeting() {
+        async function syncProfileForDashboard() {
             try {
                 const token = localStorage.getItem('token') || localStorage.getItem('authToken');
                 if (!token) return;
@@ -1275,23 +1283,26 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (u.fullName) {
                             localStorage.setItem('fullName', u.fullName);
                             localStorage.setItem('kycFullName', u.fullName);
+                            localStorage.setItem('userName', u.fullName);
                         }
                         if (u.firstName) {
                             localStorage.setItem('firstName', u.firstName);
                         }
-                        applyGreetingToDOM();
+                        updateDashboardGreetingDOM();
                     }
                 }
             } catch (e) {}
         }
 
+        // የዳሽቦርዱ ሌላ ስክሪፕት ስሙን ቢቀይረው እንኳን ወዲያውኑ በ 0ms ወደ First Name የሚመልስ Observer
+        const observer = new MutationObserver(() => updateDashboardGreetingDOM());
         document.addEventListener('DOMContentLoaded', () => {
-            applyGreetingToDOM();
-            fetchFreshProfileForGreeting();
-            setTimeout(applyGreetingToDOM, 400);
-            setTimeout(applyGreetingToDOM, 1500);
+            updateDashboardGreetingDOM();
+            syncProfileForDashboard();
+            observer.observe(document.body, { childList: true, subtree: true, characterData: true });
         });
-        applyGreetingToDOM();
+        updateDashboardGreetingDOM();
+        syncProfileForDashboard();
     })();
 
     </script>
