@@ -17,9 +17,10 @@
             background-color: #0b0e11;
             color: #eaecef;
             min-height: 100vh;
+            overflow-x: hidden;
         }
 
-        /* Navbar Styling */
+        /* Navbar Styling (PC layout untouched!) */
         .navbar {
             display: flex;
             justify-content: space-between;
@@ -41,6 +42,8 @@
             color: #f0b90b;
             letter-spacing: 1px;
             text-decoration: none;
+            display: flex;
+            align-items: center;
         }
 
         .nav-links {
@@ -57,6 +60,7 @@
             display: flex;
             align-items: center;
             gap: 6px;
+            white-space: nowrap;
         }
 
         .nav-links a:hover, .nav-links a.active {
@@ -124,6 +128,7 @@
             display: flex;
             align-items: center;
             min-height: 24px;
+            word-break: break-word;
         }
 
         .profile-details p {
@@ -131,6 +136,7 @@
             font-size: 14px;
             margin-bottom: 8px;
             min-height: 20px;
+            word-break: break-all;
         }
 
         .user-id-badge {
@@ -280,7 +286,35 @@
             font-weight: 500;
         }
 
+        /* 📱 MOBILE ONLY FIX (PC layout stays 100% unchanged!) 📱 */
         @media (max-width: 768px) {
+            html, body {
+                overflow-x: hidden;
+                width: 100%;
+            }
+            .navbar {
+                padding: 12px 16px;
+            }
+            .nav-left {
+                width: 100%;
+                justify-content: space-between;
+                gap: 12px;
+            }
+            .nav-links {
+                gap: 14px;
+            }
+            .nav-links a {
+                font-size: 13px;
+            }
+            /* Hide Trades, Wallet, Top Traders & Right Icons ONLY on Mobile */
+            .nav-links a.mobile-hide-link,
+            .nav-right {
+                display: none !important;
+            }
+            .container {
+                margin: 18px auto;
+                padding: 0 14px;
+            }
             .stats-row {
                 grid-template-columns: repeat(2, 1fr);
             }
@@ -288,6 +322,7 @@
                 flex-direction: column;
                 align-items: flex-start;
                 gap: 15px;
+                padding: 20px;
             }
             .kyc-banner {
                 flex-direction: column;
@@ -309,9 +344,9 @@
                 <a href="dashboard.html"><i class="fa-solid fa-chart-pie"></i> Dashboard</a>
                 <a href="market.html"><i class="fa-solid fa-store"></i> Market</a>
                 <a href="my-ads.html"><i class="fa-solid fa-rectangle-ad"></i> My Ads</a>
-                <a href="trades.html"><i class="fa-solid fa-right-left"></i> Trades</a>
-                <a href="wallet.html"><i class="fa-solid fa-wallet"></i> Wallet</a>
-                <a href="top-traders.html"><i class="fa-solid fa-trophy"></i> Top Traders</a>
+                <a href="trades.html" class="mobile-hide-link"><i class="fa-solid fa-right-left"></i> Trades</a>
+                <a href="wallet.html" class="mobile-hide-link"><i class="fa-solid fa-wallet"></i> Wallet</a>
+                <a href="top-traders.html" class="mobile-hide-link"><i class="fa-solid fa-trophy"></i> Top Traders</a>
             </div>
         </div>
         <div class="nav-right">
@@ -395,6 +430,17 @@
     </div>
 
     <script>
+        const API_BASE = 'https://tbr-exchange-backend.onrender.com';
+
+        function resolveProfileAvatarUrl(raw) {
+            if (!raw || raw === 'null' || raw === 'undefined') return '';
+            const str = String(raw).trim();
+            if (!str) return '';
+            if (str.startsWith('data:image') || str.startsWith('http://') || str.startsWith('https://')) return str;
+            if (str.startsWith('/')) return `${API_BASE}${str}`;
+            return str;
+        }
+
         function copyUserId() {
             const userIdText = document.getElementById('userUniqueId').innerText;
             if (!userIdText || userIdText.includes('Loading') || !userIdText.startsWith('TBR-')) return;
@@ -412,7 +458,6 @@
             });
         }
 
-        // 🚀 ጥብቅ የሆነ የአይዲ ማውጫ (TBR- የሚለውን ብቻ ነው የሚያሳልፈው)
         function getStoredId() {
             let tbrId = localStorage.getItem('tbrId') || localStorage.getItem('tbrExchangeId');
             
@@ -447,7 +492,6 @@
             return ''; 
         }
 
-        // 1. ወዲያውኑ ዩአይን የሚያዘምነው ዋና ፋንክሽን
         function updateProfileUI() {
             let name = localStorage.getItem('userName') || localStorage.getItem('fullName') || localStorage.getItem('name') || "USER";
             let email = localStorage.getItem('userEmail') || localStorage.getItem('email') || "";
@@ -455,10 +499,11 @@
             let rejectionReason = localStorage.getItem('kycRejectionReason') || 'Document check failed';
             let storedFullName = localStorage.getItem('fullName') || '';
             
-            // 🔴 የተጣራው አይዲ እዚህ ይገባል
             let userId = getStoredId();
             
-            let savedAvatar = localStorage.getItem('userAvatar') || localStorage.getItem('profilePicture') || localStorage.getItem('profilePic');
+            let savedAvatar = resolveProfileAvatarUrl(
+                localStorage.getItem('userAvatar') || localStorage.getItem('profilePicture') || localStorage.getItem('profilePic')
+            );
             
             let totalTrades = localStorage.getItem('totalTrades') || '0';
             let volume = localStorage.getItem('volume') || '0 USDT';
@@ -490,7 +535,7 @@
             }
 
             const avatarBox = document.getElementById('avatarInitial');
-            if (savedAvatar && savedAvatar !== 'null' && savedAvatar !== 'undefined' && savedAvatar.trim() !== "") {
+            if (savedAvatar) {
                 avatarBox.style.backgroundImage = `url('${savedAvatar}')`;
                 avatarBox.style.backgroundSize = "cover";
                 avatarBox.style.backgroundPosition = "center";
@@ -549,18 +594,18 @@
             }
         }
 
-        // 2. ከሰርቨር ጋር በጀርባ ዳታ የሚያመሳስል ፋንክሽን
         async function syncWithServer() {
             try {
                 const token = localStorage.getItem('token') || localStorage.getItem('authToken');
                 if (!token) return;
 
-                const response = await fetch('https://tbr-exchange-backend.onrender.com/api/user/profile', {
+                const response = await fetch(`${API_BASE}/api/user/profile?t=${Date.now()}`, {
                     method: 'GET',
                     headers: { 
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
-                    }
+                    },
+                    cache: 'no-store'
                 });
                 
                 if (response.ok) {
@@ -579,6 +624,8 @@
                             newId = 'TBR-' + String(user.numericId).padStart(6, '0');
                         } else if (user.tbrId && String(user.tbrId).startsWith('TBR-')) {
                             newId = user.tbrId;
+                        } else if (user.userId && String(user.userId).startsWith('TBR-')) {
+                            newId = user.userId;
                         }
 
                         if (newId !== "") {
@@ -587,8 +634,9 @@
                         }
                         
                         if (user.avatar && user.avatar !== 'null' && user.avatar.trim() !== '') {
-                            localStorage.setItem('userAvatar', user.avatar);
-                            localStorage.setItem('profilePicture', user.avatar);
+                            const fullAvUrl = resolveProfileAvatarUrl(user.avatar);
+                            localStorage.setItem('userAvatar', fullAvUrl);
+                            localStorage.setItem('profilePicture', fullAvUrl);
                         }
 
                         updateProfileUI(); 
@@ -599,8 +647,6 @@
             }
         }
 
-        // 🚀 3. ፔጁ ሲከፈት DOMContentLoaded የሚለውን ጠባቂ (listener) ሙሉ በሙሉ አጥፍቼዋለሁ! 
-        // ጃቫስክሪፕቱ እዚህ እንደደረሰ ያለ ምንም መዘግየት ዩአይን ወዲያውኑ አፕዴት ያደርገዋል።
         updateProfileUI(); 
         syncWithServer();  
     </script>
