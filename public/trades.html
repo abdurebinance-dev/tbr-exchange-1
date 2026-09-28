@@ -29,7 +29,8 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             color: var(--text-main);
             padding-top: 58px;
-            padding-bottom: 40px;
+            padding-bottom: 75px;
+            overflow-x: hidden;
         }
 
         /* Top Navbar */
@@ -80,23 +81,23 @@
         }
 
         /* =========================================================
-           🚀 1. "MY TRADES" LIST VIEW 🚀
+           🚀 1. "MY TRADES" LIST VIEW (PC Table + Mobile Cards!) 🚀
            ========================================================= */
         .my-trades-container {
             max-width: 1180px;
             margin: 0 auto;
-            padding: 24px 20px;
+            padding: 22px 20px;
             display: block;
         }
         .mt-header-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 22px;
+            margin-bottom: 20px;
         }
         .mt-title-wrap h1 {
-            margin: 0 0 5px 0;
-            font-size: 26px;
+            margin: 0 0 4px 0;
+            font-size: 25px;
             font-weight: 800;
             color: #ffffff;
         }
@@ -165,13 +166,13 @@
             gap: 10px;
         }
         .mt-avatar {
-            width: 32px;
-            height: 32px;
+            width: 34px;
+            height: 34px;
             border-radius: 50%;
             background: rgba(14, 203, 129, 0.14);
             border: 1px solid rgba(14, 203, 129, 0.3);
             color: var(--green);
-            font-size: 11px;
+            font-size: 11.5px;
             font-weight: 800;
             display: flex;
             align-items: center;
@@ -251,10 +252,11 @@
             display: inline-flex;
             align-items: center;
             gap: 5px;
-            padding: 4px 12px;
+            padding: 4px 11px;
             border-radius: 16px;
             font-size: 11px;
             font-weight: 700;
+            white-space: nowrap;
         }
         .mt-status-pill.locked {
             background: rgba(59, 130, 246, 0.12);
@@ -273,8 +275,8 @@
         }
         .mt-status-pill.completed {
             color: var(--green);
-            background: transparent;
-            padding-left: 0;
+            background: rgba(14, 203, 129, 0.1);
+            border: 1px solid rgba(14, 203, 129, 0.3);
         }
         .mt-status-pill.disputed {
             background: rgba(246, 70, 93, 0.12);
@@ -296,6 +298,99 @@
         .mt-action-link:hover { color: #ffffff; }
         .mt-action-link.reply-green { color: var(--green); }
 
+        /* 📱 Mobile Cards Container for "My Trades" List (Hidden on PC, Shown on Mobile!) 📱 */
+        .mt-mobile-cards-list {
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .mt-m-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 14px 15px;
+            cursor: pointer;
+            transition: transform 0.15s, border-color 0.15s;
+        }
+        .mt-m-card.active-trade-border {
+            border-color: rgba(14, 203, 129, 0.4);
+            background: linear-gradient(180deg, rgba(14, 203, 129, 0.04) 0%, #11151c 100%);
+        }
+        .mt-m-card:active {
+            transform: scale(0.99);
+        }
+        .mt-m-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .mt-m-user {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .mt-m-name-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .mt-m-name {
+            font-size: 14px;
+            font-weight: 800;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .mt-m-id-date {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-family: monospace;
+        }
+        .mt-m-mid {
+            background: #0c0f14;
+            border: 1px solid #181f29;
+            border-radius: 10px;
+            padding: 11px 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 11px;
+        }
+        .mt-m-usdt {
+            font-size: 16px;
+            font-weight: 800;
+            color: var(--green);
+            font-family: monospace;
+        }
+        .mt-m-etb {
+            font-size: 12px;
+            color: #d1d5db;
+            font-family: monospace;
+            margin-top: 2px;
+        }
+        .mt-m-rate-box {
+            text-align: right;
+        }
+        .mt-m-rate {
+            font-size: 11.5px;
+            color: var(--text-muted);
+            font-family: monospace;
+        }
+        .mt-m-method {
+            font-size: 11.5px;
+            color: var(--green);
+            font-weight: 700;
+            margin-top: 3px;
+        }
+        .mt-m-foot {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 4px;
+        }
+
         /* =========================================================
            🚀 2. SINGLE TRADE ESCROW & CHAT ROOM VIEW 🚀
            ========================================================= */
@@ -305,7 +400,6 @@
             display: none;
         }
 
-        /* Top Sub-Header Bar (Matches Screenshot 1 & 2!) */
         .tr-sticky-subheader {
             background: #080b0f;
             border-bottom: 1px solid var(--border-color);
@@ -353,7 +447,6 @@
             font-family: monospace;
         }
 
-        /* Info / Chat Segmented Pill Toggle */
         .tr-view-toggle {
             background: #11151c;
             border: 1px solid #222936;
@@ -438,7 +531,6 @@
             border-color: rgba(246, 70, 93, 0.35);
         }
 
-        /* Green "Chat with Partner" Banner Card (Screenshot 1) */
         .tap-chat-banner-card {
             background: rgba(14, 203, 129, 0.06);
             border: 1px solid rgba(14, 203, 129, 0.24);
@@ -486,7 +578,6 @@
             font-size: 14px;
         }
 
-        /* Role & Order Overview Hero Card ("You are the Buyer / Seller" - Screenshot 1) */
         .role-hero-card {
             background: var(--card-bg);
             border: 1px solid var(--border-color);
@@ -759,7 +850,7 @@
             color: var(--green);
         }
 
-        /* Dedicated "Send payment to" Card in Left Column (Screenshot 2!) */
+        /* Dedicated "Send payment to" Card */
         .send-payment-to-card {
             background: var(--card-bg);
             border: 1px solid var(--border-color);
@@ -852,7 +943,6 @@
             border-color: var(--accent-gold);
         }
 
-        /* Seller Receive Summary Card */
         .seller-bank-summary-card {
             background: var(--card-bg);
             border: 1px solid var(--border-color);
@@ -889,7 +979,6 @@
             font-weight: 700;
         }
 
-        /* Payment Window Countdown Card (Screenshot 2) */
         .timer-card {
             background: rgba(234, 179, 8, 0.04);
             border: 1px solid rgba(234, 179, 8, 0.28);
@@ -987,7 +1076,7 @@
         .status-waiting-card.blue-theme .sw-title { color: #60a5fa; }
         .sw-sub { font-size: 12px; color: var(--text-muted); }
 
-        /* Action Buttons (Screenshot 2) */
+        /* Action Buttons */
         .primary-yellow-btn {
             width: 100%;
             background: #f59e0b;
@@ -1474,11 +1563,75 @@
             cursor: pointer;
         }
 
+        /* 📱 Mobile Bottom Navigation Bar (Matches Dashboard Screenshot!) 📱 */
+        .mobile-bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: #0b0e11;
+            border-top: 1px solid var(--border-color);
+            display: none;
+            justify-content: space-around;
+            align-items: center;
+            padding: 8px 4px 10px 4px;
+            z-index: 1200;
+        }
+        .mbn-item {
+            color: #848e9c;
+            text-decoration: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            font-size: 10.5px;
+            font-weight: 600;
+            position: relative;
+            flex: 1;
+        }
+        .mbn-item i {
+            font-size: 16px;
+        }
+        .mbn-item.active {
+            color: var(--accent-gold);
+        }
+        .mbn-badge {
+            position: absolute;
+            top: -4px;
+            right: 26%;
+            background: var(--green);
+            color: #000;
+            font-size: 9px;
+            font-weight: 800;
+            padding: 1px 5px;
+            border-radius: 10px;
+            display: none;
+        }
+
         /* =========================================================
-           📱 MOBILE RESPONSIVE INFO / CHAT TAB LAYOUT 📱
+           📱 MOBILE RESPONSIVE LAYOUT (My Trades Cards + Trade Room) 📱
            ========================================================= */
         @media (max-width: 960px) {
             .nav-links { display: none; }
+            .mobile-bottom-nav { display: flex; }
+
+            .my-trades-container {
+                padding: 14px 12px 24px 12px;
+            }
+            .mt-header-row {
+                margin-bottom: 14px;
+            }
+            .mt-title-wrap h1 {
+                font-size: 22px;
+            }
+            /* Hide wide PC Table on Mobile and show sleek Mobile Cards instead! */
+            .mt-table-card {
+                display: none !important;
+            }
+            .mt-mobile-cards-list {
+                display: flex !important;
+            }
+
             .tr-sticky-subheader {
                 padding: 10px 12px;
                 top: 48px;
@@ -1487,7 +1640,6 @@
                 grid-template-columns: 1fr;
                 padding: 12px 10px;
             }
-            /* On Mobile: Show Either Info Column OR Chat Card based on active tab */
             .trade-room-outer.mobile-tab-info .left-escrow-col {
                 display: flex;
             }
@@ -1499,8 +1651,8 @@
             }
             .trade-room-outer.mobile-tab-chat .right-chat-card {
                 display: flex;
-                height: calc(100vh - 135px);
-                min-height: 500px;
+                height: calc(100vh - 180px);
+                min-height: 460px;
             }
         }
 
@@ -1598,10 +1750,9 @@
         }
         .cm-foot-note { font-size: 11px; color: #6c7583; margin-bottom: 16px; }
 
-        /* Copy Toast Notification */
         .copy-toast {
             position: fixed;
-            bottom: 24px;
+            bottom: 75px;
             left: 50%;
             transform: translateX(-50%);
             background: #0ecb81;
@@ -1642,7 +1793,7 @@
     </div>
 
     <!-- =========================================================
-         🚀 VIEW A: "MY TRADES" LIST VIEW 🚀
+         🚀 VIEW A: "MY TRADES" LIST VIEW (PC Table + Mobile Cards) 🚀
          ========================================================= -->
     <div class="my-trades-container" id="myTradesListView">
         <div class="mt-header-row">
@@ -1655,6 +1806,7 @@
             </a>
         </div>
 
+        <!-- 1. PC Table View -->
         <div class="mt-table-card">
             <table class="mt-table">
                 <thead>
@@ -1677,6 +1829,13 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- 2. Mobile Cards View (Zero Horizontal Scroll on Phones!) -->
+        <div class="mt-mobile-cards-list" id="myTradesMobileCardsList">
+            <div style="text-align:center; color:var(--text-muted); padding:35px; background:var(--card-bg); border:1px solid var(--border-color); border-radius:14px;">
+                <i class="fa-solid fa-circle-notch fa-spin"></i> Loading your trades...
+            </div>
+        </div>
     </div>
 
     <!-- =========================================================
@@ -1684,7 +1843,7 @@
          ========================================================= -->
     <div class="trade-room-outer mobile-tab-info" id="singleTradeRoomView">
 
-        <!-- Sticky Top Sub-Header Bar (Matches Screenshot 1 & 2!) -->
+        <!-- Sticky Top Sub-Header Bar -->
         <div class="tr-sticky-subheader">
             <div class="tr-sub-left">
                 <a href="trades.html" class="tr-back-btn" title="Back to My Trades">
@@ -1717,7 +1876,7 @@
             <!-- LEFT COLUMN (INFO & ESCROW FLOW) -->
             <div class="left-escrow-col">
 
-                <!-- Green "Chat with Partner" Card (Matches Screenshot 1!) -->
+                <!-- Green "Chat with Partner" Card -->
                 <div class="tap-chat-banner-card" onclick="switchMobileTradeView('chat')">
                     <div class="tcb-left">
                         <div class="tcb-icon"><i class="fa-regular fa-comment-dots"></i></div>
@@ -1732,7 +1891,7 @@
                 <!-- 1. ACTIVE TRADE FLOW VIEW -->
                 <div id="uiActiveTradeSection" style="display:flex; flex-direction:column; gap:12px;">
 
-                    <!-- "You are the Buyer / Seller" Trade Summary Hero Card (Matches Screenshot 1!) -->
+                    <!-- "You are the Buyer / Seller" Trade Summary Hero Card -->
                     <div class="role-hero-card">
                         <div class="rhc-top-bar">
                             <div class="rhc-top-left">
@@ -1812,7 +1971,7 @@
                     <!-- Numbered Instructions Card -->
                     <div class="instructions-card" id="uiInstructionsCard"></div>
 
-                    <!-- Dedicated "Send payment to" Card in Info Column (Matches Screenshot 2!) -->
+                    <!-- Dedicated "Send payment to" Card -->
                     <div class="send-payment-to-card" id="uiSendPaymentToCard">
                         <div class="spt-header">
                             <div class="spt-header-left">
@@ -2097,6 +2256,31 @@
 
     </div>
 
+    <!-- 📱 Mobile Bottom Navigation Bar (Matches Dashboard Screenshot!) 📱 -->
+    <div class="mobile-bottom-nav">
+        <a href="dashboard.html" class="mbn-item">
+            <i class="fa-solid fa-house"></i>
+            <span>Home</span>
+        </a>
+        <a href="wallet.html" class="mbn-item">
+            <i class="fa-solid fa-wallet"></i>
+            <span>Wallet</span>
+        </a>
+        <a href="market.html" class="mbn-item">
+            <i class="fa-solid fa-store"></i>
+            <span>Market</span>
+        </a>
+        <a href="trades.html" class="mbn-item active">
+            <i class="fa-solid fa-comments"></i>
+            <span>Chat</span>
+            <span class="mbn-badge" id="mbnActiveTradesBadge">0</span>
+        </a>
+        <a href="profile.html" class="mbn-item">
+            <i class="fa-solid fa-user"></i>
+            <span>Profile</span>
+        </a>
+    </div>
+
     <!-- 1. BUYER MODAL: CONFIRM PAYMENT SENT & UPLOAD RECEIPT -->
     <div class="modal-overlay" id="confirmPaymentModal" onclick="if(event.target===this) closeConfirmPaymentModal()">
         <div class="confirm-modal-card">
@@ -2179,7 +2363,6 @@
         let isFetchingList = false;
         let isFetchingRoom = false;
 
-        // 📱 Mobile Info / Chat View Switcher (Matches Screenshot 1 & 2!) 📱
         function switchMobileTradeView(tabName) {
             const outer = document.getElementById('singleTradeRoomView');
             const infoBtn = document.getElementById('btnToggleInfo');
@@ -2492,16 +2675,23 @@
 
         function renderMyTradesTable(trades) {
             const tbody = document.getElementById('myTradesTableBody');
+            const mobileCardsContainer = document.getElementById('myTradesMobileCardsList');
             document.getElementById('mtTotalCountText').innerText = `${trades ? trades.length : 0} total trades`;
 
             if (!trades || trades.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:35px; color:var(--text-muted);">No trades found yet. Click "Trade" to start buying or selling USDT.</td></tr>`;
+                const emptyMsg = `No trades found yet. Click "Trade" to start buying or selling USDT.`;
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:35px; color:var(--text-muted);">${emptyMsg}</td></tr>`;
+                if (mobileCardsContainer) {
+                    mobileCardsContainer.innerHTML = `<div style="text-align:center; padding:35px 18px; color:var(--text-muted); background:var(--card-bg); border:1px solid var(--border-color); border-radius:14px; font-size:13px;">${emptyMsg}</div>`;
+                }
                 return;
             }
 
             const { email, userId } = getLoggedUserIdentity();
             const myId = currentUserId || userId || '';
             let html = '';
+            let mobileHtml = '';
+            let activeTradesCount = 0;
 
             trades.forEach(tr => {
                 myTradesMemoryMap[tr._id] = tr;
@@ -2551,6 +2741,7 @@
                 let actionLinkHtml = '';
                 let rateSubHtml = `<div class="mt-rate-sub">${dateStr}</div>`;
                 let rowHighlight = '';
+                let mobileCardActiveCls = '';
 
                 if (resState.isDisputeRefunded) {
                     statusPillHtml = `<span class="mt-status-pill cancelled" style="color:#eab308; border-color:rgba(234,179,8,0.4); background:rgba(234,179,8,0.1);"><i class="fa-solid fa-rotate-left"></i> Refunded</span>`;
@@ -2560,7 +2751,9 @@
                     rateSubHtml = `<div class="mt-rate-sub method-green">${tr.paymentMethod || 'Bank'}</div>`;
                     actionLinkHtml = `<span class="mt-action-link"><i class="fa-solid fa-download" style="color:var(--text-muted); margin-right:4px;"></i> Receipt &rarr;</span>`;
                 } else if (st === 'funds_locked' || st === 'payment_sent' || st === 'disputed') {
+                    activeTradesCount++;
                     rowHighlight = 'active-row-highlight';
+                    mobileCardActiveCls = 'active-trade-border';
                     if (st === 'funds_locked') {
                         statusPillHtml = `<span class="mt-status-pill locked">Funds Locked</span>`;
                     } else if (st === 'payment_sent') {
@@ -2587,6 +2780,7 @@
                     ? `<span class="mt-msg-badge"><i class="fa-regular fa-comment"></i> ${userMsgsCount}</span>`
                     : '';
 
+                // 1. PC Table Row
                 html += `
                     <tr class="${rowHighlight}" onclick="openSingleTradeInstant('${targetId}')" style="cursor:pointer;">
                         <td class="mt-id-col">${tradeIdShort}</td>
@@ -2614,9 +2808,57 @@
                         <td style="text-align:right;">${actionLinkHtml}</td>
                     </tr>
                 `;
+
+                // 2. Mobile Card Item (Clean, Zero Horizontal Scroll!)
+                mobileHtml += `
+                    <div class="mt-m-card ${mobileCardActiveCls}" onclick="openSingleTradeInstant('${targetId}')">
+                        <div class="mt-m-top">
+                            <div class="mt-m-user">
+                                <div class="mt-avatar">${avatarHtml}</div>
+                                <div class="mt-m-name-wrap">
+                                    <div class="mt-m-name">
+                                        <span>${partnerName}</span>
+                                        ${msgBadgeHtml}
+                                    </div>
+                                    <div class="mt-m-id-date">${tradeIdShort} &middot; ${dateStr}</div>
+                                </div>
+                            </div>
+                            ${statusPillHtml}
+                        </div>
+
+                        <div class="mt-m-mid">
+                            <div>
+                                <div class="mt-m-usdt">${usdtVal} USDT</div>
+                                <div class="mt-m-etb">${etbVal} ETB</div>
+                            </div>
+                            <div class="mt-m-rate-box">
+                                <div class="mt-m-rate">${priceVal} ETB/USDT</div>
+                                <div class="mt-m-method">${tr.paymentMethod || 'Bank'}</div>
+                            </div>
+                        </div>
+
+                        <div class="mt-m-foot">
+                            <span class="mt-role-pill ${roleCls}">${roleArrow} ${roleLabel} USDT</span>
+                            ${actionLinkHtml}
+                        </div>
+                    </div>
+                `;
             });
 
             tbody.innerHTML = html;
+            if (mobileCardsContainer) {
+                mobileCardsContainer.innerHTML = mobileHtml;
+            }
+
+            const mbnBadge = document.getElementById('mbnActiveTradesBadge');
+            if (mbnBadge) {
+                if (activeTradesCount > 0) {
+                    mbnBadge.innerText = activeTradesCount;
+                    mbnBadge.style.display = 'inline-block';
+                } else {
+                    mbnBadge.style.display = 'none';
+                }
+            }
         }
 
         async function fetchTradeFromServer(tradeIdParam) {
@@ -2706,13 +2948,11 @@
                 ? `<img src="${partnerAvatar}" alt="${partnerName}" onerror="this.outerHTML='${initials}'">`
                 : initials;
 
-            // 1. Populate Sticky Sub-Header Bar & Green Chat Banner
             document.getElementById('uiTopPartnerName').innerText = partnerName;
             document.getElementById('uiTopUsdtSummary').innerText = usdtFormatted;
             document.getElementById('uiTradeNumber').innerText = `Trade #${tradeNum}`;
             document.getElementById('uiGreenBannerChatTitle').innerText = `Chat with ${partnerName}`;
 
-            // Unread / user chat message count badge on Chat toggle pill
             const userMsgsCount = Array.isArray(activeTrade.messages)
                 ? activeTrade.messages.filter(m => !m.isSystem && m.senderId !== 'system' && m.senderId !== 'admin').length
                 : 0;
@@ -2724,7 +2964,6 @@
                 unreadBadge.style.display = 'none';
             }
 
-            // 2. Populate Role & Order Summary Hero Card (Screenshot 1)
             document.getElementById('uiHeroRoleIcon').innerHTML = isBuyer ? '&#8601;' : '&#8599;';
             document.getElementById('uiHeroRoleTitle').innerText = isBuyer ? 'You are the Buyer' : 'You are the Seller';
             document.getElementById('uiHeroRoleSub').innerText = isBuyer
@@ -2740,11 +2979,9 @@
             document.getElementById('uiHeroPartnerAvatar').innerHTML = avatarInnerHtml;
             document.getElementById('uiHeroPartnerRoleTag').innerText = isBuyer ? 'Seller' : 'Buyer';
 
-            // 3. Populate Chat Header
             document.getElementById('uiPartnerName').innerText = partnerName;
             document.getElementById('uiPartnerAvatar').innerHTML = avatarInnerHtml;
 
-            // 4. Status Badges (Top Bar + Hero Card)
             const badgeEl = document.getElementById('uiStatusBadge');
             const heroBadgeEl = document.getElementById('uiHeroStatusBadge');
             let statusLabelText = 'Funds Locked';
@@ -2781,7 +3018,6 @@
             const compSec = document.getElementById('uiCompletedSection');
             const cancSec = document.getElementById('uiCancelledSection');
 
-            // COMPLETED OR RESOLVED
             if (status === 'completed' || resState.isDisputeResolved) {
                 activeSec.style.display = 'none';
                 cancSec.style.display = 'none';
@@ -2820,7 +3056,6 @@
                 return;
             }
 
-            // CANCELLED OR REFUNDED
             if (status === 'cancelled' || resState.isDisputeRefunded) {
                 activeSec.style.display = 'none';
                 compSec.style.display = 'none';
@@ -2871,7 +3106,6 @@
                 return;
             }
 
-            // ACTIVE TRADE (funds_locked, payment_sent, disputed)
             activeSec.style.display = 'flex';
             compSec.style.display = 'none';
             cancSec.style.display = 'none';
@@ -2932,7 +3166,6 @@
             const accLabelText = isMobileWalletMethod ? 'Phone' : 'Account No.';
 
             if (isBuyer) {
-                // Show "Send payment to" Card in Info Column (Screenshot 2) AND in Chat Dropdown
                 sendPayCard.style.display = 'block';
                 document.getElementById('uiSptMethodPill').innerText = payMethod;
                 document.getElementById('uiSptAccountName').innerText = payDetails.accountName || partnerName;
