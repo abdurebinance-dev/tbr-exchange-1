@@ -9,11 +9,11 @@
     <style>
         :root {
             --bg-color: #050709;
-            --card-bg: #0f1318;
-            --card-inner: #141920;
-            --border-color: #1e242d;
+            --card-bg: #11151c;
+            --card-inner: #161b24;
+            --border-color: #1e2530;
             --accent-gold: #f0b90b;
-            --yellow-btn: #eab308;
+            --yellow-btn: #f59e0b;
             --green: #0ecb81;
             --blue: #3b82f6;
             --red: #f6465d;
@@ -28,7 +28,7 @@
             margin: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             color: var(--text-main);
-            padding-top: 62px;
+            padding-top: 58px;
             padding-bottom: 40px;
         }
 
@@ -40,7 +40,7 @@
             width: 100%;
             background: #0b0e11;
             border-bottom: 1px solid var(--border-color);
-            padding: 8px 20px;
+            padding: 8px 18px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -80,7 +80,7 @@
         }
 
         /* =========================================================
-           🚀 1. "MY TRADES" LIST VIEW (Default visible - No Black Screen!) 🚀
+           🚀 1. "MY TRADES" LIST VIEW 🚀
            ========================================================= */
         .my-trades-container {
             max-width: 1180px;
@@ -299,69 +299,126 @@
         /* =========================================================
            🚀 2. SINGLE TRADE ESCROW & CHAT ROOM VIEW 🚀
            ========================================================= */
-        .trade-room-wrapper {
+        .trade-room-outer {
             max-width: 1220px;
             margin: 0 auto;
-            padding: 16px 20px;
             display: none;
+        }
+
+        /* Top Sub-Header Bar (Matches Screenshot 1 & 2!) */
+        .tr-sticky-subheader {
+            background: #080b0f;
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            position: sticky;
+            top: 50px;
+            z-index: 900;
+        }
+        .tr-sub-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .tr-back-btn {
+            color: #9ca3af;
+            text-decoration: none;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 26px;
+            border-radius: 6px;
+            transition: 0.15s;
+        }
+        .tr-back-btn:hover { color: #ffffff; background: #161b22; }
+        .tr-sub-title-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 3px;
+        }
+        .tr-sub-partner {
+            font-size: 14.5px;
+            font-weight: 800;
+            color: #ffffff;
+        }
+        .tr-sub-meta {
+            font-size: 11.5px;
+            color: var(--text-muted);
+            font-family: monospace;
+        }
+
+        /* Info / Chat Segmented Pill Toggle */
+        .tr-view-toggle {
+            background: #11151c;
+            border: 1px solid #222936;
+            border-radius: 10px;
+            padding: 3px;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+        .tr-toggle-pill {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 6px 12px;
+            border-radius: 7px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: 0.15s;
+            position: relative;
+        }
+        .tr-toggle-pill.active {
+            background: #1b222d;
+            color: #ffffff;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+        }
+        .tr-chat-unread-dot {
+            background: var(--green);
+            color: #000;
+            font-size: 9.5px;
+            font-weight: 800;
+            padding: 1px 5px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .trade-room-wrapper {
+            padding: 16px 18px;
+            display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 20px;
             align-items: start;
         }
 
-        @media (max-width: 960px) {
-            .trade-room-wrapper {
-                grid-template-columns: 1fr;
-                padding: 10px 10px;
-            }
-            .nav-links { display: none; }
-        }
-
         .left-escrow-col {
             display: flex;
             flex-direction: column;
-            gap: 14px;
-        }
-
-        .trade-top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-bottom: 12px;
-            border-bottom: 1px solid var(--border-color);
-        }
-        .breadcrumb-wrap {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-        }
-        .breadcrumb-wrap a {
-            color: var(--text-muted);
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            cursor: pointer;
-        }
-        .breadcrumb-wrap a:hover { color: #fff; }
-        .breadcrumb-wrap .sep { color: #3a4250; }
-        .breadcrumb-wrap .trade-id-label {
-            font-weight: 800;
-            color: #ffffff;
+            gap: 12px;
         }
 
         .status-pill-badge {
-            background: rgba(59, 130, 246, 0.12);
+            background: rgba(59, 130, 246, 0.14);
             color: #60a5fa;
-            border: 1px solid rgba(59, 130, 246, 0.3);
-            padding: 5px 13px;
-            border-radius: 20px;
+            border: 1px solid rgba(59, 130, 246, 0.35);
+            padding: 3px 10px;
+            border-radius: 16px;
             font-size: 11px;
             font-weight: 700;
+            white-space: nowrap;
         }
         .status-pill-badge.payment-sent {
-            background: rgba(234, 179, 8, 0.12);
+            background: rgba(234, 179, 8, 0.14);
             color: #eab308;
             border-color: rgba(234, 179, 8, 0.35);
         }
@@ -381,12 +438,233 @@
             border-color: rgba(246, 70, 93, 0.35);
         }
 
+        /* Green "Chat with Partner" Banner Card (Screenshot 1) */
+        .tap-chat-banner-card {
+            background: rgba(14, 203, 129, 0.06);
+            border: 1px solid rgba(14, 203, 129, 0.24);
+            border-radius: 14px;
+            padding: 14px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .tap-chat-banner-card:hover {
+            background: rgba(14, 203, 129, 0.1);
+        }
+        .tcb-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .tcb-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: rgba(14, 203, 129, 0.14);
+            border: 1px solid rgba(14, 203, 129, 0.3);
+            color: var(--green);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            flex-shrink: 0;
+        }
+        .tcb-title {
+            font-size: 13.5px;
+            font-weight: 800;
+            color: var(--green);
+            margin-bottom: 3px;
+        }
+        .tcb-sub {
+            font-size: 11.5px;
+            color: var(--text-muted);
+        }
+        .tcb-arrow {
+            color: var(--green);
+            font-size: 14px;
+        }
+
+        /* Role & Order Overview Hero Card ("You are the Buyer / Seller" - Screenshot 1) */
+        .role-hero-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            overflow: hidden;
+        }
+        .rhc-top-bar {
+            background: rgba(234, 179, 8, 0.07);
+            border-bottom: 1px solid var(--border-color);
+            padding: 14px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+        .rhc-top-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .rhc-role-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            background: rgba(234, 179, 8, 0.15);
+            border: 1px solid rgba(234, 179, 8, 0.3);
+            color: #eab308;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+        .rhc-role-title {
+            font-size: 13.5px;
+            font-weight: 800;
+            color: #eab308;
+            margin-bottom: 2px;
+        }
+        .rhc-role-sub {
+            font-size: 11.5px;
+            color: var(--text-muted);
+        }
+
+        .rhc-middle-body {
+            padding: 16px 18px;
+            border-bottom: 1px solid #19202a;
+        }
+        .rhc-label-sm {
+            font-size: 10.5px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            margin-bottom: 6px;
+        }
+        .rhc-big-usdt {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--green);
+            line-height: 1.1;
+            margin-bottom: 12px;
+        }
+        .rhc-big-usdt span {
+            font-size: 16px;
+            color: #9ca3af;
+            font-weight: 700;
+        }
+        .rhc-fiat-meta-row {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        .rhc-fiat-meta-row strong {
+            color: #ffffff;
+            font-weight: 700;
+        }
+        .rhc-fiat-meta-row .sep-bar {
+            color: #2c3545;
+        }
+        .rhc-via-method {
+            color: var(--green);
+            font-weight: 700;
+        }
+        .inline-copy-btn {
+            background: transparent;
+            border: none;
+            color: #848e9c;
+            cursor: pointer;
+            padding: 2px 4px;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+        }
+        .inline-copy-btn:hover { color: #ffffff; }
+
+        .rhc-bottom-trader {
+            padding: 13px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .rhc-trader-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .rhc-avatar-wrap {
+            position: relative;
+            width: 34px;
+            height: 34px;
+            flex-shrink: 0;
+        }
+        .rhc-avatar {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: rgba(14, 203, 129, 0.15);
+            border: 1px solid rgba(14, 203, 129, 0.35);
+            color: var(--green);
+            font-size: 12px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .rhc-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .rhc-online-dot {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--green);
+            border: 1.5px solid var(--card-bg);
+        }
+        .rhc-trader-name {
+            font-size: 13.5px;
+            font-weight: 800;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 2px;
+        }
+        .rhc-trader-name i {
+            color: var(--green);
+            font-size: 12px;
+        }
+        .rhc-trader-stats {
+            font-size: 11.5px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .rhc-trader-stats i {
+            color: #eab308;
+            font-size: 10.5px;
+        }
+        .rhc-counterparty-role-tag {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
         /* 4-Step Progress Tracker Card */
         .stepper-card {
             background: var(--card-bg);
             border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 20px 18px;
+            border-radius: 14px;
+            padding: 18px 16px;
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
@@ -396,7 +674,7 @@
             flex-direction: column;
             align-items: center;
             text-align: center;
-            width: 72px;
+            width: 68px;
         }
         .step-circle {
             width: 28px;
@@ -423,7 +701,7 @@
             color: var(--green);
         }
         .step-label {
-            font-size: 10px;
+            font-size: 10.5px;
             line-height: 1.25;
             color: #5a6372;
             font-weight: 600;
@@ -443,7 +721,7 @@
         .instructions-card {
             background: var(--card-bg);
             border: 1px solid var(--border-color);
-            border-radius: 12px;
+            border-radius: 14px;
             padding: 16px 18px;
             display: flex;
             flex-direction: column;
@@ -455,19 +733,20 @@
             gap: 12px;
             font-size: 12.5px;
             color: var(--text-muted);
+            line-height: 1.4;
         }
         .inst-row.highlight {
             color: #ffffff;
             font-weight: 700;
         }
         .inst-num {
-            width: 22px;
-            height: 22px;
+            width: 24px;
+            height: 24px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 10px;
+            font-size: 11px;
             font-weight: 700;
             background: #171c24;
             border: 1px solid #28303d;
@@ -480,11 +759,104 @@
             color: var(--green);
         }
 
+        /* Dedicated "Send payment to" Card in Left Column (Screenshot 2!) */
+        .send-payment-to-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            overflow: hidden;
+            display: none;
+        }
+        .spt-header {
+            padding: 14px 18px;
+            border-bottom: 1px solid #19202a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .spt-header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13.5px;
+            font-weight: 800;
+            color: #ffffff;
+        }
+        .spt-header-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            background: rgba(14, 203, 129, 0.12);
+            border: 1px solid rgba(14, 203, 129, 0.3);
+            color: var(--green);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+        }
+        .spt-method-pill {
+            background: rgba(14, 203, 129, 0.12);
+            border: 1px solid rgba(14, 203, 129, 0.3);
+            color: var(--green);
+            padding: 4px 11px;
+            border-radius: 16px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .spt-rows-wrap {
+            padding: 6px 18px;
+        }
+        .spt-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 13px 0;
+            border-bottom: 1px solid #171d26;
+            font-size: 13px;
+        }
+        .spt-row:last-child { border-bottom: none; }
+        .spt-row .k {
+            color: var(--text-muted);
+            font-size: 12.5px;
+        }
+        .spt-row .v {
+            color: #ffffff;
+            font-weight: 700;
+            font-family: monospace;
+            font-size: 13.5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .spt-row .v.gold-amount {
+            color: #eab308;
+            font-size: 15px;
+            font-weight: 800;
+        }
+        .spt-copy-box {
+            width: 28px;
+            height: 28px;
+            border-radius: 7px;
+            background: #171d26;
+            border: 1px solid #262f3d;
+            color: #848e9c;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+        .spt-copy-box:hover {
+            color: #ffffff;
+            border-color: var(--accent-gold);
+        }
+
         /* Seller Receive Summary Card */
         .seller-bank-summary-card {
             background: var(--card-bg);
             border: 1px solid var(--border-color);
-            border-radius: 12px;
+            border-radius: 14px;
             padding: 16px 18px;
             display: none;
             justify-content: space-between;
@@ -517,11 +889,11 @@
             font-weight: 700;
         }
 
-        /* Payment Window Countdown Card */
+        /* Payment Window Countdown Card (Screenshot 2) */
         .timer-card {
             background: rgba(234, 179, 8, 0.04);
             border: 1px solid rgba(234, 179, 8, 0.28);
-            border-radius: 12px;
+            border-radius: 14px;
             padding: 14px 18px;
         }
         .timer-card.warning-mode {
@@ -538,7 +910,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 12px;
+            font-size: 12.5px;
             font-weight: 700;
             color: #eab308;
         }
@@ -547,7 +919,7 @@
             color: var(--red);
         }
         .timer-clock {
-            font-size: 14px;
+            font-size: 14.5px;
             font-weight: 800;
             color: #eab308;
             font-family: monospace;
@@ -571,7 +943,7 @@
         .warning-card {
             background: var(--card-bg);
             border: 1px solid var(--border-color);
-            border-radius: 12px;
+            border-radius: 14px;
             padding: 14px 16px;
             display: flex;
             align-items: flex-start;
@@ -585,7 +957,7 @@
         .status-waiting-card {
             background: rgba(234, 179, 8, 0.05);
             border: 1px solid rgba(234, 179, 8, 0.25);
-            border-radius: 12px;
+            border-radius: 14px;
             padding: 16px 18px;
             display: none;
             align-items: center;
@@ -615,15 +987,15 @@
         .status-waiting-card.blue-theme .sw-title { color: #60a5fa; }
         .sw-sub { font-size: 12px; color: var(--text-muted); }
 
-        /* Buttons */
+        /* Action Buttons (Screenshot 2) */
         .primary-yellow-btn {
             width: 100%;
-            background: #eab308;
+            background: #f59e0b;
             color: #000000;
             border: none;
-            border-radius: 10px;
-            padding: 14px;
-            font-size: 13.5px;
+            border-radius: 12px;
+            padding: 15px;
+            font-size: 14px;
             font-weight: 800;
             cursor: pointer;
             display: flex;
@@ -632,7 +1004,7 @@
             gap: 8px;
             transition: 0.2s;
         }
-        .primary-yellow-btn:hover:not(:disabled) { background: #facc15; }
+        .primary-yellow-btn:hover:not(:disabled) { background: #fbbf24; }
         .primary-yellow-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
         .primary-green-btn {
@@ -640,9 +1012,9 @@
             background: var(--green);
             color: #000000;
             border: none;
-            border-radius: 10px;
-            padding: 14px;
-            font-size: 13.5px;
+            border-radius: 12px;
+            padding: 15px;
+            font-size: 14px;
             font-weight: 800;
             cursor: pointer;
             display: none;
@@ -656,8 +1028,8 @@
             background: rgba(246, 70, 93, 0.15);
             color: var(--red);
             border: 1px solid var(--red);
-            border-radius: 10px;
-            padding: 13px;
+            border-radius: 12px;
+            padding: 14px;
             font-size: 13px;
             font-weight: 800;
             cursor: pointer;
@@ -670,11 +1042,11 @@
         .secondary-cancel-btn {
             width: 100%;
             background: #0b0e12;
-            color: #d1d5db;
+            color: #e5e7eb;
             border: 1px solid var(--border-color);
-            border-radius: 10px;
-            padding: 12px;
-            font-size: 12.5px;
+            border-radius: 12px;
+            padding: 14px;
+            font-size: 13px;
             font-weight: 700;
             cursor: pointer;
             transition: 0.2s;
@@ -689,17 +1061,17 @@
         }
 
         .appeal-lock-card {
-            background: #0a0d11;
+            background: #0c0f14;
             border: 1px solid #161b22;
-            border-radius: 10px;
-            padding: 13px 16px;
+            border-radius: 12px;
+            padding: 14px 16px;
             font-size: 12px;
             color: #6c7583;
             display: flex;
             align-items: center;
             gap: 9px;
         }
-        .appeal-lock-card strong { color: #9ca3af; }
+        .appeal-lock-card strong { color: #9ca3af; font-family: monospace; }
 
         /* Completed State View */
         .completed-view-wrap {
@@ -840,12 +1212,18 @@
             border-radius: 14px;
             display: flex;
             flex-direction: column;
-            height: 650px;
+            height: 680px;
             overflow: hidden;
         }
         .chat-header {
-            padding: 16px 20px;
+            padding: 15px 18px;
             border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+        .chat-header-left {
             display: flex;
             align-items: center;
             gap: 12px;
@@ -1012,7 +1390,7 @@
 
         .msg-bubble-system {
             align-self: center;
-            max-width: 90%;
+            max-width: 92%;
             background: rgba(14, 203, 129, 0.07);
             border: 1px solid rgba(14, 203, 129, 0.22);
             color: #d1fae5;
@@ -1094,6 +1472,36 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
+        }
+
+        /* =========================================================
+           📱 MOBILE RESPONSIVE INFO / CHAT TAB LAYOUT 📱
+           ========================================================= */
+        @media (max-width: 960px) {
+            .nav-links { display: none; }
+            .tr-sticky-subheader {
+                padding: 10px 12px;
+                top: 48px;
+            }
+            .trade-room-wrapper {
+                grid-template-columns: 1fr;
+                padding: 12px 10px;
+            }
+            /* On Mobile: Show Either Info Column OR Chat Card based on active tab */
+            .trade-room-outer.mobile-tab-info .left-escrow-col {
+                display: flex;
+            }
+            .trade-room-outer.mobile-tab-info .right-chat-card {
+                display: none;
+            }
+            .trade-room-outer.mobile-tab-chat .left-escrow-col {
+                display: none;
+            }
+            .trade-room-outer.mobile-tab-chat .right-chat-card {
+                display: flex;
+                height: calc(100vh - 135px);
+                min-height: 500px;
+            }
         }
 
         /* Modals */
@@ -1189,9 +1597,28 @@
             gap: 5px;
         }
         .cm-foot-note { font-size: 11px; color: #6c7583; margin-bottom: 16px; }
+
+        /* Copy Toast Notification */
+        .copy-toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #0ecb81;
+            color: #000;
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-size: 12.5px;
+            font-weight: 800;
+            z-index: 5000;
+            display: none;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+        }
     </style>
 </head>
 <body>
+
+    <div class="copy-toast" id="copyToastBanner"><i class="fa-solid fa-check"></i> Copied to clipboard!</div>
 
     <!-- Top Navbar -->
     <div class="navbar">
@@ -1255,278 +1682,415 @@
     <!-- =========================================================
          🚀 VIEW B: SINGLE TRADE ESCROW & CHAT ROOM VIEW 🚀
          ========================================================= -->
-    <div class="trade-room-wrapper" id="singleTradeRoomView">
+    <div class="trade-room-outer mobile-tab-info" id="singleTradeRoomView">
 
-        <!-- LEFT COLUMN -->
-        <div class="left-escrow-col">
-            <div class="trade-top-bar">
-                <div class="breadcrumb-wrap">
-                    <a href="trades.html"><i class="fa-solid fa-chevron-left" style="font-size: 11px;"></i> My Orders</a>
-                    <span class="sep">/</span>
-                    <span class="trade-id-label" id="uiTradeNumber">Loading...</span>
-                </div>
-                <span class="status-pill-badge" id="uiStatusBadge">Funds Locked</span>
-            </div>
-
-            <!-- 1. ACTIVE TRADE FLOW VIEW -->
-            <div id="uiActiveTradeSection" style="display:flex; flex-direction:column; gap:14px;">
-                <div class="stepper-card">
-                    <div class="step-item done" id="step1Item">
-                        <div class="step-circle"><i class="fa-solid fa-check"></i></div>
-                        <div class="step-label">Order<br>Placed</div>
+        <!-- Sticky Top Sub-Header Bar (Matches Screenshot 1 & 2!) -->
+        <div class="tr-sticky-subheader">
+            <div class="tr-sub-left">
+                <a href="trades.html" class="tr-back-btn" title="Back to My Trades">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </a>
+                <div>
+                    <div class="tr-sub-title-row">
+                        <span class="tr-sub-partner" id="uiTopPartnerName">Trader</span>
+                        <span class="status-pill-badge" id="uiStatusBadge">Funds Locked</span>
                     </div>
-                    <div class="step-line done" id="stepLine1"></div>
-                    <div class="step-item active" id="step2Item">
-                        <div class="step-circle" id="step2Circle">2</div>
-                        <div class="step-label">Funds<br>Locked</div>
-                    </div>
-                    <div class="step-line" id="stepLine2"></div>
-                    <div class="step-item" id="step3Item">
-                        <div class="step-circle" id="step3Circle">3</div>
-                        <div class="step-label">Payment<br>Sent</div>
-                    </div>
-                    <div class="step-line" id="stepLine3"></div>
-                    <div class="step-item" id="step4Item">
-                        <div class="step-circle" id="step4Circle">4</div>
-                        <div class="step-label">Completed</div>
-                    </div>
-                </div>
-
-                <div class="instructions-card" id="uiInstructionsCard"></div>
-
-                <div class="seller-bank-summary-card" id="uiSellerSummaryCard">
-                    <div class="sbs-left">
-                        <div class="sbs-icon"><i class="fa-solid fa-file-invoice-dollar"></i></div>
-                        <div>
-                            <div class="sbs-holder" id="uiSellerHolderName">Account Holder</div>
-                            <div class="sbs-sub">Buyer will send <strong id="uiSellerEtbAmount">0.00 ETB</strong> via <span id="uiSellerBankSub">Bank</span></div>
-                        </div>
-                    </div>
-                    <span class="sbs-method-badge" id="uiSellerMethodBadge">Bank</span>
-                </div>
-
-                <div class="timer-card" id="uiTimerCard">
-                    <div class="timer-top">
-                        <div class="timer-label" id="uiTimerLabel"><i class="fa-regular fa-clock"></i> Payment window</div>
-                        <div class="timer-clock" id="uiCountdownClock">09m 59s</div>
-                    </div>
-                    <div class="timer-bar-bg">
-                        <div class="timer-bar-fill" id="uiTimerBarFill"></div>
-                    </div>
-                </div>
-
-                <div class="warning-card">
-                    <i class="fa-solid fa-triangle-exclamation"></i>
-                    <div id="uiWarningText">Only pay using the account details shown here. Never cancel after sending — use Appeal if there's an issue.</div>
-                </div>
-
-                <div class="status-waiting-card" id="uiWaitingStatusCard">
-                    <div class="sw-icon" id="uiWaitingIcon"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
-                    <div>
-                        <div class="sw-title" id="uiWaitingTitle">Waiting for seller to release</div>
-                        <div class="sw-sub" id="uiWaitingSub">Your payment is being verified. USDT will be credited once the seller confirms.</div>
-                    </div>
-                </div>
-
-                <button type="button" class="primary-yellow-btn" id="uiLeftMarkPaidBtn" style="display:none;" onclick="openConfirmPaymentModal()">
-                    <i class="fa-regular fa-circle-check"></i> Transferred, Notify Seller
-                </button>
-
-                <button type="button" class="primary-green-btn" id="uiLeftSellerReleaseBtn" onclick="openSellerReleaseModal()">
-                    <i class="fa-solid fa-circle-check"></i> I Have Received (Release USDT)
-                </button>
-
-                <button type="button" class="dispute-red-btn" id="uiApplyDisputeBtn" onclick="applyForDispute()">
-                    <i class="fa-solid fa-scale-balanced"></i> Apply for Dispute (Appeal to Admin)
-                </button>
-
-                <button type="button" class="secondary-cancel-btn" id="uiCancelTradeBtn" style="display:none;" onclick="cancelActiveTrade()">
-                    Cancel Order
-                </button>
-
-                <div class="appeal-lock-card" id="uiAppealLockCard">
-                    <i class="fa-solid fa-lock"></i>
-                    <span id="uiAppealLockText">Appeal unlocks in <strong id="uiAppealClock">09m 59s</strong></span>
-                </div>
-            </div>
-
-            <!-- 2. COMPLETED STATE VIEW -->
-            <div class="completed-view-wrap" id="uiCompletedSection">
-                <div class="completed-hero-card">
-                    <div class="comp-check-circle"><i class="fa-regular fa-circle-check"></i></div>
-                    <div class="comp-tag">COMPLETED</div>
-                    <div class="comp-big-usdt" id="uiCompBigUsdt">0.00 <span>USDT</span></div>
-                    <div class="comp-sub-note" id="uiCompSubNote">You received 0.00 USDT</div>
-                </div>
-
-                <div class="comp-summary-card">
-                    <div class="comp-sum-header">
-                        <div class="comp-sum-title"><span id="uiCompTypeWord" style="color:var(--green);">Buy</span> USDT</div>
-                        <span class="status-pill-badge" id="uiCompBankBadge" style="background:#161b22; color:#9ca3af; border-color:#262e3b;">Bank</span>
-                    </div>
-                    <div class="comp-sum-row">
-                        <span class="k">Fiat Amount</span>
-                        <span class="v" id="uiCompFiat">Br 0.00</span>
-                    </div>
-                    <div class="comp-sum-row">
-                        <span class="k">Price</span>
-                        <span class="v" id="uiCompPrice">Br 0.00</span>
-                    </div>
-                    <div class="comp-sum-row">
-                        <span class="k">Receive Quantity</span>
-                        <span class="v" id="uiCompQty">0.00 USDT</span>
-                    </div>
-                </div>
-
-                <div class="download-receipt-card" onclick="window.print()">
-                    <div style="display:flex; align-items:center; gap:12px;">
-                        <div class="sbs-icon" style="background:#161b22; border-color:#262e3b; color:#9ca3af;"><i class="fa-solid fa-download"></i></div>
-                        <strong style="font-size:13.5px;">Download Receipt</strong>
-                    </div>
-                    <span style="font-size:12px; color:var(--text-muted);">PDF / Print &rarr;</span>
-                </div>
-
-                <div class="rate-card">
-                    <div style="display:flex; align-items:center; gap:12px;">
-                        <div class="sbs-icon" style="background:rgba(234,179,8,0.12); border-color:rgba(234,179,8,0.3); color:#eab308;"><i class="fa-regular fa-star"></i></div>
-                        <div>
-                            <div style="font-size:13.5px; font-weight:800;">Rate your counterparty</div>
-                            <div style="font-size:12px; color:var(--text-muted);" id="uiRatePartnerPrompt">How was your experience?</div>
-                        </div>
-                    </div>
-                    <div class="star-row" id="uiStarRow">
-                        <i class="fa-regular fa-star" onclick="selectStar(1)"></i>
-                        <i class="fa-regular fa-star" onclick="selectStar(2)"></i>
-                        <i class="fa-regular fa-star" onclick="selectStar(3)"></i>
-                        <i class="fa-regular fa-star" onclick="selectStar(4)"></i>
-                        <i class="fa-regular fa-star" onclick="selectStar(5)"></i>
-                    </div>
-                    <div style="display:flex; gap:14px; align-items:center;">
-                        <button type="button" class="primary-yellow-btn" style="width:auto; padding:10px 22px; font-size:12.5px;" onclick="alert('Thank you for your review!')">Submit Review</button>
-                        <span style="font-size:12px; color:var(--text-muted); cursor:pointer;" onclick="this.parentElement.parentElement.style.display='none'">Skip</span>
+                    <div class="tr-sub-meta">
+                        <span id="uiTopUsdtSummary">0.00 USDT</span> &middot; <span id="uiTradeNumber">Trade #00001</span>
                     </div>
                 </div>
             </div>
 
-            <!-- 3. CANCELLED STATE VIEW -->
-            <div class="cancelled-view-wrap" id="uiCancelledSection">
-                <div class="cancelled-summary-card">
-                    <div class="canc-top-banner">
-                        <div style="display:flex; align-items:center; gap:12px;">
-                            <div class="sbs-icon" style="background:rgba(234,179,8,0.12); border-color:rgba(234,179,8,0.3); color:#eab308;">&#8601;</div>
-                            <div>
-                                <div style="font-size:13.5px; font-weight:800; color:#eab308;" id="uiCancRoleTitle">You are the Buyer</div>
-                                <div style="font-size:11.5px; color:var(--text-muted);" id="uiCancRoleSub">You pay ETB and receive USDT</div>
-                            </div>
-                        </div>
-                        <span class="status-pill-badge cancelled">Cancelled</span>
-                    </div>
-                    <div class="canc-body">
-                        <div style="font-size:10.5px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">YOU RECEIVE</div>
-                        <div class="canc-big-green" id="uiCancUsdt">0.00 <span style="font-size:15px; color:var(--text-muted);">USDT</span></div>
-                        <div style="font-size:12px; color:var(--text-muted); display:flex; gap:14px; flex-wrap:wrap;">
-                            <span>You pay <strong style="color:#fff;" id="uiCancEtb">0.00 ETB</strong></span>
-                            <span>Rate <strong style="color:#fff;" id="uiCancRate">0.00 / USDT</strong></span>
-                            <span>Via <strong style="color:var(--green);" id="uiCancBank">Bank</strong></span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="canc-notice-card">
-                    <i class="fa-solid fa-xmark" style="color:#9ca3af; font-size:16px; margin-top:2px;"></i>
-                    <div>
-                        <div style="font-size:13.5px; font-weight:800; color:#d1d5db; margin-bottom:5px;">Trade Cancelled</div>
-                        <div style="font-size:12px; color:var(--text-muted);">This trade was cancelled. Full USDT (0 fee deducted) has been returned directly to the market ad.</div>
-                    </div>
-                </div>
+            <!-- Info / Chat Segmented Pill Toggle -->
+            <div class="tr-view-toggle">
+                <button type="button" class="tr-toggle-pill active" id="btnToggleInfo" onclick="switchMobileTradeView('info')">
+                    <i class="fa-solid fa-circle-info"></i> Info
+                </button>
+                <button type="button" class="tr-toggle-pill" id="btnToggleChat" onclick="switchMobileTradeView('chat')">
+                    <i class="fa-regular fa-comment-dots"></i> Chat
+                    <span class="tr-chat-unread-dot" id="uiChatUnreadBadge">0</span>
+                </button>
             </div>
         </div>
 
-        <!-- RIGHT COLUMN: CHAT ROOM -->
-        <div class="right-chat-card">
-            <div class="chat-header">
-                <div class="chat-avatar" id="uiPartnerAvatar">--</div>
-                <div>
-                    <div class="chat-partner-name" id="uiPartnerName">Counterparty</div>
-                    <div class="chat-partner-sub">
-                        <span class="dot"></span>
-                        <span>Active trade &middot; <a href="javascript:void(0)">View profile &rarr;</a></span>
-                    </div>
-                </div>
-            </div>
+        <div class="trade-room-wrapper">
+            <!-- LEFT COLUMN (INFO & ESCROW FLOW) -->
+            <div class="left-escrow-col">
 
-            <div class="chat-pay-details-wrap" id="uiBuyerPayDropdown" style="display:none;">
-                <div class="cpd-header" onclick="togglePaymentDetailsDropdown()">
-                    <div class="cpd-left">
-                        <i class="fa-solid fa-file-invoice-dollar"></i>
-                        <span>Payment details</span>
+                <!-- Green "Chat with Partner" Card (Matches Screenshot 1!) -->
+                <div class="tap-chat-banner-card" onclick="switchMobileTradeView('chat')">
+                    <div class="tcb-left">
+                        <div class="tcb-icon"><i class="fa-regular fa-comment-dots"></i></div>
+                        <div>
+                            <div class="tcb-title" id="uiGreenBannerChatTitle">Chat with Counterparty</div>
+                            <div class="tcb-sub">Tap to open trade chat</div>
+                        </div>
                     </div>
-                    <div class="cpd-right">
-                        <span class="cpd-bank-pill" id="uiDropdownBankPill">Bank</span>
-                        <i class="fa-solid fa-chevron-up" id="uiDropdownChevron" style="color:#eab308; font-size:11px;"></i>
-                    </div>
-                </div>
-                <div class="cpd-body open" id="uiDropdownBody">
-                    <div class="cpd-row">
-                        <span class="k">Account Name</span>
-                        <span class="v">
-                            <span id="uiPayAccountName">-</span>
-                            <button type="button" class="copy-icon-btn" onclick="copyTextValue('uiPayAccountName')"><i class="fa-regular fa-copy"></i></button>
-                        </span>
-                    </div>
-                    <div class="cpd-row">
-                        <span class="k">Account No.</span>
-                        <span class="v">
-                            <span id="uiPayAccountNo">-</span>
-                            <button type="button" class="copy-icon-btn" onclick="copyTextValue('uiPayAccountNo')"><i class="fa-regular fa-copy"></i></button>
-                        </span>
-                    </div>
-                    <div class="cpd-row">
-                        <span class="k">Bank</span>
-                        <span class="v">
-                            <span id="uiPayBankName">-</span>
-                            <button type="button" class="copy-icon-btn" onclick="copyTextValue('uiPayBankName')"><i class="fa-regular fa-copy"></i></button>
-                        </span>
-                    </div>
-                    <div class="cpd-row">
-                        <span class="k">Amount</span>
-                        <span class="v">
-                            <span id="uiPayEtbExact">0.00 ETB</span>
-                            <button type="button" class="copy-icon-btn" onclick="copyTextValue('uiPayEtbExact')"><i class="fa-regular fa-copy"></i></button>
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="chat-messages-area" id="uiChatMessagesArea"></div>
-
-            <div class="chat-footer">
-                <div class="post-trade-open-banner" id="uiPostTradeBanner">
-                    <span style="width:7px; height:7px; border-radius:50%; background:var(--green);"></span>
-                    <span>Trade completed — post-trade chat is open</span>
+                    <i class="fa-solid fa-arrow-right tcb-arrow"></i>
                 </div>
 
-                <button type="button" class="primary-yellow-btn" id="uiRightMarkPaidBtn" style="display:none;" onclick="openConfirmPaymentModal()">
-                    <i class="fa-regular fa-circle-check"></i> Transferred, Notify Seller
-                </button>
+                <!-- 1. ACTIVE TRADE FLOW VIEW -->
+                <div id="uiActiveTradeSection" style="display:flex; flex-direction:column; gap:12px;">
 
-                <button type="button" class="primary-green-btn" id="uiRightSellerReleaseBtn" onclick="openSellerReleaseModal()">
-                    <i class="fa-solid fa-circle-check"></i> I Have Received (Release USDT)
-                </button>
+                    <!-- "You are the Buyer / Seller" Trade Summary Hero Card (Matches Screenshot 1!) -->
+                    <div class="role-hero-card">
+                        <div class="rhc-top-bar">
+                            <div class="rhc-top-left">
+                                <div class="rhc-role-icon" id="uiHeroRoleIcon">&#8601;</div>
+                                <div>
+                                    <div class="rhc-role-title" id="uiHeroRoleTitle">You are the Buyer</div>
+                                    <div class="rhc-role-sub" id="uiHeroRoleSub">You pay ETB and receive USDT</div>
+                                </div>
+                            </div>
+                            <span class="status-pill-badge" id="uiHeroStatusBadge">Funds Locked</span>
+                        </div>
 
-                <div class="chat-closed-banner" id="uiChatClosedBanner">
-                    Trade cancelled — chat is closed
-                </div>
+                        <div class="rhc-middle-body">
+                            <div class="rhc-label-sm" id="uiHeroReceiveCaption">YOU RECEIVE</div>
+                            <div class="rhc-big-usdt" id="uiHeroBigUsdt">0.00 <span>USDT</span></div>
+                            <div class="rhc-fiat-meta-row">
+                                <span>
+                                    <span id="uiHeroPayVerb">You pay</span>
+                                    <strong id="uiHeroEtbVal">0.00 ETB</strong>
+                                    <button type="button" class="inline-copy-btn" onclick="copyRawText(activeTrade ? activeTrade.etbAmount : '')" title="Copy ETB Amount">
+                                        <i class="fa-regular fa-copy"></i>
+                                    </button>
+                                </span>
+                                <span class="sep-bar">|</span>
+                                <span>Rate <strong id="uiHeroRateVal">0.00 / USDT</strong></span>
+                                <span class="sep-bar">|</span>
+                                <span>Via <span class="rhc-via-method" id="uiHeroMethodVal">Telebirr</span></span>
+                            </div>
+                        </div>
 
-                <div class="chat-input-bar" id="uiChatInputBar">
-                    <label class="upload-img-btn" title="Send Image in Chat">
-                        <i class="fa-regular fa-image"></i>
-                        <input type="file" accept="image/*" style="display:none;" onchange="sendImageInChat(event)">
-                    </label>
-                    <input type="text" class="chat-text-input" id="uiChatInput" placeholder="Message..." onkeydown="if(event.key==='Enter') sendChatMessage()">
-                    <button type="button" class="send-msg-btn" onclick="sendChatMessage()">
-                        <i class="fa-regular fa-paper-plane"></i>
+                        <div class="rhc-bottom-trader">
+                            <div class="rhc-trader-left">
+                                <div class="rhc-avatar-wrap">
+                                    <div class="rhc-avatar" id="uiHeroPartnerAvatar">TR</div>
+                                    <span class="rhc-online-dot"></span>
+                                </div>
+                                <div>
+                                    <div class="rhc-trader-name">
+                                        <span id="uiHeroPartnerName">Trader</span>
+                                        <i class="fa-regular fa-circle-check"></i>
+                                    </div>
+                                    <div class="rhc-trader-stats">
+                                        <i class="fa-solid fa-star"></i>
+                                        <span>99.20%</span>
+                                        <span>&middot;</span>
+                                        <span>Verified Trader</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="rhc-counterparty-role-tag" id="uiHeroPartnerRoleTag">Seller</div>
+                        </div>
+                    </div>
+
+                    <!-- 4-Step Progress Tracker Card -->
+                    <div class="stepper-card">
+                        <div class="step-item done" id="step1Item">
+                            <div class="step-circle"><i class="fa-solid fa-check"></i></div>
+                            <div class="step-label">Order<br>Placed</div>
+                        </div>
+                        <div class="step-line done" id="stepLine1"></div>
+                        <div class="step-item active" id="step2Item">
+                            <div class="step-circle" id="step2Circle">2</div>
+                            <div class="step-label">Funds<br>Locked</div>
+                        </div>
+                        <div class="step-line" id="stepLine2"></div>
+                        <div class="step-item" id="step3Item">
+                            <div class="step-circle" id="step3Circle">3</div>
+                            <div class="step-label">Payment<br>Sent</div>
+                        </div>
+                        <div class="step-line" id="stepLine3"></div>
+                        <div class="step-item" id="step4Item">
+                            <div class="step-circle" id="step4Circle">4</div>
+                            <div class="step-label">Completed</div>
+                        </div>
+                    </div>
+
+                    <!-- Numbered Instructions Card -->
+                    <div class="instructions-card" id="uiInstructionsCard"></div>
+
+                    <!-- Dedicated "Send payment to" Card in Info Column (Matches Screenshot 2!) -->
+                    <div class="send-payment-to-card" id="uiSendPaymentToCard">
+                        <div class="spt-header">
+                            <div class="spt-header-left">
+                                <div class="spt-header-icon"><i class="fa-solid fa-dollar-sign"></i></div>
+                                <span>Send payment to</span>
+                            </div>
+                            <span class="spt-method-pill" id="uiSptMethodPill">Telebirr</span>
+                        </div>
+                        <div class="spt-rows-wrap">
+                            <div class="spt-row">
+                                <span class="k">Account Name</span>
+                                <span class="v">
+                                    <span id="uiSptAccountName">-</span>
+                                    <button type="button" class="spt-copy-box" onclick="copyTextValue('uiSptAccountName')"><i class="fa-regular fa-copy"></i></button>
+                                </span>
+                            </div>
+                            <div class="spt-row">
+                                <span class="k" id="uiSptAccLabel">Phone / Account</span>
+                                <span class="v">
+                                    <span id="uiSptAccountNo">-</span>
+                                    <button type="button" class="spt-copy-box" onclick="copyTextValue('uiSptAccountNo')"><i class="fa-regular fa-copy"></i></button>
+                                </span>
+                            </div>
+                            <div class="spt-row">
+                                <span class="k">Bank</span>
+                                <span class="v">
+                                    <span id="uiSptBankName">-</span>
+                                    <button type="button" class="spt-copy-box" onclick="copyTextValue('uiSptBankName')"><i class="fa-regular fa-copy"></i></button>
+                                </span>
+                            </div>
+                            <div class="spt-row">
+                                <span class="k">Amount</span>
+                                <span class="v gold-amount">
+                                    <span id="uiSptAmountEtb">0.00 ETB</span>
+                                    <button type="button" class="spt-copy-box" onclick="copyTextValue('uiSptAmountEtb')"><i class="fa-regular fa-copy"></i></button>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Seller Receive Summary Card -->
+                    <div class="seller-bank-summary-card" id="uiSellerSummaryCard">
+                        <div class="sbs-left">
+                            <div class="sbs-icon"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+                            <div>
+                                <div class="sbs-holder" id="uiSellerHolderName">Account Holder</div>
+                                <div class="sbs-sub">Buyer will send <strong id="uiSellerEtbAmount">0.00 ETB</strong> via <span id="uiSellerBankSub">Bank</span></div>
+                            </div>
+                        </div>
+                        <span class="sbs-method-badge" id="uiSellerMethodBadge">Bank</span>
+                    </div>
+
+                    <!-- Payment Window Countdown Card -->
+                    <div class="timer-card" id="uiTimerCard">
+                        <div class="timer-top">
+                            <div class="timer-label" id="uiTimerLabel"><i class="fa-regular fa-clock"></i> Payment window</div>
+                            <div class="timer-clock" id="uiCountdownClock">09m 59s</div>
+                        </div>
+                        <div class="timer-bar-bg">
+                            <div class="timer-bar-fill" id="uiTimerBarFill"></div>
+                        </div>
+                    </div>
+
+                    <div class="warning-card">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        <div id="uiWarningText">Only pay using the account details shown here. Never cancel after sending — use Appeal if there's an issue.</div>
+                    </div>
+
+                    <div class="status-waiting-card" id="uiWaitingStatusCard">
+                        <div class="sw-icon" id="uiWaitingIcon"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
+                        <div>
+                            <div class="sw-title" id="uiWaitingTitle">Waiting for seller to release</div>
+                            <div class="sw-sub" id="uiWaitingSub">Your payment is being verified. USDT will be credited once the seller confirms.</div>
+                        </div>
+                    </div>
+
+                    <button type="button" class="primary-yellow-btn" id="uiLeftMarkPaidBtn" style="display:none;" onclick="openConfirmPaymentModal()">
+                        <i class="fa-regular fa-circle-check"></i> Transferred, Notify Seller
                     </button>
+
+                    <button type="button" class="primary-green-btn" id="uiLeftSellerReleaseBtn" onclick="openSellerReleaseModal()">
+                        <i class="fa-solid fa-circle-check"></i> I Have Received (Release USDT)
+                    </button>
+
+                    <button type="button" class="dispute-red-btn" id="uiApplyDisputeBtn" onclick="applyForDispute()">
+                        <i class="fa-solid fa-scale-balanced"></i> Apply for Dispute (Appeal to Admin)
+                    </button>
+
+                    <button type="button" class="secondary-cancel-btn" id="uiCancelTradeBtn" style="display:none;" onclick="cancelActiveTrade()">
+                        Cancel Order
+                    </button>
+
+                    <div class="appeal-lock-card" id="uiAppealLockCard">
+                        <i class="fa-solid fa-lock"></i>
+                        <span id="uiAppealLockText">Appeal unlocks in <strong id="uiAppealClock">09m 59s</strong></span>
+                    </div>
+                </div>
+
+                <!-- 2. COMPLETED STATE VIEW -->
+                <div class="completed-view-wrap" id="uiCompletedSection">
+                    <div class="completed-hero-card">
+                        <div class="comp-check-circle"><i class="fa-regular fa-circle-check"></i></div>
+                        <div class="comp-tag">COMPLETED</div>
+                        <div class="comp-big-usdt" id="uiCompBigUsdt">0.00 <span>USDT</span></div>
+                        <div class="comp-sub-note" id="uiCompSubNote">You received 0.00 USDT</div>
+                    </div>
+
+                    <div class="comp-summary-card">
+                        <div class="comp-sum-header">
+                            <div class="comp-sum-title"><span id="uiCompTypeWord" style="color:var(--green);">Buy</span> USDT</div>
+                            <span class="status-pill-badge" id="uiCompBankBadge" style="background:#161b22; color:#9ca3af; border-color:#262e3b;">Bank</span>
+                        </div>
+                        <div class="comp-sum-row">
+                            <span class="k">Fiat Amount</span>
+                            <span class="v" id="uiCompFiat">Br 0.00</span>
+                        </div>
+                        <div class="comp-sum-row">
+                            <span class="k">Price</span>
+                            <span class="v" id="uiCompPrice">Br 0.00</span>
+                        </div>
+                        <div class="comp-sum-row">
+                            <span class="k">Receive Quantity</span>
+                            <span class="v" id="uiCompQty">0.00 USDT</span>
+                        </div>
+                    </div>
+
+                    <div class="download-receipt-card" onclick="window.print()">
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <div class="sbs-icon" style="background:#161b22; border-color:#262e3b; color:#9ca3af;"><i class="fa-solid fa-download"></i></div>
+                            <strong style="font-size:13.5px;">Download Receipt</strong>
+                        </div>
+                        <span style="font-size:12px; color:var(--text-muted);">PDF / Print &rarr;</span>
+                    </div>
+
+                    <div class="rate-card">
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <div class="sbs-icon" style="background:rgba(234,179,8,0.12); border-color:rgba(234,179,8,0.3); color:#eab308;"><i class="fa-regular fa-star"></i></div>
+                            <div>
+                                <div style="font-size:13.5px; font-weight:800;">Rate your counterparty</div>
+                                <div style="font-size:12px; color:var(--text-muted);" id="uiRatePartnerPrompt">How was your experience?</div>
+                            </div>
+                        </div>
+                        <div class="star-row" id="uiStarRow">
+                            <i class="fa-regular fa-star" onclick="selectStar(1)"></i>
+                            <i class="fa-regular fa-star" onclick="selectStar(2)"></i>
+                            <i class="fa-regular fa-star" onclick="selectStar(3)"></i>
+                            <i class="fa-regular fa-star" onclick="selectStar(4)"></i>
+                            <i class="fa-regular fa-star" onclick="selectStar(5)"></i>
+                        </div>
+                        <div style="display:flex; gap:14px; align-items:center;">
+                            <button type="button" class="primary-yellow-btn" style="width:auto; padding:10px 22px; font-size:12.5px;" onclick="alert('Thank you for your review!')">Submit Review</button>
+                            <span style="font-size:12px; color:var(--text-muted); cursor:pointer;" onclick="this.parentElement.parentElement.style.display='none'">Skip</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. CANCELLED STATE VIEW -->
+                <div class="cancelled-view-wrap" id="uiCancelledSection">
+                    <div class="cancelled-summary-card">
+                        <div class="canc-top-banner">
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <div class="sbs-icon" style="background:rgba(234,179,8,0.12); border-color:rgba(234,179,8,0.3); color:#eab308;">&#8601;</div>
+                                <div>
+                                    <div style="font-size:13.5px; font-weight:800; color:#eab308;" id="uiCancRoleTitle">You are the Buyer</div>
+                                    <div style="font-size:11.5px; color:var(--text-muted);" id="uiCancRoleSub">You pay ETB and receive USDT</div>
+                                </div>
+                            </div>
+                            <span class="status-pill-badge cancelled">Cancelled</span>
+                        </div>
+                        <div class="canc-body">
+                            <div style="font-size:10.5px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">YOU RECEIVE</div>
+                            <div class="canc-big-green" id="uiCancUsdt">0.00 <span style="font-size:15px; color:var(--text-muted);">USDT</span></div>
+                            <div style="font-size:12px; color:var(--text-muted); display:flex; gap:14px; flex-wrap:wrap;">
+                                <span>You pay <strong style="color:#fff;" id="uiCancEtb">0.00 ETB</strong></span>
+                                <span>Rate <strong style="color:#fff;" id="uiCancRate">0.00 / USDT</strong></span>
+                                <span>Via <strong style="color:var(--green);" id="uiCancBank">Bank</strong></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="canc-notice-card">
+                        <i class="fa-solid fa-xmark" style="color:#9ca3af; font-size:16px; margin-top:2px;"></i>
+                        <div>
+                            <div style="font-size:13.5px; font-weight:800; color:#d1d5db; margin-bottom:5px;">Trade Cancelled</div>
+                            <div style="font-size:12px; color:var(--text-muted);">This trade was cancelled. Full USDT (0 fee deducted) has been returned directly to the market ad.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: CHAT ROOM -->
+            <div class="right-chat-card">
+                <div class="chat-header">
+                    <div class="chat-header-left">
+                        <div class="chat-avatar" id="uiPartnerAvatar">--</div>
+                        <div>
+                            <div class="chat-partner-name" id="uiPartnerName">Counterparty</div>
+                            <div class="chat-partner-sub">
+                                <span class="dot"></span>
+                                <span>Active trade &middot; <a href="javascript:void(0)" onclick="switchMobileTradeView('info')">Order Info &rarr;</a></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-pay-details-wrap" id="uiBuyerPayDropdown" style="display:none;">
+                    <div class="cpd-header" onclick="togglePaymentDetailsDropdown()">
+                        <div class="cpd-left">
+                            <i class="fa-solid fa-file-invoice-dollar"></i>
+                            <span>Payment details</span>
+                        </div>
+                        <div class="cpd-right">
+                            <span class="cpd-bank-pill" id="uiDropdownBankPill">Bank</span>
+                            <i class="fa-solid fa-chevron-up" id="uiDropdownChevron" style="color:#eab308; font-size:11px;"></i>
+                        </div>
+                    </div>
+                    <div class="cpd-body open" id="uiDropdownBody">
+                        <div class="cpd-row">
+                            <span class="k">Account Name</span>
+                            <span class="v">
+                                <span id="uiPayAccountName">-</span>
+                                <button type="button" class="copy-icon-btn" onclick="copyTextValue('uiPayAccountName')"><i class="fa-regular fa-copy"></i></button>
+                            </span>
+                        </div>
+                        <div class="cpd-row">
+                            <span class="k">Account No.</span>
+                            <span class="v">
+                                <span id="uiPayAccountNo">-</span>
+                                <button type="button" class="copy-icon-btn" onclick="copyTextValue('uiPayAccountNo')"><i class="fa-regular fa-copy"></i></button>
+                            </span>
+                        </div>
+                        <div class="cpd-row">
+                            <span class="k">Bank</span>
+                            <span class="v">
+                                <span id="uiPayBankName">-</span>
+                                <button type="button" class="copy-icon-btn" onclick="copyTextValue('uiPayBankName')"><i class="fa-regular fa-copy"></i></button>
+                            </span>
+                        </div>
+                        <div class="cpd-row">
+                            <span class="k">Amount</span>
+                            <span class="v">
+                                <span id="uiPayEtbExact">0.00 ETB</span>
+                                <button type="button" class="copy-icon-btn" onclick="copyTextValue('uiPayEtbExact')"><i class="fa-regular fa-copy"></i></button>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-messages-area" id="uiChatMessagesArea"></div>
+
+                <div class="chat-footer">
+                    <div class="post-trade-open-banner" id="uiPostTradeBanner">
+                        <span style="width:7px; height:7px; border-radius:50%; background:var(--green);"></span>
+                        <span>Trade completed — post-trade chat is open</span>
+                    </div>
+
+                    <button type="button" class="primary-yellow-btn" id="uiRightMarkPaidBtn" style="display:none;" onclick="openConfirmPaymentModal()">
+                        <i class="fa-regular fa-circle-check"></i> Transferred, Notify Seller
+                    </button>
+
+                    <button type="button" class="primary-green-btn" id="uiRightSellerReleaseBtn" onclick="openSellerReleaseModal()">
+                        <i class="fa-solid fa-circle-check"></i> I Have Received (Release USDT)
+                    </button>
+
+                    <div class="chat-closed-banner" id="uiChatClosedBanner">
+                        Trade cancelled — chat is closed
+                    </div>
+
+                    <div class="chat-input-bar" id="uiChatInputBar">
+                        <label class="upload-img-btn" title="Send Image in Chat">
+                            <i class="fa-regular fa-image"></i>
+                            <input type="file" accept="image/*" style="display:none;" onchange="sendImageInChat(event)">
+                        </label>
+                        <input type="text" class="chat-text-input" id="uiChatInput" placeholder="Message..." onkeydown="if(event.key==='Enter') sendChatMessage()">
+                        <button type="button" class="send-msg-btn" onclick="sendChatMessage()">
+                            <i class="fa-regular fa-paper-plane"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1615,6 +2179,32 @@
         let isFetchingList = false;
         let isFetchingRoom = false;
 
+        // 📱 Mobile Info / Chat View Switcher (Matches Screenshot 1 & 2!) 📱
+        function switchMobileTradeView(tabName) {
+            const outer = document.getElementById('singleTradeRoomView');
+            const infoBtn = document.getElementById('btnToggleInfo');
+            const chatBtn = document.getElementById('btnToggleChat');
+
+            if (tabName === 'chat') {
+                outer.classList.remove('mobile-tab-info');
+                outer.classList.add('mobile-tab-chat');
+                infoBtn.classList.remove('active');
+                chatBtn.classList.add('active');
+                setTimeout(() => {
+                    const area = document.getElementById('uiChatMessagesArea');
+                    if (area) area.scrollTop = area.scrollHeight;
+                    const inp = document.getElementById('uiChatInput');
+                    if (inp && window.innerWidth > 960) inp.focus();
+                }, 50);
+            } else {
+                outer.classList.remove('mobile-tab-chat');
+                outer.classList.add('mobile-tab-info');
+                chatBtn.classList.remove('active');
+                infoBtn.classList.add('active');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
         function invalidateAllMarketAndBalanceCaches() {
             try {
                 const keysToRemove = [
@@ -1644,7 +2234,6 @@
             return str;
         }
 
-        // 🔍 ትሬዱ በAdmin የተፈታ (Resolved / Released) ወይስ የተመለሰ (Refunded) መሆኑን በትክክል የሚለይ ፋንክሽን 🔍
         function detectTradeResolutionState(tr) {
             if (!tr) return { effectiveStatus: 'funds_locked', isDisputeResolved: false, isDisputeRefunded: false, applicantText: '' };
 
@@ -1660,7 +2249,7 @@
                 if (m.isSystem || m.senderId === 'system' || m.senderId === 'admin') {
                     if (txt.includes('refunded to the Seller') || txt.includes('refunded to Seller') || txt.includes('Winner: Seller')) {
                         adminRefundedMsg = txt;
-                    } else if (txt.includes('Released') && txt.includes('Buyer') || txt.includes('Winner: Buyer')) {
+                    } else if ((txt.includes('Released') && txt.includes('Buyer')) || txt.includes('Winner: Buyer')) {
                         adminReleasedMsg = txt;
                     }
                     if (txt.includes('applied for a dispute') || txt.includes('Dispute opened')) {
@@ -1802,7 +2391,7 @@
 
             if (tradeIdParam) {
                 document.getElementById('myTradesListView').style.display = 'none';
-                document.getElementById('singleTradeRoomView').style.display = 'grid';
+                document.getElementById('singleTradeRoomView').style.display = 'block';
 
                 try {
                     const cachedOrder = JSON.parse(localStorage.getItem('tbr_active_p2p_order') || 'null');
@@ -1955,7 +2544,6 @@
                     ? tr.messages.filter(m => !m.isSystem && m.senderId !== 'system' && m.senderId !== 'admin').length
                     : 0;
 
-                // ✅ Resolved / Refunded / Completed / Cancelled ሁሉንም በትክክል መለየት (ፈጽሞ ባዶ አይሆንም!)
                 const resState = detectTradeResolutionState(tr);
                 const st = resState.effectiveStatus;
                 const targetId = tr._id;
@@ -2102,54 +2690,98 @@
             const etbFormatted = formatEtb(activeTrade.etbAmount);
             const netUsdtNum = Number(activeTrade.netUsdt || activeTrade.usdtAmount || 0);
             const usdtFormatted = netUsdtNum.toFixed(2) + ' USDT';
-            const payMethod = activeTrade.paymentMethod || 'Commercial Bank of Ethiopia';
+            const unitRateFormatted = Number(activeTrade.unitPrice || 0).toFixed(2);
+            const payMethod = activeTrade.paymentMethod || 'Telebirr';
             const payDetails = activeTrade.paymentDetails || {};
 
             const resState = detectTradeResolutionState(activeTrade);
             const status = resState.effectiveStatus;
-
-            document.getElementById('uiTradeNumber').innerText = `Trade #${tradeNum}`;
 
             const partnerName = isBuyer
                 ? (activeTrade.sellerName || activeTrade.counterpartyName || 'Seller')
                 : (activeTrade.buyerName || activeTrade.counterpartyName || 'Buyer');
             const partnerAvatar = resolveAvatarUrl(isBuyer ? activeTrade.sellerAvatar : activeTrade.buyerAvatar);
             const initials = String(partnerName).slice(0, 2).toUpperCase();
-
-            document.getElementById('uiPartnerName').innerText = partnerName;
-            document.getElementById('uiPartnerAvatar').innerHTML = partnerAvatar
+            const avatarInnerHtml = partnerAvatar
                 ? `<img src="${partnerAvatar}" alt="${partnerName}" onerror="this.outerHTML='${initials}'">`
                 : initials;
 
-            const badgeEl = document.getElementById('uiStatusBadge');
-            if (resState.isDisputeResolved) {
-                badgeEl.innerText = 'Resolved (Released)';
-                badgeEl.className = 'status-pill-badge completed';
-            } else if (resState.isDisputeRefunded) {
-                badgeEl.innerText = 'Refunded';
-                badgeEl.className = 'status-pill-badge payment-sent';
-            } else if (status === 'funds_locked') {
-                badgeEl.innerText = 'Funds Locked';
-                badgeEl.className = 'status-pill-badge';
-            } else if (status === 'payment_sent') {
-                badgeEl.innerText = 'Payment Sent';
-                badgeEl.className = 'status-pill-badge payment-sent';
-            } else if (status === 'completed') {
-                badgeEl.innerText = 'Completed';
-                badgeEl.className = 'status-pill-badge completed';
-            } else if (status === 'cancelled') {
-                badgeEl.innerText = 'Cancelled';
-                badgeEl.className = 'status-pill-badge cancelled';
-            } else if (status === 'disputed') {
-                badgeEl.innerText = 'Disputed';
-                badgeEl.className = 'status-pill-badge disputed';
+            // 1. Populate Sticky Sub-Header Bar & Green Chat Banner
+            document.getElementById('uiTopPartnerName').innerText = partnerName;
+            document.getElementById('uiTopUsdtSummary').innerText = usdtFormatted;
+            document.getElementById('uiTradeNumber').innerText = `Trade #${tradeNum}`;
+            document.getElementById('uiGreenBannerChatTitle').innerText = `Chat with ${partnerName}`;
+
+            // Unread / user chat message count badge on Chat toggle pill
+            const userMsgsCount = Array.isArray(activeTrade.messages)
+                ? activeTrade.messages.filter(m => !m.isSystem && m.senderId !== 'system' && m.senderId !== 'admin').length
+                : 0;
+            const unreadBadge = document.getElementById('uiChatUnreadBadge');
+            if (userMsgsCount > 0) {
+                unreadBadge.innerText = userMsgsCount;
+                unreadBadge.style.display = 'inline-block';
+            } else {
+                unreadBadge.style.display = 'none';
             }
+
+            // 2. Populate Role & Order Summary Hero Card (Screenshot 1)
+            document.getElementById('uiHeroRoleIcon').innerHTML = isBuyer ? '&#8601;' : '&#8599;';
+            document.getElementById('uiHeroRoleTitle').innerText = isBuyer ? 'You are the Buyer' : 'You are the Seller';
+            document.getElementById('uiHeroRoleSub').innerText = isBuyer
+                ? 'You pay ETB and receive USDT'
+                : 'You sell USDT and receive ETB';
+            document.getElementById('uiHeroReceiveCaption').innerText = isBuyer ? 'YOU RECEIVE' : 'YOU SELL';
+            document.getElementById('uiHeroBigUsdt').innerHTML = `${netUsdtNum.toFixed(2)} <span>USDT</span>`;
+            document.getElementById('uiHeroPayVerb').innerText = isBuyer ? 'You pay ' : 'You receive ';
+            document.getElementById('uiHeroEtbVal').innerText = etbFormatted;
+            document.getElementById('uiHeroRateVal').innerText = `${unitRateFormatted} / USDT`;
+            document.getElementById('uiHeroMethodVal').innerText = payMethod;
+            document.getElementById('uiHeroPartnerName').innerText = partnerName;
+            document.getElementById('uiHeroPartnerAvatar').innerHTML = avatarInnerHtml;
+            document.getElementById('uiHeroPartnerRoleTag').innerText = isBuyer ? 'Seller' : 'Buyer';
+
+            // 3. Populate Chat Header
+            document.getElementById('uiPartnerName').innerText = partnerName;
+            document.getElementById('uiPartnerAvatar').innerHTML = avatarInnerHtml;
+
+            // 4. Status Badges (Top Bar + Hero Card)
+            const badgeEl = document.getElementById('uiStatusBadge');
+            const heroBadgeEl = document.getElementById('uiHeroStatusBadge');
+            let statusLabelText = 'Funds Locked';
+            let statusClassStr = 'status-pill-badge';
+
+            if (resState.isDisputeResolved) {
+                statusLabelText = 'Resolved (Released)';
+                statusClassStr = 'status-pill-badge completed';
+            } else if (resState.isDisputeRefunded) {
+                statusLabelText = 'Refunded';
+                statusClassStr = 'status-pill-badge payment-sent';
+            } else if (status === 'funds_locked') {
+                statusLabelText = 'Funds Locked';
+                statusClassStr = 'status-pill-badge';
+            } else if (status === 'payment_sent') {
+                statusLabelText = 'Payment Sent';
+                statusClassStr = 'status-pill-badge payment-sent';
+            } else if (status === 'completed') {
+                statusLabelText = 'Completed';
+                statusClassStr = 'status-pill-badge completed';
+            } else if (status === 'cancelled') {
+                statusLabelText = 'Cancelled';
+                statusClassStr = 'status-pill-badge cancelled';
+            } else if (status === 'disputed') {
+                statusLabelText = 'Disputed';
+                statusClassStr = 'status-pill-badge disputed';
+            }
+            badgeEl.innerText = statusLabelText;
+            badgeEl.className = statusClassStr;
+            heroBadgeEl.innerText = statusLabelText;
+            heroBadgeEl.className = statusClassStr;
 
             const activeSec = document.getElementById('uiActiveTradeSection');
             const compSec = document.getElementById('uiCompletedSection');
             const cancSec = document.getElementById('uiCancelledSection');
 
-            // ✅ 1. COMPLETED ወይም ADMIN RESOLVED (Released to Buyer) ሲሆን Active ክፍሉን አጥፍቶ ውሳኔውን በግልጽ ማሳየት!
+            // COMPLETED OR RESOLVED
             if (status === 'completed' || resState.isDisputeResolved) {
                 activeSec.style.display = 'none';
                 cancSec.style.display = 'none';
@@ -2174,7 +2806,7 @@
                 document.getElementById('uiCompTypeWord').innerText = isBuyer ? 'Buy' : 'Sell';
                 document.getElementById('uiCompBankBadge').innerText = payMethod;
                 document.getElementById('uiCompFiat').innerText = `Br ${Number(activeTrade.etbAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
-                document.getElementById('uiCompPrice').innerText = `Br ${Number(activeTrade.unitPrice || 0).toFixed(2)}`;
+                document.getElementById('uiCompPrice').innerText = `Br ${unitRateFormatted}`;
                 document.getElementById('uiCompQty').innerText = `${netUsdtNum.toFixed(2)} USDT`;
                 document.getElementById('uiRatePartnerPrompt').innerText = `How was your experience with ${partnerName}?`;
 
@@ -2188,7 +2820,7 @@
                 return;
             }
 
-            // ✅ 2. CANCELLED ወይም ADMIN REFUNDED (Returned to Seller) ሲሆን Active ክፍሉን አጥፍቶ ውሳኔውን በግልጽ ማሳየት!
+            // CANCELLED OR REFUNDED
             if (status === 'cancelled' || resState.isDisputeRefunded) {
                 activeSec.style.display = 'none';
                 compSec.style.display = 'none';
@@ -2198,7 +2830,7 @@
                 document.getElementById('uiCancRoleSub').innerText = isBuyer ? 'You pay ETB and receive USDT' : 'You sell USDT and receive ETB';
                 document.getElementById('uiCancUsdt').innerHTML = `${netUsdtNum.toFixed(2)} <span style="font-size:15px; color:var(--text-muted);">USDT</span>`;
                 document.getElementById('uiCancEtb').innerText = etbFormatted;
-                document.getElementById('uiCancRate').innerText = `${Number(activeTrade.unitPrice || 0).toFixed(2)} / USDT`;
+                document.getElementById('uiCancRate').innerText = `${unitRateFormatted} / USDT`;
                 document.getElementById('uiCancBank').innerText = payMethod;
 
                 const cancNoticeCard = cancSec.querySelector('.canc-notice-card');
@@ -2239,7 +2871,7 @@
                 return;
             }
 
-            // 3. ACTIVE TRADE (funds_locked, payment_sent, disputed)
+            // ACTIVE TRADE (funds_locked, payment_sent, disputed)
             activeSec.style.display = 'flex';
             compSec.style.display = 'none';
             cancSec.style.display = 'none';
@@ -2268,8 +2900,8 @@
             const cancelBtn = document.getElementById('uiCancelTradeBtn');
             const disputeBtn = document.getElementById('uiApplyDisputeBtn');
             const appealLockCard = document.getElementById('uiAppealLockCard');
+            const sendPayCard = document.getElementById('uiSendPaymentToCard');
 
-            // ✅ ትሬዱ Disputed ላይ ከሆነ በድጋሚ Apply for Dispute እንዳይነካ መቆለፍ እና ማን እንዳመለከተ ማሳየት!
             if (status === 'disputed') {
                 appealLockCard.style.display = 'none';
                 disputeBtn.style.display = 'flex';
@@ -2277,7 +2909,7 @@
                 disputeBtn.style.opacity = '0.75';
                 disputeBtn.style.cursor = 'not-allowed';
 
-                const whoApplied = resState.applicantRole; // 'buyer' or 'seller'
+                const whoApplied = resState.applicantRole;
                 const iApplied = (isBuyer && whoApplied === 'buyer') || (!isBuyer && whoApplied === 'seller');
 
                 if (iApplied) {
@@ -2296,7 +2928,19 @@
                 disputeBtn.innerHTML = `<i class="fa-solid fa-scale-balanced"></i> Apply for Dispute (Appeal to Admin)`;
             }
 
+            const isMobileWalletMethod = ['telebirr', 'm-pesa', 'cbe birr'].includes(payMethod.toLowerCase().trim());
+            const accLabelText = isMobileWalletMethod ? 'Phone' : 'Account No.';
+
             if (isBuyer) {
+                // Show "Send payment to" Card in Info Column (Screenshot 2) AND in Chat Dropdown
+                sendPayCard.style.display = 'block';
+                document.getElementById('uiSptMethodPill').innerText = payMethod;
+                document.getElementById('uiSptAccountName').innerText = payDetails.accountName || partnerName;
+                document.getElementById('uiSptAccLabel').innerText = accLabelText;
+                document.getElementById('uiSptAccountNo').innerText = payDetails.accountNumber || '-';
+                document.getElementById('uiSptBankName').innerText = payDetails.bankName || payMethod;
+                document.getElementById('uiSptAmountEtb').innerText = etbFormatted;
+
                 document.getElementById('uiBuyerPayDropdown').style.display = 'block';
                 document.getElementById('uiDropdownBankPill').innerText = payMethod;
                 document.getElementById('uiPayAccountName').innerText = payDetails.accountName || partnerName;
@@ -2343,6 +2987,7 @@
                     cancelBtn.style.display = 'none';
                 }
             } else {
+                sendPayCard.style.display = 'none';
                 document.getElementById('uiBuyerPayDropdown').style.display = 'none';
                 document.getElementById('uiLeftMarkPaidBtn').style.display = 'none';
                 document.getElementById('uiRightMarkPaidBtn').style.display = 'none';
@@ -2399,7 +3044,6 @@
                 const resState = detectTradeResolutionState(activeTrade);
                 const st = resState.effectiveStatus;
 
-                // ✅ ትሬዱ Completed, Cancelled, Resolved ወይም Refunded ከሆነ ሰዓት ቆጣሪው ወዲያውኑ ይቆማል!
                 if (st === 'completed' || st === 'cancelled' || resState.isDisputeResolved || resState.isDisputeRefunded) {
                     return;
                 }
@@ -2565,7 +3209,6 @@
             btn.innerHTML = `<i class="fa-solid fa-unlock-keyhole"></i> Yes, I Have Received — Release USDT`;
         }
 
-        // ⚡ 1. ያለ ምንም Reason Prompt ወዲያውኑ Dispute የሚልክ እና ድጋሚ እንዳይነካ የሚቆልፍ ⚡
         async function applyForDispute() {
             if (!activeTrade || activeTrade.status === 'disputed') return;
 
@@ -2771,9 +3414,25 @@
             icon.className = body.classList.contains('open') ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down';
         }
 
+        function showCopiedToast() {
+            const toast = document.getElementById('copyToastBanner');
+            if (!toast) return;
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 1600);
+        }
+
+        function copyRawText(raw) {
+            if (!raw) return;
+            navigator.clipboard.writeText(String(raw).trim());
+            showCopiedToast();
+        }
+
         function copyTextValue(elId) {
-            const text = document.getElementById(elId).innerText.replace(' ETB', '').trim();
+            const el = document.getElementById(elId);
+            if (!el) return;
+            const text = el.innerText.replace(' ETB', '').replace(/,/g, '').trim();
             navigator.clipboard.writeText(text);
+            showCopiedToast();
         }
 
         function selectStar(num) {
