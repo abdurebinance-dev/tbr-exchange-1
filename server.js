@@ -4221,6 +4221,10 @@ app.post('/api/notifications/mark-read', async (req, res) => {
     }
 });
 
+app.get('/favicon.ico', (req, res) => {
+    res.sendFile(path.join(publicPath, 'logo.png'), (err) => { if (err) res.status(204).end(); });
+});
+
 app.listen(PORT, () => {
     console.log(`TBR Exchange Server is running on port ${PORT} 🚀`);
 });
