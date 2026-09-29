@@ -2694,10 +2694,16 @@ app.get('/api/settings/limits', (req, res) => {
     });
 });
 
-async function autoSweepUSDT(userAddress, userPrivateKey) {
+async function autoSweepUSDT(userAddress, userPrivateKey, attempt = 1) {
     const cleanAddr = String(userAddress || '').trim().toLowerCase();
     try {
         if (!masterWallet) return;
+        
+        // ብሎክቼይኑ ዳታውን እስኪያዘምን (Sync እስኪያደርግ) የመጀመሪያ ሙከራ ላይ 10 ሰከንድ ይጠብቃል
+        if (attempt === 1) {
+            await new Promise(resolve => setTimeout(resolve, 10000));
+        }
+
         recentDepositLocks.set(cleanAddr, Date.now());
 
         const userWallet = new ethers.Wallet(userPrivateKey, provider);
@@ -2707,19 +2713,21 @@ async function autoSweepUSDT(userAddress, userPrivateKey) {
         const usdtBalance = await usdtContractUser.balanceOf(actualAddress);
 
         if (usdtBalance > 0n) {
-            // ✅ FIX 5: የጋዝ ክፍያ ወደ 0.0005 BNB ከፍ ብሏል (Auto Sweep እንዳይቋረጥ)
-            const txFee = ethers.parseEther("0.0005"); 
+            // 1. ጋዝ ይልካል (0.0006 BNB ለበለጠ ደህንነት)
+            const txFee = ethers.parseEther("0.0006"); 
             const bnbTx = await masterWallet.sendTransaction({
                 to: actualAddress,
                 value: txFee
             });
-            await bnbTx.wait();
+            await bnbTx.wait(1); // 1 ብሎክ ኮንፈርም እስኪደረግ ይጠብቃል
 
+            // 2. USDT ወደ ማስተር ዋሌት ጠራርጎ ይልካል
             const sweepTx = await usdtContractUser.transfer(masterWallet.address, usdtBalance);
-            await sweepTx.wait();
+            await sweepTx.wait(1);
 
             const sweptAmount = parseFloat(ethers.formatUnits(usdtBalance, 18));
             const user = await User.findOne({ bscAddress: new RegExp(`^${actualAddress}$`, 'i') }).select('_id email').lean();
+            
             if (user) {
                 await Transaction.create({
                     userId: user._id,
@@ -2728,10 +2736,16 @@ async function autoSweepUSDT(userAddress, userPrivateKey) {
                     amount: sweptAmount,
                     status: 'completed'
                 });
+                console.log(`✅ Auto-Sweep Successful: ${sweptAmount} USDT swept from ${user.email}`);
             }
         }
     } catch (error) {
-        console.error(`[Auto-Sweep Error]:`, error.message);
+        console.error(`[Auto-Sweep Error Attempt ${attempt}]:`, error.message);
+        // 3. ካልሰራ እስከ 3 ጊዜ ድጋሚ (Auto-Retry) ይሞክራል
+        if (attempt < 3) {
+            console.log(`🔄 Retrying auto sweep for ${cleanAddr} in 30 seconds...`);
+            setTimeout(() => autoSweepUSDT(userAddress, userPrivateKey, attempt + 1), 30000);
+        }
     }
 }
 
