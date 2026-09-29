@@ -64,7 +64,7 @@ app.use(express.static(publicPath));
 app.use('/uploads', express.static('uploads'));
 
 // ============================================================================
-// 📦 ALL MONGOOSE SCHEMAS & MODELS (ORGANIZED AT TOP FOR FAST ACCESS) 📦
+// 📦 ALL MONGOOSE SCHEMAS & MODELS 📦
 // ============================================================================
 
 // 1. User Schema & Model
@@ -280,7 +280,6 @@ const Notification = mongoose.models.Notification || mongoose.model('Notificatio
 
 // ============================================================================
 // ⚡ ULTRA-FAST AVATAR CACHE & NON-BLOCKING URL GENERATOR (0.000ms!) ⚡
-// (በፍጹም የዳሽቦርድ ወይም የማርኬት ጥሪዎችን አያዘገይም!)
 // ============================================================================
 const avatarBinaryCache = new Map();
 const tradeStatsCache = new Map();
@@ -321,7 +320,6 @@ async function ensureAvatarCached(userId) {
     }
 }
 
-// ⚡ Non-blocking: Returns URL in 0ms without querying 2MB Base64 from MongoDB! ⚡
 function getFastAvatarUrl(userId) {
     if (!userId) return '';
     const key = String(userId);
@@ -429,7 +427,6 @@ const verifyAdmin = async (req, res, next) => {
 const verifyFinanceAdmin = verifyAdmin;
 const verifyAdminToken = verifyAdmin;
 
-// ⚡ Smart verifyToken: Supports JWT Token AND seamless fallback for newly signed-up users ⚡
 const verifyToken = async (req, res, next) => {
     try {
         let token = null;
@@ -461,7 +458,6 @@ const verifyToken = async (req, res, next) => {
             } catch (jwtErr) {}
         }
 
-        // Fallback: If user just signed up and frontend sent email or userId in query/body/headers
         const fallbackUser = await resolveUserFromRequest(req);
         if (fallbackUser) {
             req.user = {
@@ -506,7 +502,6 @@ async function sendEmailViaBrevo({ to, subject, htmlContent }) {
     return await response.json();
 }
 
-// ⚡ Non-Blocking Notification Helper (DB + Brevo Email in 0ms) ⚡
 async function notifyUser({ userId, email, title, message, type = 'info', link = 'dashboard.html', sendEmail = true }) {
     setImmediate(async () => {
         try {
@@ -579,7 +574,7 @@ async function sendVerificationEmail(email, verificationCode) {
     });
 }
 
-// --- ⚡ Ultra-Fast Auth Routes (Sign Up, Sign In, Verify) ⚡ ---
+// --- Auth Routes ---
 app.post('/api/signup', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -669,7 +664,6 @@ app.post('/api/resend', async (req, res) => {
     }
 });
 
-// ✅ FIX #1: Sign-up Verification immediately issues JWT Token & full User profile so user is logged in 100% without needing to re-login!
 app.post('/api/verify', async (req, res) => {
     try {
         const { email, code } = req.body;
@@ -1057,10 +1051,8 @@ app.post('/api/reset-password', async (req, res) => {
 });
 
 // ============================================================================
-// 🔥 FAST WEB3 DEPOSIT CHECK & AUTO-SWEEP (NEVER OVERWRITES BALANCE WITH 0!) 🔥
+// 🔥 FAST WEB3 DEPOSIT CHECK & AUTO-SWEEP (ATOMIC DOUBLE-DEPOSIT PROTECTED) 🔥
 // ============================================================================
-const activeDepositChecks = new Set();
-const recentDepositLocks = new Map();
 
 app.get('/api/check-deposits/:walletAddress', async (req, res) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -1080,25 +1072,33 @@ app.get('/api/check-deposits/:walletAddress', async (req, res) => {
     }
 
     try {
-        const existingUser = await User.findOne({ bscAddress: { $regex: new RegExp(`^${userWalletAddress}$`, 'i') } })
-            .select('_id email balance lockedBalance bscAddress bscPrivateKey')
-            .lean();
+        // ⚡ 1. ATOMIC DB LOCK: በተመሳሳይ ጊዜ ለሚመጡ ጥያቄዎች (Race Condition) መከላከያ ⚡
+        // MongoDB አንድ ሪኩዌስት ብቻ እንዲያልፍ ያደርጋል፣ ለ 60 ሰከንድ ሎክ ይሆናል
+        const existingUser = await User.findOneAndUpdate(
+            { 
+                bscAddress: new RegExp(`^${userWalletAddress}$`, 'i'),
+                $or: [
+                    { depositLockUntil: { $exists: false } },
+                    { depositLockUntil: { $lt: new Date() } }
+                ]
+            },
+            { $set: { depositLockUntil: new Date(Date.now() + 60 * 1000) } }, // Lock for 60 seconds
+            { new: true, select: '_id email balance lockedBalance bscAddress bscPrivateKey' }
+        ).lean();
 
         if (!existingUser) {
-            return res.json({ success: false, message: 'Wallet not found', transactions: [] });
-        }
-
-        const lastLockTime = recentDepositLocks.get(userWalletAddress) || 0;
-        if (activeDepositChecks.has(userWalletAddress) || (Date.now() - lastLockTime < 60000)) {
+            // Lock ከተደረገ (ተጠቃሚው ደጋግሞ ክሊክ ካደረገ) ዝም ብሎ አሁን ያለውን ባላንስ ብቻ ይመልሳል
+            const fallbackUser = await User.findOne({ bscAddress: new RegExp(`^${userWalletAddress}$`, 'i') }).select('balance lockedBalance').lean();
+            if (!fallbackUser) {
+                return res.json({ success: false, message: 'Wallet not found', transactions: [] });
+            }
             return res.json({
                 success: true,
-                balance: Number(existingUser.balance || 0),
-                lockedBalance: Number(existingUser.lockedBalance || 0),
+                balance: Number(fallbackUser.balance || 0),
+                lockedBalance: Number(fallbackUser.lockedBalance || 0),
                 transactions: []
             });
         }
-
-        activeDepositChecks.add(userWalletAddress);
 
         const usdtContract = new ethers.Contract(USDT_CONTRACT_ADDRESS, usdtAbi, provider);
         const balanceWei = await Promise.race([
@@ -1111,19 +1111,23 @@ app.get('/api/check-deposits/:walletAddress', async (req, res) => {
         let updatedBalance = Number(existingUser.balance || 0);
 
         if (exactDepositAmt > 0.0001) {
+            // ⚡ 2. SWEEP FAILED VULNERABILITY FIX ⚡
+            // ማስተር ዋሌትህ ላይ BNB አልቆ Sweep ሳያደርግ ቢቀር ድጋሚ እንዳይደምርበት 
+            // 90 ሰከንድ የነበረውን ወደ 24 ሰዓት (24 hours) አሳድገነዋል!
             const recentDuplicate = await Transaction.findOne({
                 userId: existingUser._id,
                 type: 'deposit',
-                amount: { $gte: exactDepositAmt - 0.0001, $lte: exactDepositAmt + 0.0001 },
-                createdAt: { $gt: new Date(Date.now() - 90 * 1000) }
+                amount: { $gte: exactDepositAmt - 0.0001,$lte: exactDepositAmt + 0.0001 },
+                createdAt: { $gt: new Date(Date.now() - 24 * 60 * 60 * 1000) } 
             }).select('_id').lean();
 
             if (recentDuplicate) {
-                recentDepositLocks.set(userWalletAddress, Date.now());
-                activeDepositChecks.delete(userWalletAddress);
                 if (existingUser.bscPrivateKey) {
-                    autoSweepUSDT(userWalletAddress, existingUser.bscPrivateKey);
+                    autoSweepUSDT(userWalletAddress, existingUser.bscPrivateKey); // ጋዝ ሞልቶ ከሆነ ድጋሚ Sweep እንዲሞክር
                 }
+                // Lock እናነሳለን
+                await User.updateOne({ _id: existingUser._id }, { $unset: { depositLockUntil: '' } });
+                
                 return res.json({
                     success: true,
                     balance: updatedBalance,
@@ -1132,11 +1136,12 @@ app.get('/api/check-deposits/:walletAddress', async (req, res) => {
                 });
             }
 
-            recentDepositLocks.set(userWalletAddress, Date.now());
-
+            // ⚡ 3. ATOMIC CREDIT BALANCE ⚡
             const updatedDoc = await User.findByIdAndUpdate(
                 existingUser._id,
-                { $inc: { balance: exactDepositAmt } },
+                { 
+                    $inc: { balance: exactDepositAmt },$unset: { depositLockUntil: '' } // Lock አንሳ
+                },
                 { new: true, select: 'balance' }
             ).lean();
 
@@ -1163,20 +1168,33 @@ app.get('/api/check-deposits/:walletAddress', async (req, res) => {
             if (existingUser.bscPrivateKey) {
                 autoSweepUSDT(userWalletAddress, existingUser.bscPrivateKey);
             }
+            
+            return res.json({
+                success: true,
+                balance: updatedBalance,
+                lockedBalance: Number(existingUser.lockedBalance || 0),
+                transactions: [{ to: userWalletAddress, value: exactDepositAmt, tokenSymbol: 'USDT' }]
+            });
         }
 
-        activeDepositChecks.delete(userWalletAddress);
+        // ዜሮ ከሆነ Lock እናነሳለን
+        await User.updateOne({ _id: existingUser._id }, { $unset: { depositLockUntil: '' } });
 
         return res.json({
             success: true,
             balance: updatedBalance,
             lockedBalance: Number(existingUser.lockedBalance || 0),
-            transactions: exactDepositAmt > 0.0001 ? [{ to: userWalletAddress, value: exactDepositAmt, tokenSymbol: 'USDT' }] : []
+            transactions: []
         });
 
     } catch (error) {
-        activeDepositChecks.delete(userWalletAddress);
-        const fallbackUser = await User.findOne({ bscAddress: { $regex: new RegExp(`^${userWalletAddress}$`, 'i') } })
+        // ኤረር ከተፈጠረ Lock ይነሳል (እንዳይጣበቅ)
+        await User.updateOne(
+            { bscAddress: new RegExp(`^${userWalletAddress}$`, 'i') }, 
+            { $unset: { depositLockUntil: '' } }
+        ).catch(() => {});
+
+        const fallbackUser = await User.findOne({ bscAddress: new RegExp(`^${userWalletAddress}$`, 'i') })
             .select('balance lockedBalance')
             .lean();
 
@@ -1189,6 +1207,7 @@ app.get('/api/check-deposits/:walletAddress', async (req, res) => {
     }
 });
 
+// ✅ ATOMIC WITHDRAWAL FIX: Race Condition & Double Spend Solved ✅
 app.post('/api/withdraw/request', verifyToken, async (req, res) => {
     try {
         const { amount, destinationAddress, useEmailFallback, passkeyVerified } = req.body;
@@ -1207,8 +1226,7 @@ app.post('/api/withdraw/request', verifyToken, async (req, res) => {
             return res.status(404).json({ success: false, message: 'User not found.' });
         }
 
-        const totalDeduction = withdrawAmount;
-        if (user.balance < totalDeduction) {
+        if (user.balance < withdrawAmount) {
             return res.status(400).json({ success: false, message: 'Insufficient available balance.' });
         }
 
@@ -1233,15 +1251,24 @@ app.post('/api/withdraw/request', verifyToken, async (req, res) => {
         if (hasPasskey && passkeyVerified && !useEmailFallback) {
             const amountToSend = withdrawAmount - 1;
 
+            // ⚡ ATOMIC DEDUCTION ⚡ 
+            const updatedUser = await User.findOneAndUpdate(
+                { _id: user._id, balance: { $gte: withdrawAmount } },
+                { 
+                    $inc: { balance: -withdrawAmount },
+                    $set: { dailyWithdrawnAmount: userDailyWithdrawn + withdrawAmount, dailyWithdrawnDate: new Date() }
+                },
+                { new: true }
+            );
+
+            if (!updatedUser) {
+                return res.status(400).json({ success: false, message: 'Insufficient balance or request is processing.' });
+            }
+
             try {
                 const amountInWei = ethers.parseUnits(amountToSend.toString(), 18);
                 const tx = await usdtContractMaster.transfer(destinationAddress, amountInWei);
                 await tx.wait();
-
-                user.balance = Number((user.balance - withdrawAmount).toFixed(6));
-                user.dailyWithdrawnAmount = userDailyWithdrawn + withdrawAmount;
-                user.dailyWithdrawnDate = new Date();
-                await user.save();
 
                 await Transaction.create({
                     userId: user._id,
@@ -1264,11 +1291,19 @@ app.post('/api/withdraw/request', verifyToken, async (req, res) => {
 
                 return res.json({
                     success: true,
-                    balance: user.balance,
+                    balance: updatedUser.balance,
                     message: `Successfully withdrew ${amountToSend.toFixed(2)} USDT via Passkey (1 USDT fee applied).`
                 });
             } catch (txError) {
                 console.error('Blockchain Tx Error (Passkey):', txError);
+                // ⚡ ATOMIC ROLLBACK ⚡
+                await User.updateOne(
+                    { _id: user._id },
+                    { 
+                        $inc: { balance: withdrawAmount },
+                        $set: { dailyWithdrawnAmount: userDailyWithdrawn }
+                    }
+                );
                 return res.status(500).json({ success: false, message: 'Blockchain transfer failed. Check Master Wallet balance or gas fee.' });
             }
         }
@@ -1304,37 +1339,54 @@ app.post('/api/withdraw/request', verifyToken, async (req, res) => {
     }
 });
 
+// ✅ ATOMIC WITHDRAWAL VERIFY FIX ✅
 app.post('/api/withdraw/verify-otp', verifyToken, async (req, res) => {
     try {
         const { otp, amount, destinationAddress } = req.body;
-        const user = await User.findById(req.user.id).select('-kycData -avatar');
-
-        if (!user || user.verificationCode !== otp || Date.now() > user.verificationCodeExpire) {
-            return res.status(400).json({ success: false, message: 'Invalid or expired verification code.' });
-        }
-
+        
         if (!destinationAddress) {
             return res.status(400).json({ success: false, message: 'Destination address is required to complete withdrawal.' });
         }
 
         const withdrawAmount = parseFloat(amount);
-        if (user.balance < withdrawAmount) {
-            return res.status(400).json({ success: false, message: 'Insufficient balance.' });
+        if (isNaN(withdrawAmount) || withdrawAmount < 2) {
+             return res.status(400).json({ success: false, message: 'Invalid withdrawal amount.' });
+        }
+
+        const amountToSend = withdrawAmount - 1;
+
+        // ⚡ ATOMIC VERIFY & DEDUCT ⚡
+        const user = await User.findOneAndUpdate(
+            { 
+                _id: req.user.id, 
+                verificationCode: otp, 
+                verificationCodeExpire: { $gt: Date.now() },
+                balance: { $gte: withdrawAmount }
+            },
+            {
+                $unset: { verificationCode: '', verificationCodeExpire: '' },
+                $inc: { balance: -withdrawAmount }
+            },
+            { new: true, select: '-kycData -avatar email balance dailyWithdrawnAmount dailyWithdrawnDate' }
+        );
+
+        if (!user) {
+            const checkUser = await User.findById(req.user.id).select('verificationCode verificationCodeExpire balance');
+            if (!checkUser || checkUser.verificationCode !== otp || Date.now() > checkUser.verificationCodeExpire) {
+                return res.status(400).json({ success: false, message: 'Invalid or expired verification code.' });
+            }
+            return res.status(400).json({ success: false, message: 'Insufficient balance or concurrent request detected.' });
         }
 
         const userDailyWithdrawn = user.dailyWithdrawnDate && new Date(user.dailyWithdrawnDate).toDateString() === new Date().toDateString() ? user.dailyWithdrawnAmount : 0;
-        const amountToSend = withdrawAmount - 1;
 
         try {
             const amountInWei = ethers.parseUnits(amountToSend.toString(), 18);
             const tx = await usdtContractMaster.transfer(destinationAddress, amountInWei);
             await tx.wait();
 
-            user.balance = Number((user.balance - withdrawAmount).toFixed(6));
             user.dailyWithdrawnAmount = userDailyWithdrawn + withdrawAmount;
             user.dailyWithdrawnDate = new Date();
-            user.verificationCode = undefined;
-            user.verificationCodeExpire = undefined;
             await user.save();
 
             await Transaction.create({
@@ -1359,6 +1411,8 @@ app.post('/api/withdraw/verify-otp', verifyToken, async (req, res) => {
             res.json({ success: true, balance: user.balance, message: `Withdrawal of ${amountToSend.toFixed(2)} USDT Sent via Blockchain!` });
         } catch (txError) {
             console.error('Blockchain Tx Error (Email OTP):', txError);
+            // ⚡ ATOMIC ROLLBACK ⚡
+            await User.updateOne({ _id: user._id }, { $inc: { balance: withdrawAmount } });
             return res.status(500).json({ success: false, message: 'Blockchain transfer failed. Insufficient BNB for Gas or invalid address.' });
         }
 
@@ -1369,7 +1423,7 @@ app.post('/api/withdraw/verify-otp', verifyToken, async (req, res) => {
 });
 
 // ============================================================================
-// ⚡ ULTRA-FAST PROFILE, REAL P2P STATS (>=95% FLOOR) & INSTANT BALANCE ⚡
+// ⚡ ULTRA-FAST PROFILE, REAL P2P STATS & INSTANT BALANCE ⚡
 // ============================================================================
 async function getRealUserTradeStats(userId, userEmail) {
     try {
@@ -1431,7 +1485,6 @@ async function getRealUserTradeStats(userId, userEmail) {
             ? Math.round(((completedCount - disputesLost) / completedCount) * 100)
             : 100;
 
-        // ✅ FIX #2: Never display below 95%! If >= 95%, show the exact percentage.
         const completionPct = Math.max(95, Math.min(100, rawCompletionPct));
         const reputationPct = Math.max(95, Math.min(100, rawReputationPct));
 
@@ -1513,7 +1566,6 @@ async function getFastUserProfilePayload(userId) {
     const finalFullName = hasValidVerifiedName ? resolvedFullName : emailPrefix;
     const firstNameOnly = hasValidVerifiedName ? resolvedFullName.trim().split(/\s+/)[0] : emailPrefix;
 
-    // ⚡ Non-blocking avatar URL + fast cached trade stats -> Responds in 0.005s! ⚡
     const avatarUrl = getFastAvatarUrl(user._id);
     const tradeStats = await getRealUserTradeStats(user._id, user.email);
 
@@ -1552,7 +1604,6 @@ async function getFastUserProfilePayload(userId) {
     };
 }
 
-// ✅ FIX #4: Return balance & profile fields at BOTH top-level and inside `user` so Dashboard displays balance in 0.00s!
 app.get('/me', verifyToken, async (req, res) => {
     try {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -2128,7 +2179,7 @@ app.get('/api/admin/kyc-image/:id/:field', async (req, res) => {
     }
 });
 
-// 🚀 2. ULTRA-FAST KYC REQUESTS (2KB Payload -> Loads in 0.01s!) 🚀
+// 🚀 2. ULTRA-FAST KYC REQUESTS 🚀
 app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
     try {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -2694,7 +2745,7 @@ app.get('/api/verify-recipient', verifyToken, async (req, res) => {
     }
 });
 
-// --- 🔥 Fast Internal Transfer API (Atomic Balance Update) 🔥 ---
+// ✅ ATOMIC INTERNAL TRANSFER FIX ✅
 app.post('/api/transfer', verifyToken, async (req, res) => {
     try {
         const { recipient, amount, code, authType } = req.body;
@@ -2706,19 +2757,7 @@ app.post('/api/transfer', verifyToken, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid transfer details.' });
         }
 
-        const sender = await User.findById(senderId).select('_id email balance emailOtp emailOtpExpires').lean();
-        if (!sender) {
-            return res.status(404).json({ success: false, message: 'Sender not found.' });
-        }
-
-        if (sender.balance < transferAmount) {
-            return res.status(400).json({ success: false, message: `Your available balance is ${sender.balance} USDT. Insufficient balance!` });
-        }
-
-        if (code && code !== '' && sender.emailOtp && sender.emailOtp !== code) {
-            return res.status(400).json({ success: false, message: 'Invalid verification code.' });
-        }
-
+        const exactAmt = Number(transferAmount.toFixed(6));
         const isObjectId = /^[0-9a-fA-F]{24}$/.test(recipientQuery);
 
         const receiver = await User.findOne({
@@ -2735,29 +2774,45 @@ app.post('/api/transfer', verifyToken, async (req, res) => {
             return res.status(404).json({ success: false, message: 'Recipient not found! Please check the Email or ID.' });
         }
 
-        if (sender._id.toString() === receiver._id.toString()) {
+        if (senderId === receiver._id.toString()) {
             return res.status(400).json({ success: false, message: 'You cannot transfer to yourself.' });
         }
 
-        const exactAmt = Number(transferAmount.toFixed(6));
+        // ⚡ ATOMIC TRANSFER DEDUCT ⚡
+        const senderQuery = {
+            _id: senderId,
+            balance: { $gte: exactAmt }
+        };
+        
+        // Ensure strictly matching OTP if it was provided
+        if (code) {
+             senderQuery.emailOtp = code;
+        }
 
-        const [updatedSender] = await Promise.all([
-            User.findByIdAndUpdate(
-                sender._id,
-                { $inc: { balance: -exactAmt }, $unset: { emailOtp: '', emailOtpExpires: '' } },
-                { new: true, select: 'balance' }
-            ).lean(),
-            User.findByIdAndUpdate(
-                receiver._id,
-                { $inc: { balance: exactAmt } }
-            )
-        ]);
+        const updatedSender = await User.findOneAndUpdate(
+            senderQuery,
+            { 
+                $inc: { balance: -exactAmt }, 
+                $unset: { emailOtp: '', emailOtpExpires: '' } 
+            },
+            { new: true, select: 'balance email emailOtp' }
+        );
+
+        if (!updatedSender) {
+            const currentSender = await User.findById(senderId).select('balance emailOtp');
+            if (code && currentSender && currentSender.emailOtp !== code) {
+                 return res.status(400).json({ success: false, message: 'Invalid verification code.' });
+            }
+            return res.status(400).json({ success: false, message: 'Insufficient balance or transfer already processed.' });
+        }
+
+        await User.findByIdAndUpdate(receiver._id, { $inc: { balance: exactAmt } });
 
         try {
             await Transaction.create([
                 {
-                    userId: sender._id,
-                    email: sender.email,
+                    userId: updatedSender._id,
+                    email: updatedSender.email,
                     type: 'transfer',
                     amount: exactAmt,
                     destinationAddress: receiver.email,
@@ -2768,15 +2823,15 @@ app.post('/api/transfer', verifyToken, async (req, res) => {
                     email: receiver.email,
                     type: 'deposit',
                     amount: exactAmt,
-                    destinationAddress: sender.email,
+                    destinationAddress: updatedSender.email,
                     status: 'completed'
                 }
             ]);
         } catch(txErr) {}
 
         notifyUser({
-            userId: sender._id,
-            email: sender.email,
+            userId: updatedSender._id,
+            email: updatedSender.email,
             title: 'USDT Transferred',
             message: `You sent ${exactAmt.toFixed(2)} USDT to ${receiver.email}.`,
             type: 'transfer',
@@ -2786,14 +2841,14 @@ app.post('/api/transfer', verifyToken, async (req, res) => {
             userId: receiver._id,
             email: receiver.email,
             title: 'USDT Received',
-            message: `You received ${exactAmt.toFixed(2)} USDT from ${sender.email}.`,
+            message: `You received ${exactAmt.toFixed(2)} USDT from ${updatedSender.email}.`,
             type: 'deposit',
             link: 'wallet.html'
         });
 
         res.json({
             success: true,
-            balance: updatedSender ? updatedSender.balance : Number((sender.balance - exactAmt).toFixed(6)),
+            balance: updatedSender.balance,
             message: 'Transfer successful!'
         });
 
@@ -2825,11 +2880,11 @@ app.post('/api/user/heartbeat', verifyToken, async (req, res) => {
     }
 });
 
-// --- 🔥 P2P Ad APIs (Instant Lock & Balance Update) 🔥 ---
+// ✅ ATOMIC P2P AD POST FIX ✅
 app.post('/api/ads', verifyToken, async (req, res) => {
     try {
         const { tradeType, price, totalAmount, minLimit, maxLimit, paymentMethods, verificationLevel, termsConditions } = req.body;
-        const user = await User.findById(req.user.id).select('_id email balance lockedBalance traderUsername userId').lean();
+        const user = await User.findById(req.user.id).select('_id email traderUsername userId').lean();
 
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found.' });
@@ -2838,17 +2893,19 @@ app.post('/api/ads', verifyToken, async (req, res) => {
         const amountNum = Number(Number(totalAmount).toFixed(6));
 
         if (tradeType === 'sell') {
-            if (!user.balance || user.balance + 0.0001 < amountNum) {
-                return res.status(400).json({ success: false, message: 'Insufficient balance to post this sell ad.' });
-            }
-
-            await User.updateOne(
-                { _id: user._id },
+            // ⚡ ATOMIC BALANCE CHECK & LOCK ⚡
+            const updatedUser = await User.findOneAndUpdate(
+                { _id: user._id, balance: { $gte: amountNum } },
                 {
                     $inc: { balance: -amountNum, lockedBalance: amountNum },
                     $set: { lastActive: new Date() }
-                }
+                },
+                { new: true }
             );
+
+            if (!updatedUser) {
+                return res.status(400).json({ success: false, message: 'Insufficient balance to post this sell ad.' });
+            }
         } else {
             await User.updateOne({ _id: user._id }, { $set: { lastActive: new Date() } });
         }
@@ -2881,7 +2938,7 @@ app.post('/api/ads', verifyToken, async (req, res) => {
     }
 });
 
-// ⚡ 1. ULTRA-FAST LIVE MARKET ADS (With Real Trade Counts & >=95% Completion Rate!) ⚡
+// ⚡ 1. ULTRA-FAST LIVE MARKET ADS ⚡
 app.get('/api/ads', async (req, res) => {
     try {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -2953,7 +3010,6 @@ app.get('/api/ads', async (req, res) => {
             const totalFinished = uStat.completed + uStat.cancelled;
             const rawCompRate = totalFinished > 0 ? Math.round((uStat.completed / totalFinished) * 100) : 100;
 
-            // ✅ FIX #2: Never display below 95%! If >= 95%, show exact rate.
             const compRateNum = Math.max(95, Math.min(100, rawCompRate));
 
             return {
@@ -3188,7 +3244,6 @@ async function refundEscrowOnCancel(trade) {
     }
 }
 
-// ✅ FIX #3: Synchronizes `expiresAt` with client's `req.query.t` clock so client NEVER sees `370m 14s` due to timezone/clock offset!
 function attachAccurateTimerData(tradeRaw, req = null) {
     if (!tradeRaw) return null;
     const obj = tradeRaw.toObject ? tradeRaw.toObject() : { ...tradeRaw };
@@ -3350,16 +3405,13 @@ app.post('/api/trades', async (req, res) => {
             await checkAdMinLimitAndCleanUp(ad);
         }
 
-        // ⚡ ፕሮፌሽናል የክፍያ (Payment) ምርጫ ማስተካከያ ⚡
         let matchedPay = {};
         if (actionType === 'sell') {
-            // ሻጩ (አሁን የገባው ዩዘር) USDT እየሸጠ ስለሆነ፣ ብር የሚቀበለው በራሱ አካውንት ነው
             const userPayments = Array.isArray(sellerUser.paymentMethods) ? sellerUser.paymentMethods : [];
             matchedPay = userPayments.find(p =>
                 String(p.type || '').toLowerCase().trim() === String(paymentMethod || '').toLowerCase().trim()
             ) || userPayments[0] || {};
         } else {
-            // ገዢ USDT እየገዛ ከሆነ፣ ብር የሚልከው ለማስታወቂያው ባለቤት ነው
             const adOwnerPayments = Array.isArray(sellerUser.paymentMethods) ? sellerUser.paymentMethods : [];
             matchedPay = adOwnerPayments.find(p =>
                 String(p.type || '').toLowerCase().trim() === String(paymentMethod || '').toLowerCase().trim()
@@ -3538,7 +3590,7 @@ app.get('/api/user/active-trades', async (req, res) => {
     }
 });
 
-// 4. Get Single Trade Details (With Atomic Safe Timeout Cancel)
+// 4. Get Single Trade Details
 app.get('/api/trades/:id', async (req, res) => {
     try {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -3555,7 +3607,6 @@ app.get('/api/trades/:id', async (req, res) => {
 
         if (!trade) return res.status(404).json({ success: false, message: 'Trade not found.' });
 
-        // ⚡ Atomic Timeout Check: ሰዓቱ ሲያልቅ 1 ጊዜ ብቻ Refund እንዲያደርግ የሚያግድ ኮድ ⚡
         if (trade.status === 'funds_locked' && Date.now() >= new Date(trade.expiresAt).getTime()) {
             if (!trade.warningExtended) {
                 const extended = await Trade.findOneAndUpdate(
@@ -3576,7 +3627,6 @@ app.get('/api/trades/:id', async (req, res) => {
                 );
                 if (extended) trade = extended;
             } else {
-                // Atomic Cancel: በ 1 ሰከንድ ውስጥ ብዙ ጥያቄ ቢመጣም አንድ ጊዜ ብቻ ነው የሚሰራው!
                 const cancelledTrade = await Trade.findOneAndUpdate(
                     { _id: trade._id, status: 'funds_locked', warningExtended: true },
                     {
