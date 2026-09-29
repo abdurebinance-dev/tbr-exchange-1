@@ -1361,12 +1361,10 @@
                 return;
             }
 
-            // የትራንስፈር መረጃውን ወደ ተለዋዋጭ ማስገባት
             pendingActionType = "Transfer";
             pendingTransferRecipient = recipient;
             pendingTransferAmount = amount;
 
-            // የሞዳሉን ጽሁፍ ወደ Transfer መቀየር
             const actionLabel = document.getElementById("securityModalActionName");
             if (actionLabel) actionLabel.innerText = "Transfer";
 
@@ -1509,7 +1507,46 @@
         }
 
         // =========================================================
-        // 🚀 3. EMAIL OTP: ለጋራ የሚሰራ
+        // 🚀 2. WITHDRAW ACTION: የደህንነት ሞዳል ይከፍታል
+        // =========================================================
+        async function initiateWithdrawal() {
+            const address = document.getElementById('withdraw-address').value.trim();
+            const amount = document.getElementById('withdraw-amount').value;
+
+            // አዲስ ቶስት መከላከያ (ዝም እንዳይል)
+            if (!address || parseFloat(amount) < 2 || parseFloat(amount) > parseFloat(userRawBalance)) {
+                showToast("Please enter a valid amount and address.", true);
+                return;
+            }
+
+            pendingActionType = "Withdraw";
+            pendingWithdrawAmount = parseFloat(amount);
+
+            const actionLabel = document.getElementById("securityModalActionName");
+            if (actionLabel) actionLabel.innerText = "Withdrawal";
+
+            if (userHasPasskey) {
+                document.getElementById('securityModal').style.display = 'flex';
+            } else {
+                document.getElementById('otpModal').style.display = 'flex';
+                document.getElementById('sendEmailCodeBtn').innerText = "Send Code";
+                document.getElementById('sendEmailCodeBtn').disabled = false;
+            }
+        }
+
+        function closeSecurityModal() {
+            document.getElementById('securityModal').style.display = 'none';
+        }
+
+        function switchToEmailOTP() {
+            closeSecurityModal(); 
+            document.getElementById('otpModal').style.display = 'flex'; 
+            document.getElementById('sendEmailCodeBtn').innerText = "Send Code";
+            document.getElementById('sendEmailCodeBtn').disabled = false;
+        }
+
+        // =========================================================
+        // 🚀 3. EMAIL OTP: ለጋራ የሚሰራ (አዲሱ እንከንየለሽ ኮድ)
         // =========================================================
         async function triggerEmailOTP() {
             const token = localStorage.getItem('token') || localStorage.getItem('authToken');
@@ -1522,11 +1559,9 @@
             const reqAddress = pendingActionType === "Transfer" ? pendingTransferRecipient : document.getElementById('withdraw-address').value.trim();
 
             try {
-                // 🚀 Transfer እና Withdraw የተለያዩ API እንዲጠቀሙ ተደርጓል 🚀
                 let apiURL = `${API_BASE_URL}/api/withdraw/request`;
                 let bodyData = { amount: reqAmount, destinationAddress: reqAddress, useEmailFallback: true, passkeyVerified: false };
 
-                // Transfer ከሆነ የራሱን API ይጠቀማል
                 if (pendingActionType === "Transfer") {
                     apiURL = `${API_BASE_URL}/api/transfer/request-otp`;
                     bodyData = { amount: reqAmount, recipient: reqAddress };
@@ -1541,22 +1576,56 @@
                     body: JSON.stringify(bodyData)
                 });
 
+                // ሰርቨሩ HTML 404 Error ቢመልስ ከስር ባለው catch ውስጥ እንዲያዝ ያደርጋል
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    throw new Error(errData.message || "Server error/Not Ready");
+                }
+
                 const data = await res.json();
                 
-                // Transfer የሚመልሰው requiresEmailOtp ስለሌለው || data.success አክለናል
-                if (data.requiresEmailOtp || (pendingActionType === "Transfer" && data.success)) {
+                if (data.requiresEmailOtp || (pendingActionType === "Transfer" && data.success) || data.success) {
                     showToast("Verification code sent to your email!");
                     startOtpCountdown();
                 } else {
-                    showToast(data.message || "Error sending code.");
+                    showToast(data.message || "Error sending code.", true);
                     sendBtn.disabled = false;
                     sendBtn.innerText = "Send Code";
                 }
             } catch (err) {
-                showToast("Server error switching to email.");
+                console.error(err);
+                showToast(err.message || "Server error switching to email.", true);
                 sendBtn.disabled = false;
                 sendBtn.innerText = "Send Code";
             }
+        }
+
+        function startOtpCountdown() {
+            const btn = document.getElementById('sendEmailCodeBtn');
+            let timeLeft = 60;
+            btn.innerText = `${timeLeft}s`;
+            
+            const timer = setInterval(() => {
+                timeLeft--;
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    btn.innerText = "Send Code";
+                    btn.disabled = false;
+                } else {
+                    btn.innerText = `${timeLeft}s`;
+                }
+            }, 1000);
+        }
+
+        function base64urlToBufferWallet(base64url) {
+            const padding = '='.repeat((4 - base64url.length % 4) % 4);
+            const base64 = (base64url + padding).replace(/\-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const buffer = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) {
+                buffer[i] = rawData.charCodeAt(i);
+            }
+            return buffer;
         }
 
         // =========================================================
@@ -1589,14 +1658,12 @@
                     showToast("Passkey verification cancelled."); return;
                 }
 
-                // 🚀 Transfer ከሆነ ወደ Transfer API ያልፋል 🚀
                 if (pendingActionType === "Transfer") {
                     closeSecurityModal();
                     executeTransferAPI(pendingTransferRecipient, pendingTransferAmount, '', 'passkey');
                     return;
                 }
 
-                // ለ Withdraw ከሆነ
                 const address = document.getElementById('withdraw-address').value.trim();
                 const withdrawRes = await fetch(`${API_BASE_URL}/api/withdraw/request`, {
                     method: 'POST',
@@ -1621,12 +1688,12 @@
                     await fetchUserProfile();
                     fetchTransactions();
                 } else {
-                    showToast(data.message || "Passkey failed.");
+                    showToast(data.message || "Passkey failed.", true);
                 }
 
             } catch (err) {
                 console.error("Passkey Verify Error:", err);
-                showToast("Action cancelled or Passkey not supported.");
+                showToast("Action cancelled or Passkey not supported.", true);
             }
         }
 
@@ -1636,19 +1703,24 @@
         async function verifyAndCompleteWithdrawal() {
             const otp = document.getElementById('otpCodeInput').value.trim();
             if (!otp || otp.length !== 6) {
-                showToast("Please enter valid 6-digit OTP code.");
+                showToast("Please enter valid 6-digit OTP code.", true);
                 return;
             }
 
-            // 🚀 Transfer ከሆነ ወደ Transfer API ያልፋል 🚀
+            const submitBtn = document.querySelector('#otpModal .action-submit-btn');
+            const originalText = submitBtn.innerText;
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Verifying...";
+
             if (pendingActionType === "Transfer") {
-                closeOtpModal();
-                executeTransferAPI(pendingTransferRecipient, pendingTransferAmount, otp, 'email');
+                await executeTransferAPI(pendingTransferRecipient, pendingTransferAmount, otp, 'email');
                 document.getElementById('otpCodeInput').value = "";
+                closeOtpModal();
+                submitBtn.disabled = false;
+                submitBtn.innerText = originalText;
                 return;
             }
 
-            // ለ Withdraw ከሆነ
             const address = document.getElementById('withdraw-address').value.trim();
             const token = localStorage.getItem('token') || localStorage.getItem('authToken');
             try {
@@ -1676,11 +1748,14 @@
                     validateWithdrawForm();
                     fetchTransactions(); 
                 } else {
-                    showToast(data.message || "Verification failed.");
+                    showToast(data.message || "Verification failed.", true);
                 }
             } catch (err) {
                 console.error("OTP Verify Error:", err);
-                showToast("Server error during verification.");
+                showToast("Server error during verification.", true);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerText = originalText;
             }
         }
 
@@ -1762,5 +1837,3 @@
             }, 3000);
         }
     </script>
-</body>
-</html>
