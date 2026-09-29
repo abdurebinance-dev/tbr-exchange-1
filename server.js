@@ -1916,8 +1916,7 @@ app.get('/api/admin/finance/stats', verifyFinanceAdmin, async (req, res) => {
         const [allTx, failedTx, potentialSweeps] = await Promise.all([
             Transaction.find({ status: { $in: ['completed', 'Completed'] } }).select('amount fee createdAt').lean(),
             Transaction.find({ status: 'failed' }).limit(50).lean(),
-            // ✅ FIX 1: "_id" አብሮ እንዲወጣ ተደርጓል
-            User.find({ balance: { $gt: 0 }, bscAddress: {$ne: '' } }).select('_id email bscAddress').limit(25).lean()
+            User.find({ balance: { $gt: 0 }, bscAddress: { $ne: '' } }).select('_id email bscAddress').limit(25).lean()
         ]);
 
         let totalVolume = 0;
@@ -1945,7 +1944,9 @@ app.get('/api/admin/finance/stats', verifyFinanceAdmin, async (req, res) => {
                 ]);
                 if (bal > 0n) {
                     pendingSweeps.push({
-                        userId: user._id, // ✅ FIX 2: userId ወደ Frontend ተልኳል
+                        _id: user._id,      // 🔥 የጠፋችው ይቺ ናት! (Frontend ይቺን ነው የሚፈልገው)
+                        id: user._id,       // Backup
+                        userId: user._id,   // Backup
                         email: user.email,
                         bscAddress: user.bscAddress,
                         balance: parseFloat(ethers.formatUnits(bal, 18))
@@ -1975,21 +1976,28 @@ app.get('/api/admin/finance/stats', verifyFinanceAdmin, async (req, res) => {
 
 app.post('/api/admin/manual-sweep', verifyFinanceAdmin, async (req, res) => {
     try {
-        // ✅ FIX 3: Frontend "undefined" ቢልክም በ email ወይም በ bscAddress ይፈልጋል
-        const { userId, bscAddress, email } = req.body;
+        // Frontend የሚያመጣውን ማንኛውንም አይዲ (ID) እንቀበላለን
+        const payloadId = String(req.body.userId || req.body.id || req.body._id || '').trim();
 
         let user = null;
 
-        if (userId && userId !== 'undefined') {
-            user = await User.findById(userId).select('_id email bscAddress bscPrivateKey').lean();
-        } else if (bscAddress) {
-            user = await User.findOne({ bscAddress: new RegExp(`^${bscAddress}$`, 'i') }).select('_id email bscAddress bscPrivateKey').lean();
-        } else if (email) {
-            user = await User.findOne({ email: email.toLowerCase() }).select('_id email bscAddress bscPrivateKey').lean();
+        if (payloadId && payloadId !== 'undefined') {
+            // 1. መደበኛ MongoDB ID ከሆነ
+            if (mongoose.Types.ObjectId.isValid(payloadId)) {
+                user = await User.findById(payloadId).select('_id email bscAddress bscPrivateKey').lean();
+            } 
+            // 2. Email ከተላከ
+            else if (payloadId.includes('@')) {
+                user = await User.findOne({ email: payloadId.toLowerCase() }).select('_id email bscAddress bscPrivateKey').lean();
+            } 
+            // 3. BSC Address ከተላከ
+            else if (payloadId.startsWith('0x')) {
+                user = await User.findOne({ bscAddress: new RegExp(`^${payloadId}$`, 'i') }).select('_id email bscAddress bscPrivateKey').lean();
+            }
         }
 
         if (!user || !user.bscPrivateKey) {
-            return res.status(404).json({ success: false, message: 'User or private key not found in database.' });
+            return res.status(404).json({ success: false, message: 'User or private key not found! Please refresh the page (Ctrl + F5) and try again.' });
         }
 
         const userWallet = new ethers.Wallet(user.bscPrivateKey, provider);
@@ -2000,7 +2008,6 @@ app.post('/api/admin/manual-sweep', verifyFinanceAdmin, async (req, res) => {
             return res.status(400).json({ success: false, message: `No USDT found in wallet ${userWallet.address}.` });
         }
 
-        // ✅ FIX 4: የጋዝ ክፍያ ወደ 0.0005 BNB ከፍ ብሏል (አለበለዚያ fails silently)
         const txFee = ethers.parseEther("0.0005"); 
         const bnbTx = await masterWallet.sendTransaction({
             to: userWallet.address,
@@ -2028,7 +2035,7 @@ app.post('/api/admin/manual-sweep', verifyFinanceAdmin, async (req, res) => {
 
     } catch (error) {
         console.error('Admin Manual Sweep Error:', error);
-        res.status(500).json({ success: false, message: 'Sweep failed: Check Master Wallet BNB Balance or Gas. ' + error.message });
+        res.status(500).json({ success: false, message: 'Sweep failed: Check Master Wallet BNB Balance or Gas.' });
     }
 });
 
