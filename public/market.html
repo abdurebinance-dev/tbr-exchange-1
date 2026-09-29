@@ -2344,6 +2344,78 @@
         loadRealAdsStats();
     })();
 
+    // ⚡ PROFESSIONAL SELL MODAL PAYMENT METHOD & LIMIT FIX ⚡
+(function fixMarketSellModalAccounts() {
+    let mySavedPayments = [];
+
+    // የገባውን ዩዘር የባንክ አካውንቶች ከሰርቨር ማምጣት
+    async function loadMyPaymentMethods() {
+        try {
+            const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+            if (!token) return;
+            const res = await fetch('/api/user/payments', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                mySavedPayments = data.payments || [];
+            }
+        } catch (e) {}
+    }
+
+    loadMyPaymentMethods();
+
+    // ፎርሙ (Modal) ሲከፈት ወዲያውኑ ማስተካከል
+    const observer = new MutationObserver(() => {
+        const sellModal = document.querySelector('.modal, #sellModal, [id*="sell"], .trade-modal');
+        if (!sellModal || sellModal.style.display === 'none') return;
+
+        const modalTitle = sellModal.querySelector('h2, h3, .modal-title, .title');
+        const isSellModal = modalTitle && modalTitle.innerText.toLowerCase().includes('sell');
+        if (!isSellModal) return;
+
+        // 1. Min / Max limit የተገለበጠውን ማስተካከል (ለምሳሌ 500 - 131.56 ወደ 131.56 - 500)
+        const limitTexts = sellModal.querySelectorAll('span, p, div, small');
+        limitTexts.forEach(el => {
+            const txt = el.innerText || '';
+            const m = txt.match(/Limit\s*([\d,.]+)\s*[-–]\s*([\d,.]+)\s*ETB/i);
+            if (m) {
+                const val1 = parseFloat(m[1].replace(/,/g, ''));
+                const val2 = parseFloat(m[2].replace(/,/g, ''));
+                if (val1 > val2) {
+                    el.innerText = `Limit ${val2.toFixed(2)} – ${val1.toFixed(2)} ETB`;
+                }
+            }
+        });
+
+        // 2. Sell ፎርም ላይ የሌላ ሰውን አካውንት አጥፍቶ የራስህን (የሻጩን) ማስገባት
+        if (mySavedPayments.length > 0) {
+            const activeMethodBtn = sellModal.querySelector('.method-btn.active, .payment-btn.active, button.active');
+            const selectedMethodType = activeMethodBtn ? activeMethodBtn.innerText.trim().toLowerCase() : '';
+
+            const matchedAcc = mySavedPayments.find(p => 
+                p.type && p.type.toLowerCase().includes(selectedMethodType)
+            ) || mySavedPayments[0];
+
+            if (matchedAcc) {
+                const myName = localStorage.getItem('fullName') || localStorage.getItem('userName') || matchedAcc.name;
+                
+                // Screenshot ላይ ያለውን 'Buyer will send to' ቦክስ በራስህ አካውንት መተካት
+                const detailLines = sellModal.querySelectorAll('p, div, span');
+                detailLines.forEach(line => {
+                    if (line.innerText.includes('rahmet ali') || line.innerText.includes('1000397691652')) {
+                        line.innerHTML = `<strong style="color:#fff; font-size:14px;">${myName}</strong><br>` +
+                                         `<span style="color:#d1d5db; font-family:monospace; font-size:13px;">${matchedAcc.account}</span><br>` +
+                                         `<small style="color:#848e9c;">${matchedAcc.type || matchedAcc.name}</small>`;
+                    }
+                });
+            }
+        }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+})();
+
     </script>
 </body>
 </html>

@@ -3350,10 +3350,21 @@ app.post('/api/trades', async (req, res) => {
             await checkAdMinLimitAndCleanUp(ad);
         }
 
-        const sellerPayments = Array.isArray(sellerUser.paymentMethods) ? sellerUser.paymentMethods : [];
-        const matchedPay = sellerPayments.find(p =>
-            String(p.type || '').toLowerCase().trim() === String(paymentMethod || '').toLowerCase().trim()
-        ) || sellerPayments[0] || {};
+        // ⚡ ፕሮፌሽናል የክፍያ (Payment) ምርጫ ማስተካከያ ⚡
+        let matchedPay = {};
+        if (actionType === 'sell') {
+            // ሻጩ (አሁን የገባው ዩዘር) USDT እየሸጠ ስለሆነ፣ ብር የሚቀበለው በራሱ አካውንት ነው
+            const userPayments = Array.isArray(sellerUser.paymentMethods) ? sellerUser.paymentMethods : [];
+            matchedPay = userPayments.find(p =>
+                String(p.type || '').toLowerCase().trim() === String(paymentMethod || '').toLowerCase().trim()
+            ) || userPayments[0] || {};
+        } else {
+            // ገዢ USDT እየገዛ ከሆነ፣ ብር የሚልከው ለማስታወቂያው ባለቤት ነው
+            const adOwnerPayments = Array.isArray(sellerUser.paymentMethods) ? sellerUser.paymentMethods : [];
+            matchedPay = adOwnerPayments.find(p =>
+                String(p.type || '').toLowerCase().trim() === String(paymentMethod || '').toLowerCase().trim()
+            ) || adOwnerPayments[0] || {};
+        }
 
         const resolveName = (u) => {
             const clean = String(u.traderUsername || '').trim().replace(/^@+/, '');
@@ -3527,7 +3538,7 @@ app.get('/api/user/active-trades', async (req, res) => {
     }
 });
 
-// 4. Get Single Trade Details
+// 4. Get Single Trade Details (With Atomic Safe Timeout Cancel)
 app.get('/api/trades/:id', async (req, res) => {
     try {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -3544,28 +3555,50 @@ app.get('/api/trades/:id', async (req, res) => {
 
         if (!trade) return res.status(404).json({ success: false, message: 'Trade not found.' });
 
+        // ⚡ Atomic Timeout Check: ሰዓቱ ሲያልቅ 1 ጊዜ ብቻ Refund እንዲያደርግ የሚያግድ ኮድ ⚡
         if (trade.status === 'funds_locked' && Date.now() >= new Date(trade.expiresAt).getTime()) {
             if (!trade.warningExtended) {
-                trade.warningExtended = true;
-                trade.expiresAt = new Date(Date.now() + 2 * 60 * 1000);
-                trade.messages.push({
-                    senderId: 'system',
-                    senderName: 'System',
-                    text: '⚠️ Warning: Payment window expired! An extra 2 minutes has been granted. Please complete payment and upload your receipt now, or this order will be automatically cancelled.',
-                    isSystem: true
-                });
-                await trade.save();
+                const extended = await Trade.findOneAndUpdate(
+                    { _id: trade._id, status: 'funds_locked', warningExtended: false },
+                    {
+                        $set: { warningExtended: true, expiresAt: new Date(Date.now() + 2 * 60 * 1000) },
+                        $push: {
+                            messages: {
+                                senderId: 'system',
+                                senderName: 'System',
+                                text: '⚠️ Warning: Payment window expired! 2 extra minutes granted. Please complete payment or order will cancel.',
+                                isSystem: true,
+                                createdAt: new Date()
+                            }
+                        }
+                    },
+                    { new: true }
+                );
+                if (extended) trade = extended;
             } else {
-                await refundEscrowOnCancel(trade);
-                trade.status = 'cancelled';
-                trade.messages.push({
-                    senderId: 'system',
-                    senderName: 'System',
-                    text: 'Trade automatically cancelled due to payment timeout. Escrowed USDT has been returned to the seller.',
-                    isSystem: true
-                });
-                await trade.save();
-                tradeStatsCache.clear();
+                // Atomic Cancel: በ 1 ሰከንድ ውስጥ ብዙ ጥያቄ ቢመጣም አንድ ጊዜ ብቻ ነው የሚሰራው!
+                const cancelledTrade = await Trade.findOneAndUpdate(
+                    { _id: trade._id, status: 'funds_locked', warningExtended: true },
+                    {
+                        $set: { status: 'cancelled' },
+                        $push: {
+                            messages: {
+                                senderId: 'system',
+                                senderName: 'System',
+                                text: 'Trade automatically cancelled due to timeout. Escrow refunded safely.',
+                                isSystem: true,
+                                createdAt: new Date()
+                            }
+                        }
+                    },
+                    { new: true }
+                );
+
+                if (cancelledTrade) {
+                    await refundEscrowOnCancel(cancelledTrade);
+                    trade = cancelledTrade;
+                    if (typeof tradeStatsCache !== 'undefined') tradeStatsCache.clear();
+                }
             }
         }
 
