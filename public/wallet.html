@@ -1509,44 +1509,6 @@
         }
 
         // =========================================================
-        // 🚀 2. WITHDRAW ACTION: የደህንነት ሞዳል ይከፍታል
-        // =========================================================
-        async function initiateWithdrawal() {
-            const address = document.getElementById('withdraw-address').value.trim();
-            const amount = document.getElementById('withdraw-amount').value;
-
-            if (!address || parseFloat(amount) < 2 || parseFloat(amount) > parseFloat(userRawBalance)) {
-                return;
-            }
-
-            pendingActionType = "Withdraw";
-            pendingWithdrawAmount = parseFloat(amount);
-
-            // የሞዳሉን ጽሁፍ ወደ Withdrawal መቀየር
-            const actionLabel = document.getElementById("securityModalActionName");
-            if (actionLabel) actionLabel.innerText = "Withdrawal";
-
-            if (userHasPasskey) {
-                document.getElementById('securityModal').style.display = 'flex';
-            } else {
-                document.getElementById('otpModal').style.display = 'flex';
-                document.getElementById('sendEmailCodeBtn').innerText = "Send Code";
-                document.getElementById('sendEmailCodeBtn').disabled = false;
-            }
-        }
-
-        function closeSecurityModal() {
-            document.getElementById('securityModal').style.display = 'none';
-        }
-
-        function switchToEmailOTP() {
-            closeSecurityModal(); 
-            document.getElementById('otpModal').style.display = 'flex'; 
-            document.getElementById('sendEmailCodeBtn').innerText = "Send Code";
-            document.getElementById('sendEmailCodeBtn').disabled = false;
-        }
-
-        // =========================================================
         // 🚀 3. EMAIL OTP: ለጋራ የሚሰራ
         // =========================================================
         async function triggerEmailOTP() {
@@ -1560,17 +1522,29 @@
             const reqAddress = pendingActionType === "Transfer" ? pendingTransferRecipient : document.getElementById('withdraw-address').value.trim();
 
             try {
-                const res = await fetch(`${API_BASE_URL}/api/withdraw/request`, {
+                // 🚀 Transfer እና Withdraw የተለያዩ API እንዲጠቀሙ ተደርጓል 🚀
+                let apiURL = `${API_BASE_URL}/api/withdraw/request`;
+                let bodyData = { amount: reqAmount, destinationAddress: reqAddress, useEmailFallback: true, passkeyVerified: false };
+
+                // Transfer ከሆነ የራሱን API ይጠቀማል
+                if (pendingActionType === "Transfer") {
+                    apiURL = `${API_BASE_URL}/api/transfer/request-otp`;
+                    bodyData = { amount: reqAmount, recipient: reqAddress };
+                }
+
+                const res = await fetch(apiURL, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify({ amount: reqAmount, destinationAddress: reqAddress, useEmailFallback: true, passkeyVerified: false })
+                    body: JSON.stringify(bodyData)
                 });
 
                 const data = await res.json();
-                if (data.requiresEmailOtp) {
+                
+                // Transfer የሚመልሰው requiresEmailOtp ስለሌለው || data.success አክለናል
+                if (data.requiresEmailOtp || (pendingActionType === "Transfer" && data.success)) {
                     showToast("Verification code sent to your email!");
                     startOtpCountdown();
                 } else {
@@ -1583,34 +1557,6 @@
                 sendBtn.disabled = false;
                 sendBtn.innerText = "Send Code";
             }
-        }
-
-        function startOtpCountdown() {
-            const btn = document.getElementById('sendEmailCodeBtn');
-            let timeLeft = 60;
-            btn.innerText = `${timeLeft}s`;
-            
-            const timer = setInterval(() => {
-                timeLeft--;
-                if (timeLeft <= 0) {
-                    clearInterval(timer);
-                    btn.innerText = "Send Code";
-                    btn.disabled = false;
-                } else {
-                    btn.innerText = `${timeLeft}s`;
-                }
-            }, 1000);
-        }
-
-        function base64urlToBufferWallet(base64url) {
-            const padding = '='.repeat((4 - base64url.length % 4) % 4);
-            const base64 = (base64url + padding).replace(/\-/g, '+').replace(/_/g, '/');
-            const rawData = window.atob(base64);
-            const buffer = new Uint8Array(rawData.length);
-            for (let i = 0; i < rawData.length; ++i) {
-                buffer[i] = rawData.charCodeAt(i);
-            }
-            return buffer;
         }
 
         // =========================================================

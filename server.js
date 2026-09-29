@@ -1356,23 +1356,23 @@ app.post('/api/withdraw/verify-otp', verifyToken, async (req, res) => {
         const amountToSend = withdrawAmount - 1;
 
         // ⚡ ATOMIC VERIFY & DEDUCT ⚡
+        // (Fix: Removed mixed inclusion/exclusion to stop MongoServerError)
         const user = await User.findOneAndUpdate(
             { 
                 _id: req.user.id, 
                 verificationCode: otp, 
-                verificationCodeExpire: { $gt: Date.now() },
+                verificationCodeExpire: { $gt: new Date() },
                 balance: { $gte: withdrawAmount }
             },
             {
-                $unset: { verificationCode: '', verificationCodeExpire: '' },
-                $inc: { balance: -withdrawAmount }
+                $unset: { verificationCode: '', verificationCodeExpire: '' },$inc: { balance: -withdrawAmount }
             },
-            { new: true, select: '-kycData -avatar email balance dailyWithdrawnAmount dailyWithdrawnDate' }
+            { new: true, select: 'email balance dailyWithdrawnAmount dailyWithdrawnDate bscAddress' }
         );
 
         if (!user) {
             const checkUser = await User.findById(req.user.id).select('verificationCode verificationCodeExpire balance');
-            if (!checkUser || checkUser.verificationCode !== otp || Date.now() > checkUser.verificationCodeExpire) {
+            if (!checkUser || checkUser.verificationCode !== otp || new Date() > checkUser.verificationCodeExpire) {
                 return res.status(400).json({ success: false, message: 'Invalid or expired verification code.' });
             }
             return res.status(400).json({ success: false, message: 'Insufficient balance or concurrent request detected.' });
@@ -2765,10 +2765,62 @@ app.get('/api/verify-recipient', verifyToken, async (req, res) => {
     }
 });
 
-// ✅ ATOMIC INTERNAL TRANSFER FIX ✅
+// --- 🔥 Fast Internal Transfer API (Atomic Balance Update) 🔥 ---
+app.post('/api/transfer/request-otp', verifyToken, async (req, res) => {
+    try {
+        const { amount, recipient } = req.body;
+        const transferAmount = parseFloat(amount);
+
+        if (isNaN(transferAmount) || transferAmount <= 0) {
+            return res.status(400).json({ success: false, message: 'Invalid transfer amount.' });
+        }
+
+        if (!recipient) {
+            return res.status(400).json({ success: false, message: 'Recipient is required.' });
+        }
+
+        const user = await User.findById(req.user.id).select('email balance').lean();
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
+
+        if (user.balance < transferAmount) {
+            return res.status(400).json({ success: false, message: 'Insufficient available balance.' });
+        }
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        await User.updateOne(
+            { _id: user._id },
+            { $set: { verificationCode: otp, verificationCodeExpire: new Date(Date.now() + 10 * 60 * 1000) } }
+        );
+
+        const htmlContent = `
+        <div style="background-color: #0c0c0c; padding: 40px 20px; font-family: sans-serif; color: #ffffff;">
+            <div style="max-width: 550px; margin: auto; background-color: #141414; border: 1px solid #262626; border-radius: 12px; padding: 30px; text-align: center;">
+                <h2 style="color: #d4af37;">Transfer Verification</h2>
+                <p style="color: #b0b0b0;">Your confirmation code for an internal transfer of ${transferAmount} USDT is:</p>
+                <h1 style="color: #f3c653; font-size: 38px; letter-spacing: 5px; margin: 20px 0;">${otp}</h1>
+                <p style="color: #b0b0b0;">Fee: 0.00 USDT | Recipient receives: ${transferAmount.toFixed(2)} USDT</p>
+                <p style="color: #f6465d; font-size: 12px; margin-top: 15px;">If you did not request this transfer, secure your account immediately.</p>
+            </div>
+        </div>`;
+
+        sendEmailViaBrevo({
+            to: user.email,
+            subject: `Transfer Verification Code — ${otp}`,
+            htmlContent
+        }).catch(err => console.error('Transfer Email Error:', err.message));
+
+        return res.json({ success: true, message: 'Verification code sent to your email.' });
+    } catch (error) {
+        console.error('Transfer Request OTP Error:', error);
+        res.status(500).json({ success: false, message: 'Server error requesting transfer OTP.' });
+    }
+});
+
 app.post('/api/transfer', verifyToken, async (req, res) => {
     try {
-        const { recipient, amount, code, authType } = req.body;
+        const { recipient, amount, code } = req.body;
         const senderId = req.user.id;
         const transferAmount = parseFloat(amount);
         const recipientQuery = (recipient || '').trim();
@@ -2804,24 +2856,28 @@ app.post('/api/transfer', verifyToken, async (req, res) => {
             balance: { $gte: exactAmt }
         };
         
-        // Ensure strictly matching OTP if it was provided
         if (code) {
-             senderQuery.emailOtp = code;
+             senderQuery.verificationCode = code;
+             senderQuery.verificationCodeExpire = { $gt: new Date() };
         }
 
         const updatedSender = await User.findOneAndUpdate(
             senderQuery,
             { 
-                $inc: { balance: -exactAmt }, 
-                $unset: { emailOtp: '', emailOtpExpires: '' } 
+                $inc: { balance: -exactAmt },$unset: { verificationCode: '', verificationCodeExpire: '' } 
             },
-            { new: true, select: 'balance email emailOtp' }
+            { new: true, select: 'balance email verificationCode' }
         );
 
         if (!updatedSender) {
-            const currentSender = await User.findById(senderId).select('balance emailOtp');
-            if (code && currentSender && currentSender.emailOtp !== code) {
-                 return res.status(400).json({ success: false, message: 'Invalid verification code.' });
+            const currentSender = await User.findById(senderId).select('balance verificationCode verificationCodeExpire');
+            if (code) {
+                 if (currentSender && currentSender.verificationCode !== code) {
+                     return res.status(400).json({ success: false, message: 'Invalid verification code.' });
+                 }
+                 if (currentSender && currentSender.verificationCodeExpire && new Date() > new Date(currentSender.verificationCodeExpire)) {
+                     return res.status(400).json({ success: false, message: 'Verification code has expired.' });
+                 }
             }
             return res.status(400).json({ success: false, message: 'Insufficient balance or transfer already processed.' });
         }
