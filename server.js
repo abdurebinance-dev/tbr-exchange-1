@@ -2694,34 +2694,55 @@ app.get('/api/settings/limits', (req, res) => {
     });
 });
 
+const activeSweeps = new Set();
+let masterWalletSending = false; // ብሎክቼይን ላይ Nonce Error እንዳይፈጠር የሚቆልፍ (Mutex Lock)
+
 async function autoSweepUSDT(userAddress, userPrivateKey, attempt = 1) {
     const cleanAddr = String(userAddress || '').trim().toLowerCase();
-    try {
-        if (!masterWallet) return;
-        
-        // ብሎክቼይኑ ዳታውን እስኪያዘምን (Sync እስኪያደርግ) የመጀመሪያ ሙከራ ላይ 10 ሰከንድ ይጠብቃል
-        if (attempt === 1) {
-            await new Promise(resolve => setTimeout(resolve, 10000));
-        }
+    
+    // 1. ተመሳሳይ ዩዘር ላይ የተደራረበ Sweep እንዳይሰራ መከላከያ
+    if (attempt === 1 && activeSweeps.has(cleanAddr)) return;
+    activeSweeps.add(cleanAddr);
 
-        recentDepositLocks.set(cleanAddr, Date.now());
+    try {
+        if (!masterWallet) {
+            activeSweeps.delete(cleanAddr);
+            return;
+        }
+        
+        // 2. ብሎክቼይኑ ዳታውን Sync እስኪያደርግ 5 ሰከንድ ይጠብቃል
+        if (attempt === 1) {
+            await new Promise(resolve => setTimeout(resolve, 5000));
+        }
 
         const userWallet = new ethers.Wallet(userPrivateKey, provider);
         const actualAddress = userWallet.address;
-
         const usdtContractUser = new ethers.Contract(USDT_CONTRACT_ADDRESS, usdtAbi, userWallet);
+        
         const usdtBalance = await usdtContractUser.balanceOf(actualAddress);
 
         if (usdtBalance > 0n) {
-            // 1. ጋዝ ይልካል (0.0006 BNB ለበለጠ ደህንነት)
-            const txFee = ethers.parseEther("0.0006"); 
-            const bnbTx = await masterWallet.sendTransaction({
-                to: actualAddress,
-                value: txFee
-            });
-            await bnbTx.wait(1); // 1 ብሎክ ኮንፈርም እስኪደረግ ይጠብቃል
+            // 3. ማስተር ዋሌቱ በአንድ ጊዜ ብዙ BNB እንዳይልከና ጋዝ እንዳይበላሽ (Queue / Lock)
+            while (masterWalletSending) {
+                await new Promise(r => setTimeout(r, 1000)); // ሌላ Sweep እያደረገ ከሆነ 1 ሰከንድ ይጠብቃል
+            }
+            masterWalletSending = true; 
 
-            // 2. USDT ወደ ማስተር ዋሌት ጠራርጎ ይልካል
+            try {
+                const txFee = ethers.parseEther("0.0006"); 
+                const bnbTx = await masterWallet.sendTransaction({
+                    to: actualAddress,
+                    value: txFee
+                });
+                await bnbTx.wait(1);
+            } finally {
+                masterWalletSending = false; // ጋዝ ልኮ ሲጨርስ ለሌሎች ክፍት ያደርጋል
+            }
+
+            // BNB ከደረሰ በኋላ 2 ሰከንድ ጋፕ እንሰጠዋለን (Node sync እንዲያደርግ)
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            // 4. USDT ወደ ማስተር ዋሌት ይልካል
             const sweepTx = await usdtContractUser.transfer(masterWallet.address, usdtBalance);
             await sweepTx.wait(1);
 
@@ -2736,15 +2757,22 @@ async function autoSweepUSDT(userAddress, userPrivateKey, attempt = 1) {
                     amount: sweptAmount,
                     status: 'completed'
                 });
-                console.log(`✅ Auto-Sweep Successful: ${sweptAmount} USDT swept from ${user.email}`);
+                console.log(`✅ Auto-Sweep Success: ${sweptAmount} USDT swept for ${user.email}`);
             }
         }
+        
+        // ሲሳካ መቆለፊያውን ይፈታል
+        activeSweeps.delete(cleanAddr);
+
     } catch (error) {
+        masterWalletSending = false; // ኤረር ቢፈጠርም የ BNB መቆለፊያው ይፈታል
         console.error(`[Auto-Sweep Error Attempt ${attempt}]:`, error.message);
-        // 3. ካልሰራ እስከ 3 ጊዜ ድጋሚ (Auto-Retry) ይሞክራል
+        
+        // 5. ካልሰራ እስከ 3 ጊዜ ድጋሚ ይሞክራል
         if (attempt < 3) {
-            console.log(`🔄 Retrying auto sweep for ${cleanAddr} in 30 seconds...`);
             setTimeout(() => autoSweepUSDT(userAddress, userPrivateKey, attempt + 1), 30000);
+        } else {
+            activeSweeps.delete(cleanAddr); // ከ 3 ጊዜ በኋላ ካልሰራ ነፃ ያደርገዋል (ማንዋል እንዲሰራ)
         }
     }
 }
