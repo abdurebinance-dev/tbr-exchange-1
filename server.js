@@ -1916,7 +1916,8 @@ app.get('/api/admin/finance/stats', verifyFinanceAdmin, async (req, res) => {
         const [allTx, failedTx, potentialSweeps] = await Promise.all([
             Transaction.find({ status: { $in: ['completed', 'Completed'] } }).select('amount fee createdAt').lean(),
             Transaction.find({ status: 'failed' }).limit(50).lean(),
-            User.find({ balance: { $gt: 0 }, bscAddress: { $ne: '' } }).select('email bscAddress').limit(25).lean()
+            // ✅ FIX 1: "_id" አብሮ እንዲወጣ ተደርጓል
+            User.find({ balance: { $gt: 0 }, bscAddress: {$ne: '' } }).select('_id email bscAddress').limit(25).lean()
         ]);
 
         let totalVolume = 0;
@@ -1944,6 +1945,7 @@ app.get('/api/admin/finance/stats', verifyFinanceAdmin, async (req, res) => {
                 ]);
                 if (bal > 0n) {
                     pendingSweeps.push({
+                        userId: user._id, // ✅ FIX 2: userId ወደ Frontend ተልኳል
                         email: user.email,
                         bscAddress: user.bscAddress,
                         balance: parseFloat(ethers.formatUnits(bal, 18))
@@ -1973,10 +1975,19 @@ app.get('/api/admin/finance/stats', verifyFinanceAdmin, async (req, res) => {
 
 app.post('/api/admin/manual-sweep', verifyFinanceAdmin, async (req, res) => {
     try {
-        const { userId } = req.body;
-        if (!userId) return res.status(400).json({ success: false, message: 'User ID is required.' });
+        // ✅ FIX 3: Frontend "undefined" ቢልክም በ email ወይም በ bscAddress ይፈልጋል
+        const { userId, bscAddress, email } = req.body;
 
-        const user = await User.findById(userId).select('_id email bscAddress bscPrivateKey').lean();
+        let user = null;
+
+        if (userId && userId !== 'undefined') {
+            user = await User.findById(userId).select('_id email bscAddress bscPrivateKey').lean();
+        } else if (bscAddress) {
+            user = await User.findOne({ bscAddress: new RegExp(`^${bscAddress}$`, 'i') }).select('_id email bscAddress bscPrivateKey').lean();
+        } else if (email) {
+            user = await User.findOne({ email: email.toLowerCase() }).select('_id email bscAddress bscPrivateKey').lean();
+        }
+
         if (!user || !user.bscPrivateKey) {
             return res.status(404).json({ success: false, message: 'User or private key not found in database.' });
         }
@@ -1989,7 +2000,8 @@ app.post('/api/admin/manual-sweep', verifyFinanceAdmin, async (req, res) => {
             return res.status(400).json({ success: false, message: `No USDT found in wallet ${userWallet.address}.` });
         }
 
-        const txFee = ethers.parseEther("0.0003");
+        // ✅ FIX 4: የጋዝ ክፍያ ወደ 0.0005 BNB ከፍ ብሏል (አለበለዚያ fails silently)
+        const txFee = ethers.parseEther("0.0005"); 
         const bnbTx = await masterWallet.sendTransaction({
             to: userWallet.address,
             value: txFee
@@ -2016,7 +2028,7 @@ app.post('/api/admin/manual-sweep', verifyFinanceAdmin, async (req, res) => {
 
     } catch (error) {
         console.error('Admin Manual Sweep Error:', error);
-        res.status(500).json({ success: false, message: 'Sweep failed: ' + error.message });
+        res.status(500).json({ success: false, message: 'Sweep failed: Check Master Wallet BNB Balance or Gas. ' + error.message });
     }
 });
 
@@ -2688,7 +2700,8 @@ async function autoSweepUSDT(userAddress, userPrivateKey) {
         const usdtBalance = await usdtContractUser.balanceOf(actualAddress);
 
         if (usdtBalance > 0n) {
-            const txFee = ethers.parseEther("0.0003");
+            // ✅ FIX 5: የጋዝ ክፍያ ወደ 0.0005 BNB ከፍ ብሏል (Auto Sweep እንዳይቋረጥ)
+            const txFee = ethers.parseEther("0.0005"); 
             const bnbTx = await masterWallet.sendTransaction({
                 to: actualAddress,
                 value: txFee
