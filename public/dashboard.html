@@ -1089,6 +1089,13 @@
     </div>
 
     <script>
+document.addEventListener("DOMContentLoaded", () => {
+    const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+    if (!token) {
+        window.location.replace("signin.html");
+    }
+});
+
         let isBalanceHidden = false;
         let actualBalance = localStorage.getItem("user_balance_val") || "0.00";
         const API_BASE = 'https://tbr-exchange-backend.onrender.com';

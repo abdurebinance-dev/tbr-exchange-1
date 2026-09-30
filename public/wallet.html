@@ -889,6 +889,12 @@
     </div>
 
     <script>
+    document.addEventListener("DOMContentLoaded", () => {
+    const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+    if (!token) {
+        window.location.replace("signin.html");
+    }
+});
         const API_BASE_URL = ''; 
 
         // 🚀 የደህንነት ማረጋገጫዎች የትኛውን ስራ እንደሚሰሩ የምንለይበት መያዣዎች 🚀
