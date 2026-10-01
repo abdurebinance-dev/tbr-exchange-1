@@ -476,30 +476,28 @@ const verifyToken = async (req, res, next) => {
 
 async function sendEmailViaBrevo({ to, subject, htmlContent }) {
     if (!BREVO_API_KEY) {
-        throw new Error('BREVO_API_KEY is missing in environment variables.');
+        console.error('❌ ERROR: BREVO_API_KEY is missing in Render Environment Variables!');
+        return;
     }
 
-    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
-        method: 'POST',
-        headers: {
-            'accept': 'application/json',
-            'api-key': BREVO_API_KEY,
-            'content-type': 'application/json'
-        },
-        body: JSON.stringify({
+    try {
+        const response = await axios.post('https://api.brevo.com/v3/smtp/email', {
             sender: { email: EMAIL_FROM, name: 'TBR Exchange' },
             to: [{ email: to }],
             subject: subject,
             htmlContent: htmlContent
-        })
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to send email via Brevo');
+        }, {
+            headers: {
+                'accept': 'application/json',
+                'api-key': BREVO_API_KEY,
+                'content-type': 'application/json'
+            }
+        });
+        console.log(`✅ Email sent successfully to: ${to}`);
+        return response.data;
+    } catch (error) {
+        console.error('❌ BREVO EMAIL ERROR:', error.response ? JSON.stringify(error.response.data) : error.message);
     }
-
-    return await response.json();
 }
 
 async function notifyUser({ userId, email, title, message, type = 'info', link = 'dashboard.html', sendEmail = true }) {
