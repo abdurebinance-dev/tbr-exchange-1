@@ -4478,6 +4478,7 @@ async function calculateLeaderboardBackground() {
                     volume: Number(stats.volume.toFixed(2)),
                     tradesCount: stats.completed,
                     completionRate: totalFinished === 0 ? 100 : Math.min(100, Math.floor(80 + (rawCompRate * 0.4)))
+                };
             })
             .filter(u => u.volume > 0 || u.tradesCount > 0)
             .sort((a, b) => b.volume - a.volume)
