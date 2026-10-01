@@ -3183,7 +3183,7 @@ app.get('/api/ads', async (req, res) => {
             const totalFinished = uStat.completed + uStat.cancelled;
             const rawCompRate = totalFinished > 0 ? Math.round((uStat.completed / totalFinished) * 100) : 100;
 
-            const compRateNum = (uStat.completed === 0 && uStat.cancelled === 0) ? 100 : Math.min(100, Math.floor(80 + (rawCompRate * 0.4)));
+            const compRateNum = (!totalFinished || Number(totalFinished) === 0) ? 100 : Math.min(100, Math.floor(80 + (rawCompRate * 0.4)));
             return {
                 ...ad,
                 totalAmount: Number(availUsdt.toFixed(4)),
