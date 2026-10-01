@@ -1541,8 +1541,7 @@ async function getRealUserTradeStats(userId, userEmail) {
             ? Math.round(((completedCount - disputesLost) / completedCount) * 100)
             : 100;
 
-        const completionPct = totalFinished > 0 ? Math.floor(80 + (rawCompletionPct * 0.20)) : 100;
-        const reputationPct = rawReputationPct;
+        const completionPct = totalFinished === 0 ? 100 : Math.min(100, Math.floor(80 + (rawCompletionPct * 0.4)));
 
         const formattedVol = Number(totalVolumeUsdt.toFixed(2)).toLocaleString('en-US', {
             minimumFractionDigits: totalVolumeUsdt % 1 === 0 ? 0 : 2,
@@ -3184,8 +3183,7 @@ app.get('/api/ads', async (req, res) => {
             const totalFinished = uStat.completed + uStat.cancelled;
             const rawCompRate = totalFinished > 0 ? Math.round((uStat.completed / totalFinished) * 100) : 100;
 
-            const compRateNum = totalFinished > 0 ? Math.floor(80 + (rawCompRate * 0.20)) : 100;
-
+            const compRateNum = totalFinished === 0 ? 100 : Math.min(100, Math.floor(80 + (rawCompRate * 0.4)));
             return {
                 ...ad,
                 totalAmount: Number(availUsdt.toFixed(4)),
@@ -4479,8 +4477,7 @@ async function calculateLeaderboardBackground() {
                     userId: uid,
                     volume: Number(stats.volume.toFixed(2)),
                     tradesCount: stats.completed,
-                    completionRate: totalFinished > 0 ? Math.floor(80 + (rawCompRate * 0.20)) : 100
-                };
+                    completionRate: totalFinished === 0 ? 100 : Math.min(100, Math.floor(80 + (rawCompRate * 0.4)))
             })
             .filter(u => u.volume > 0 || u.tradesCount > 0)
             .sort((a, b) => b.volume - a.volume)
