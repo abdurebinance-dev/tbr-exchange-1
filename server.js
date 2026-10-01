@@ -4432,20 +4432,13 @@ app.post('/api/admin/escrow-action', verifyAdminToken, async (req, res) => {
 });
 
 // ============================================================================
-// 🏆 LEADERBOARD / TOP TRADERS API (ULTRA-FAST CACHED) 🏆
+// 🏆 LEADERBOARD / TOP TRADERS API (BACKGROUND CALCULATION - INSTANT LOAD) 🏆
 // ============================================================================
-let leaderboardCache = null;
-let leaderboardCacheTime = 0;
+let leaderboardCache = [];
 
-app.get('/api/leaderboard', async (req, res) => {
+// Xisaabinta (Calculation) ከጀርባ ይሰራል፣ ዩዘሩን አያስጠብቅም
+async function calculateLeaderboardBackground() {
     try {
-        res.setHeader('Cache-Control', 'public, max-age=300'); // Cache for 5 mins
-        const now = Date.now();
-
-        if (leaderboardCache && (now - leaderboardCacheTime < 5 * 60 * 1000)) {
-            return res.json({ success: true, data: leaderboardCache });
-        }
-
         const allTrades = await Trade.find({ status: { $in: ['completed', 'resolved', 'released', 'cancelled', 'refunded'] } })
             .select('buyerId sellerId status usdtAmount disputeWinner')
             .lean();
@@ -4490,15 +4483,16 @@ app.get('/api/leaderboard', async (req, res) => {
                 };
             })
             .filter(u => u.volume > 0 || u.tradesCount > 0)
-            .sort((a, b) => b.volume - a.volume) // ⚡ ደረጃ የሚወጣው በ Volume ብዛት ነው
-            .slice(0, 15); // ከፍተኛ 15 ሰዎችን ብቻ ይወስዳል
+            .sort((a, b) => b.volume - a.volume)
+            .slice(0, 15);
 
         const userIds = rankedList.map(u => u.userId);
         const usersInfo = await User.find({ _id: { $in: userIds } })
             .select('fullName traderUsername userId kycStatus lastActive avatar')
             .lean();
 
-        const enrichedLeaderboard = rankedList.map((rank, index) => {
+        const now = Date.now();
+        leaderboardCache = rankedList.map((rank, index) => {
             const uInfo = usersInfo.find(u => String(u._id) === String(rank.userId)) || {};
             const rawUsername = (uInfo.traderUsername || '').trim().replace(/^@+/, '');
             const tbrId = String(uInfo.userId || '').replace(/\D/g, '').padStart(6, '0') || '000001';
@@ -4518,15 +4512,20 @@ app.get('/api/leaderboard', async (req, res) => {
                 completionRate: `${rank.completionRate}%`
             };
         });
-
-        leaderboardCache = enrichedLeaderboard;
-        leaderboardCacheTime = now;
-
-        res.json({ success: true, data: enrichedLeaderboard });
+        console.log("✅ Leaderboard background calculation completed.");
     } catch (error) {
-        console.error("Leaderboard Fetch Error:", error);
-        res.status(500).json({ success: false, message: 'Error fetching leaderboard data.' });
+        console.error("Leaderboard Background Calc Error:", error);
     }
+}
+
+// ሰርቨሩ ሲነሳ ወዲያውኑ 1 ጊዜ ያሰላል፣ ከዛ በኋላ በየ 5 ደቂቃው ራሱ ያሰላል
+setTimeout(calculateLeaderboardBackground, 5000);
+setInterval(calculateLeaderboardBackground, 5 * 60 * 1000);
+
+// API-ው ዳታውን በቅጽበት (በ 0ms) ይመልሳል
+app.get('/api/leaderboard', (req, res) => {
+    res.setHeader('Cache-Control', 'public, max-age=60');
+    res.json({ success: true, data: leaderboardCache });
 });
 
 // ============================================================================
