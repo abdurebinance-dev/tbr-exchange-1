@@ -88,7 +88,7 @@
 
         .header-sec {
             text-align: left;
-            margin-bottom: 40px;
+            margin-bottom: 20px;
             display: flex;
             align-items: center;
             gap: 12px;
@@ -100,6 +100,18 @@
             font-size: 24px;
             display: flex;
             align-items: center;
+            gap: 10px;
+        }
+
+        /* Loading Spinner */
+        #main-loader {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 50vh;
+            color: var(--gold);
+            font-size: 16px;
+            font-weight: 500;
             gap: 10px;
         }
 
@@ -209,21 +221,20 @@
             min-width: 600px; 
         }
 
-        /* 1. Reduce gap between Rank and Trader columns */
         th, td {
-            padding: 16px 15px; /* Reduced right/left padding */
+            padding: 16px 15px;
             border-bottom: 1px solid var(--border-color);
             white-space: nowrap;
         }
 
         th:first-child, td:first-child {
-            width: 60px; /* Force the Rank column to be narrow */
-            padding-right: 0px; /* Remove right padding on Rank column */
-            text-align: center; /* Center the rank circle */
+            width: 60px;
+            padding-right: 0px;
+            text-align: center;
         }
         
         th:nth-child(2), td:nth-child(2) {
-            padding-left: 10px; /* Reduce left padding on Trader column */
+            padding-left: 10px;
         }
 
         th {
@@ -276,8 +287,6 @@
         .volume-td { color: var(--text-main); font-weight: bold; }
         .usdt-text { color: var(--gold); font-size: 12px; margin-left: 3px; }
         .rate-td { color: #0ecb81; font-weight: 600; }
-
-        .loader-row { text-align: center; padding: 40px !important; color: var(--gold); }
 
         /* Mobile Responsive */
         @media (max-width: 768px) {
@@ -336,6 +345,11 @@
             <h2>🏆 Top Volume Traders</h2>
         </div>
 
+        <!-- Centered Loading Spinner -->
+        <div id="main-loader">
+            <i class="fa-solid fa-spinner fa-spin"></i> Loading Top Traders...
+        </div>
+
         <div class="podium-container" id="podium-container" style="display: none;">
         </div>
 
@@ -354,8 +368,6 @@
                 </tbody>
             </table>
         </div>
-
-        <div id="loader" class="loader-row"><i class="fa-solid fa-spinner fa-spin"></i> Loading Top Traders...</div>
     </div>
 
     <script>
@@ -376,7 +388,8 @@
                 
                 const result = await response.json();
                 
-                document.getElementById('loader').style.display = 'none';
+                // Hide loader once data is fetched
+                document.getElementById('main-loader').style.display = 'none';
 
                 if (result.success && result.data && result.data.length > 0) {
                     const top3 = result.data.slice(0, 3);
@@ -387,8 +400,6 @@
                         podiumContainer.style.display = 'flex';
                         top3.forEach(trader => {
                             let rankClass = trader.rank === 1 ? 'rank-1' : trader.rank === 2 ? 'rank-2' : 'rank-3';
-                            
-                            // 2. Change default avatar to TR
                             const avatarSrc = trader.avatar || `https://ui-avatars.com/api/?name=TR&background=181a20&color=f0b90b&bold=true`;
                             
                             const topDecorator = trader.rank === 1 
@@ -415,7 +426,6 @@
                     if (rest.length > 0) {
                         tableWrapper.style.display = 'block';
                         rest.forEach(trader => {
-                            // 2. Change default avatar to TR
                             const avatarSrc = trader.avatar || `https://ui-avatars.com/api/?name=TR&background=181a20&color=f0b90b&bold=true`;
                             const verifiedHtml = (trader.kycStatus === 'verified' || trader.kycStatus === 'approved') 
                                 ? `<span class="verified-badge"><i class="fa-solid fa-check"></i></span>` : '';
@@ -439,13 +449,13 @@
                         });
                     }
                 } else {
-                    document.getElementById('podium-container').style.display = 'none';
-                    document.getElementById('table-wrapper').style.display = 'block';
-                    document.getElementById('leaderboard-body').innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 40px; color:var(--text-muted);">No trading data available yet.</td></tr>';
+                    document.getElementById('main-loader').innerHTML = 'No trading data available yet.';
+                    document.getElementById('main-loader').style.display = 'flex';
                 }
             } catch (error) {
-                document.getElementById('loader').innerHTML = 'Failed to load leaderboard.';
-                document.getElementById('loader').style.color = '#f6465d';
+                document.getElementById('main-loader').innerHTML = 'Failed to load leaderboard.';
+                document.getElementById('main-loader').style.color = '#f6465d';
+                document.getElementById('main-loader').style.display = 'flex';
             }
         }
     </script>
