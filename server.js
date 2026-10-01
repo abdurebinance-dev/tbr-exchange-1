@@ -4479,7 +4479,7 @@ async function calculateLeaderboardBackground() {
                     userId: uid,
                     volume: Number(stats.volume.toFixed(2)),
                     tradesCount: stats.completed,
-                    completionRate: Math.max(95, Math.min(100, rawCompRate))
+                    completionRate: rawCompRate
                 };
             })
             .filter(u => u.volume > 0 || u.tradesCount > 0)
