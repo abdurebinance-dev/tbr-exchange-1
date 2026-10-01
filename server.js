@@ -4432,6 +4432,104 @@ app.post('/api/admin/escrow-action', verifyAdminToken, async (req, res) => {
 });
 
 // ============================================================================
+// 🏆 LEADERBOARD / TOP TRADERS API (ULTRA-FAST CACHED) 🏆
+// ============================================================================
+let leaderboardCache = null;
+let leaderboardCacheTime = 0;
+
+app.get('/api/leaderboard', async (req, res) => {
+    try {
+        res.setHeader('Cache-Control', 'public, max-age=300'); // Cache for 5 mins
+        const now = Date.now();
+
+        if (leaderboardCache && (now - leaderboardCacheTime < 5 * 60 * 1000)) {
+            return res.json({ success: true, data: leaderboardCache });
+        }
+
+        const allTrades = await Trade.find({ status: { $in: ['completed', 'resolved', 'released', 'cancelled', 'refunded'] } })
+            .select('buyerId sellerId status usdtAmount disputeWinner')
+            .lean();
+
+        const userStats = {};
+        allTrades.forEach(tr => {
+            const isComp = ['completed', 'resolved', 'released'].includes(String(tr.status).toLowerCase());
+            const amt = Number(tr.usdtAmount || 0);
+
+            const addStat = (uid, isBuyer) => {
+                if (!uid) return;
+                const idStr = String(uid);
+                if (!userStats[idStr]) userStats[idStr] = { completed: 0, cancelled: 0, volume: 0, disputesLost: 0 };
+                
+                if (isComp) {
+                    userStats[idStr].completed += 1;
+                    userStats[idStr].volume += amt;
+                } else if (tr.status === 'cancelled' || tr.status === 'refunded') {
+                    userStats[idStr].cancelled += 1;
+                }
+
+                if (tr.disputeWinner) {
+                    if ((isBuyer && tr.disputeWinner === 'seller') || (!isBuyer && tr.disputeWinner === 'buyer')) {
+                        userStats[idStr].disputesLost += 1;
+                    }
+                }
+            };
+
+            addStat(tr.buyerId, true);
+            addStat(tr.sellerId, false);
+        });
+
+        const rankedList = Object.entries(userStats)
+            .map(([uid, stats]) => {
+                const totalFinished = stats.completed + stats.cancelled;
+                const rawCompRate = totalFinished > 0 ? Math.round((stats.completed / totalFinished) * 100) : 100;
+                return {
+                    userId: uid,
+                    volume: Number(stats.volume.toFixed(2)),
+                    tradesCount: stats.completed,
+                    completionRate: Math.max(95, Math.min(100, rawCompRate))
+                };
+            })
+            .filter(u => u.volume > 0 || u.tradesCount > 0)
+            .sort((a, b) => b.volume - a.volume) // ⚡ ደረጃ የሚወጣው በ Volume ብዛት ነው
+            .slice(0, 15); // ከፍተኛ 15 ሰዎችን ብቻ ይወስዳል
+
+        const userIds = rankedList.map(u => u.userId);
+        const usersInfo = await User.find({ _id: { $in: userIds } })
+            .select('fullName traderUsername userId kycStatus lastActive avatar')
+            .lean();
+
+        const enrichedLeaderboard = rankedList.map((rank, index) => {
+            const uInfo = usersInfo.find(u => String(u._id) === String(rank.userId)) || {};
+            const rawUsername = (uInfo.traderUsername || '').trim().replace(/^@+/, '');
+            const tbrId = String(uInfo.userId || '').replace(/\D/g, '').padStart(6, '0') || '000001';
+            const displayName = rawUsername ? rawUsername : (uInfo.fullName || `trader${tbrId}`);
+            
+            return {
+                rank: index + 1,
+                userId: rank.userId,
+                name: displayName,
+                traderUsername: rawUsername,
+                tbrId: uInfo.userId || '',
+                kycStatus: uInfo.kycStatus || 'unverified',
+                avatar: getFastAvatarUrl(rank.userId),
+                isOnline: uInfo.lastActive ? (now - new Date(uInfo.lastActive).getTime() <= 10 * 60 * 1000) : false,
+                volume: rank.volume,
+                tradesCount: rank.tradesCount,
+                completionRate: `${rank.completionRate}%`
+            };
+        });
+
+        leaderboardCache = enrichedLeaderboard;
+        leaderboardCacheTime = now;
+
+        res.json({ success: true, data: enrichedLeaderboard });
+    } catch (error) {
+        console.error("Leaderboard Fetch Error:", error);
+        res.status(500).json({ success: false, message: 'Error fetching leaderboard data.' });
+    }
+});
+
+// ============================================================================
 // 🔔 NOTIFICATION ENDPOINTS (LATEST 5 + SEE ALL) 🔔
 // ============================================================================
 app.get('/api/notifications', async (req, res) => {
