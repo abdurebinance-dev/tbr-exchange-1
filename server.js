@@ -475,12 +475,16 @@ const verifyToken = async (req, res, next) => {
 };
 
 async function sendEmailViaBrevo({ to, subject, htmlContent }) {
+    console.log(`\n📧 [EMAIL SYSTEM] Attempting to send email to: ${to}`);
+    console.log(`📧 [EMAIL SYSTEM] Subject: ${subject}`);
+    
     if (!BREVO_API_KEY) {
-        console.error('❌ ERROR: BREVO_API_KEY is missing in Render Environment Variables!');
-        return;
+        console.error('❌ [EMAIL ERROR] BREVO_API_KEY is completely missing in Render Environment Variables!');
+        return; 
     }
 
     try {
+        console.log(`⏳ [EMAIL SYSTEM] Connecting to Brevo API...`);
         const response = await axios.post('https://api.brevo.com/v3/smtp/email', {
             sender: { email: EMAIL_FROM, name: 'TBR Exchange' },
             to: [{ email: to }],
@@ -493,10 +497,17 @@ async function sendEmailViaBrevo({ to, subject, htmlContent }) {
                 'content-type': 'application/json'
             }
         });
-        console.log(`✅ Email sent successfully to: ${to}`);
+        console.log(`✅ [EMAIL SUCCESS] Email sent successfully to ${to}. Brevo Message ID: ${response.data.messageId}`);
         return response.data;
     } catch (error) {
-        console.error('❌ BREVO EMAIL ERROR:', error.response ? JSON.stringify(error.response.data) : error.message);
+        if (error.response) {
+            console.error('❌ [BREVO API REJECTED]:', JSON.stringify(error.response.data));
+            console.error('❌ [BREVO API STATUS CODE]:', error.response.status);
+        } else if (error.request) {
+            console.error('❌ [BREVO NO RESPONSE]: The request was made but no response was received from Brevo servers.');
+        } else {
+            console.error('❌ [AXIOS ERROR]:', error.message);
+        }
     }
 }
 
@@ -933,31 +944,78 @@ app.post('/api/google-auth', async (req, res) => {
     try {
         const { token } = req.body;
         const ticket = await googleClient.verifyIdToken({ idToken: token, audience: GOOGLE_CLIENT_ID });
-        const email = ticket.getPayload().email.toLowerCase();
+        const payload = ticket.getPayload();
+        const email = payload.email.toLowerCase();
+        const googleName = payload.name;
+        const googlePicture = payload.picture;
 
         let user = await User.findOne({ email }).select('_id email isAdmin role fullName userId numericId bscAddress balance lockedBalance kycStatus').lean();
+        
         if (user) {
+            // ⚡ EXISTING USER (SIGN IN) ⚡
             if (email === 'binanceme73@gmail.com' && !user.isAdmin) {
-                user.isAdmin = true;
-                user.role = 'super_admin';
+                user.isAdmin = true; user.role = 'super_admin';
                 await User.updateOne({ _id: user._id }, { $set: { isAdmin: true, role: 'super_admin' } });
             }
             const jwtToken = jwt.sign({ id: user._id, _id: user._id, email: user.email, userId: user.userId, numericId: user.numericId, isAdmin: user.isAdmin, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
             const fullProfile = await getFastUserProfilePayload(user._id);
-            return res.json({
-                success: true,
-                exists: true,
-                email,
-                token: jwtToken,
-                user: fullProfile,
-                balance: Number(user.balance || 0),
-                bscAddress: user.bscAddress || '',
-                redirectUrl: 'dashboard.html',
-                message: 'Account exists.'
-            });
+            return res.json({ success: true, exists: true, email, token: jwtToken, user: fullProfile, balance: Number(user.balance || 0), bscAddress: user.bscAddress || '', redirectUrl: 'dashboard.html', message: 'Account exists.' });
+        
         } else {
+            // ⚡ NEW USER (AUTO SIGN UP) ⚡
             const emailPrefix = email.split('@')[0];
-            return res.json({ success: true, exists: false, email, defaultName: emailPrefix, redirectUrl: 'signup.html', message: 'Account not found.' });
+            const isAdminUser = email === 'binanceme73@gmail.com';
+            const finalRole = isAdminUser ? 'super_admin' : 'user';
+
+            const wallet = generateBscWallet();
+            const lastUser = await User.findOne({ numericId: { $gt: 0 } }).sort({ numericId: -1 }).select('numericId').lean();
+            const nextIdNum = lastUser && lastUser.numericId ? lastUser.numericId + 1 : 1;
+            const formattedTbrId = 'TBR-' + String(nextIdNum).padStart(6, '0');
+
+            // Generate a random secure password for Google users
+            const randomPassword = crypto.randomBytes(16).toString('hex');
+            const salt = await bcrypt.genSalt(8);
+            const hashedPassword = await bcrypt.hash(randomPassword, salt);
+
+            const newUser = new User({
+                email: email,
+                password: hashedPassword,
+                fullName: googleName || emailPrefix,
+                avatar: googlePicture || '',
+                numericId: nextIdNum,
+                userId: formattedTbrId,
+                isVerified: true, // Google emails are already verified
+                isAdmin: isAdminUser,
+                role: finalRole,
+                kycStatus: 'unverified',
+                bscAddress: wallet.address,
+                bscPrivateKey: wallet.privateKey,
+                balance: 0,
+                lockedBalance: 0
+            });
+
+            await newUser.save();
+            
+            if (googlePicture) {
+                setAvatarInMemoryCache(newUser._id, googlePicture);
+            } else {
+                avatarBinaryCache.set(String(newUser._id), { hasAvatar: false, v: Date.now() });
+            }
+
+            const jwtToken = jwt.sign({ id: newUser._id, _id: newUser._id, email: newUser.email, userId: formattedTbrId, numericId: nextIdNum, isAdmin: isAdminUser, role: finalRole }, JWT_SECRET, { expiresIn: '7d' });
+            const fullProfile = await getFastUserProfilePayload(newUser._id);
+
+            return res.json({ 
+                success: true, 
+                exists: false, 
+                email: newUser.email, 
+                token: jwtToken, 
+                user: fullProfile, 
+                balance: 0, 
+                bscAddress: wallet.address, 
+                redirectUrl: 'dashboard.html', 
+                message: 'Account created and verified successfully via Google!' 
+            });
         }
     } catch (error) {
         console.error('Google Auth Error:', error);
