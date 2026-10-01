@@ -1541,8 +1541,8 @@ async function getRealUserTradeStats(userId, userEmail) {
             ? Math.round(((completedCount - disputesLost) / completedCount) * 100)
             : 100;
 
-        const completionPct = Math.max(95, Math.min(100, rawCompletionPct));
-        const reputationPct = Math.max(95, Math.min(100, rawReputationPct));
+        const completionPct = rawCompletionPct;
+        const reputationPct = rawReputationPct;
 
         const formattedVol = Number(totalVolumeUsdt.toFixed(2)).toLocaleString('en-US', {
             minimumFractionDigits: totalVolumeUsdt % 1 === 0 ? 0 : 2,
@@ -3184,7 +3184,7 @@ app.get('/api/ads', async (req, res) => {
             const totalFinished = uStat.completed + uStat.cancelled;
             const rawCompRate = totalFinished > 0 ? Math.round((uStat.completed / totalFinished) * 100) : 100;
 
-            const compRateNum = Math.max(95, Math.min(100, rawCompRate));
+            const compRateNum = rawCompRate;
 
             return {
                 ...ad,
