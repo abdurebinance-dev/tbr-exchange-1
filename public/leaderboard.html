@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Top Traders - TBR Exchange</title>
+    <!-- Add Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
             --bg-main: #0b0e11;
@@ -26,22 +28,74 @@
             color: var(--text-main);
         }
 
-        /* 1. & 2. Simple Navbar (No dashboard links) */
+        /* 2. & 3. Exact Dashboard Navbar Styling */
         .navbar {
             display: flex;
             align-items: center;
-            justify-content: center; /* Center the logo */
-            padding: 15px 20px;
+            justify-content: space-between;
+            padding: 15px 40px;
             background-color: var(--bg-card);
             border-bottom: 1px solid var(--border-color);
         }
+
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 35px; /* Space between logo and links */
+        }
         
-        .nav-brand {
-            color: var(--gold);
-            font-size: 24px;
-            font-weight: 800;
+        .nav-brand img {
+            height: 32px; /* Adjust TBR Logo size here */
+            display: block;
+            cursor: pointer;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 25px;
+        }
+
+        .nav-links a {
+            color: var(--text-muted);
             text-decoration: none;
-            letter-spacing: 1px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .nav-links a:hover, .nav-links a.active {
+            color: var(--gold);
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .verified-btn {
+            background-color: rgba(14, 203, 129, 0.1);
+            color: #0ecb81;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .nav-right i {
+            color: var(--text-muted);
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        .nav-right i:hover {
+            color: var(--text-main);
         }
 
         /* Main Container */
@@ -52,14 +106,20 @@
         }
 
         .header-sec {
-            text-align: center;
+            text-align: left;
             margin-bottom: 40px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
         .header-sec h2 {
             margin: 0;
             color: var(--text-main);
-            font-size: 26px;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         /* 5. Top 3 Podium Design */
@@ -85,22 +145,22 @@
             align-items: center;
         }
 
-        /* 1st Place is larger and centered */
+        /* 1st Place */
         .podium-card.rank-1 {
-            order: 2; /* Put 1st in the middle */
+            order: 2; 
             border-color: #f0b90b;
             transform: scale(1.1);
             z-index: 10;
             background: linear-gradient(180deg, rgba(240,185,11,0.1) 0%, var(--bg-card) 100%);
             box-shadow: 0 0 20px rgba(240, 185, 11, 0.2);
         }
-        /* 2nd Place on the left */
+        /* 2nd Place */
         .podium-card.rank-2 {
             order: 1;
             border-color: #c0c0c0;
             background: linear-gradient(180deg, rgba(192,192,192,0.1) 0%, var(--bg-card) 100%);
         }
-        /* 3rd Place on the right */
+        /* 3rd Place */
         .podium-card.rank-3 {
             order: 3;
             border-color: #cd7f32;
@@ -233,6 +293,10 @@
 
         /* 4. Mobile Responsive Fixes */
         @media (max-width: 768px) {
+            .navbar { padding: 15px 20px; }
+            .nav-links { display: none; } /* Hide links on very small screens, menu button handles it */
+            .nav-right { gap: 15px; }
+            
             .header-sec h2 { font-size: 22px; }
             
             /* Stack Podium Cards vertically on mobile */
@@ -257,18 +321,41 @@
 </head>
 <body>
 
-    <!-- Simple Navbar -->
+    <!-- Corrected Navbar with Logo and Links on the Left -->
     <nav class="navbar">
-        <a href="dashboard.html" class="nav-brand">TBR Exchange</a>
+        <div class="nav-left">
+            <a href="dashboard.html" class="nav-brand">
+                <!-- 3. Using exact TBR Logo -->
+                <img src="logo.png" alt="TBR Exchange">
+            </a>
+            <div class="nav-links">
+                <a href="dashboard.html"><i class="fa-solid fa-house"></i> Dashboard</a>
+                <a href="market.html"><i class="fa-solid fa-store"></i> Market</a>
+                <a href="ads.html"><i class="fa-solid fa-bullhorn"></i> My Ads</a>
+                <a href="trades.html"><i class="fa-solid fa-right-left"></i> Trades</a>
+                <a href="wallet.html"><i class="fa-solid fa-wallet"></i> Wallet</a>
+                <a href="leaderboard.html" class="active"><i class="fa-solid fa-trophy"></i> Top Traders</a>
+            </div>
+        </div>
+        
+        <div class="nav-right">
+            <div class="verified-btn">
+                <i class="fa-solid fa-check-circle"></i> Verified
+            </div>
+            <i class="fa-solid fa-moon"></i>
+            <i class="fa-regular fa-bell"></i>
+            <i class="fa-solid fa-bars"></i>
+        </div>
     </nav>
 
     <!-- Main Content -->
     <div class="container">
+        <!-- 1. Removed the Auto-update text -->
         <div class="header-sec">
             <h2>🏆 Top Volume Traders</h2>
         </div>
 
-        <!-- Top 3 Podium -->
+        <!-- 5. Top 3 Podium -->
         <div class="podium-container" id="podium-container" style="display: none;">
             <!-- Podium cards injected by JS -->
         </div>
@@ -292,7 +379,7 @@
         </div>
 
         <!-- Loader -->
-        <div id="loader" class="loader-row">Loading Top Traders...</div>
+        <div id="loader" class="loader-row"><i class="fa-solid fa-spinner fa-spin"></i> Loading Top Traders...</div>
     </div>
 
     <script>
@@ -329,7 +416,7 @@
                             const verifiedHtml = (trader.kycStatus === 'verified' || trader.kycStatus === 'approved') 
                                 ? `<span class="verified-badge">✔ Verified</span>` : '';
 
-                            // No TBR ID shown
+                            // 4. TBR ID hidden
                             podiumContainer.innerHTML += `
                                 <div class="podium-card ${rankClass}">
                                     <div class="podium-rank">#${trader.rank}</div>
@@ -353,7 +440,7 @@
                             const verifiedHtml = (trader.kycStatus === 'verified' || trader.kycStatus === 'approved') 
                                 ? `<span class="verified-badge">✔ Verified</span>` : '';
 
-                            // No TBR ID shown
+                            // 4. TBR ID hidden
                             const row = document.createElement('tr');
                             row.innerHTML = `
                                 <td><div class="rank-circle">${trader.rank}</div></td>
