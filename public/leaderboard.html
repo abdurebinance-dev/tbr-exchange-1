@@ -68,31 +68,18 @@
             color: var(--gold);
         }
 
-        .nav-right {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .verified-btn {
-            background-color: rgba(14, 203, 129, 0.1);
-            color: #0ecb81;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 13px;
+        /* Mobile Dashboard Button */
+        .mobile-dash-btn {
+            display: none;
+            color: var(--gold);
+            text-decoration: none;
+            font-size: 14px;
             font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 5px;
+            background: rgba(240, 185, 11, 0.1);
+            padding: 8px 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(240, 185, 11, 0.2);
         }
-
-        .nav-right i {
-            color: var(--text-muted);
-            font-size: 18px;
-            cursor: pointer;
-        }
-
-        .nav-right i:hover { color: var(--text-main); }
 
         .container {
             max-width: 1000px;
@@ -286,7 +273,10 @@
         @media (max-width: 768px) {
             .navbar { padding: 15px 20px; }
             .nav-links { display: none; } 
-            .nav-right { gap: 15px; }
+            
+            .mobile-dash-btn {
+                display: flex; /* Display the back to dashboard button on mobile */
+            }
             
             .header-sec h2 { font-size: 22px; }
             
@@ -326,14 +316,10 @@
             </div>
         </div>
         
-        <div class="nav-right">
-            <div class="verified-btn">
-                <i class="fa-solid fa-check-circle"></i> Verified
-            </div>
-            <i class="fa-solid fa-moon"></i>
-            <i class="fa-regular fa-bell"></i>
-            <i class="fa-solid fa-bars"></i>
-        </div>
+        <!-- Mobile explicit dashboard button -->
+        <a href="dashboard.html" class="mobile-dash-btn">
+            <i class="fa-solid fa-arrow-left"></i> Dashboard
+        </a>
     </nav>
 
     <div class="container">
