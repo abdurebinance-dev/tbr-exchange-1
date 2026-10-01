@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Top Traders - TBR Exchange</title>
-    <!-- Add Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -13,7 +12,6 @@
             --text-main: #eaecef;
             --text-muted: #848e9c;
             --gold: #f0b90b;
-            --gold-hover: #fcd535;
             --border-color: #2b3139;
         }
         
@@ -28,7 +26,7 @@
             color: var(--text-main);
         }
 
-        /* 2. & 3. Exact Dashboard Navbar Styling */
+        /* Navbar */
         .navbar {
             display: flex;
             align-items: center;
@@ -41,11 +39,11 @@
         .nav-left {
             display: flex;
             align-items: center;
-            gap: 35px; /* Space between logo and links */
+            gap: 35px;
         }
         
         .nav-brand img {
-            height: 32px; /* Adjust TBR Logo size here */
+            height: 32px;
             display: block;
             cursor: pointer;
         }
@@ -94,11 +92,8 @@
             cursor: pointer;
         }
 
-        .nav-right i:hover {
-            color: var(--text-main);
-        }
+        .nav-right i:hover { color: var(--text-main); }
 
-        /* Main Container */
         .container {
             max-width: 1000px;
             margin: 30px auto;
@@ -122,100 +117,95 @@
             gap: 10px;
         }
 
-        /* 5. Top 3 Podium Design */
+        /* Top 3 Podium Image Style */
         .podium-container {
             display: flex;
             justify-content: center;
             align-items: flex-end;
-            gap: 20px;
-            margin-bottom: 50px;
+            gap: 50px;
+            margin-top: 40px;
+            margin-bottom: 60px;
         }
 
-        .podium-card {
-            background-color: var(--bg-card);
-            border: 2px solid;
-            border-radius: 16px;
-            padding: 25px 15px;
-            text-align: center;
-            width: 30%;
-            position: relative;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        .podium-profile {
             display: flex;
             flex-direction: column;
             align-items: center;
+            position: relative;
         }
 
-        /* 1st Place */
-        .podium-card.rank-1 {
-            order: 2; 
-            border-color: #f0b90b;
-            transform: scale(1.1);
+        .podium-profile.rank-1 {
+            order: 2;
+            transform: scale(1.15);
+            margin-bottom: 20px;
             z-index: 10;
-            background: linear-gradient(180deg, rgba(240,185,11,0.1) 0%, var(--bg-card) 100%);
-            box-shadow: 0 0 20px rgba(240, 185, 11, 0.2);
         }
-        /* 2nd Place */
-        .podium-card.rank-2 {
-            order: 1;
-            border-color: #c0c0c0;
-            background: linear-gradient(180deg, rgba(192,192,192,0.1) 0%, var(--bg-card) 100%);
-        }
-        /* 3rd Place */
-        .podium-card.rank-3 {
-            order: 3;
-            border-color: #cd7f32;
-            background: linear-gradient(180deg, rgba(205,127,50,0.1) 0%, var(--bg-card) 100%);
-        }
+        .podium-profile.rank-2 { order: 1; }
+        .podium-profile.rank-3 { order: 3; }
 
-        .podium-rank {
-            position: absolute;
-            top: -15px;
-            width: 35px;
-            height: 35px;
-            border-radius: 50%;
+        .avatar-wrapper {
+            position: relative;
             display: flex;
-            align-items: center;
             justify-content: center;
-            font-weight: bold;
-            font-size: 16px;
-            color: #000;
         }
-        .rank-1 .podium-rank { background: radial-gradient(circle, #fcd535, #f0b90b); }
-        .rank-2 .podium-rank { background: radial-gradient(circle, #ffffff, #c0c0c0); }
-        .rank-3 .podium-rank { background: radial-gradient(circle, #ffa07a, #cd7f32); color: #fff; }
 
         .podium-avatar {
-            width: 70px;
-            height: 70px;
             border-radius: 50%;
             object-fit: cover;
-            margin-bottom: 15px;
-            border: 3px solid var(--bg-main);
+            border: 4px solid #fff;
+            background-color: var(--bg-card);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .rank-1 .podium-avatar {
+            width: 90px;
+            height: 90px;
+            border-color: #f0b90b; 
+            box-shadow: 0 0 20px rgba(240, 185, 11, 0.4);
+        }
+        .rank-2 .podium-avatar {
+            width: 75px;
+            height: 75px;
+            border-color: #e6e6e6; 
+        }
+        .rank-3 .podium-avatar {
+            width: 75px;
+            height: 75px;
+            border-color: #cd7f32; 
+        }
+
+        .podium-crown {
+            position: absolute;
+            top: -30px;
+            color: #f0b90b;
+            font-size: 38px;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.6);
+            z-index: 5;
+        }
+
+        .podium-number {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 12px;
         }
 
         .podium-name {
-            font-weight: bold;
-            font-size: 16px;
+            margin-top: 15px;
+            font-size: 15px;
+            font-weight: 700;
+            text-transform: uppercase;
             color: var(--text-main);
-            margin-bottom: 5px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            justify-content: center;
-            flex-wrap: wrap;
+            text-align: center;
+            max-width: 120px;
+            word-wrap: break-word;
         }
 
-        .podium-vol {
+        .podium-score {
             color: var(--gold);
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 800;
-            margin-bottom: 5px;
-        }
-        
-        .podium-stats {
-            color: var(--text-muted);
-            font-size: 12px;
-            font-weight: 500;
+            margin-top: 6px;
         }
 
         /* Table Styling for Ranks 4+ */
@@ -223,14 +213,14 @@
             background-color: var(--bg-card);
             border-radius: 12px;
             border: 1px solid var(--border-color);
-            overflow-x: auto; /* 4. Mobile horizontal scroll */
+            overflow-x: auto;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
             text-align: left;
-            min-width: 600px; /* Prevents squeezing on mobile */
+            min-width: 600px; 
         }
 
         th, td {
@@ -283,6 +273,7 @@
             padding: 2px 6px;
             border-radius: 4px;
             font-weight: 600;
+            margin-left: 8px;
         }
 
         .volume-td { color: var(--text-main); font-weight: bold; }
@@ -291,41 +282,38 @@
 
         .loader-row { text-align: center; padding: 40px !important; color: var(--gold); }
 
-        /* 4. Mobile Responsive Fixes */
+        /* Mobile Responsive */
         @media (max-width: 768px) {
             .navbar { padding: 15px 20px; }
-            .nav-links { display: none; } /* Hide links on very small screens, menu button handles it */
+            .nav-links { display: none; } 
             .nav-right { gap: 15px; }
             
             .header-sec h2 { font-size: 22px; }
             
-            /* Stack Podium Cards vertically on mobile */
             .podium-container {
-                flex-direction: column;
-                align-items: center;
-                gap: 30px;
-                margin-bottom: 30px;
+                gap: 15px;
+                margin-top: 30px;
+                margin-bottom: 40px;
             }
-            .podium-card {
-                width: 100%;
-                order: initial !important; /* Reset order to 1, 2, 3 vertically */
-                transform: none !important; /* Remove scaling */
-            }
-            .podium-card.rank-1 { order: 1 !important; height: auto; }
-            .podium-card.rank-2 { order: 2 !important; height: auto; }
-            .podium-card.rank-3 { order: 3 !important; height: auto; }
+            .podium-profile.rank-1 { transform: scale(1.1); }
             
+            .rank-1 .podium-avatar { width: 75px; height: 75px; }
+            .rank-2 .podium-avatar, .rank-3 .podium-avatar { width: 60px; height: 60px; }
+            
+            .podium-crown { font-size: 28px; top: -22px; }
+            .podium-number { font-size: 18px; margin-bottom: 8px; }
+            .podium-name { font-size: 12px; max-width: 90px; }
+            .podium-score { font-size: 13px; }
+
             th, td { padding: 12px 15px; }
         }
     </style>
 </head>
 <body>
 
-    <!-- Corrected Navbar with Logo and Links on the Left -->
     <nav class="navbar">
         <div class="nav-left">
             <a href="dashboard.html" class="nav-brand">
-                <!-- 3. Using exact TBR Logo -->
                 <img src="logo.png" alt="TBR Exchange">
             </a>
             <div class="nav-links">
@@ -348,19 +336,16 @@
         </div>
     </nav>
 
-    <!-- Main Content -->
     <div class="container">
-        <!-- 1. Removed the Auto-update text -->
         <div class="header-sec">
             <h2>🏆 Top Volume Traders</h2>
         </div>
 
-        <!-- 5. Top 3 Podium -->
+        <!-- Image style Podium -->
         <div class="podium-container" id="podium-container" style="display: none;">
-            <!-- Podium cards injected by JS -->
+            <!-- Podium profiles injected by JS -->
         </div>
 
-        <!-- Rank 4 and below Table -->
         <div class="table-container" id="table-wrapper" style="display: none;">
             <table>
                 <thead>
@@ -373,12 +358,10 @@
                     </tr>
                 </thead>
                 <tbody id="leaderboard-body">
-                    <!-- Table rows injected by JS -->
                 </tbody>
             </table>
         </div>
 
-        <!-- Loader -->
         <div id="loader" class="loader-row"><i class="fa-solid fa-spinner fa-spin"></i> Loading Top Traders...</div>
     </div>
 
@@ -406,30 +389,31 @@
                     const top3 = result.data.slice(0, 3);
                     const rest = result.data.slice(3);
 
-                    // 5. Render Top 3 Podium
                     const podiumContainer = document.getElementById('podium-container');
                     if (top3.length > 0) {
                         podiumContainer.style.display = 'flex';
                         top3.forEach(trader => {
                             let rankClass = trader.rank === 1 ? 'rank-1' : trader.rank === 2 ? 'rank-2' : 'rank-3';
                             const avatarSrc = trader.avatar || `https://ui-avatars.com/api/?name=${trader.name}&background=181a20&color=f0b90b&bold=true`;
-                            const verifiedHtml = (trader.kycStatus === 'verified' || trader.kycStatus === 'approved') 
-                                ? `<span class="verified-badge">✔ Verified</span>` : '';
+                            
+                            const topDecorator = trader.rank === 1 
+                                ? '<i class="fa-solid fa-crown podium-crown"></i>' 
+                                : `<div class="podium-number">${trader.rank}</div>`;
 
-                            // 4. TBR ID hidden
                             podiumContainer.innerHTML += `
-                                <div class="podium-card ${rankClass}">
-                                    <div class="podium-rank">#${trader.rank}</div>
-                                    <img src="${avatarSrc}" class="podium-avatar" onerror="this.src='https://ui-avatars.com/api/?name=User&background=181a20&color=f0b90b'">
-                                    <div class="podium-name">${trader.name} ${verifiedHtml}</div>
-                                    <div class="podium-vol">${Number(trader.volume).toLocaleString('en-US', {minimumFractionDigits: 2})} <span class="usdt-text">USDT</span></div>
-                                    <div class="podium-stats">${trader.tradesCount} Orders | ${trader.completionRate} Rate</div>
+                                <div class="podium-profile ${rankClass}">
+                                    ${trader.rank !== 1 ? topDecorator : ''}
+                                    <div class="avatar-wrapper">
+                                        ${trader.rank === 1 ? topDecorator : ''}
+                                        <img src="${avatarSrc}" class="podium-avatar" onerror="this.src='https://ui-avatars.com/api/?name=User&background=181a20&color=f0b90b'">
+                                    </div>
+                                    <div class="podium-name">${trader.name}</div>
+                                    <div class="podium-score">${Number(trader.volume).toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
                                 </div>
                             `;
                         });
                     }
 
-                    // Render Rank 4+ Table
                     const tableWrapper = document.getElementById('table-wrapper');
                     const tbody = document.getElementById('leaderboard-body');
                     
@@ -438,16 +422,15 @@
                         rest.forEach(trader => {
                             const avatarSrc = trader.avatar || `https://ui-avatars.com/api/?name=${trader.name}&background=181a20&color=f0b90b&bold=true`;
                             const verifiedHtml = (trader.kycStatus === 'verified' || trader.kycStatus === 'approved') 
-                                ? `<span class="verified-badge">✔ Verified</span>` : '';
+                                ? `<span class="verified-badge"><i class="fa-solid fa-check"></i></span>` : '';
 
-                            // 4. TBR ID hidden
                             const row = document.createElement('tr');
                             row.innerHTML = `
                                 <td><div class="rank-circle">${trader.rank}</div></td>
                                 <td>
                                     <div class="trader-info-table">
                                         <img src="${avatarSrc}" class="table-avatar" onerror="this.src='https://ui-avatars.com/api/?name=User&background=181a20&color=f0b90b'">
-                                        <div style="font-weight:600; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+                                        <div style="font-weight:600; color:var(--text-main); display:flex; align-items:center;">
                                             ${trader.name} ${verifiedHtml}
                                         </div>
                                     </div>
