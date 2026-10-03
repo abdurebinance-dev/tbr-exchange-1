@@ -365,7 +365,15 @@
         }
 
         // --- ትክክለኛው የ WebAuthn Passkey Login ሎጂክ ---
+        let passkeyAbortController = new AbortController();
+
         document.getElementById('passkeyBtn').addEventListener('click', async () => {
+            // የቆየ ተደራራቢ የ Passkey ጥያቄ ካለ መጀመሪያ እናቋርጠዋለን (ለ PWA ግጭት መፍትሄ)
+            if (passkeyAbortController) {
+                passkeyAbortController.abort();
+                passkeyAbortController = new AbortController();
+            }
+
             try {
                 showError("Passkey", "Requesting biometric authentication...");
                 
@@ -388,8 +396,10 @@
                     rpId: window.location.hostname
                 };
 
+                // AbortController signal እዚህ ጋር ተጨምሯል 
                 const assertion = await navigator.credentials.get({
-                    publicKey: publicKeyCredentialRequestOptions
+                    publicKey: publicKeyCredentialRequestOptions,
+                    signal: passkeyAbortController.signal
                 });
 
                 const authResponse = await fetch(`${API_BASE_URL}/api/passkey/login-verify`, {
@@ -422,6 +432,12 @@
                 }
 
             } catch (err) {
+                // Abort የተደረገውን ሆን ተብሎ የተቋረጠ ኤረር ችላ እንዲል እናደርጋለን
+                if (err.name === 'AbortError') {
+                    console.log('Previous passkey request aborted successfully.');
+                    return;
+                }
+                
                 console.error('Passkey login error:', err);
                 showError("Passkey Cancelled", "Passkey authentication was cancelled or not supported.");
             }
