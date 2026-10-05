@@ -94,6 +94,9 @@ const userSchema = new mongoose.Schema({
     bscPrivateKey: { type: String, default: '' },
     balance: { type: Number, default: 0 },
     lockedBalance: { type: Number, default: 0 },
+    creditedChainBalance: { type: Number, default: 0 }, // ከብሎክቼይን የተነበበውን በትክክል መመዝገቢያ
+    depositLockUntil: { type: Date }, // ዲፖዚት ሲደረግ እንዳይደራረብ መቆለፊያ
+    withdrawLockUntil: { type: Date }, // ወጪ ሲደረግ እንዳይደራረብ መቆለፊያ
     dailyWithdrawnAmount: { type: Number, default: 0 },
     dailyWithdrawnDate: { type: Date },
 
@@ -1107,7 +1110,7 @@ app.post('/api/reset-password', async (req, res) => {
 });
 
 // ============================================================================
-// 🔥 FAST WEB3 DEPOSIT CHECK & AUTO-SWEEP (ATOMIC DOUBLE-DEPOSIT PROTECTED) 🔥
+// 🔥 FAST WEB3 DEPOSIT CHECK (ATOMIC DOUBLE-DEPOSIT PROTECTED) 🔥
 // ============================================================================
 
 app.get('/api/check-deposits/:walletAddress', async (req, res) => {
@@ -1115,151 +1118,81 @@ app.get('/api/check-deposits/:walletAddress', async (req, res) => {
     const userWalletAddress = String(req.params.walletAddress || '').trim().toLowerCase();
 
     if (!userWalletAddress || !userWalletAddress.startsWith('0x')) {
-        const fallbackU = await resolveUserFromRequest(req);
-        if (fallbackU) {
-            return res.json({
-                success: true,
-                balance: Number(fallbackU.balance || 0),
-                lockedBalance: Number(fallbackU.lockedBalance || 0),
-                transactions: []
-            });
-        }
         return res.json({ success: false, message: 'Invalid wallet address', transactions: [] });
     }
 
     try {
-        // ⚡ 1. ATOMIC DB LOCK: በተመሳሳይ ጊዜ ለሚመጡ ጥያቄዎች (Race Condition) መከላከያ ⚡
-        // MongoDB አንድ ሪኩዌስት ብቻ እንዲያልፍ ያደርጋል፣ ለ 60 ሰከንድ ሎክ ይሆናል
+        // ⚡ 1. ATOMIC DB LOCK & STATE FETCH ⚡
         const existingUser = await User.findOneAndUpdate(
             { 
                 bscAddress: new RegExp(`^${userWalletAddress}$`, 'i'),
-                $or: [
-                    { depositLockUntil: { $exists: false } },
-                    { depositLockUntil: { $lt: new Date() } }
-                ]
+                $or: [ { depositLockUntil: { $exists: false } }, { depositLockUntil: {$lt: new Date() } } ]
             },
             { $set: { depositLockUntil: new Date(Date.now() + 60 * 1000) } }, // Lock for 60 seconds
-            { new: true, select: '_id email balance lockedBalance bscAddress bscPrivateKey' }
+            { new: true, select: '_id email balance lockedBalance bscAddress bscPrivateKey creditedChainBalance' }
         ).lean();
 
         if (!existingUser) {
-            // Lock ከተደረገ (ተጠቃሚው ደጋግሞ ክሊክ ካደረገ) ዝም ብሎ አሁን ያለውን ባላንስ ብቻ ይመልሳል
             const fallbackUser = await User.findOne({ bscAddress: new RegExp(`^${userWalletAddress}$`, 'i') }).select('balance lockedBalance').lean();
-            if (!fallbackUser) {
-                return res.json({ success: false, message: 'Wallet not found', transactions: [] });
-            }
-            return res.json({
-                success: true,
-                balance: Number(fallbackUser.balance || 0),
-                lockedBalance: Number(fallbackUser.lockedBalance || 0),
-                transactions: []
-            });
+            return res.json({ success: true, balance: Number(fallbackUser ? fallbackUser.balance : 0), lockedBalance: Number(fallbackUser ? fallbackUser.lockedBalance : 0), transactions: [] });
         }
 
         const usdtContract = new ethers.Contract(USDT_CONTRACT_ADDRESS, usdtAbi, provider);
         const balanceWei = await Promise.race([
             usdtContract.balanceOf(userWalletAddress),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('BSC RPC Timeout')), 2200))
+            new Promise((_, reject) => setTimeout(() => reject(new Error('BSC Timeout')), 2200))
         ]);
 
         const currentChainBal = parseFloat(ethers.formatUnits(balanceWei, 18));
         const exactDepositAmt = Number(currentChainBal.toFixed(6));
-        let updatedBalance = Number(existingUser.balance || 0);
+        const alreadyCredited = Number(existingUser.creditedChainBalance || 0);
 
-        if (exactDepositAmt > 0.0001) {
-            // ⚡ 2. SWEEP FAILED VULNERABILITY FIX ⚡
-            // ማስተር ዋሌትህ ላይ BNB አልቆ Sweep ሳያደርግ ቢቀር ድጋሚ እንዳይደምርበት 
-            // 90 ሰከንድ የነበረውን ወደ 24 ሰዓት (24 hours) አሳድገነዋል!
-            const recentDuplicate = await Transaction.findOne({
-                userId: existingUser._id,
-                type: 'deposit',
-                amount: { $gte: exactDepositAmt - 0.0001,$lte: exactDepositAmt + 0.0001 },
-                createdAt: { $gt: new Date(Date.now() - 24 * 60 * 60 * 1000) } 
-            }).select('_id').lean();
+        // ⚡ 2. MATHEMATICAL DIFFERENCE (DOUBLE SPEND FIX) ⚡
+        // ድሮ የተደመረውን ቀንሶ፣ አዲሱን የገባውን ብር ብቻ ይሰላል
+        const newCreditAmount = Number((exactDepositAmt - alreadyCredited).toFixed(6));
 
-            if (recentDuplicate) {
-                if (existingUser.bscPrivateKey) {
-                    autoSweepUSDT(userWalletAddress, existingUser.bscPrivateKey); // ጋዝ ሞልቶ ከሆነ ድጋሚ Sweep እንዲሞክር
-                }
-                // Lock እናነሳለን
-                await User.updateOne({ _id: existingUser._id }, { $unset: { depositLockUntil: '' } });
-                
-                return res.json({
-                    success: true,
-                    balance: updatedBalance,
-                    lockedBalance: Number(existingUser.lockedBalance || 0),
-                    transactions: []
-                });
-            }
-
-            // ⚡ 3. ATOMIC CREDIT BALANCE ⚡
+        if (newCreditAmount > 0.0001) {
+            // New valid deposit amount found! Credit the specific difference.
             const updatedDoc = await User.findByIdAndUpdate(
                 existingUser._id,
                 { 
-                    $inc: { balance: exactDepositAmt },$unset: { depositLockUntil: '' } // Lock አንሳ
+                    $inc: { balance: newCreditAmount },
+                    $set: { creditedChainBalance: exactDepositAmt }, // Update tracker$unset: { depositLockUntil: '' }
                 },
-                { new: true, select: 'balance' }
+                { new: true, select: 'balance lockedBalance' }
             ).lean();
-
-            updatedBalance = updatedDoc ? Number(updatedDoc.balance) : Number((updatedBalance + exactDepositAmt).toFixed(6));
 
             await Transaction.create({
                 userId: existingUser._id,
                 email: existingUser.email,
                 type: 'deposit',
-                amount: exactDepositAmt,
+                amount: newCreditAmount,
                 status: 'completed',
                 destinationAddress: userWalletAddress
             });
 
-            notifyUser({
-                userId: existingUser._id,
-                email: existingUser.email,
-                title: 'Deposit Confirmed',
-                message: `Your deposit of ${exactDepositAmt.toFixed(2)} USDT has been credited to your wallet.`,
-                type: 'deposit',
-                link: 'wallet.html'
-            });
+            notifyUser({ userId: existingUser._id, email: existingUser.email, title: 'Deposit Confirmed', message: `Your deposit of ${newCreditAmount.toFixed(2)} USDT has been credited.`, type: 'deposit', link: 'wallet.html' });
 
-            if (existingUser.bscPrivateKey) {
-                autoSweepUSDT(userWalletAddress, existingUser.bscPrivateKey);
-            }
+            if (existingUser.bscPrivateKey) { autoSweepUSDT(userWalletAddress, existingUser.bscPrivateKey); }
             
-            return res.json({
-                success: true,
-                balance: updatedBalance,
-                lockedBalance: Number(existingUser.lockedBalance || 0),
-                transactions: [{ to: userWalletAddress, value: exactDepositAmt, tokenSymbol: 'USDT' }]
+            return res.json({ success: true, balance: Number(updatedDoc.balance), lockedBalance: Number(updatedDoc.lockedBalance), transactions: [{ to: userWalletAddress, value: newCreditAmount, tokenSymbol: 'USDT' }] });
+
+        } else if (exactDepositAmt < 0.0001 && alreadyCredited > 0) {
+            // ⚡ 3. SWEEP COMPLETED FIX ⚡
+            // ማስተር ዋሌቱ ብሩን ጠርጎ (Sweep አድርጎ) ሲጨርስ፣ ሪሴት (Reset) ያደርገዋል
+            await User.findByIdAndUpdate(existingUser._id, {
+                $set: { creditedChainBalance: 0 },$unset: { depositLockUntil: '' }
             });
+            return res.json({ success: true, balance: Number(existingUser.balance || 0), lockedBalance: Number(existingUser.lockedBalance || 0), transactions: [] });
+        } else {
+            // ምንም አዲስ ብር ካልገባ Lock አንስቶ ይመለሳል
+            await User.updateOne({ _id: existingUser._id }, { $unset: { depositLockUntil: '' } });
+            return res.json({ success: true, balance: Number(existingUser.balance || 0), lockedBalance: Number(existingUser.lockedBalance || 0), transactions: [] });
         }
-
-        // ዜሮ ከሆነ Lock እናነሳለን
-        await User.updateOne({ _id: existingUser._id }, { $unset: { depositLockUntil: '' } });
-
-        return res.json({
-            success: true,
-            balance: updatedBalance,
-            lockedBalance: Number(existingUser.lockedBalance || 0),
-            transactions: []
-        });
-
     } catch (error) {
-        // ኤረር ከተፈጠረ Lock ይነሳል (እንዳይጣበቅ)
-        await User.updateOne(
-            { bscAddress: new RegExp(`^${userWalletAddress}$`, 'i') }, 
-            { $unset: { depositLockUntil: '' } }
-        ).catch(() => {});
-
-        const fallbackUser = await User.findOne({ bscAddress: new RegExp(`^${userWalletAddress}$`, 'i') })
-            .select('balance lockedBalance')
-            .lean();
-
-        return res.json({
-            success: true,
-            balance: fallbackUser ? Number(fallbackUser.balance || 0) : 0,
-            lockedBalance: fallbackUser ? Number(fallbackUser.lockedBalance || 0) : 0,
-            transactions: []
-        });
+        await User.updateOne({ bscAddress: new RegExp(`^${userWalletAddress}$`, 'i') }, { $unset: { depositLockUntil: '' } }).catch(() => {});
+        const fallbackUser = await User.findOne({ bscAddress: new RegExp(`^${userWalletAddress}$`, 'i') }).select('balance lockedBalance').lean();
+        return res.json({ success: true, balance: fallbackUser ? Number(fallbackUser.balance || 0) : 0, lockedBalance: fallbackUser ? Number(fallbackUser.lockedBalance || 0) : 0, transactions: [] });
     }
 });
 
@@ -1269,106 +1202,74 @@ app.post('/api/withdraw/request', verifyToken, async (req, res) => {
         const { amount, destinationAddress, useEmailFallback, passkeyVerified } = req.body;
         const withdrawAmount = parseFloat(amount);
 
-        if (!withdrawAmount || withdrawAmount < 2) {
-            return res.status(400).json({ success: false, message: 'Minimum withdrawal amount is 2 USDT.' });
-        }
-
-        if (!destinationAddress) {
-            return res.status(400).json({ success: false, message: 'Destination address is required.' });
-        }
+        if (!withdrawAmount || withdrawAmount < 2) return res.status(400).json({ success: false, message: 'Minimum withdrawal amount is 2 USDT.' });
+        if (!destinationAddress) return res.status(400).json({ success: false, message: 'Destination address is required.' });
 
         const user = await User.findById(req.user.id).select('-kycData -avatar');
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found.' });
-        }
-
-        if (user.balance < withdrawAmount) {
-            return res.status(400).json({ success: false, message: 'Insufficient available balance.' });
-        }
+        if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
 
         const userDailyWithdrawn = user.dailyWithdrawnDate && new Date(user.dailyWithdrawnDate).toDateString() === new Date().toDateString() ? user.dailyWithdrawnAmount : 0;
+        if (userDailyWithdrawn + withdrawAmount > 5000) return res.status(400).json({ success: false, message: `Exceeds daily withdrawal limit.` });
 
-        const DAILY_LIMIT = 5000;
-        if (userDailyWithdrawn + withdrawAmount > DAILY_LIMIT) {
-            return res.status(400).json({ success: false, message: `Exceeds daily withdrawal limit.` });
-        }
-
-        const userPasskeys = await Passkey.find({ userId: user._id }).lean();
-        const hasPasskey = userPasskeys && userPasskeys.length > 0;
+        const hasPasskey = await Passkey.exists({ userId: user._id });
 
         if (hasPasskey && !passkeyVerified && !useEmailFallback) {
-            return res.json({
-                success: true,
-                requiresPasskeyPrompt: true,
-                message: 'Security verification required.'
-            });
+            return res.json({ success: true, requiresPasskeyPrompt: true, message: 'Security verification required.' });
         }
 
         if (hasPasskey && passkeyVerified && !useEmailFallback) {
             const amountToSend = withdrawAmount - 1;
 
-            // ⚡ ATOMIC DEDUCTION ⚡ 
+            // ⚡ ATOMIC DOUBLE-CLICK LOCK & DEDUCTION ⚡ 
             const updatedUser = await User.findOneAndUpdate(
-                { _id: user._id, balance: { $gte: withdrawAmount } },
                 { 
-                    $inc: { balance: -withdrawAmount },
-                    $set: { dailyWithdrawnAmount: userDailyWithdrawn + withdrawAmount, dailyWithdrawnDate: new Date() }
+                    _id: user._id, 
+                    balance: { $gte: withdrawAmount },$or: [{ withdrawLockUntil: { $exists: false } }, { withdrawLockUntil: {$lt: new Date() } }]
+                },
+                { 
+                    $inc: { balance: -withdrawAmount },$set: { 
+                        dailyWithdrawnAmount: userDailyWithdrawn + withdrawAmount, 
+                        dailyWithdrawnDate: new Date(),
+                        withdrawLockUntil: new Date(Date.now() + 60 * 1000) // 60 ሰከንድ ይቆለፋል
+                    }
                 },
                 { new: true }
             );
 
             if (!updatedUser) {
-                return res.status(400).json({ success: false, message: 'Insufficient balance or request is processing.' });
+                return res.status(400).json({ success: false, message: 'Insufficient balance or request is processing. Please wait.' });
             }
 
+            let txHash = null;
             try {
                 const amountInWei = ethers.parseUnits(amountToSend.toString(), 18);
                 const tx = await usdtContractMaster.transfer(destinationAddress, amountInWei);
-                await tx.wait();
+                txHash = tx.hash;
+                await tx.wait(); // Confirm
 
-                await Transaction.create({
-                    userId: user._id,
-                    email: user.email,
-                    type: 'withdrawal',
-                    amount: amountToSend,
-                    fee: 1,
-                    status: 'completed',
-                    destinationAddress: destinationAddress
-                });
+                // Unlock
+                await User.updateOne({ _id: user._id }, { $unset: { withdrawLockUntil: '' } });
+                await Transaction.create({ userId: user._id, email: user.email, type: 'withdrawal', amount: amountToSend, fee: 1, status: 'completed', destinationAddress: destinationAddress });
+                notifyUser({ userId: user._id, email: user.email, title: 'Withdrawal Completed', message: `Your withdrawal of ${amountToSend.toFixed(2)} USDT has been sent.`, type: 'withdrawal', link: 'wallet.html' });
 
-                notifyUser({
-                    userId: user._id,
-                    email: user.email,
-                    title: 'Withdrawal Completed',
-                    message: `Your withdrawal of ${amountToSend.toFixed(2)} USDT has been sent to ${destinationAddress}.`,
-                    type: 'withdrawal',
-                    link: 'wallet.html'
-                });
-
-                return res.json({
-                    success: true,
-                    balance: updatedUser.balance,
-                    message: `Successfully withdrew ${amountToSend.toFixed(2)} USDT via Passkey (1 USDT fee applied).`
-                });
+                return res.json({ success: true, balance: updatedUser.balance, message: `Successfully withdrew ${amountToSend.toFixed(2)} USDT via Passkey.` });
             } catch (txError) {
-                console.error('Blockchain Tx Error (Passkey):', txError);
-                // ⚡ ATOMIC ROLLBACK ⚡
-                await User.updateOne(
-                    { _id: user._id },
-                    { 
-                        $inc: { balance: withdrawAmount },
-                        $set: { dailyWithdrawnAmount: userDailyWithdrawn }
-                    }
-                );
-                return res.status(500).json({ success: false, message: 'Blockchain transfer failed. Check Master Wallet balance or gas fee.' });
+                if (!txHash) {
+                    await User.updateOne(
+                        { _id: user._id },
+                        { $inc: { balance: withdrawAmount }, $set: { dailyWithdrawnAmount: userDailyWithdrawn },$unset: { withdrawLockUntil: '' } }
+                    );
+                    return res.status(500).json({ success: false, message: 'Blockchain transfer failed. Check Master Wallet balance or gas fee. Balance refunded.' });
+                } else {
+                    await User.updateOne({ _id: user._id }, { $unset: { withdrawLockUntil: '' } });
+                    return res.status(500).json({ success: false, message: 'Transfer broadcasted but delayed. Please check BSCScan.' });
+                }
             }
         }
 
+        // Email OTP Generation
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        await User.updateOne(
-            { _id: user._id },
-            { $set: { verificationCode: otp, verificationCodeExpire: new Date(Date.now() + 10 * 60 * 1000) } }
-        );
+        await User.updateOne({ _id: user._id }, { $set: { verificationCode: otp, verificationCodeExpire: new Date(Date.now() + 10 * 60 * 1000) } });
 
         const htmlContent = `
         <div style="background-color: #0c0c0c; padding: 40px 20px; font-family: sans-serif; color: #ffffff;">
@@ -1381,99 +1282,67 @@ app.post('/api/withdraw/request', verifyToken, async (req, res) => {
             </div>
         </div>`;
 
-        sendEmailViaBrevo({
-            to: user.email,
-            subject: `Withdrawal Verification Code — ${otp}`,
-            htmlContent
-        }).catch(err => console.error('Withdraw Email Error:', err.message));
-
+        sendEmailViaBrevo({ to: user.email, subject: `Withdrawal Verification Code — ${otp}`, htmlContent }).catch(() => {});
         return res.json({ success: true, requiresEmailOtp: true, message: 'Verification code sent to your email.' });
 
     } catch (error) {
-        console.error('Withdraw Request Error:', error);
-        res.status(500).json({ success: false, message: error.message || 'Server error during withdrawal request.' });
+        res.status(500).json({ success: false, message: 'Server error during withdrawal request.' });
     }
 });
 
-// ✅ ATOMIC WITHDRAWAL VERIFY FIX ✅
+// ✅ ATOMIC WITHDRAWAL VERIFY FIX (OTP) ✅
 app.post('/api/withdraw/verify-otp', verifyToken, async (req, res) => {
     try {
         const { otp, amount, destinationAddress } = req.body;
-        
-        if (!destinationAddress) {
-            return res.status(400).json({ success: false, message: 'Destination address is required to complete withdrawal.' });
-        }
-
         const withdrawAmount = parseFloat(amount);
-        if (isNaN(withdrawAmount) || withdrawAmount < 2) {
-             return res.status(400).json({ success: false, message: 'Invalid withdrawal amount.' });
-        }
+        if (!destinationAddress || isNaN(withdrawAmount) || withdrawAmount < 2) return res.status(400).json({ success: false, message: 'Invalid details.' });
 
         const amountToSend = withdrawAmount - 1;
 
-        // ⚡ ATOMIC VERIFY & DEDUCT ⚡
-        // (Fix: Removed mixed inclusion/exclusion to stop MongoServerError)
+        // ⚡ ATOMIC VERIFY, DEDUCT & LOCK ⚡
+        // በተመሳሳይ ሰከንድ የሚመጡ ጥያቄዎችን አግዶ አንድ ብቻ እንዲያልፍ ያደርጋል
         const user = await User.findOneAndUpdate(
             { 
                 _id: req.user.id, 
                 verificationCode: otp, 
                 verificationCodeExpire: { $gt: new Date() },
-                balance: { $gte: withdrawAmount }
+                balance: { $gte: withdrawAmount },$or: [{ withdrawLockUntil: { $exists: false } }, { withdrawLockUntil: {$lt: new Date() } }]
             },
             {
-                $unset: { verificationCode: '', verificationCodeExpire: '' },$inc: { balance: -withdrawAmount }
+                $unset: { verificationCode: '', verificationCodeExpire: '' },
+                $inc: { balance: -withdrawAmount },$set: { withdrawLockUntil: new Date(Date.now() + 60 * 1000) } // ለ 60 ሰከንድ ይቆለፋል
             },
             { new: true, select: 'email balance dailyWithdrawnAmount dailyWithdrawnDate bscAddress' }
         );
 
-        if (!user) {
-            const checkUser = await User.findById(req.user.id).select('verificationCode verificationCodeExpire balance');
-            if (!checkUser || checkUser.verificationCode !== otp || new Date() > checkUser.verificationCodeExpire) {
-                return res.status(400).json({ success: false, message: 'Invalid or expired verification code.' });
-            }
-            return res.status(400).json({ success: false, message: 'Insufficient balance or concurrent request detected.' });
-        }
+        if (!user) return res.status(400).json({ success: false, message: 'Invalid OTP, insufficient balance, or concurrent request detected.' });
 
         const userDailyWithdrawn = user.dailyWithdrawnDate && new Date(user.dailyWithdrawnDate).toDateString() === new Date().toDateString() ? user.dailyWithdrawnAmount : 0;
+        let txHash = null;
 
         try {
             const amountInWei = ethers.parseUnits(amountToSend.toString(), 18);
             const tx = await usdtContractMaster.transfer(destinationAddress, amountInWei);
-            await tx.wait();
+            txHash = tx.hash;
+            await tx.wait(); // ብሎክቼይን ላይ እስኪረጋገጥ ይጠብቃል
 
-            user.dailyWithdrawnAmount = userDailyWithdrawn + withdrawAmount;
-            user.dailyWithdrawnDate = new Date();
-            await user.save();
+            // ከረጋገጠ በኋላ መቆለፊያውን ይፈታል
+            await User.updateOne({ _id: user._id }, { $set: { dailyWithdrawnAmount: userDailyWithdrawn + withdrawAmount, dailyWithdrawnDate: new Date() },$unset: { withdrawLockUntil: '' } });
+            await Transaction.create({ userId: user._id, email: user.email, type: 'withdrawal', amount: amountToSend, fee: 1, status: 'completed', destinationAddress: destinationAddress });
 
-            await Transaction.create({
-                userId: user._id,
-                email: user.email,
-                type: 'withdrawal',
-                amount: amountToSend,
-                fee: 1,
-                status: 'completed',
-                destinationAddress: destinationAddress
-            });
-
-            notifyUser({
-                userId: user._id,
-                email: user.email,
-                title: 'Withdrawal Completed',
-                message: `Your withdrawal of ${amountToSend.toFixed(2)} USDT has been sent to ${destinationAddress}.`,
-                type: 'withdrawal',
-                link: 'wallet.html'
-            });
-
-            res.json({ success: true, balance: user.balance, message: `Withdrawal of ${amountToSend.toFixed(2)} USDT Sent via Blockchain!` });
+            res.json({ success: true, balance: user.balance, message: `Withdrawal of ${amountToSend.toFixed(2)} USDT Sent!` });
         } catch (txError) {
-            console.error('Blockchain Tx Error (Email OTP):', txError);
-            // ⚡ ATOMIC ROLLBACK ⚡
-            await User.updateOne({ _id: user._id }, { $inc: { balance: withdrawAmount } });
-            return res.status(500).json({ success: false, message: 'Blockchain transfer failed. Insufficient BNB for Gas or invalid address.' });
+            if (!txHash) {
+                // ብሎክቼይን ላይ ሳይላክ ካቋረጠ ብሩን ይመልሳል፣ መቆለፊያውንም ይፈታል
+                await User.updateOne({ _id: user._id }, { $inc: { balance: withdrawAmount },$unset: { withdrawLockUntil: '' } });
+                return res.status(500).json({ success: false, message: 'Blockchain transfer failed. Balance refunded.' });
+            } else {
+                // ተልኮ ግን ሪስፖንስ ከዘገየ መቆለፊያውን ብቻ ይፈታል (ብሩን አይመልስም)
+                await User.updateOne({ _id: user._id }, { $unset: { withdrawLockUntil: '' } });
+                return res.status(500).json({ success: false, message: 'Transfer broadcasted but delayed. Please check BSCScan.' });
+            }
         }
-
     } catch (error) {
-        console.error('Verify Withdraw OTP Error:', error);
         res.status(500).json({ success: false, message: 'Server error during verification.' });
     }
 });
