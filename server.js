@@ -3966,6 +3966,10 @@ app.post('/api/trades/:id/request-cancel', async (req, res) => {
 // 8. ⚡ Apply for Dispute ⚡
 app.post('/api/trades/:id/dispute', async (req, res) => {
     try {
+        // ⚡ ተጠቃሚው የሚጽፈውን መረጃ (Reason) ከ Frontend እንቀበላለን ⚡
+        const { reason, disputeReason, message } = req.body; 
+        const customReason = (reason || disputeReason || message || '').trim();
+
         const currentUser = await resolveUserFromRequest(req);
         const trade = await Trade.findById(req.params.id).select('-receiptImage');
         if (!trade) return res.status(404).json({ success: false, message: 'Trade not found.' });
@@ -3991,12 +3995,18 @@ app.post('/api/trades/:id/dispute', async (req, res) => {
 
         trade.status = 'disputed';
         trade.disputeOpenedBy = applicantRole.toLowerCase();
-        trade.disputeReason = `${applicantRole} (${applicantName}) applied for dispute.`;
+        
+        // 🔥 የደንበኛውን ትክክለኛ ምክንያት አድሚን ፓኔል ላይ እንዲታይ ሴቭ እናደርጋለን 🔥
+        if (customReason) {
+            trade.disputeReason = `${applicantRole} (${applicantName}) applied for dispute. Reason: ${customReason}`;
+        } else {
+            trade.disputeReason = `${applicantRole} (${applicantName}) applied for dispute.`;
+        }
 
         trade.messages.push({
             senderId: 'system',
             senderName: 'System',
-            text: `⚖️ ${applicantRole} (${applicantName}) applied for a dispute! Chat history and payment receipt have been forwarded to the TBR Admin Dispute Room.`,
+            text: `⚖️ ${applicantRole} (${applicantName}) applied for a dispute! ${customReason ? `Reason: ${customReason}. ` : ''}Chat history and payment receipt have been forwarded to the TBR Admin Dispute Room.`,
             isSystem: true,
             createdAt: new Date()
         });
