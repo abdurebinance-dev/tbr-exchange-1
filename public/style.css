@@ -2,29 +2,63 @@
    ፕሮፌሽናል የቀለም ማዕከል (CSS VARIABLES) 
 ========================================== */
 :root {
+    /* 🌙 መደበኛው (Dark Mode) ቀለማት */
     --bg-main: #0b0b0b;
     --bg-nav: #0b0b0b;
     --bg-card: #141414;
     --bg-input: #1a1a1a;
-    --bg-pm: #16181d;
+    --bg-pm-card: #121212;
+    --bg-pm-form: #16181d;
+    --bg-pm-input: #080808;
+    --bg-btn-secondary: #1a1a1a;
+    --bg-btn-secondary-hover: #222222;
+    --bg-btn-pm: #2b313a;
+    --bg-btn-pm-hover: #3b424d;
+    --divider-bg: #141414;
+
     --text-main: #e0e0e0;
     --text-heading: #ffffff;
     --text-muted: #888888;
-    --border-color: #333333;
-    --border-light: #1f1f1f;
+    --text-muted-light: #bbbbbb;
+    --text-empty-icon: #4a505a;
+    --text-empty-text: #848e9c;
+
+    --border-main: #333333;
+    --border-nav: #1f1f1f;
+    --border-divider: #252525;
+    --border-pm: #2b313a;
+    
+    --shadow-form: 0 15px 35px rgba(0, 0, 0, 0.9);
 }
 
 body.light-mode {
+    /* ☀️ Light Mode ሲበራ የሚቀየሩት ቀለማት */
     --bg-main: #f0f2f5;
     --bg-nav: #ffffff;
     --bg-card: #ffffff;
     --bg-input: #f8f9fa;
-    --bg-pm: #ffffff;
+    --bg-pm-card: #ffffff;
+    --bg-pm-form: #f8f9fa;
+    --bg-pm-input: #ffffff;
+    --bg-btn-secondary: #f0f2f5;
+    --bg-btn-secondary-hover: #e2e5e9;
+    --bg-btn-pm: #e9ecef;
+    --bg-btn-pm-hover: #dee2e6;
+    --divider-bg: #ffffff;
+
     --text-main: #212529;
     --text-heading: #000000;
     --text-muted: #6c757d;
-    --border-color: #ced4da;
-    --border-light: #eaeaec;
+    --text-muted-light: #495057;
+    --text-empty-icon: #adb5bd;
+    --text-empty-text: #6c757d;
+
+    --border-main: #ced4da;
+    --border-nav: #eaeaec;
+    --border-divider: #eaeaec;
+    --border-pm: #dee2e6;
+    
+    --shadow-form: 0 10px 25px rgba(0, 0, 0, 0.05);
 }
 
 /* =========================================
@@ -48,13 +82,13 @@ header, .navbar {
     align-items: center;
     padding: 15px 40px;
     background-color: var(--bg-nav);
-    border-bottom: 1px solid var(--border-light);
+    border-bottom: 1px solid var(--border-nav);
     width: 100%;
     box-sizing: border-box;
     position: sticky;
     top: 0;
     z-index: 1000;
-    transition: background-color 0.3s ease;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .nav-left {
@@ -89,6 +123,7 @@ header, .navbar {
     color: var(--text-muted);
     text-decoration: none;
     font-size: 14px;
+    transition: color 0.2s;
 }
 
 .nav-links a:hover {
@@ -106,6 +141,7 @@ header, .navbar {
     text-decoration: none;
     font-size: 14px;
     font-weight: 500;
+    transition: color 0.2s;
 }
 
 .signin-link:hover {
@@ -128,17 +164,18 @@ header, .navbar {
     opacity: 0.95;
 }
 
+/* ፎርሞች */
 .form-container {
     background-color: var(--bg-card);
     padding: 35px 30px;
     border-radius: 20px;
     width: 100%;
     max-width: 440px;
-    border: 1px solid var(--border-light);
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    box-shadow: var(--shadow-form);
     box-sizing: border-box;
     margin: 40px auto;
-    transition: background-color 0.3s ease;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .form-logo-container {
@@ -204,7 +241,7 @@ label {
     display: block;
     margin-bottom: 6px;
     font-size: 13px;
-    color: var(--text-muted);
+    color: var(--text-muted-light);
 }
 
 .input-box {
@@ -218,7 +255,7 @@ input[type="text"],
 input[type="number"] {
     width: 100%;
     padding: 12px 14px 12px 40px;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-main);
     border-radius: 10px;
     background-color: var(--bg-input);
     color: var(--text-main);
@@ -244,7 +281,7 @@ input:focus {
 
 .terms-box {
     background-color: var(--bg-input);
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-main);
     padding: 12px;
     border-radius: 10px;
     font-size: 12px;
@@ -253,6 +290,7 @@ input:focus {
     gap: 10px;
     align-items: flex-start;
     margin-bottom: 15px;
+    transition: background-color 0.3s ease;
 }
 
 .terms-box input[type="checkbox"] {
@@ -271,13 +309,14 @@ input:focus {
 
 .captcha-box {
     background-color: var(--bg-input);
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-main);
     padding: 12px 15px;
     border-radius: 10px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
+    transition: background-color 0.3s ease;
 }
 
 .captcha-left {
@@ -334,9 +373,9 @@ input:focus {
 .google-btn, .passkey-btn {
     width: 100%;
     padding: 12px;
-    background-color: var(--bg-input);
+    background-color: var(--bg-btn-secondary);
     color: var(--text-main);
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-main);
     border-radius: 10px;
     cursor: pointer;
     font-size: 14px;
@@ -350,16 +389,16 @@ input:focus {
 
 .passkey-btn {
     color: #d4af37;
-    border-color: #d4af3744;
+    border-color: rgba(212, 175, 55, 0.27);
 }
 
 .google-btn:hover, .passkey-btn:hover {
-    background-color: var(--border-light);
+    background-color: var(--bg-btn-secondary-hover);
 }
 
 .divider {
     text-align: center;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-divider);
     line-height: 0.1em;
     margin: 20px 0;
     color: var(--text-muted);
@@ -367,8 +406,9 @@ input:focus {
 }
 
 .divider span {
-    background-color: var(--bg-card);
+    background-color: var(--divider-bg);
     padding: 0 15px;
+    transition: background-color 0.3s ease;
 }
 
 .signin-text {
@@ -506,11 +546,11 @@ input:focus {
 
 /* 💳 Payment Methods Styles */
 .pm-card {
-    background-color: var(--bg-pm);
-    border: 1px solid var(--border-color);
+    background-color: var(--bg-pm-card);
+    border: 1px solid var(--border-pm);
     border-radius: 12px;
     padding: 24px;
-    transition: background-color 0.3s ease;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .pm-header {
@@ -541,7 +581,7 @@ input:focus {
 }
 
 .pm-add-btn {
-    background-color: var(--border-color);
+    background-color: var(--bg-btn-pm);
     color: var(--text-heading);
     border: none;
     padding: 6px 14px;
@@ -556,7 +596,7 @@ input:focus {
 }
 
 .pm-add-btn:hover {
-    background-color: var(--border-light);
+    background-color: var(--bg-btn-pm-hover);
 }
 
 /* Empty State */
@@ -567,7 +607,7 @@ input:focus {
 
 .pm-empty-state i {
     font-size: 28px;
-    color: var(--text-muted);
+    color: var(--text-empty-icon);
     margin-bottom: 15px;
 }
 
@@ -575,24 +615,25 @@ input:focus {
     margin: 0 0 10px 0;
     font-size: 14px;
     font-weight: 500;
-    color: var(--text-muted);
+    color: var(--text-empty-text);
 }
 
 .pm-empty-state p {
     margin: 0 auto;
     font-size: 12px;
-    color: var(--text-muted);
+    color: var(--text-empty-text);
     max-width: 600px;
     line-height: 1.5;
 }
 
 /* Add Form */
 .pm-add-form {
-    background-color: var(--bg-pm);
-    border: 1px solid var(--border-color);
+    background-color: var(--bg-pm-form);
+    border: 1px solid var(--border-pm);
     border-radius: 12px;
     padding: 24px;
     margin-bottom: 25px;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .pm-add-form h4 {
@@ -609,16 +650,16 @@ input:focus {
     background-image: url('data:image/svg+xml;utf8,<svg fill="%23848e9c" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>');
     background-repeat: no-repeat;
     background-position: right 10px top 50%;
-    background-color: var(--bg-input);
+    background-color: var(--bg-pm-input) !important;
     color: var(--text-main);
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-pm);
     cursor: pointer;
 }
 
 .pm-add-form .form-control {
-    background-color: var(--bg-input);
+    background-color: var(--bg-pm-input);
     color: var(--text-main);
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-pm);
 }
 
 .pm-actions {
@@ -648,7 +689,7 @@ input:focus {
 }
 
 .pm-cancel-text {
-    color: var(--text-heading);
+    color: var(--text-main);
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
