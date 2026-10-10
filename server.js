@@ -2412,11 +2412,35 @@ app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
 // 🚀 ADMIN: GET USER DETAILS & STATS 🚀
 app.get('/api/admin/user-details/:id', verifyAdminToken, async (req, res) => {
     try {
-        const user = await User.findById(req.params.id).select('email fullName traderUsername userId kycStatus').lean();
+        const user = await User.findById(req.params.id).select('email fullName traderUsername userId kycStatus isBanned').lean();
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
         
-        const stats = await getRealUserTradeStats(user._id, user.email);
-        res.json({ success: true, user, stats });
+        const cleanEmail = String(user.email).toLowerCase().trim();
+        
+        // 100% ትክክለኛ እንዲሆን ቀጥታ ከዳታቤዝ እንቆጥራለን (ያለ Cache)
+        const completedTrades = await Trade.find({
+            $or: [
+                { buyerId: user._id },
+                { sellerId: user._id },
+                { buyerEmail: cleanEmail },
+                { sellerEmail: cleanEmail }
+            ],
+            status: { $in: ['completed', 'resolved', 'released'] } // ስኬታማ ትሬዶችን ብቻ!
+        }).select('usdtAmount amount netUsdt').lean();
+
+        let totalVolume = 0;
+        completedTrades.forEach(tr => {
+            totalVolume += Number(tr.usdtAmount || tr.amount || tr.netUsdt || 0);
+        });
+
+        res.json({ 
+            success: true, 
+            user, 
+            stats: {
+                totalTrades: completedTrades.length,
+                volumeUsdt: Number(totalVolume.toFixed(2))
+            } 
+        });
     } catch (error) {
         console.error("User Details Error:", error);
         res.status(500).json({ success: false, message: 'Server error' });
