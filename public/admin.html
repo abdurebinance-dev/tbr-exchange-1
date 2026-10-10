@@ -498,6 +498,27 @@
             setInterval(fetchEscrowDisputes, 3500);
         }
 
+        // አድሚኑ የ KYC ታብ ላይ ከሆነ ዝርዝሩን በራሱ ጊዜ (ያለ ሪፍሬሽ) አፕዴት ያደርገዋል
+setInterval(() => {
+    if (document.getElementById('tab-kyc').classList.contains('active')) {
+        // አዲሱን ዝርዝር ከሰርቨር አምጥቶ በድብቅ ሰንጠረዡን ያድሰዋል
+        fetch(`${API_BASE}/api/admin/kyc-requests?status=${activeKycStatus}&limit=50&t=${Date.now()}`, { 
+            headers: { 'Authorization': 'Bearer ' + getToken() },
+            cache: 'no-store'
+        }).then(res => res.json()).then(json => {
+            let rawList = Array.isArray(json) ? json : (Array.isArray(json.data) ? json.data : json.requests);
+            kycCache[activeKycStatus] = rawList;
+            currentKycList = rawList;
+            renderKycs(document.getElementById('kycTableBody'), rawList);
+            
+            // የ Pending ቁጥሩንም አብሮ ያስተካክላል
+            if (activeKycStatus === 'pending') {
+                document.getElementById('statKycCount').innerText = rawList.length;
+            }
+        }).catch(err => console.log(err));
+    }
+}, 8000);
+
         async function adminLogin() {
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;

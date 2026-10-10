@@ -470,24 +470,32 @@ if (data.user.email && document.getElementById('emailInput')) {
         const token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('jwt');
 
         try {
-            const response = await fetch('https://tbr-exchange-backend.onrender.com/api/kyc/submit', {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-                },
-                body: JSON.stringify({ 
-                    email,
-                    fullName, 
-                    idNumber, 
-                    dateOfBirth: dob, 
-                    residentialAddress: address, 
-                    docType,
-                    frontImage: frontImageBase64,
-                    backImage: backImageBase64 || '',
-                    selfieImage: selfieImageBase64
-                })
-            });
+        // 🔴 1. ፎቶዎቹን ወደ ሰርቨር ከመላክህ በፊት እዚህ ጋር እናሳንሳቸዋለን (Compress)
+        // ማሳሰቢያ፡ በቅንፍ ውስጥ ያሉት (ለምሳሌ frontImageVal) የራስህ የፎቶ ቫሪያብል ስሞች መሆን አለባቸው
+        const smallFrontImage = await compressImage(frontImageVal); 
+        const smallBackImage = await compressImage(backImageVal);
+        const smallSelfieImage = await compressImage(selfieImageVal);
+
+        // 🔴 2. አሁን አዲሱን (ያነሰውን) ፎቶ ወደ ባክኤንድ እንልካለን
+        const response = await fetch('https://tbr-exchange-backend.onrender.com/api/kyc/submit', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            },
+            body: JSON.stringify({
+                email: email,
+                fullName: fullName,
+                idNumber: idNumber,
+                dateOfBirth: dob,
+                residentialAddress: address,
+                
+                // 🔴 3. የተጨመቀውን አዲሱን ፎቶ እዚህ ጋር ትልካለህ
+                frontImage: smallFrontImage,
+                backImage: smallBackImage,
+                selfieImage: smallSelfieImage
+            })
+        });
 
 function showToast(message) {
         let toast = document.getElementById('customToast');
@@ -542,6 +550,27 @@ function showToast(message) {
             submitBtn.innerHTML = '<i class="fa-solid fa-arrow-up-from-bracket"></i> Submit for Review';
         }
     });
+
+async function compressImage(base64Str) {
+    return new Promise((resolve) => {
+        if (!base64Str) return resolve('');
+        let img = new Image();
+        img.src = base64Str;
+        img.onload = () => {
+            let canvas = document.createElement('canvas');
+            let scaleSize = 800 / img.width; // ኳሊቲውን ሳይጎዳ ሳይዙን ያሳንሰዋል
+            if (scaleSize > 1) scaleSize = 1;
+            canvas.width = img.width * scaleSize;
+            canvas.height = img.height * scaleSize;
+            let ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL('image/jpeg', 0.6)); // ወደ 60% ያቀልለዋል
+        };
+    });
+}
+
+
+
     </script>
 </body>
 </html>
