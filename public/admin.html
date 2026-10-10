@@ -273,6 +273,7 @@
                     </div>
                 </div>
 
+                <!-- 🔴 ካርዱ ሲነካ ሞዳሉን እንዲከፍት onclick ጨምረንበታል -->
                 <div class="stat-card" onclick="openCompletedTradesModal()" style="cursor: pointer;" title="Click to view full history">
                     <div>
                         <div class="label">Total Trade</div>
@@ -356,7 +357,7 @@
                 <button id="btn-pending-kyc" class="btn" onclick="loadKycData('pending')" style="background: rgba(240, 185, 11, 0.2); color: #f0b90b; border: 1px solid #f0b90b; font-weight: bold; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Pending KYC</button>
                 <button id="btn-approved-kyc" class="btn" onclick="loadKycData('approved')" style="background: rgba(14, 203, 129, 0.2); color: #0ecb81; border: 1px solid #0ecb81; font-weight: bold; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Approved KYC</button>
                 <button id="btn-rejected-kyc" class="btn" onclick="loadKycData('rejected')" style="background: rgba(246, 70, 93, 0.2); color: #f6465d; border: 1px solid #f6465d; font-weight: bold; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Rejected KYC</button>
-                <input type="text" id="searchInput" class="input-box" placeholder="Search by email or name..." onkeyup="filterTableData()" autocomplete="off" style="max-width: 350px; margin-left: auto;">
+                <input type="search" id="searchInput" class="input-box" placeholder="Search by email or name..." onkeyup="filterTableData()" autocomplete="new-password" style="max-width: 350px; margin-left: auto;">
             </div>
 
             <div class="table-container">
@@ -401,7 +402,7 @@
         <div id="tab-users" class="tab-content">
             <div class="section-title"><i class="fa-solid fa-users-gear"></i> User Directory & Account Suspension Control</div>
             <div style="display: flex; margin-bottom: 20px; justify-content: flex-end;">
-                <input type="text" id="userSearchInput" class="input-box" placeholder="Search by Email, TBR ID, or Username..." onkeyup="filterUsersTable()" autocomplete="off" style="max-width: 350px;">
+                <input type="search" id="userSearchInput" class="input-box" placeholder="Search by Email, TBR ID, or Username..." onkeyup="filterUsersTable()" autocomplete="new-password" style="max-width: 350px;">
             </div>
             <div class="table-container">
                 <table>
@@ -461,9 +462,15 @@
         });
 
         function initAdminDataFast() {
-            // 🔴 ፔጁ ሲከፈት የሰርች ሳጥኑን ባዶ ያደርገዋል
+            // 🔴 ፔጁ ሲከፈት የሰርች ሳጥኑን ባዶ ያደርገዋል (ብሮውዘር ዘግይቶ ከሞላው ደግሞ በግድ እንዲያጠፋው)
             const searchBox = document.getElementById('userSearchInput');
-            if (searchBox) searchBox.value = '';
+            if (searchBox) {
+                searchBox.value = '';
+                setTimeout(() => {
+                    searchBox.value = '';
+                    filterUsersTable(); // ዩዘሮችን መልሶ በሙሉ ያሳያል
+                }, 500);
+            }
 
             // 1. Restore cached stats, KYC lists, Escrow Disputes & Users immediately in 0.00s!
             try {
