@@ -2409,6 +2409,43 @@ app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
     }
 });
 
+// 🚀 ADMIN: GET USER DETAILS & STATS 🚀
+app.get('/api/admin/user-details/:id', verifyAdminToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id).select('email fullName traderUsername userId kycStatus').lean();
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+        
+        const stats = await getRealUserTradeStats(user._id, user.email);
+        res.json({ success: true, user, stats });
+    } catch (error) {
+        console.error("User Details Error:", error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// 🚀 ADMIN: SEND WARNING 🚀
+app.post('/api/admin/warn-user', verifyAdminToken, async (req, res) => {
+    try {
+        const { userId, message } = req.body;
+        const user = await User.findById(userId).select('_id email').lean();
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+        notifyUser({
+            userId: user._id,
+            email: user.email,
+            title: '⚠️ Admin Warning',
+            message: message || 'You have received a warning from the administrator regarding your account activity.',
+            type: 'warning',
+            link: 'dashboard.html'
+        });
+
+        res.json({ success: true, message: 'Warning sent successfully to the user.' });
+    } catch (error) {
+        console.error("Warn User Error:", error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
 async function assignIdsToExistingUsers() {
     try {
         const usersWithoutId = await User.find({

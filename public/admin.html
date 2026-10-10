@@ -1036,18 +1036,113 @@ if (activeKycStatus === 'pending') {
             usersList.forEach(user => {
                 let isBanned = user.isBanned || false;
                 html += `<tr>
-                    <td>${user.email}</td>
+                    <td>
+                        ${user.email}
+                        <i class="fa-solid fa-eye" style="color:var(--blue); cursor:pointer; margin-left:10px; font-size:14px;" onclick="openUserDetailsModal('${user._id}')" title="View User Details"></i>
+                    </td>
                     <td>${user.isAdmin ? '<span class="badge-approved">Admin</span>' : 'Standard'}</td>
-                    <td><span class="badge-${user.kycStatus === 'verified' ? 'approved' : 'pending'}">${user.kycStatus || 'pending'}</span></td>
+                    <td><span class="badge-${user.kycStatus === 'verified' || user.kycStatus === 'approved' ? 'approved' : 'pending'}">${user.kycStatus || 'pending'}</span></td>
                     <td>${isBanned ? '<span class="badge-rejected">Banned</span>' : '<span class="badge-approved">Active</span>'}</td>
                     <td>
                         <button class="btn ${isBanned ? 'btn-approve' : 'btn-ban'}" onclick="toggleUserBan('${user._id}', ${isBanned})">
                             ${isBanned ? 'Unban User' : 'Ban User'}
                         </button>
+                        <button class="btn" style="background: rgba(240, 185, 11, 0.15); color: var(--yellow); border: 1px solid var(--yellow); margin-left: 6px;" onclick="sendUserWarning('${user._id}')">
+                            <i class="fa-solid fa-triangle-exclamation"></i> Warning
+                        </button>
                     </td>
                 </tr>`;
             });
             tbody.innerHTML = html;
+        }
+
+        // --- 🚀 User Details Modal & Warning Actions 🚀 ---
+        async function openUserDetailsModal(userId) {
+            let modal = document.getElementById('userDetailsModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'userDetailsModal';
+                modal.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.85); display:flex; justify-content:center; align-items:center; z-index:99999; padding:16px;";
+                document.body.appendChild(modal);
+            }
+            
+            modal.innerHTML = `
+                <div style="background:#151a21; border:1px solid #232d3f; border-radius:12px; width:100%; max-width:400px; padding:30px; color:#fff; text-align:center;">
+                    <h3 style="margin:0; color:#3b82f6;"><i class="fa-solid fa-circle-notch fa-spin"></i> Fetching details...</h3>
+                </div>
+            `;
+            modal.style.display = 'flex';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/user-details/${userId}`, {
+                    headers: { 'Authorization': 'Bearer ' + getToken() }
+                });
+                const json = await res.json();
+                
+                if (res.ok && json.success) {
+                    const u = json.user;
+                    const s = json.stats;
+                    
+                    const isVerified = ['verified', 'approved'].includes(String(u.kycStatus).toLowerCase());
+                    const displayName = isVerified ? `<span style="color:#0ecb81;"><i class="fa-solid fa-circle-check"></i> ${u.fullName}</span>` : `<span style="color:#848e9c;">(Unverified)</span> ${u.fullName || 'User'}`;
+                    
+                    modal.innerHTML = `
+                        <div style="background:#151a21; border:1px solid #232d3f; border-radius:12px; width:100%; max-width:400px; padding:0; color:#fff; box-shadow: 0 20px 50px rgba(0,0,0,0.8); overflow:hidden;">
+                            <div style="background:#18202a; padding:15px 20px; border-bottom:1px solid #232d3f; display:flex; justify-content:space-between; align-items:center;">
+                                <h3 style="margin:0; color:#3b82f6; font-size:16px;"><i class="fa-solid fa-address-card"></i> User Details</h3>
+                                <button onclick="document.getElementById('userDetailsModal').style.display='none'" style="background:none; border:none; color:#848e9c; font-size:24px; cursor:pointer; line-height:1;">&times;</button>
+                            </div>
+                            <div style="padding:20px; text-align:left; font-size:14px; line-height:1.8;">
+                                <div style="display:flex; justify-content:space-between; border-bottom:1px solid #232d3f; padding-bottom:10px; margin-bottom:10px;">
+                                    <span style="color:#848e9c;">Email:</span> <strong>${u.email}</strong>
+                                </div>
+                                <div style="display:flex; justify-content:space-between; border-bottom:1px solid #232d3f; padding-bottom:10px; margin-bottom:10px;">
+                                    <span style="color:#848e9c;">TBR ID:</span> <strong style="color:#f0b90b;">${u.userId || 'N/A'}</strong>
+                                </div>
+                                <div style="display:flex; justify-content:space-between; border-bottom:1px solid #232d3f; padding-bottom:10px; margin-bottom:10px;">
+                                    <span style="color:#848e9c;">Full Name:</span> <strong>${displayName}</strong>
+                                </div>
+                                <div style="display:flex; justify-content:space-between; border-bottom:1px solid #232d3f; padding-bottom:10px; margin-bottom:10px;">
+                                    <span style="color:#848e9c;">Username:</span> <strong>${u.traderUsername ? '@'+u.traderUsername : '<span style="color:#848e9c;">None</span>'}</strong>
+                                </div>
+                                <div style="display:flex; justify-content:space-between; border-bottom:1px solid #232d3f; padding-bottom:10px; margin-bottom:10px;">
+                                    <span style="color:#848e9c;">Total Trades:</span> <strong style="color:#0ecb81;">${s.totalTrades} Orders</strong>
+                                </div>
+                                <div style="display:flex; justify-content:space-between;">
+                                    <span style="color:#848e9c;">Total Volume:</span> <strong style="color:#00d4ff;">${s.volumeUsdt} USDT</strong>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    modal.innerHTML = `<div style="background:#151a21; padding:25px; border-radius:12px; color:#f6465d;">Failed to load user details.</div>`;
+                    setTimeout(() => modal.style.display = 'none', 2000);
+                }
+            } catch (err) {
+                modal.innerHTML = `<div style="background:#151a21; padding:25px; border-radius:12px; color:#f6465d;">Network Error.</div>`;
+                setTimeout(() => modal.style.display = 'none', 2000);
+            }
+        }
+
+        async function sendUserWarning(userId) {
+            const message = prompt('Enter the warning message to send to this user:', '⚠️ Warning: Please follow the platform rules. Continued violations may result in a ban.');
+            if (!message || !message.trim()) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/warn-user`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+                    body: JSON.stringify({ userId, message: message.trim() })
+                });
+                const json = await res.json();
+                if (res.ok && json.success) {
+                    alert('Warning sent successfully! The user will see this notification.');
+                } else {
+                    alert(json.message || 'Failed to send warning.');
+                }
+            } catch(e) {
+                alert('Network error while sending warning.');
+            }
         }
 
         async function fetchUsersList() {
