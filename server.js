@@ -2364,6 +2364,23 @@ app.post('/api/admin/kyc-action', verifyAdmin, async (req, res) => {
     }
 });
 
+// 🚀 ADMIN: GET ALL COMPLETED TRADES 🚀
+app.get('/api/admin/completed-trades', verifyAdminToken, async (req, res) => {
+    try {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+        const trades = await Trade.find({ status: { $in: ['completed', 'resolved', 'released'] } })
+            .select('tradeNumber buyerEmail sellerEmail usdtAmount etbAmount status createdAt')
+            .sort({ createdAt: -1 }) // አዲሶቹ ከላይ እንዲመጡ
+            .limit(100) // የቅርብ 100 ትሬዶችን ያመጣል
+            .lean();
+
+        res.json({ success: true, trades });
+    } catch (error) {
+        console.error("Admin Completed Trades Error:", error);
+        res.status(500).json({ success: false, message: 'Server error fetching trades.' });
+    }
+});
+
 // ⚡ Fast Admin Users List ⚡
 app.get('/api/admin/users', verifyAdminToken, async (req, res) => {
     try {

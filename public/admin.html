@@ -273,7 +273,8 @@
                     </div>
                 </div>
 
-                <div class="stat-card">
+                <!-- 🔴 ካርዱ ሲነካ ሞዳሉን እንዲከፍት onclick ጨምረንበታል -->
+                <div class="stat-card" onclick="openCompletedTradesModal()" style="cursor: pointer;" title="Click to view full history">
                     <div>
                         <div class="label">Total Trade</div>
                         <div class="value" id="statTotalTrades" style="color: var(--purple);">0</div>
@@ -1112,6 +1113,95 @@ if (activeKycStatus === 'pending') {
                 }
             } catch (err) {}
         }
+
+        // 🚀 1. ሰዓቱን "12 minutes ago", "2 hours ago" ወደሚል ፎርማት የሚቀይር ፈንክሽን
+        function timeAgo(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+            let interval = seconds / 31536000;
+            if (interval > 1) return Math.floor(interval) + " years ago";
+            interval = seconds / 2592000;
+            if (interval > 1) return Math.floor(interval) + " months ago";
+            interval = seconds / 86400;
+            if (interval > 1) return Math.floor(interval) + " days ago";
+            interval = seconds / 3600;
+            if (interval > 1) return "about " + Math.floor(interval) + " hour" + (Math.floor(interval) > 1 ? "s" : "") + " ago";
+            interval = seconds / 60;
+            if (interval > 1) return Math.floor(interval) + " minutes ago";
+            return "just now";
+        }
+
+        // 🚀 2. Total Trade ካርዱ ሲነካ ሰንጠረዡን አምጥቶ የሚያሳየው ዋናው ፈንክሽን
+        async function openCompletedTradesModal() {
+            let modal = document.getElementById('completedTradesModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'completedTradesModal';
+                modal.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.85); display:flex; justify-content:center; align-items:center; z-index:99999; padding:16px;";
+                
+                // የሰንጠረዡ ዲዛይን (USDT, ETB, CHAIN, STATUS, AGE)
+                modal.innerHTML = `
+                    <div style="background:#151a21; border:1px solid #232d3f; border-radius:12px; max-width:800px; width:100%; max-height:85vh; display:flex; flex-direction:column; padding:0; color:#fff; box-shadow: 0 20px 50px rgba(0,0,0,0.8); overflow: hidden;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #232d3f; padding:20px;">
+                            <h3 style="margin:0; color:#a855f7; font-size:18px;"><i class="fa-solid fa-handshake"></i> Completed Trades History</h3>
+                            <button onclick="document.getElementById('completedTradesModal').style.display='none'" style="background:none; border:none; color:#848e9c; font-size:24px; cursor:pointer; line-height:1;">&times;</button>
+                        </div>
+                        <div style="overflow-y:auto; flex:1; padding: 0;">
+                            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
+                                <thead style="background: #18202a; position: sticky; top: 0;">
+                                    <tr>
+                                        <th style="padding: 12px 20px; color: #848e9c; font-weight: 600;">USDT</th>
+                                        <th style="padding: 12px 20px; color: #848e9c; font-weight: 600;">ETB</th>
+                                        <th style="padding: 12px 20px; color: #848e9c; font-weight: 600;">CHAIN</th>
+                                        <th style="padding: 12px 20px; color: #848e9c; font-weight: 600;">STATUS</th>
+                                        <th style="padding: 12px 20px; color: #848e9c; font-weight: 600;">AGE</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="completedTradesTableBody">
+                                    <tr><td colspan="5" style="text-align:center; padding: 40px; color:#f0b90b;"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading trades...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            }
+            modal.style.display = 'flex';
+            document.getElementById('completedTradesTableBody').innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 40px; color:#f0b90b;"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading trades...</td></tr>`;
+            
+            // ዳታውን ከባክኤንድ (server.js) አምጥቶ መደርደር
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/completed-trades?t=${Date.now()}`, {
+                    headers: { 'Authorization': 'Bearer ' + getToken() },
+                    cache: 'no-store'
+                });
+                const json = await res.json();
+                const tbody = document.getElementById('completedTradesTableBody');
+                
+                if (res.ok && json.success && json.trades && json.trades.length > 0) {
+                    let html = '';
+                    json.trades.forEach(tr => {
+                        const usdt = Number(tr.usdtAmount || 0).toFixed(2);
+                        const etb = Number(tr.etbAmount || 0).toLocaleString('en-US');
+                        const statusBadge = `<span style="background: rgba(14, 203, 129, 0.12); color: #0ecb81; border: 1px solid rgba(14, 203, 129, 0.25); padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold;">completed</span>`;
+                        const ageStr = timeAgo(new Date(tr.createdAt));
+                        
+                        html += `<tr style="border-bottom: 1px solid #232d3f;">
+                            <td style="padding: 14px 20px; font-weight: bold; color: #fff;">${usdt}</td>
+                            <td style="padding: 14px 20px; color: #848e9c;">${etb}</td>
+                            <td style="padding: 14px 20px;"><span style="border: 1px solid #474d57; padding: 2px 8px; border-radius: 4px; font-size: 11px; color: #848e9c;">BNB</span></td>
+                            <td style="padding: 14px 20px;">${statusBadge}</td>
+                            <td style="padding: 14px 20px; color: #848e9c; font-size: 12px;">${ageStr}</td>
+                        </tr>`;
+                    });
+                    tbody.innerHTML = html;
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 40px; color:#848e9c;">No completed trades found.</td></tr>`;
+                }
+            } catch (err) {
+                document.getElementById('completedTradesTableBody').innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 40px; color:#f6465d;">Error loading trades. Please check connection.</td></tr>`;
+            }
+        }
+
     </script>
 </body>
 </html>
