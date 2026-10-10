@@ -2021,7 +2021,7 @@ app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
                 .lean()
         ]);
 
-        const kycPending = Math.max(kycPendingFromKyc, kycPendingFromUsers);
+        const kycPending = kycPendingFromKyc;
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -2110,7 +2110,9 @@ app.get('/api/admin/kyc-image/:id/:field', async (req, res) => {
             return res.status(404).end();
         }
 
-        res.setHeader('Cache-Control', 'public, max-age=86400');
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+res.setHeader('Pragma', 'no-cache');
+res.setHeader('Expires', '0');
 
         if (Buffer.isBuffer(kyc[field])) {
             res.setHeader('Content-Type', 'image/jpeg');

@@ -760,9 +760,10 @@
             document.getElementById('modalUserEmail').innerText = `KYC: ${kycItem.email || kycItem.userEmail || kycItem.userId || 'N/A'}`;
             modal.style.display = 'flex';
 
-            const front = resolveImgUrl(kycItem.frontImage || `/api/admin/kyc-image/${kycId}/frontImage`);
-            const back = resolveImgUrl(kycItem.backImage || `/api/admin/kyc-image/${kycId}/backImage`);
-            const selfie = resolveImgUrl(kycItem.selfieImage || `/api/admin/kyc-image/${kycId}/selfieImage`);
+            const ts = Date.now();
+            const front = resolveImgUrl(kycItem.frontImage || `/api/admin/kyc-image/${kycId}/frontImage?t=${ts}`);
+            const back = resolveImgUrl(kycItem.backImage || `/api/admin/kyc-image/${kycId}/backImage?t=${ts}`);
+            const selfie = resolveImgUrl(kycItem.selfieImage || `/api/admin/kyc-image/${kycId}/selfieImage?t=${ts}`);
 
             document.getElementById('modalFrontImg').src = front;
             document.getElementById('modalBackImg').src = back;
