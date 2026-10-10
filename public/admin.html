@@ -553,7 +553,7 @@
         function applyStatsToDOM(data) {
             if (!data) return;
             document.getElementById('statUserCount').innerText = data.totalUsers ?? 0;
-           document.getElementById('statKycCount').innerText = data.kycPending ?? 0;
+            document.getElementById('statKycCount').innerText = data.kycPending ?? 0;
             document.getElementById('statOnMarket').innerText = formatUsdtOnly(data.onMarket);
             document.getElementById('statLivePosts').innerText = data.livePosts ?? 0;
             document.getElementById('statTotalTrades').innerText = data.totalTrades ?? 0;
