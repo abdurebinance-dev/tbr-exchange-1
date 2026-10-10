@@ -364,10 +364,36 @@
             window.location.href = redirectUrl || 'dashboard.html';
         }
 
-        // --- ትክክለኛው የ WebAuthn Passkey Login ሎጂክ ---
+        // 🔴 1. አዲሶቹ ፎርማት አስተካካይ ፈንክሽኖች (Helper Functions)
+        function base64UrlToUint8Array(base64UrlData) {
+            const padding = '='.repeat((4 - base64UrlData.length % 4) % 4);
+            const base64 = (base64UrlData + padding).replace(/\-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+
+        function arrayBufferToBase64(buffer) {
+            let binary = '';
+            const bytes = new Uint8Array(buffer);
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return window.btoa(binary);
+        }
+
         let passkeyAbortController = new AbortController();
 
         document.getElementById('passkeyBtn').addEventListener('click', async () => {
+            // ብሮውዘሩ Passkey የሚደግፍ መሆኑን ማረጋገጫ
+            if (!window.PublicKeyCredential) {
+                showError("Unsupported", "Passkeys are not supported on this device/browser.");
+                return;
+            }
+
             if (passkeyAbortController) {
                 passkeyAbortController.abort();
                 passkeyAbortController = new AbortController();
@@ -388,8 +414,11 @@
                     return;
                 }
 
+                // 🔴 2. ኤረሩን የፈጠረውን ኮድ አስተካከልነው (በአዲሱ Helper ፈንክሽን ቀየርነው)
+                const challengeArray = base64UrlToUint8Array(optionsData.options.challenge);
+
                 const publicKeyCredentialRequestOptions = {
-                    challenge: Uint8Array.from(atob(optionsData.options.challenge), c => c.charCodeAt(0)),
+                    challenge: challengeArray,
                     timeout: 60000,
                     userVerification: "preferred",
                     rpId: window.location.hostname
@@ -400,17 +429,18 @@
                     signal: passkeyAbortController.signal
                 });
 
+                // 🔴 3. ትላልቅ ዳታዎችን ሳይበላሹ ወደ ሰርቨር መላክ
                 const authResponse = await fetch(`${API_BASE_URL}/api/passkey/login-verify`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         id: assertion.id,
-                        rawId: btoa(String.fromCharCode(...new Uint8Array(assertion.rawId))),
+                        rawId: arrayBufferToBase64(assertion.rawId),
                         response: {
-                            clientDataJSON: btoa(String.fromCharCode(...new Uint8Array(assertion.response.clientDataJSON))),
-                            authenticatorData: btoa(String.fromCharCode(...new Uint8Array(assertion.response.authenticatorData))),
-                            signature: btoa(String.fromCharCode(...new Uint8Array(assertion.response.signature))),
-                            userHandle: assertion.response.userHandle ? btoa(String.fromCharCode(...new Uint8Array(assertion.response.userHandle))) : null
+                            clientDataJSON: arrayBufferToBase64(assertion.response.clientDataJSON),
+                            authenticatorData: arrayBufferToBase64(assertion.response.authenticatorData),
+                            signature: arrayBufferToBase64(assertion.response.signature),
+                            userHandle: assertion.response.userHandle ? arrayBufferToBase64(assertion.response.userHandle) : null
                         },
                         type: assertion.type
                     })
@@ -436,10 +466,11 @@
                 }
                 
                 console.error('Passkey login error:', err);
-                showError("Passkey Cancelled", "Passkey authentication was cancelled or not supported.");
+                // 🔴 4. ኤረሩ አሁንም ከተፈጠረ ትክክለኛውን ምክንያት ለኛ እንዲያሳየን አደረግነው
+                showError("Passkey Error", err.message || "Passkey authentication was cancelled or not supported.");
             }
         });
-
+        
         document.getElementById('signin-email').addEventListener('input', function() {
             const identifier = this.value.trim();
             if (identifier) {
