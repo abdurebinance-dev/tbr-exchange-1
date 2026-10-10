@@ -710,6 +710,16 @@
             tbody.innerHTML = html;
         }
 
+        if (activeKycStatus === targetStatus) {
+    currentKycList = rawList;
+    renderKycs(tbody, rawList);
+    
+    // 🔴 ይሄንን አዲሱን ኮድ እዚህ ጋር ጨምረው (ቁጥሩን ከዝርዝሩ ጋር እኩል ያደርገዋል)
+    if (targetStatus === 'pending') {
+        document.getElementById('statKycCount').innerText = rawList.length;
+    }
+}
+
         async function openKycModalByIndex(idx) {
             const kycItem = currentKycList[idx];
             if (!kycItem) return;
@@ -783,6 +793,15 @@
                 loadKycData(activeKycStatus, true);
             }
         }
+
+        currentKycList = currentKycList.filter(item => (item._id || item.id) !== kycId);
+kycCache[activeKycStatus] = currentKycList;
+renderKycs(document.getElementById('kycTableBody'), currentKycList);
+
+// 🔴 ይሄንን አዲሱን ኮድ እዚህ ጋር ጨምረው (Approve/Reject ሲደረግ ቁጥሩ ወዲያው ይቀንሳል)
+if (activeKycStatus === 'pending') {
+    document.getElementById('statKycCount').innerText = currentKycList.length;
+}
 
         // ============================================================================
         // ⚡ TAB 4: ULTRA-FAST ESCROW & DISPUTES ROOM (0.00s Render & Locked Actions) ⚡
