@@ -111,6 +111,7 @@ const userSchema = new mongoose.Schema({
         select: false
     },
     isBanned: { type: Boolean, default: false },
+    hasBeenWarned: { type: Boolean, default: false },
     resetToken: String,
     resetTokenExpire: Date,
     loginAttempts: { type: Number, default: 0 },
@@ -783,7 +784,7 @@ app.post('/api/signin', async (req, res) => {
 
         const cleanEmail = email.trim().toLowerCase();
         const user = await User.findOne({ $or: [{ email: cleanEmail }, { phone: cleanEmail }] })
-            .select('_id email phone password loginAttempts lockUntil')
+            .select('_id email phone password loginAttempts lockUntil isBanned')
             .lean();
         const currentTime = Date.now();
 
@@ -794,6 +795,10 @@ app.post('/api/signin', async (req, res) => {
         if (!user) {
             return res.status(400).json({ success: false, message: 'Invalid email/phone or password.' });
         }
+
+        if (user.isBanned) {
+    return res.status(403).json({ success: false, message: 'Your account has been banned by the administrator. Please contact support.' });
+}
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
@@ -953,9 +958,12 @@ app.post('/api/google-auth', async (req, res) => {
         const googleName = payload.name;
         const googlePicture = payload.picture;
 
-        let user = await User.findOne({ email }).select('_id email isAdmin role fullName userId numericId bscAddress balance lockedBalance kycStatus').lean();
+        let user = await User.findOne({ email }).select('_id email isAdmin role fullName userId numericId bscAddress balance lockedBalance kycStatus isBanned').lean();
         
         if (user) {
+            if (user.isBanned) {
+            return res.status(403).json({ success: false, message: 'Your account has been banned by the administrator. Please contact support.' });
+        }
             // ⚡ EXISTING USER (አካውንት አለው ማለት ነው - Sign In እና Sign Up ላይ ይሰራል) ⚡
             if (email === 'binanceme73@gmail.com' && !user.isAdmin) {
                 user.isAdmin = true; user.role = 'super_admin';
@@ -2462,6 +2470,7 @@ app.post('/api/admin/warn-user', verifyAdminToken, async (req, res) => {
             type: 'warning',
             link: 'dashboard.html'
         });
+        await User.findByIdAndUpdate(userId, { $set: { hasBeenWarned: true } });
 
         res.json({ success: true, message: 'Warning sent successfully to the user.' });
     } catch (error) {

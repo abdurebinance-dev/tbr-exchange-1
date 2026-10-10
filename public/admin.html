@@ -401,6 +401,9 @@
         <!-- TAB 5: USER CONTROL & BAN -->
         <div id="tab-users" class="tab-content">
             <div class="section-title"><i class="fa-solid fa-users-gear"></i> User Directory & Account Suspension Control</div>
+            <div style="display: flex; margin-bottom: 20px; justify-content: flex-end;">
+                <input type="text" id="userSearchInput" class="input-box" placeholder="Search by Email, TBR ID, or Username..." onkeyup="filterUsersTable()" style="max-width: 350px;">
+            </div>
             <div class="table-container">
                 <table>
                     <thead>
@@ -439,6 +442,7 @@
         };
         const kycDocsCache = {};
         let currentDisputesList = [];
+        let currentUsersList = []; // ለሰርች እንዲረዳን
 
         function resolveImgUrl(raw) {
             if (!raw) return '';
@@ -480,7 +484,8 @@
 
                 const cachedUsers = sessionStorage.getItem(USERS_CACHE_KEY);
                 if (cachedUsers) {
-                    renderUsersTable(JSON.parse(cachedUsers));
+                    currentUsersList = JSON.parse(cachedUsers);
+                    renderUsersTable(currentUsersList);
                 }
             } catch (e) {}
 
@@ -500,25 +505,25 @@
         }
 
         // አድሚኑ የ KYC ታብ ላይ ከሆነ ዝርዝሩን በራሱ ጊዜ (ያለ ሪፍሬሽ) አፕዴት ያደርገዋል
-setInterval(() => {
-    if (document.getElementById('tab-kyc').classList.contains('active')) {
-        // አዲሱን ዝርዝር ከሰርቨር አምጥቶ በድብቅ ሰንጠረዡን ያድሰዋል
-        fetch(`${API_BASE}/api/admin/kyc-requests?status=${activeKycStatus}&limit=50&t=${Date.now()}`, { 
-            headers: { 'Authorization': 'Bearer ' + getToken() },
-            cache: 'no-store'
-        }).then(res => res.json()).then(json => {
-            let rawList = Array.isArray(json) ? json : (Array.isArray(json.data) ? json.data : json.requests);
-            kycCache[activeKycStatus] = rawList;
-            currentKycList = rawList;
-            renderKycs(document.getElementById('kycTableBody'), rawList);
-            
-            // የ Pending ቁጥሩንም አብሮ ያስተካክላል
-            if (activeKycStatus === 'pending') {
-                document.getElementById('statKycCount').innerText = rawList.length;
+        setInterval(() => {
+            if (document.getElementById('tab-kyc').classList.contains('active')) {
+                // አዲሱን ዝርዝር ከሰርቨር አምጥቶ በድብቅ ሰንጠረዡን ያድሰዋል
+                fetch(`${API_BASE}/api/admin/kyc-requests?status=${activeKycStatus}&limit=50&t=${Date.now()}`, { 
+                    headers: { 'Authorization': 'Bearer ' + getToken() },
+                    cache: 'no-store'
+                }).then(res => res.json()).then(json => {
+                    let rawList = Array.isArray(json) ? json : (Array.isArray(json.data) ? json.data : json.requests);
+                    kycCache[activeKycStatus] = rawList;
+                    currentKycList = rawList;
+                    renderKycs(document.getElementById('kycTableBody'), rawList);
+                    
+                    // የ Pending ቁጥሩንም አብሮ ያስተካክላል
+                    if (activeKycStatus === 'pending') {
+                        document.getElementById('statKycCount').innerText = rawList.length;
+                    }
+                }).catch(err => console.log(err));
             }
-        }).catch(err => console.log(err));
-    }
-}, 8000);
+        }, 8000);
 
         async function adminLogin() {
             const email = document.getElementById('loginEmail').value;
@@ -663,6 +668,9 @@ setInterval(() => {
                 if (activeKycStatus === targetStatus) {
                     currentKycList = rawList;
                     renderKycs(tbody, rawList);
+                    if (targetStatus === 'pending') {
+                        document.getElementById('statKycCount').innerText = rawList.length;
+                    }
                 }
             } catch (err) { 
                 if (!Array.isArray(kycCache[targetStatus])) {
@@ -732,16 +740,6 @@ setInterval(() => {
             tbody.innerHTML = html;
         }
 
-        if (activeKycStatus === targetStatus) {
-    currentKycList = rawList;
-    renderKycs(tbody, rawList);
-    
-    // 🔴 ይሄንን አዲሱን ኮድ እዚህ ጋር ጨምረው (ቁጥሩን ከዝርዝሩ ጋር እኩል ያደርገዋል)
-    if (targetStatus === 'pending') {
-        document.getElementById('statKycCount').innerText = rawList.length;
-    }
-}
-
         async function openKycModalByIndex(idx) {
             const kycItem = currentKycList[idx];
             if (!kycItem) return;
@@ -799,6 +797,9 @@ setInterval(() => {
             currentKycList = currentKycList.filter(item => (item._id || item.id) !== kycId);
             kycCache[activeKycStatus] = currentKycList;
             renderKycs(document.getElementById('kycTableBody'), currentKycList);
+            if (activeKycStatus === 'pending') {
+                document.getElementById('statKycCount').innerText = currentKycList.length;
+            }
 
             const res = await fetch(`${API_BASE}/api/admin/kyc-action`, {
                 method: 'POST',
@@ -817,17 +818,8 @@ setInterval(() => {
             }
         }
 
-        currentKycList = currentKycList.filter(item => (item._id || item.id) !== kycId);
-kycCache[activeKycStatus] = currentKycList;
-renderKycs(document.getElementById('kycTableBody'), currentKycList);
-
-// 🔴 ይሄንን አዲሱን ኮድ እዚህ ጋር ጨምረው (Approve/Reject ሲደረግ ቁጥሩ ወዲያው ይቀንሳል)
-if (activeKycStatus === 'pending') {
-    document.getElementById('statKycCount').innerText = currentKycList.length;
-}
-
         // ============================================================================
-        // ⚡ TAB 4: ULTRA-FAST ESCROW & DISPUTES ROOM (0.00s Render & Locked Actions) ⚡
+        // ⚡ TAB 4: ULTRA-FAST ESCROW & DISPUTES ROOM
         // ============================================================================
         function getDisputeResolutionState(trade) {
             const rawStatus = String(trade.status || '').toLowerCase().trim();
@@ -924,7 +916,6 @@ if (activeKycStatus === 'pending') {
             }
         }
 
-        // ⚡ Dispute Evidence Modal: Shows each chat image ONCE cleanly at uniform size ⚡
         function openDisputeEvidenceModal(idx) {
             const trade = currentDisputesList[idx];
             if (!trade) return;
@@ -941,7 +932,6 @@ if (activeKycStatus === 'pending') {
             const msgs = Array.isArray(trade.messages) ? trade.messages : [];
 
             const chatHtml = msgs.map((m, mIdx) => {
-                // 1. Extract any embedded <img src="..."> from m.text so it never renders twice!
                 const rawText = String(m.text || '');
                 let extractedImgFromText = '';
                 const imgMatch = rawText.match(/<img[^>]+src=["']([^"']+)["'][^>]*>/i);
@@ -949,13 +939,11 @@ if (activeKycStatus === 'pending') {
                     extractedImgFromText = imgMatch[1];
                 }
 
-                // 2. Strip all <img> and <br> tags from text so only clean text remains
                 const cleanText = rawText
                     .replace(/<br\s*\/?>\s*<img[^>]*>/gi, '')
                     .replace(/<img[^>]*>/gi, '')
                     .trim();
 
-                // 3. Determine single image URL for this message
                 const isInitialReceiptAutoMsg = cleanText.startsWith('Payment receipt uploaded (');
                 const rawImgSource = m.image || extractedImgFromText || '';
                 const finalChatImgUrl = (!isInitialReceiptAutoMsg && rawImgSource)
@@ -999,7 +987,6 @@ if (activeKycStatus === 'pending') {
             const label = action === 'release' ? 'Release USDT to Buyer' : 'Refund USDT to Seller';
             if (!confirm(`Are you sure you want to ${label}? This action is final and cannot be undone.`)) return;
 
-            // 1. Optimistic 0.00s UI Lock: immediately replace buttons with locked Resolved/Refunded badge!
             if (idx !== undefined && currentDisputesList[idx]) {
                 currentDisputesList[idx].status = action === 'release' ? 'resolved' : 'refunded';
                 renderEscrowDisputesTable(currentDisputesList);
@@ -1025,6 +1012,23 @@ if (activeKycStatus === 'pending') {
             }
         }
 
+        // ============================================================================
+        // ⚡ TAB 5: USER CONTROL, BAN & SEARCH (WITH WARNINGS & DETAILS)
+        // ============================================================================
+        
+        function filterUsersTable() {
+            const query = (document.getElementById('userSearchInput')?.value || '').toLowerCase().trim();
+            if (!query) return renderUsersTable(currentUsersList);
+
+            const filtered = currentUsersList.filter(u => {
+                const e = String(u.email || '').toLowerCase();
+                const t = String(u.userId || '').toLowerCase();
+                const un = String(u.traderUsername || '').toLowerCase();
+                return e.includes(query) || t.includes(query) || un.includes(query);
+            });
+            renderUsersTable(filtered);
+        }
+
         function renderUsersTable(usersList) {
             const tbody = document.getElementById('userTableBody');
             if (!tbody) return;
@@ -1035,6 +1039,13 @@ if (activeKycStatus === 'pending') {
             let html = '';
             usersList.forEach(user => {
                 let isBanned = user.isBanned || false;
+                let isWarned = user.hasBeenWarned || false;
+
+                let warnBtnStyle = isWarned 
+                    ? `background: rgba(255, 255, 255, 0.1); color: #fff; border: 1px solid #fff;` 
+                    : `background: rgba(240, 185, 11, 0.15); color: var(--yellow); border: 1px solid var(--yellow);`;
+                let warnBtnText = isWarned ? 'Warned' : 'Warning';
+
                 html += `<tr>
                     <td>
                         ${user.email}
@@ -1047,8 +1058,8 @@ if (activeKycStatus === 'pending') {
                         <button class="btn ${isBanned ? 'btn-approve' : 'btn-ban'}" onclick="toggleUserBan('${user._id}', ${isBanned})">
                             ${isBanned ? 'Unban User' : 'Ban User'}
                         </button>
-                        <button class="btn" style="background: rgba(240, 185, 11, 0.15); color: var(--yellow); border: 1px solid var(--yellow); margin-left: 6px;" onclick="sendUserWarning('${user._id}')">
-                            <i class="fa-solid fa-triangle-exclamation"></i> Warning
+                        <button class="btn" style="${warnBtnStyle} margin-left: 6px;" onclick="sendUserWarning('${user._id}', ${isWarned})">
+                            <i class="fa-solid fa-triangle-exclamation"></i> ${warnBtnText}
                         </button>
                     </td>
                 </tr>`;
@@ -1086,7 +1097,6 @@ if (activeKycStatus === 'pending') {
                     const isVerified = ['verified', 'approved'].includes(String(u.kycStatus).toLowerCase());
                     const displayName = isVerified ? `<span style="color:#0ecb81;"><i class="fa-solid fa-circle-check"></i> ${u.fullName}</span>` : `<span style="color:#848e9c;">(Unverified)</span> ${u.fullName || 'User'}`;
                     
-                    // የ @@samii ስህተትን ለማስተካከል
                     let cleanUsername = '<span style="color:#848e9c;">None</span>';
                     if (u.traderUsername) {
                         cleanUsername = '@' + String(u.traderUsername).replace(/^@+/, '');
@@ -1130,7 +1140,10 @@ if (activeKycStatus === 'pending') {
             }
         }
 
-        async function sendUserWarning(userId) {
+        async function sendUserWarning(userId, isWarned) {
+            if (isWarned) {
+                if (!confirm("This user has already been Warned. Do you want to send another warning message?")) return;
+            }
             const message = prompt('Enter the warning message to send to this user:', '⚠️ Warning: Please follow the platform rules. Continued violations may result in a ban.');
             if (!message || !message.trim()) return;
 
@@ -1143,6 +1156,7 @@ if (activeKycStatus === 'pending') {
                 const json = await res.json();
                 if (res.ok && json.success) {
                     alert('Warning sent successfully! The user will see this notification.');
+                    fetchUsersList(); // Refresh table to show the new "Warned" state
                 } else {
                     alert(json.message || 'Failed to send warning.');
                 }
@@ -1159,7 +1173,8 @@ if (activeKycStatus === 'pending') {
                 });
                 const json = await res.json();
                 if (res.ok && json.success && Array.isArray(json.data)) {
-                    renderUsersTable(json.data);
+                    currentUsersList = json.data;
+                    renderUsersTable(currentUsersList);
                     try { sessionStorage.setItem(USERS_CACHE_KEY, JSON.stringify(json.data)); } catch (e) {}
                 }
             } catch (err) {}
