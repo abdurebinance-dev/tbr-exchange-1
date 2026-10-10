@@ -368,7 +368,6 @@
         let passkeyAbortController = new AbortController();
 
         document.getElementById('passkeyBtn').addEventListener('click', async () => {
-            // የቆየ ተደራራቢ የ Passkey ጥያቄ ካለ መጀመሪያ እናቋርጠዋለን (ለ PWA ግጭት መፍትሄ)
             if (passkeyAbortController) {
                 passkeyAbortController.abort();
                 passkeyAbortController = new AbortController();
@@ -396,7 +395,6 @@
                     rpId: window.location.hostname
                 };
 
-                // AbortController signal እዚህ ጋር ተጨምሯል 
                 const assertion = await navigator.credentials.get({
                     publicKey: publicKeyCredentialRequestOptions,
                     signal: passkeyAbortController.signal
@@ -432,7 +430,6 @@
                 }
 
             } catch (err) {
-                // Abort የተደረገውን ሆን ተብሎ የተቋረጠ ኤረር ችላ እንዲል እናደርጋለን
                 if (err.name === 'AbortError') {
                     console.log('Previous passkey request aborted successfully.');
                     return;
@@ -529,10 +526,20 @@
                 const res = await fetch(`${API_BASE_URL}/api/google-auth`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token: response.credential })
+                    body: JSON.stringify({ 
+                        token: response.credential,
+                        action: 'signin' // 🔴 የ signin መለያ ይሄ ነው 
+                    })
                 });
 
                 const data = await res.json();
+                
+                // 🔴 አካውንት ከሌለው ወደ Sign up እንዲሄድ የሚያደርገው ሎጂክ
+                if (data.requiresSignup) {
+                    window.location.href = 'signup.html';
+                    return;
+                }
+
                 if (data.success) {
                     if (data.token) {
                         localStorage.setItem('authToken', data.token);
@@ -550,7 +557,7 @@
                 }
             } catch (err) {
                 console.error('Error:', err);
-                showErrorToast('Server error during Google sign-up.');
+                showErrorToast('Server error during Google sign-in.');
             }
         }
 

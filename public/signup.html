@@ -534,62 +534,40 @@
         }
 
         async function handleGoogleResponse(response) {
-    try {
-        // ከመግባቱ በፊት የቆዩ መረጃዎች እንዳይደባለቁ ማጽዳት
-        localStorage.clear(); 
-        sessionStorage.clear();
+            try {
+                localStorage.clear(); 
+                sessionStorage.clear();
 
-        const res = await fetch(`${API_BASE_URL}/api/google-auth`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token: response.credential })
-        });
+                const res = await fetch(`${API_BASE_URL}/api/google-auth`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        token: response.credential,
+                        action: 'signup' // 🔴 ይህ አዲሱ ማስተካከያ ነው
+                    })
+                });
 
-        // የመጨረሻውን ተጠቃሚ በ numericId ፈልግ
-const lastUser = await User.findOne().sort({ numericId: -1 });
-let nextIdNumber = 1;
+                const data = await res.json();
+                
+                if (data.success) {
+                    if (data.token) {
+                        localStorage.setItem('authToken', data.token);
+                    }
+                    if (data.user && data.user.email) {
+                        localStorage.setItem('userEmail', data.user.email);
+                    } else if (data.email) {
+                        localStorage.setItem('userEmail', data.email);
+                    }
 
-if (lastUser && lastUser.numericId) {
-    nextIdNumber = lastUser.numericId + 1;
-}
-
-const newNumericId = nextIdNumber;
-const newUserId = 'TBR-' + String(newNumericId).padStart(6, '0');
-
-// አዲሱን ተጠቃሚ ሲመዘገብ userId እና numericId አብሮ ማስቀመጥ
-const newUser = new User({
-    name,
-    email,
-    password,
-    numericId: newNumericId,
-    userId: newUserId,
-    createdAt: new Date()
-});
-
-await newUser.save();
-
-        const data = await res.json();
-        if (data.success) {
-            // ከባክኤንድ የመጣውን ትክክለኛ አዲስ ቶከን እና ኢሜይል ማስቀመጥ
-            if (data.token) {
-                localStorage.setItem('authToken', data.token);
+                    window.location.href = data.redirectUrl || 'dashboard.html';
+                } else {
+                    showErrorToast(data.message || 'Google authentication failed.');
+                }
+            } catch (err) {
+                console.error('Error:', err);
+                showErrorToast('Server error during Google sign-up.');
             }
-            if (data.user && data.user.email) {
-                localStorage.setItem('userEmail', data.user.email);
-            } else if (data.email) {
-                localStorage.setItem('userEmail', data.email);
-            }
-
-            // ወደ ዳሽቦርድ መውሰድ
-            window.location.href = data.redirectUrl || 'dashboard.html';
-        } else {
-            showErrorToast(data.message || 'Google authentication failed.');
         }
-    } catch (err) {
-        console.error('Error:', err);
-        showErrorToast('Server error during Google sign-up.');
-    }
-}
 
         let toastTimer = null;
 

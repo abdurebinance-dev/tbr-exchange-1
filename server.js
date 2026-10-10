@@ -945,7 +945,8 @@ app.post('/api/resend-code', async (req, res) => {
 
 app.post('/api/google-auth', async (req, res) => {
     try {
-        const { token } = req.body;
+        // 🔴 1. 'action' የሚለውን ቃል ተቀብለናል (ከየትኛው ገፅ እንደመጣ ለመለየት)
+        const { token, action } = req.body; 
         const ticket = await googleClient.verifyIdToken({ idToken: token, audience: GOOGLE_CLIENT_ID });
         const payload = ticket.getPayload();
         const email = payload.email.toLowerCase();
@@ -955,17 +956,29 @@ app.post('/api/google-auth', async (req, res) => {
         let user = await User.findOne({ email }).select('_id email isAdmin role fullName userId numericId bscAddress balance lockedBalance kycStatus').lean();
         
         if (user) {
-            // ⚡ EXISTING USER (SIGN IN) ⚡
+            // ⚡ EXISTING USER (አካውንት አለው ማለት ነው - Sign In እና Sign Up ላይ ይሰራል) ⚡
             if (email === 'binanceme73@gmail.com' && !user.isAdmin) {
                 user.isAdmin = true; user.role = 'super_admin';
                 await User.updateOne({ _id: user._id }, { $set: { isAdmin: true, role: 'super_admin' } });
             }
             const jwtToken = jwt.sign({ id: user._id, _id: user._id, email: user.email, userId: user.userId, numericId: user.numericId, isAdmin: user.isAdmin, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
             const fullProfile = await getFastUserProfilePayload(user._id);
-            return res.json({ success: true, exists: true, email, token: jwtToken, user: fullProfile, balance: Number(user.balance || 0), bscAddress: user.bscAddress || '', redirectUrl: 'dashboard.html', message: 'Account exists.' });
+            
+            return res.json({ success: true, exists: true, email, token: jwtToken, user: fullProfile, balance: Number(user.balance || 0), bscAddress: user.bscAddress || '', redirectUrl: 'dashboard.html', message: 'Account signed in successfully.' });
         
         } else {
-            // ⚡ NEW USER (AUTO SIGN UP) ⚡
+            // ⚡ NEW USER (አካውንት የለውም) ⚡
+            
+            // 🔴 2. ከ Sign In የመጣ ከሆነ እና አካውንት ከሌለው ወደ Sign Up ሪዳይሬክት አድርገው
+            if (action === 'signin') {
+                return res.status(404).json({
+                    success: false,
+                    requiresSignup: true, // Frontend ይሄንን አይቶ ወደ signup ይወስደዋል
+                    message: 'Account not found. Please sign up first.'
+                });
+            }
+
+            // 🔴 3. ከ Sign Up የመጣ ከሆነ ብቻ አዲስ አካውንት ይፈጠራል
             const emailPrefix = email.split('@')[0];
             const isAdminUser = email === 'binanceme73@gmail.com';
             const finalRole = isAdminUser ? 'super_admin' : 'user';
@@ -975,7 +988,6 @@ app.post('/api/google-auth', async (req, res) => {
             const nextIdNum = lastUser && lastUser.numericId ? lastUser.numericId + 1 : 1;
             const formattedTbrId = 'TBR-' + String(nextIdNum).padStart(6, '0');
 
-            // Generate a random secure password for Google users
             const randomPassword = crypto.randomBytes(16).toString('hex');
             const salt = await bcrypt.genSalt(8);
             const hashedPassword = await bcrypt.hash(randomPassword, salt);
@@ -987,7 +999,7 @@ app.post('/api/google-auth', async (req, res) => {
                 avatar: googlePicture || '',
                 numericId: nextIdNum,
                 userId: formattedTbrId,
-                isVerified: true, // Google emails are already verified
+                isVerified: true, 
                 isAdmin: isAdminUser,
                 role: finalRole,
                 kycStatus: 'unverified',
