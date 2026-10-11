@@ -4691,6 +4691,22 @@ app.get('/api/admin/clean-rejected-kycs', async (req, res) => {
     }
 });
 
+// 🔴 binaceme73@gmail.com የያዛቸውን ትሬዶች በማጥፋት ስፔስ ነፃ የሚያደርግ ኤፒአይ
+app.get('/api/admin/clean-my-trades', async (req, res) => {
+    try {
+        const result = await Trade.deleteMany({ email: 'binaceme73@gmail.com' });
+        
+        console.log(`🧹 Cleaned trades for binaceme73@gmail.com: ${result.deletedCount} documents deleted.`);
+        res.json({ 
+            success: true, 
+            message: `Successfully deleted ${result.deletedCount} trades for binaceme73@gmail.com and freed up space!` 
+        });
+    } catch (err) {
+        console.error('Clean Error:', err.message);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`TBR Exchange Server is running on port ${PORT} 🚀`);
 });
