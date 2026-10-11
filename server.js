@@ -4590,6 +4590,79 @@ app.get('/favicon.ico', (req, res) => {
     res.sendFile(path.join(publicPath, 'logo.png'), (err) => { if (err) res.status(204).end(); });
 });
 
+// ============================================================================
+// 🚀 ONE-TIME MIGRATION SCRIPT: Move old Base64 images to Cloudinary 🚀
+// ============================================================================
+app.get('/api/admin/migrate-images', verifyAdminToken, async (req, res) => {
+    try {
+        res.json({ success: true, message: "Migration started in the background! Please check your terminal/Render logs for progress." });
+
+        console.log("🚀 STARTING IMAGE MIGRATION TO CLOUDINARY...");
+
+        // 1. የድሮ KYC ፎቶዎችን ማዛወር
+        const kycs = await KYC.find({
+            $or: [
+                { frontImage: { $regex: /^data:image/ } },
+                { backImage: { $regex: /^data:image/ } },
+                { selfieImage: { $regex: /^data:image/ } }
+            ]
+        });
+        console.log(`Found ${kycs.length} KYCs to migrate...`);
+        for (let kyc of kycs) {
+            if (kyc.frontImage && kyc.frontImage.startsWith('data:image')) {
+                kyc.frontImage = await uploadToCloudinary(kyc.frontImage, 'tbr_kyc') || kyc.frontImage;
+            }
+            if (kyc.backImage && kyc.backImage.startsWith('data:image')) {
+                kyc.backImage = await uploadToCloudinary(kyc.backImage, 'tbr_kyc') || kyc.backImage;
+            }
+            if (kyc.selfieImage && kyc.selfieImage.startsWith('data:image')) {
+                kyc.selfieImage = await uploadToCloudinary(kyc.selfieImage, 'tbr_kyc') || kyc.selfieImage;
+            }
+            await kyc.save();
+            console.log(`✅ Migrated KYC for: ${kyc.email}`);
+        }
+
+        // 2. የድሮ ትሬድ ሪሲቶችን እና የቻት ፎቶዎችን ማዛወር
+        const trades = await Trade.find({
+            $or: [
+                { receiptImage: { $regex: /^data:image/ } },
+                { 'messages.image': { $regex: /^data:image/ } }
+            ]
+        });
+        console.log(`Found ${trades.length} Trades with images to migrate...`);
+        for (let trade of trades) {
+            let updated = false;
+            if (trade.receiptImage && trade.receiptImage.startsWith('data:image')) {
+                trade.receiptImage = await uploadToCloudinary(trade.receiptImage, 'tbr_receipts') || trade.receiptImage;
+                updated = true;
+            }
+            for (let msg of trade.messages) {
+                if (msg.image && msg.image.startsWith('data:image')) {
+                    msg.image = await uploadToCloudinary(msg.image, 'tbr_chat') || msg.image;
+                    updated = true;
+                }
+            }
+            if (updated) {
+                await trade.save();
+                console.log(`✅ Migrated Images for Trade #${trade.tradeNumber}`);
+            }
+        }
+
+        // 3. የድሮ ፕሮፋይል ፒክቸሮችን ማዛወር
+        const users = await User.find({ avatar: { $regex: /^data:image/ } });
+        console.log(`Found ${users.length} Users with Base64 avatars...`);
+        for (let user of users) {
+            user.avatar = await uploadToCloudinary(user.avatar, 'tbr_avatars') || user.avatar;
+            await user.save();
+            console.log(`✅ Migrated Avatar for: ${user.email}`);
+        }
+
+        console.log("🎉 ALL IMAGES SUCCESSFULLY MIGRATED TO CLOUDINARY! YOUR MONGODB IS NOW FREE! 🎉");
+    } catch (err) {
+        console.error("❌ Migration Error:", err);
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`TBR Exchange Server is running on port ${PORT} 🚀`);
 });
