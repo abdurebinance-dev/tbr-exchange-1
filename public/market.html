@@ -1307,63 +1307,82 @@
         </div>
     </div>
 
-    <!-- User Profile Stats Modal -->
-    <div class="sheet-overlay" id="userProfileModal" onclick="if(event.target === this) this.style.display='none'" style="z-index: 3000;">
-        <div class="sheet-box" style="background: #0b0d10; color: white;">
-            <div class="sheet-handle"></div>
-            <div class="sheet-header">
-                <h2 id="modalProfileUsername" style="display:flex; align-items:center; gap:8px;">
-                    Username <i class="fa-solid fa-circle-check" style="color: var(--accent-gold); font-size:16px;"></i>
-                </h2>
-                <button class="sheet-close-btn" onclick="document.getElementById('userProfileModal').style.display='none'"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            
-            <div style="display: flex; justify-content: space-around; margin-bottom: 20px; text-align: center; border-bottom: 1px solid #1e2229; padding-bottom: 15px;">
-                <div>
-                    <div style="color: #848e9c; font-size: 12px;">Followers</div>
-                    <div id="modalProfileFollowers" style="font-size: 18px; font-weight: bold;">-</div>
-                </div>
-                <div>
-                    <div style="color: #848e9c; font-size: 12px;">Following</div>
-                    <div style="font-size: 18px; font-weight: bold;">1</div>
-                </div>
-                <div>
-                    <div style="color: #848e9c; font-size: 12px;">All Trades</div>
-                    <div id="modalProfileTotalTrades" style="font-size: 18px; font-weight: bold;">-</div>
-                </div>
-            </div>
+// ስሙ የሚታይበት ዲቪ (div) ወይም ስፓን (span) ላይ ክሊክ ሲደረግ openUserProfileStats እንዲጠራ
+<div class="adv-name" onclick="openUserProfileStats('${t.name}')" style="cursor: pointer;">
+    ${t.name} ${t.verified ? '<i class="fa-solid fa-circle-check"></i>' : ''}
+</div>
 
-            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1e2229;">
-                <span style="color: #848e9c; font-size: 14px;">30d Trades</span>
-                <span style="font-weight: bold; color: var(--green);" id="modalProfile30dTrades">-</span>
+<!-- User Profile Stats Modal -->
+<div class="sheet-overlay" id="userProfileModal" onclick="if(event.target === this) this.style.display='none'" style="display: none; z-index: 3000; align-items: flex-end; justify-content: center;">
+    <div class="sheet-box" style="background: #0b0d10; border-top: 1px solid #1e2229; border-radius: 20px 20px 0 0; width: 100%; max-width: 440px; padding: 20px; color: white;">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h2 id="modalProfileUsername" style="font-size: 18px; font-weight: 700; margin: 0; display:flex; align-items:center; gap:6px;">
+                Username <i class="fa-solid fa-circle-check" style="color: var(--accent-gold); font-size:14px;"></i>
+            </h2>
+            <button class="sheet-close-btn" onclick="document.getElementById('userProfileModal').style.display='none'" style="background:transparent; border:1px solid #2b313a; color:#fff; border-radius:50%; width:28px; height:28px; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        
+        <div style="display: flex; justify-content: space-around; margin-bottom: 20px; text-align: center; border-bottom: 1px solid #1e2229; padding-bottom: 15px;">
+            <div>
+                <div style="color: #848e9c; font-size: 11px;">Followers</div>
+                <div id="modalProfileFollowers" style="font-size: 16px; font-weight: bold;">-</div>
             </div>
-            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1e2229;">
-                <span style="color: #848e9c; font-size: 14px;">30d Completion Rate</span>
-                <span style="font-weight: bold; color: var(--accent-gold);" id="modalProfileCompRate">-</span>
+            <div>
+                <div style="color: #848e9c; font-size: 11px;">Following</div>
+                <div style="font-size: 16px; font-weight: bold;">1</div>
             </div>
-            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1e2229;">
-                <span style="color: #848e9c; font-size: 14px;">Avg. Release Time</span>
-                <span style="font-weight: bold;" id="modalProfileReleaseTime">-</span>
+            <div>
+                <div style="color: #848e9c; font-size: 11px;">All Trades</div>
+                <div id="modalProfileTotalTrades" style="font-size: 16px; font-weight: bold;">-</div>
             </div>
         </div>
-    </div>
 
-    <!-- Custom P2P Warning Modal (Instead of ugly browser alert) -->
-<div class="sheet-overlay" id="customAlertModal" style="display: none; z-index: 4000; align-items: center; justify-content: center;">
-    <div class="sheet-box" style="background: #11141a; border: 1px solid #222731; border-radius: 18px; max-width: 380px; padding: 24px; text-align: center;">
-        <div style="font-size: 40px; color: var(--accent-gold); margin-bottom: 12px;">
-            <i class="fa-solid fa-triangle-exclamation"></i>
+        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #1e2229; font-size: 13px;">
+            <span style="color: #848e9c;">30d Trades</span>
+            <span style="font-weight: bold; color: var(--green);" id="modalProfile30dTrades">-</span>
         </div>
-        <h3 style="color: #fff; font-size: 16px; margin-bottom: 10px; font-weight: 700;">የክፍያ መንገድ ይጎድላል</h3>
-        <p style="color: #848e9c; font-size: 13px; line-height: 1.5; margin-bottom: 20px;">
-            ትሬድ ለማድረግ መጀመሪያ የክፍያ መንገድ (Payment Method) ማካተት አለብዎት። አሁን ወደ ማስተካከያ ገጽ ይሂዱ?
-        </p>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-            <button onclick="document.getElementById('customAlertModal').style.display='none'" style="background: #181a20; border: 1px solid #2b313a; color: #fff; padding: 12px; border-radius: 10px; font-weight: 700; cursor: pointer;">ተመለስ</button>
-            <button onclick="window.location.href='settings.html?tab=payments'" style="background: var(--accent-gold); border: none; color: #000; padding: 12px; border-radius: 10px; font-weight: 700; cursor: pointer;">አሁን ጨምር</button>
+        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #1e2229; font-size: 13px;">
+            <span style="color: #848e9c;">30d Completion Rate</span>
+            <span style="font-weight: bold; color: var(--accent-gold);" id="modalProfileCompRate">-</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 8px 0; font-size: 13px;">
+            <span style="color: #848e9c;">Avg. Release Time</span>
+            <span style="font-weight: bold;" id="modalProfileReleaseTime">-</span>
         </div>
     </div>
 </div>
+
+<script>
+    async function openUserProfileStats(username) {
+        const cleanName = String(username || '').trim().replace(/^@+/, '');
+        const modal = document.getElementById('userProfileModal');
+        modal.style.display = 'flex';
+        
+        document.getElementById('modalProfileUsername').innerHTML = `${cleanName} <i class="fa-solid fa-circle-check" style="color: var(--accent-gold); font-size:14px;"></i>`;
+        document.getElementById('modalProfileTotalTrades').innerText = '...';
+        document.getElementById('modalProfile30dTrades').innerText = '...';
+        document.getElementById('modalProfileCompRate').innerText = '...';
+        document.getElementById('modalProfileFollowers').innerText = '...';
+        document.getElementById('modalProfileReleaseTime').innerText = '...';
+
+        try {
+            const res = await fetch(`/api/user/profile/${encodeURIComponent(cleanName)}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('modalProfileTotalTrades').innerText = data.totalTrades;
+                    document.getElementById('modalProfile30dTrades').innerText = data.thirtyDayCompleted;
+                    document.getElementById('modalProfileCompRate').innerText = data.completionRate;
+                    document.getElementById('modalProfileFollowers').innerText = data.followers;
+                    document.getElementById('modalProfileReleaseTime').innerText = data.avgReleaseTime;
+                }
+            }
+        } catch (e) {
+            console.error("Error fetching profile stats", e);
+        }
+    }
+</script>
 
     <script>
         const API_BASE = '';
@@ -1471,35 +1490,6 @@
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
             }).catch(() => {});
-        }
-
-        // ማርኬት ፔጅ ላይ የአድቨርታይዘሩ ስም ሲነካ ስታቲስቲክሱን ከ ዳታቤዝ አምጥቶ የሚያሳየው
-        async function openUserProfileStats(username) {
-            const modal = document.getElementById('userProfileModal');
-            modal.style.display = 'flex';
-            
-            document.getElementById('modalProfileUsername').innerHTML = `${username} <i class="fa-solid fa-circle-check" style="color: var(--accent-gold); font-size:16px;"></i>`;
-            document.getElementById('modalProfileTotalTrades').innerText = '...';
-            document.getElementById('modalProfile30dTrades').innerText = '...';
-            document.getElementById('modalProfileCompRate').innerText = '...';
-            document.getElementById('modalProfileFollowers').innerText = '...';
-            document.getElementById('modalProfileReleaseTime').innerText = '...';
-
-            try {
-                const res = await fetch(`/api/user/profile/${username}`);
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.success) {
-                        document.getElementById('modalProfileTotalTrades').innerText = data.totalTrades;
-                        document.getElementById('modalProfile30dTrades').innerText = data.thirtyDayCompleted;
-                        document.getElementById('modalProfileCompRate').innerText = data.completionRate;
-                        document.getElementById('modalProfileFollowers').innerText = data.followers;
-                        document.getElementById('modalProfileReleaseTime').innerText = data.avgReleaseTime;
-                    }
-                }
-            } catch (e) {
-                console.error("Error fetching stats", e);
-            }
         }
 
         async function fetchAdminSettings() {
