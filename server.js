@@ -11,6 +11,27 @@ const multer = require('multer');
 const axios = require('axios');
 const { ethers } = require('ethers');
 
+// ☁️ CLOUDINARY SETUP ☁️
+const cloudinary = require('cloudinary').v2;
+
+cloudinary.config({ 
+  cloud_name: 'rctlburr', 
+  api_key: '627545888124122', 
+  api_secret: 'Wv5MbcNqmpHgniq_ZAsVUftnNLO' 
+});
+
+// ፎቶዎችን ወደ Cloudinary የሚጭን እና አጭር ሊንክ (URL) የሚመልስ ፈንክሽን
+async function uploadToCloudinary(base64Image, folderName) {
+    if (!base64Image || !base64Image.startsWith('data:image')) return base64Image;
+    try {
+        const result = await cloudinary.uploader.upload(base64Image, { folder: folderName });
+        return result.secure_url;
+    } catch (err) {
+        console.error('Cloudinary Upload Error:', err);
+        return '';
+    }
+}
+
 const upload = multer({ dest: 'uploads/' });
 
 const app = express();
@@ -1602,8 +1623,9 @@ app.post('/api/user/update', verifyToken, async (req, res) => {
 
         const updateData = {};
         if (field === 'avatar') {
-            updateData.avatar = value;
-            setAvatarInMemoryCache(req.user.id, value);
+            const uploadedAvatar = await uploadToCloudinary(value, 'tbr_avatars');
+            updateData.avatar = uploadedAvatar || value;
+            setAvatarInMemoryCache(req.user.id, updateData.avatar);
         } else if (field === 'phone') {
             updateData.phone = value;
         } else if (field === 'username' || field === 'traderUsername') {
@@ -2265,6 +2287,10 @@ app.post('/api/kyc/submit', async (req, res) => {
             await User.updateOne({ _id: user._id }, { $set: { bscAddress: wallet.address, bscPrivateKey: wallet.privateKey } });
         }
 
+        const uploadedFront = await uploadToCloudinary(frontImage, 'tbr_kyc');
+        const uploadedBack = await uploadToCloudinary(backImage, 'tbr_kyc');
+        const uploadedSelfie = await uploadToCloudinary(selfieImage, 'tbr_kyc');
+
         const kycDataPayload = {
             userId: user._id,
             email: user.email,
@@ -2273,9 +2299,9 @@ app.post('/api/kyc/submit', async (req, res) => {
             docType: docType || 'national_id',
             dob: dateOfBirth || '',
             address: residentialAddress || '',
-            frontImage: frontImage || '',
-            backImage: backImage || '',
-            selfieImage: selfieImage || '',
+            frontImage: uploadedFront || '',
+            backImage: uploadedBack || '',
+            selfieImage: uploadedSelfie || '',
             status: 'pending'
         };
 
@@ -3820,8 +3846,11 @@ app.post('/api/trades/:id/mark-paid', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Payment receipt screenshot is required.' });
         }
 
+        // ☁️ የሪሲት ፎቶውን ወደ Cloudinary ይጭነዋል
+        const uploadedReceipt = await uploadToCloudinary(receiptImage, 'tbr_receipts');
+        
         trade.status = 'payment_sent';
-        trade.receiptImage = receiptImage;
+        trade.receiptImage = uploadedReceipt || receiptImage;
         trade.warningExtended = false;
         trade.expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
@@ -4151,11 +4180,14 @@ app.post('/api/trades/:id/messages', async (req, res) => {
         const isBuyer = String(trade.buyerId) === senderIdStr;
         const senderName = isBuyer ? trade.buyerName : trade.sellerName;
 
+        // ☁️ በቻት የሚላክ ፎቶ ካለ ወደ Cloudinary ይጭነዋል
+        const uploadedChatImg = await uploadToCloudinary(image, 'tbr_chat');
+
         trade.messages.push({
             senderId: senderIdStr,
             senderName,
             text: text || '',
-            image: image || '',
+            image: uploadedChatImg || '',
             isSystem: false,
             createdAt: new Date()
         });
