@@ -22,13 +22,24 @@ cloudinary.config({
 
 // ፎቶዎችን ወደ Cloudinary የሚጭን እና አጭር ሊንክ (URL) የሚመልስ ፈንክሽን
 async function uploadToCloudinary(base64Image, folderName) {
-    if (!base64Image || !base64Image.startsWith('data:image')) return base64Image;
+    if (!base64Image || typeof base64Image !== 'string' || !base64Image.startsWith('data:image')) {
+        return ''; 
+    }
+    
     try {
-        const result = await cloudinary.uploader.upload(base64Image, { folder: folderName });
+        const result = await cloudinary.uploader.upload(base64Image, { 
+            folder: folderName,
+            resource_type: "auto", // 🔴 ማንኛውንም የፎቶ አይነት (PNG, JPG, WEBP, ወዘተ) በግድ እንዲቀበል ያደርጋል
+            transformation: [
+                { width: 1500, crop: "limit" }, // 🔴 ፎቶው በጣም ትልቅ ከሆነ (ለምሳሌ 4K) ሳይበላሽ መጠኑን ያስተካክላል
+                { quality: "auto:best" },       // 🔴 ጥራቱን ሳይቀንስ ሜጋባይቱን (Size) በራሱ ያሳንሳል (Compress ያደርጋል)
+                { fetch_format: "auto" }        // 🔴 ፎቶውን ለዌብሳይት ወደሚቀል ፎርማት ራሱ ይቀይረዋል
+            ]
+        });
         return result.secure_url;
     } catch (err) {
-        console.error('Cloudinary Upload Error:', err);
-        return '';
+        console.error('Cloudinary Upload Error:', err.message);
+        return ''; 
     }
 }
 
