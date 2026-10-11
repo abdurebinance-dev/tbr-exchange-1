@@ -4674,6 +4674,23 @@ app.get('/api/admin/migrate-images', verifyAdminToken, async (req, res) => {
     }
 });
 
+// 🔴 ውድቅ የተደረጉ (Rejected) የ KYC ዶክመንቶችን በማጥፋት MongoDB ስፔስ ነፃ የሚያደርግ ኤፒአይ
+app.get('/api/admin/clean-rejected-kycs', async (req, res) => {
+    try {
+        // 1. Status-ቸው 'rejected' ወይም 'declined' የሆኑትን KYC መረጃዎች ይፈልጋል
+        const result = await KYC.deleteMany({ status: { $in: ['rejected', 'declined'] } });
+        
+        console.log(`🧹 Cleaned rejected KYCs: ${result.deletedCount} documents deleted.`);
+        res.json({ 
+            success: true, 
+            message: `Successfully deleted ${result.deletedCount} rejected KYC records and freed up database space!` 
+        });
+    } catch (err) {
+        console.error('Clean Error:', err.message);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`TBR Exchange Server is running on port ${PORT} 🚀`);
 });
