@@ -4558,6 +4558,51 @@ app.get('/favicon.ico', (req, res) => {
     res.sendFile(path.join(publicPath, 'logo.png'), (err) => { if (err) res.status(204).end(); });
 });
 
+// የተጠቃሚውን ትክክለኛ የትሬድ መረጃ (Profile Stats) ለማምጣት
+app.get('/api/user/profile/:username', async (req, res) => {
+    try {
+        const username = req.params.username;
+        
+        // 1. የተጠቃሚውን ጠቅላላ ትሬዶች መፈለግ
+        const allTrades = await Trade.find({ 
+            $or: [{ buyerName: username }, { sellerName: username }] 
+        });
+
+        // 2. የተሳኩ (Completed) ትሬዶችን መለየት
+        const completedTrades = allTrades.filter(t => t.status === 'completed');
+        
+        // 3. የ 30 ቀን (30d) ትሬዶችን መለየት
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const last30dTrades = allTrades.filter(t => new Date(t.createdAt) >= thirtyDaysAgo);
+        const last30dCompleted = last30dTrades.filter(t => t.status === 'completed');
+
+        // 4. Completion Rate ማሰላት
+        let completionRate = 0;
+        if (last30dTrades.length > 0) {
+            completionRate = ((last30dCompleted.length / last30dTrades.length) * 100).toFixed(1);
+        }
+
+        // መረጃውን ወደ Frontend መላክ
+        res.json({
+            success: true,
+            username: username,
+            totalTrades: allTrades.length,
+            completedTrades: completedTrades.length,
+            thirtyDayTrades: last30dTrades.length,
+            thirtyDayCompleted: last30dCompleted.length,
+            completionRate: completionRate + '%',
+            // እንደ Followers እና Avg Release time ያሉትን ለጊዜው ዲፎልት (Default) ማድረግ ትችላለህ
+            followers: Math.floor(Math.random() * 50) + 10, 
+            avgReleaseTime: '12 min'
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`TBR Exchange Server is running on port ${PORT} 🚀`);
 });

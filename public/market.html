@@ -1307,6 +1307,48 @@
         </div>
     </div>
 
+    <!-- User Profile Stats Modal -->
+    <div class="sheet-overlay" id="userProfileModal" onclick="if(event.target === this) this.style.display='none'" style="z-index: 3000;">
+        <div class="sheet-box" style="background: #0b0d10; color: white;">
+            <div class="sheet-handle"></div>
+            <div class="sheet-header">
+                <h2 id="modalProfileUsername" style="display:flex; align-items:center; gap:8px;">
+                    Username <i class="fa-solid fa-circle-check" style="color: var(--accent-gold); font-size:16px;"></i>
+                </h2>
+                <button class="sheet-close-btn" onclick="document.getElementById('userProfileModal').style.display='none'"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div style="display: flex; justify-content: space-around; margin-bottom: 20px; text-align: center; border-bottom: 1px solid #1e2229; padding-bottom: 15px;">
+                <div>
+                    <div style="color: #848e9c; font-size: 12px;">Followers</div>
+                    <div id="modalProfileFollowers" style="font-size: 18px; font-weight: bold;">-</div>
+                </div>
+                <div>
+                    <div style="color: #848e9c; font-size: 12px;">Following</div>
+                    <div style="font-size: 18px; font-weight: bold;">1</div>
+                </div>
+                <div>
+                    <div style="color: #848e9c; font-size: 12px;">All Trades</div>
+                    <div id="modalProfileTotalTrades" style="font-size: 18px; font-weight: bold;">-</div>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1e2229;">
+                <span style="color: #848e9c; font-size: 14px;">30d Trades</span>
+                <span style="font-weight: bold; color: var(--green);" id="modalProfile30dTrades">-</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1e2229;">
+                <span style="color: #848e9c; font-size: 14px;">30d Completion Rate</span>
+                <span style="font-weight: bold; color: var(--accent-gold);" id="modalProfileCompRate">-</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1e2229;">
+                <span style="color: #848e9c; font-size: 14px;">Avg. Release Time</span>
+                <span style="font-weight: bold;" id="modalProfileReleaseTime">-</span>
+            </div>
+        </div>
+    </div>
+
+
     <script>
         const API_BASE = '';
         // ⚡ ቀላል (2KB) የማርኬት ካሽ ቁልፍ (QuotaExceededError ፈጽሞ እንዳይፈጠርና በ 0.00s እንዲከፍት!) ⚡
@@ -1413,6 +1455,35 @@
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
             }).catch(() => {});
+        }
+
+        // ማርኬት ፔጅ ላይ የአድቨርታይዘሩ ስም ሲነካ ስታቲስቲክሱን ከ ዳታቤዝ አምጥቶ የሚያሳየው
+        async function openUserProfileStats(username) {
+            const modal = document.getElementById('userProfileModal');
+            modal.style.display = 'flex';
+            
+            document.getElementById('modalProfileUsername').innerHTML = `${username} <i class="fa-solid fa-circle-check" style="color: var(--accent-gold); font-size:16px;"></i>`;
+            document.getElementById('modalProfileTotalTrades').innerText = '...';
+            document.getElementById('modalProfile30dTrades').innerText = '...';
+            document.getElementById('modalProfileCompRate').innerText = '...';
+            document.getElementById('modalProfileFollowers').innerText = '...';
+            document.getElementById('modalProfileReleaseTime').innerText = '...';
+
+            try {
+                const res = await fetch(`/api/user/profile/${username}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success) {
+                        document.getElementById('modalProfileTotalTrades').innerText = data.totalTrades;
+                        document.getElementById('modalProfile30dTrades').innerText = data.thirtyDayCompleted;
+                        document.getElementById('modalProfileCompRate').innerText = data.completionRate;
+                        document.getElementById('modalProfileFollowers').innerText = data.followers;
+                        document.getElementById('modalProfileReleaseTime').innerText = data.avgReleaseTime;
+                    }
+                }
+            } catch (e) {
+                console.error("Error fetching stats", e);
+            }
         }
 
         async function fetchAdminSettings() {
@@ -1927,11 +1998,20 @@
         }
 
         function openOrderModalByIndex(index) {
+            // ⚡ ማስተካከያ: ሁለቱም (Buy እና Sell) ሲደረጉ ተጠቃሚው Payment Method መኖሩን ቼክ ያደርጋል ⚡
+            if (!currentUserSavedPayments || currentUserSavedPayments.length === 0) {
+                const wantsToAdd = confirm("ትሬድ ለማድረግ መጀመሪያ የክፍያ መንገድ (Payment Method) ማካተት አለብዎት። አሁን መጨመር ይፈልጋሉ?");
+                if (wantsToAdd) {
+                    window.location.href = 'settings.html?tab=payments';
+                }
+                return;
+            }
+
+            const isBuy = currentType === 'buy';
             const ad = currentRenderedAds[index];
             if (!ad) return;
             activeModalAd = ad;
 
-            const isBuy = currentType === 'buy';
             const priceDisplay = Number(ad.numericPrice) % 1 === 0 ? Number(ad.numericPrice).toString() : ad.numericPrice.toFixed(2);
             const minFormatted = formatMoney2(ad.numericMin);
             const maxFormatted = formatMoney2(ad.numericMax);
