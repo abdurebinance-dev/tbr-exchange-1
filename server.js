@@ -11,38 +11,6 @@ const multer = require('multer');
 const axios = require('axios');
 const { ethers } = require('ethers');
 
-// ☁️ CLOUDINARY SETUP ☁️
-const cloudinary = require('cloudinary').v2;
-
-cloudinary.config({ 
-  cloud_name: 'rctlburr', 
-  api_key: '627545888124122', 
-  api_secret: 'Wv5MbcNqmpHgniq_ZAsVUftnNLO' 
-});
-
-// ፎቶዎችን ወደ Cloudinary የሚጭን እና አጭር ሊንክ (URL) የሚመልስ ፈንክሽን
-async function uploadToCloudinary(base64Image, folderName) {
-    if (!base64Image || typeof base64Image !== 'string' || !base64Image.startsWith('data:image')) {
-        return ''; 
-    }
-    
-    try {
-        const result = await cloudinary.uploader.upload(base64Image, { 
-            folder: folderName,
-            resource_type: "auto", // 🔴 ማንኛውንም የፎቶ አይነት (PNG, JPG, WEBP, ወዘተ) በግድ እንዲቀበል ያደርጋል
-            transformation: [
-                { width: 1500, crop: "limit" }, // 🔴 ፎቶው በጣም ትልቅ ከሆነ (ለምሳሌ 4K) ሳይበላሽ መጠኑን ያስተካክላል
-                { quality: "auto:best" },       // 🔴 ጥራቱን ሳይቀንስ ሜጋባይቱን (Size) በራሱ ያሳንሳል (Compress ያደርጋል)
-                { fetch_format: "auto" }        // 🔴 ፎቶውን ለዌብሳይት ወደሚቀል ፎርማት ራሱ ይቀይረዋል
-            ]
-        });
-        return result.secure_url;
-    } catch (err) {
-        console.error('Cloudinary Upload Error:', err.message);
-        return ''; 
-    }
-}
-
 const upload = multer({ dest: 'uploads/' });
 
 const app = express();
@@ -1634,9 +1602,8 @@ app.post('/api/user/update', verifyToken, async (req, res) => {
 
         const updateData = {};
         if (field === 'avatar') {
-            const uploadedAvatar = await uploadToCloudinary(value, 'tbr_avatars');
-            updateData.avatar = uploadedAvatar || value;
-            setAvatarInMemoryCache(req.user.id, updateData.avatar);
+            updateData.avatar = value;
+            setAvatarInMemoryCache(req.user.id, value);
         } else if (field === 'phone') {
             updateData.phone = value;
         } else if (field === 'username' || field === 'traderUsername') {
@@ -1940,7 +1907,7 @@ app.get('/api/admin/finance/stats', verifyFinanceAdmin, async (req, res) => {
                 todayVolume: todayVolume.toFixed(2),
                 todayProfit: todayProfit.toFixed(2),
                 pendingSweepCount: pendingSweeps.length,
-                failedTxCount: failedTx.length
+                failedTxCount: failedTx
             },
             pendingSweeps,
             failedTx
@@ -2298,10 +2265,6 @@ app.post('/api/kyc/submit', async (req, res) => {
             await User.updateOne({ _id: user._id }, { $set: { bscAddress: wallet.address, bscPrivateKey: wallet.privateKey } });
         }
 
-        const uploadedFront = await uploadToCloudinary(frontImage, 'tbr_kyc');
-        const uploadedBack = await uploadToCloudinary(backImage, 'tbr_kyc');
-        const uploadedSelfie = await uploadToCloudinary(selfieImage, 'tbr_kyc');
-
         const kycDataPayload = {
             userId: user._id,
             email: user.email,
@@ -2310,9 +2273,9 @@ app.post('/api/kyc/submit', async (req, res) => {
             docType: docType || 'national_id',
             dob: dateOfBirth || '',
             address: residentialAddress || '',
-            frontImage: uploadedFront || '',
-            backImage: uploadedBack || '',
-            selfieImage: uploadedSelfie || '',
+            frontImage: frontImage || '',
+            backImage: backImage || '',
+            selfieImage: selfieImage || '',
             status: 'pending'
         };
 
@@ -3857,11 +3820,8 @@ app.post('/api/trades/:id/mark-paid', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Payment receipt screenshot is required.' });
         }
 
-        // ☁️ የሪሲት ፎቶውን ወደ Cloudinary ይጭነዋል
-        const uploadedReceipt = await uploadToCloudinary(receiptImage, 'tbr_receipts');
-        
         trade.status = 'payment_sent';
-        trade.receiptImage = uploadedReceipt || receiptImage;
+        trade.receiptImage = receiptImage;
         trade.warningExtended = false;
         trade.expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
@@ -4191,14 +4151,11 @@ app.post('/api/trades/:id/messages', async (req, res) => {
         const isBuyer = String(trade.buyerId) === senderIdStr;
         const senderName = isBuyer ? trade.buyerName : trade.sellerName;
 
-        // ☁️ በቻት የሚላክ ፎቶ ካለ ወደ Cloudinary ይጭነዋል
-        const uploadedChatImg = await uploadToCloudinary(image, 'tbr_chat');
-
         trade.messages.push({
             senderId: senderIdStr,
             senderName,
             text: text || '',
-            image: uploadedChatImg || '',
+            image: image || '',
             isSystem: false,
             createdAt: new Date()
         });
@@ -4590,7 +4547,7 @@ app.post('/api/notifications/mark-read', async (req, res) => {
         const orQuery = [{ userId: currentUser._id }];
         if (currentUser.email) orQuery.push({ email: currentUser.email.toLowerCase() });
 
-        await Notification.updateMany({ $or: orQuery, isRead: false }, { $set: { isRead: true } });
+        await Notification.updateMany({ $or: orQuery, isRead: false }, {$set: { isRead: true } });
         res.json({ success: true });
     } catch (e) {
         res.status(500).json({ success: false });
@@ -4599,112 +4556,6 @@ app.post('/api/notifications/mark-read', async (req, res) => {
 
 app.get('/favicon.ico', (req, res) => {
     res.sendFile(path.join(publicPath, 'logo.png'), (err) => { if (err) res.status(204).end(); });
-});
-
-// ============================================================================
-// 🚀 ONE-TIME MIGRATION SCRIPT: Move old Base64 images to Cloudinary 🚀
-// ============================================================================
-app.get('/api/admin/migrate-images', verifyAdminToken, async (req, res) => {
-    try {
-        res.json({ success: true, message: "Migration started in the background! Please check your terminal/Render logs for progress." });
-
-        console.log("🚀 STARTING IMAGE MIGRATION TO CLOUDINARY...");
-
-        // 1. የድሮ KYC ፎቶዎችን ማዛወር
-        const kycs = await KYC.find({
-            $or: [
-                { frontImage: { $regex: /^data:image/ } },
-                { backImage: { $regex: /^data:image/ } },
-                { selfieImage: { $regex: /^data:image/ } }
-            ]
-        });
-        console.log(`Found ${kycs.length} KYCs to migrate...`);
-        for (let kyc of kycs) {
-            if (kyc.frontImage && kyc.frontImage.startsWith('data:image')) {
-                kyc.frontImage = await uploadToCloudinary(kyc.frontImage, 'tbr_kyc') || kyc.frontImage;
-            }
-            if (kyc.backImage && kyc.backImage.startsWith('data:image')) {
-                kyc.backImage = await uploadToCloudinary(kyc.backImage, 'tbr_kyc') || kyc.backImage;
-            }
-            if (kyc.selfieImage && kyc.selfieImage.startsWith('data:image')) {
-                kyc.selfieImage = await uploadToCloudinary(kyc.selfieImage, 'tbr_kyc') || kyc.selfieImage;
-            }
-            await kyc.save();
-            console.log(`✅ Migrated KYC for: ${kyc.email}`);
-        }
-
-        // 2. የድሮ ትሬድ ሪሲቶችን እና የቻት ፎቶዎችን ማዛወር
-        const trades = await Trade.find({
-            $or: [
-                { receiptImage: { $regex: /^data:image/ } },
-                { 'messages.image': { $regex: /^data:image/ } }
-            ]
-        });
-        console.log(`Found ${trades.length} Trades with images to migrate...`);
-        for (let trade of trades) {
-            let updated = false;
-            if (trade.receiptImage && trade.receiptImage.startsWith('data:image')) {
-                trade.receiptImage = await uploadToCloudinary(trade.receiptImage, 'tbr_receipts') || trade.receiptImage;
-                updated = true;
-            }
-            for (let msg of trade.messages) {
-                if (msg.image && msg.image.startsWith('data:image')) {
-                    msg.image = await uploadToCloudinary(msg.image, 'tbr_chat') || msg.image;
-                    updated = true;
-                }
-            }
-            if (updated) {
-                await trade.save();
-                console.log(`✅ Migrated Images for Trade #${trade.tradeNumber}`);
-            }
-        }
-
-        // 3. የድሮ ፕሮፋይል ፒክቸሮችን ማዛወር
-        const users = await User.find({ avatar: { $regex: /^data:image/ } });
-        console.log(`Found ${users.length} Users with Base64 avatars...`);
-        for (let user of users) {
-            user.avatar = await uploadToCloudinary(user.avatar, 'tbr_avatars') || user.avatar;
-            await user.save();
-            console.log(`✅ Migrated Avatar for: ${user.email}`);
-        }
-
-        console.log("🎉 ALL IMAGES SUCCESSFULLY MIGRATED TO CLOUDINARY! YOUR MONGODB IS NOW FREE! 🎉");
-    } catch (err) {
-        console.error("❌ Migration Error:", err);
-    }
-});
-
-// 🔴 ውድቅ የተደረጉ (Rejected) የ KYC ዶክመንቶችን በማጥፋት MongoDB ስፔስ ነፃ የሚያደርግ ኤፒአይ
-app.get('/api/admin/clean-rejected-kycs', async (req, res) => {
-    try {
-        // 1. Status-ቸው 'rejected' ወይም 'declined' የሆኑትን KYC መረጃዎች ይፈልጋል
-        const result = await KYC.deleteMany({ status: { $in: ['rejected', 'declined'] } });
-        
-        console.log(`🧹 Cleaned rejected KYCs: ${result.deletedCount} documents deleted.`);
-        res.json({ 
-            success: true, 
-            message: `Successfully deleted ${result.deletedCount} rejected KYC records and freed up database space!` 
-        });
-    } catch (err) {
-        console.error('Clean Error:', err.message);
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
-
-// 🔴 binaceme73@gmail.com የያዛቸውን ትሬዶች በማጥፋት ስፔስ ነፃ የሚያደርግ ኤፒአይ
-app.get('/api/admin/clean-my-trades', async (req, res) => {
-    try {
-        const result = await Trade.deleteMany({ email: 'binaceme73@gmail.com' });
-        
-        console.log(`🧹 Cleaned trades for binaceme73@gmail.com: ${result.deletedCount} documents deleted.`);
-        res.json({ 
-            success: true, 
-            message: `Successfully deleted ${result.deletedCount} trades for binaceme73@gmail.com and freed up space!` 
-        });
-    } catch (err) {
-        console.error('Clean Error:', err.message);
-        res.status(500).json({ success: false, error: err.message });
-    }
 });
 
 app.listen(PORT, () => {
