@@ -1353,37 +1353,6 @@
     </div>
 </div>
 
-<script>
-    async function openUserProfileStats(username) {
-        const cleanName = String(username || '').trim().replace(/^@+/, '');
-        const modal = document.getElementById('userProfileModal');
-        modal.style.display = 'flex';
-        
-        document.getElementById('modalProfileUsername').innerHTML = `${cleanName} <i class="fa-solid fa-circle-check" style="color: var(--accent-gold); font-size:14px;"></i>`;
-        document.getElementById('modalProfileTotalTrades').innerText = '...';
-        document.getElementById('modalProfile30dTrades').innerText = '...';
-        document.getElementById('modalProfileCompRate').innerText = '...';
-        document.getElementById('modalProfileFollowers').innerText = '...';
-        document.getElementById('modalProfileReleaseTime').innerText = '...';
-
-        try {
-            const res = await fetch(`/api/user/profile/${encodeURIComponent(cleanName)}`);
-            if (res.ok) {
-                const data = await res.json();
-                if (data.success) {
-                    document.getElementById('modalProfileTotalTrades').innerText = data.totalTrades;
-                    document.getElementById('modalProfile30dTrades').innerText = data.thirtyDayCompleted;
-                    document.getElementById('modalProfileCompRate').innerText = data.completionRate;
-                    document.getElementById('modalProfileFollowers').innerText = data.followers;
-                    document.getElementById('modalProfileReleaseTime').innerText = data.avgReleaseTime;
-                }
-            }
-        } catch (e) {
-            console.error("Error fetching profile stats", e);
-        }
-    }
-</script>
-
     <script>
         const API_BASE = '';
         // ⚡ ቀላል (2KB) የማርኬት ካሽ ቁልፍ (QuotaExceededError ፈጽሞ እንዳይፈጠርና በ 0.00s እንዲከፍት!) ⚡
@@ -2399,6 +2368,35 @@
                 }
             });
         }
+
+        async function openUserProfileStats(username) {
+        const cleanName = String(username || '').trim().replace(/^@+/, '');
+        const modal = document.getElementById('userProfileModal');
+        modal.style.display = 'flex';
+        
+        document.getElementById('modalProfileUsername').innerHTML = `${cleanName} <i class="fa-solid fa-circle-check" style="color: var(--accent-gold); font-size:14px;"></i>`;
+        document.getElementById('modalProfileTotalTrades').innerText = '...';
+        document.getElementById('modalProfile30dTrades').innerText = '...';
+        document.getElementById('modalProfileCompRate').innerText = '...';
+        document.getElementById('modalProfileFollowers').innerText = '...';
+        document.getElementById('modalProfileReleaseTime').innerText = '...';
+
+        try {
+            const res = await fetch(`/api/user/profile/${encodeURIComponent(cleanName)}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('modalProfileTotalTrades').innerText = data.totalTrades;
+                    document.getElementById('modalProfile30dTrades').innerText = data.thirtyDayCompleted;
+                    document.getElementById('modalProfileCompRate').innerText = data.completionRate;
+                    document.getElementById('modalProfileFollowers').innerText = data.followers;
+                    document.getElementById('modalProfileReleaseTime').innerText = data.avgReleaseTime;
+                }
+            }
+        } catch (e) {
+            console.error("Error fetching profile stats", e);
+        }
+    }
 
         async function loadRealAdsStats() {
             try {
