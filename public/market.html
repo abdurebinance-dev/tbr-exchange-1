@@ -1348,6 +1348,22 @@
         </div>
     </div>
 
+    <!-- Custom P2P Warning Modal (Instead of ugly browser alert) -->
+<div class="sheet-overlay" id="customAlertModal" style="display: none; z-index: 4000; align-items: center; justify-content: center;">
+    <div class="sheet-box" style="background: #11141a; border: 1px solid #222731; border-radius: 18px; max-width: 380px; padding: 24px; text-align: center;">
+        <div style="font-size: 40px; color: var(--accent-gold); margin-bottom: 12px;">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <h3 style="color: #fff; font-size: 16px; margin-bottom: 10px; font-weight: 700;">የክፍያ መንገድ ይጎድላል</h3>
+        <p style="color: #848e9c; font-size: 13px; line-height: 1.5; margin-bottom: 20px;">
+            ትሬድ ለማድረግ መጀመሪያ የክፍያ መንገድ (Payment Method) ማካተት አለብዎት። አሁን ወደ ማስተካከያ ገጽ ይሂዱ?
+        </p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <button onclick="document.getElementById('customAlertModal').style.display='none'" style="background: #181a20; border: 1px solid #2b313a; color: #fff; padding: 12px; border-radius: 10px; font-weight: 700; cursor: pointer;">ተመለስ</button>
+            <button onclick="window.location.href='settings.html?tab=payments'" style="background: var(--accent-gold); border: none; color: #000; padding: 12px; border-radius: 10px; font-weight: 700; cursor: pointer;">አሁን ጨምር</button>
+        </div>
+    </div>
+</div>
 
     <script>
         const API_BASE = '';
@@ -1998,14 +2014,12 @@
         }
 
         function openOrderModalByIndex(index) {
-            // ⚡ ማስተካከያ: ሁለቱም (Buy እና Sell) ሲደረጉ ተጠቃሚው Payment Method መኖሩን ቼክ ያደርጋል ⚡
             if (!currentUserSavedPayments || currentUserSavedPayments.length === 0) {
-                const wantsToAdd = confirm("ትሬድ ለማድረግ መጀመሪያ የክፍያ መንገድ (Payment Method) ማካተት አለብዎት። አሁን መጨመር ይፈልጋሉ?");
-                if (wantsToAdd) {
-                    window.location.href = 'settings.html?tab=payments';
-                }
+                // የብሮውዘርን ነጭ አሌርት በመተው ውብ ሞዳላችንን እናሳያለን
+                document.getElementById('customAlertModal').style.display = 'flex';
                 return;
             }
+            // ... ቀሪው ኮድ እንደነበረ ይቀጥላል ...
 
             const isBuy = currentType === 'buy';
             const ad = currentRenderedAds[index];

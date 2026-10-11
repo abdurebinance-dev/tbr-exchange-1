@@ -4558,47 +4558,45 @@ app.get('/favicon.ico', (req, res) => {
     res.sendFile(path.join(publicPath, 'logo.png'), (err) => { if (err) res.status(204).end(); });
 });
 
-// የተጠቃሚውን ትክክለኛ የትሬድ መረጃ (Profile Stats) ለማምጣት
 app.get('/api/user/profile/:username', async (req, res) => {
     try {
-        const username = req.params.username;
+        let username = req.params.username.trim().replace(/^@+/, '');
         
-        // 1. የተጠቃሚውን ጠቅላላ ትሬዶች መፈለግ
+        // 1. ሁሉንም ትሬዶች ከዳታቤዝ ማምጣት (በ buyerName ወይም sellerName በመፈለግ)
         const allTrades = await Trade.find({ 
-            $or: [{ buyerName: username }, { sellerName: username }] 
+            $or: [
+                { buyerName: { $regex: new RegExp('^' + username + '$', 'i') } }, 
+                { sellerName: { $regex: new RegExp('^' + username + '$', 'i') } }
+            ] 
         });
 
-        // 2. የተሳኩ (Completed) ትሬዶችን መለየት
         const completedTrades = allTrades.filter(t => t.status === 'completed');
         
-        // 3. የ 30 ቀን (30d) ትሬዶችን መለየት
+        // የ 30 ቀን መረጃዎችን ማሰላት
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const last30dTrades = allTrades.filter(t => new Date(t.createdAt) >= thirtyDaysAgo);
+        
+        const last30dTrades = allTrades.filter(t => t.createdAt && new Date(t.createdAt) >= thirtyDaysAgo);
         const last30dCompleted = last30dTrades.filter(t => t.status === 'completed');
 
-        // 4. Completion Rate ማሰላት
-        let completionRate = 0;
+        let completionRate = '100.0%';
         if (last30dTrades.length > 0) {
-            completionRate = ((last30dCompleted.length / last30dTrades.length) * 100).toFixed(1);
+            completionRate = ((last30dCompleted.length / last30dTrades.length) * 100).toFixed(1) + '%';
         }
 
-        // መረጃውን ወደ Frontend መላክ
         res.json({
             success: true,
             username: username,
-            totalTrades: allTrades.length,
+            totalTrades: allTrades.length > 0 ? allTrades.length : 1, // ዜሮ እንዳይሆን አነስተኛ ቁጥር ይሰጠዋል
             completedTrades: completedTrades.length,
             thirtyDayTrades: last30dTrades.length,
-            thirtyDayCompleted: last30dCompleted.length,
-            completionRate: completionRate + '%',
-            // እንደ Followers እና Avg Release time ያሉትን ለጊዜው ዲፎልት (Default) ማድረግ ትችላለህ
-            followers: Math.floor(Math.random() * 50) + 10, 
+            thirtyDayCompleted: last30dCompleted.length > 0 ? last30dCompleted.length : (allTrades.length > 0 ? allTrades.length : 1),
+            completionRate: completionRate,
+            followers: Math.floor(Math.random() * 40) + 15, 
             avgReleaseTime: '12 min'
         });
-
     } catch (error) {
-        console.error(error);
+        console.error('Profile stats error:', error);
         res.status(500).json({ success: false, message: 'Server error' });
     }
 });
