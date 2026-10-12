@@ -4474,18 +4474,21 @@ async function calculateLeaderboardBackground() {
             const rawUsername = (uInfo.traderUsername || '').trim().replace(/^@+/, '');
             let displayName = rawUsername;
 
-            // Bwe waba tewali username, kozesa ID y'omukozesa ey'amazima okuva mu database (nga TBR-000004)
+            // 🔥 ዩዘርነም ከሌለ በዘፈቀደ የሚወጣውን ጽሁፍ አስወግጄ፣ ትክክለኛውን የ TBR ID (userId) ብቻ አስገብቻለሁ
             if (!displayName) {
-                displayName = uInfo.userId || (uInfo.numericId ? 'TBR-' + String(uInfo.numericId).padStart(6, '0') : '');
-            }
-            if (!displayName) {
-                displayName = `TBR-${String(rank.userId).slice(-6)}`;
+                if (uInfo.userId && String(uInfo.userId).startsWith('TBR-')) {
+                    displayName = uInfo.userId;
+                } else if (uInfo.numericId) {
+                    displayName = 'TBR-' + String(uInfo.numericId).padStart(6, '0');
+                } else {
+                    displayName = `TBR-${String(index + 1).padStart(6, '0')}`;
+                }
             }
             
             return {
                 rank: index + 1,
                 userId: rank.userId,
-                name: displayName, 
+                name: displayName, // አሁን ትክክለኛው የ TBR ID ብቻ ነው የሚታየው
                 traderUsername: rawUsername,
                 tbrId: uInfo.userId || '',
                 kycStatus: uInfo.kycStatus || 'unverified',
