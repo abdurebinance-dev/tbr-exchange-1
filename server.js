@@ -2017,9 +2017,12 @@ app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
             KYC.countDocuments({ status: { $in: ['pending', 'under_review', 'submitted', 'Pending', ''] } }),
             User.countDocuments({ kycStatus: { $in: ['pending', 'under_review', 'submitted'] } }),
             Ad.find({ status: 'active', totalAmount: { $gt: 0.0001 } }).select('tradeType totalAmount').lean(),
-            // 🔥 ማስተካከያ 1: .select() የሚለውን አጥፍተነዋል፣ ዳታቤዝ ላይ ያለውን ማንኛውንም የቆየ የ Fee መረጃ እንዳይደብቅ
-            Trade.find({ status: { $in: ['completed', 'Completed', 'released', 'Released', 'resolved'] } }).lean(),
-            Trade.find({ status: { $in: ['funds_locked', 'payment_sent', 'disputed'] } }).lean()
+            Trade.find({ status: { $in: ['completed', 'Completed', 'released', 'Released', 'resolved'] } })
+                .select('usdtAmount amount netUsdt buyerFeeUsdt sellerFeeUsdt totalPlatformFeeUsdt feeUsdt createdAt updatedAt')
+                .lean(),
+            Trade.find({ status: { $in: ['funds_locked', 'payment_sent', 'disputed'] } })
+                .select('usdtAmount sellerTotalDeductedUsdt amount')
+                .lean()
         ]);
 
         const kycPending = kycPendingFromKyc;
@@ -2039,16 +2042,13 @@ app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
             totalTrades += 1;
             totalP2pUsdt += amt;
 
-            // 🔥 ማስተካከያ 2: ሁሉንም አይነት የ Fee ስሞች ከዳታቤዙ እንዲለቅም ተደርጓል
             let exactSavedFee = 0;
             if (tr.totalPlatformFeeUsdt !== undefined && Number(tr.totalPlatformFeeUsdt) > 0) {
                 exactSavedFee = Number(tr.totalPlatformFeeUsdt);
-            } else if ((tr.buyerFeeUsdt !== undefined && Number(tr.buyerFeeUsdt) > 0) || (tr.sellerFeeUsdt !== undefined && Number(tr.sellerFeeUsdt) > 0)) {
+            } else if (tr.buyerFeeUsdt !== undefined || tr.sellerFeeUsdt !== undefined) {
                 exactSavedFee = Number(tr.buyerFeeUsdt || 0) + Number(tr.sellerFeeUsdt || 0);
             } else if (tr.feeUsdt !== undefined && Number(tr.feeUsdt) > 0) {
                 exactSavedFee = Number(tr.feeUsdt);
-            } else if (tr.fee !== undefined && Number(tr.fee) > 0) {
-                exactSavedFee = Number(tr.fee); // አሮጌ ዳታዎች 'fee' በሚል ተመዝግበው ከሆነ ያመጣዋል
             }
 
             totalFeeUsdt += exactSavedFee;
