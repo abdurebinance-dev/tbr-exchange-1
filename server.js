@@ -4455,7 +4455,8 @@ async function calculateLeaderboardBackground() {
                     userId: uid,
                     volume: Number(stats.volume.toFixed(2)),
                     tradesCount: stats.completed,
-                    completionRate: totalFinished === 0 ? 100 : Math.min(100, Math.floor(80 + (rawCompRate * 0.4)))
+                    totalFinished: totalFinished,
+                    completionRate: rawCompRate
                 };
             })
             .filter(u => u.volume > 0 || u.tradesCount > 0)
@@ -4464,20 +4465,26 @@ async function calculateLeaderboardBackground() {
 
         const userIds = rankedList.map(u => u.userId);
         const usersInfo = await User.find({ _id: { $in: userIds } })
-            .select('fullName traderUsername userId kycStatus lastActive avatar')
+            .select('fullName traderUsername email userId numericId kycStatus lastActive avatar')
             .lean();
 
         const now = Date.now();
         leaderboardCache = rankedList.map((rank, index) => {
             const uInfo = usersInfo.find(u => String(u._id) === String(rank.userId)) || {};
+            
+            // 🔥 ዩዘርነም ከሌለው trader000000 ሳይሆን ትክክለኛውን የዩዘር ID (ለምሳሌ TBR-000004) እንዲያሳይ ማድረግ
             const rawUsername = (uInfo.traderUsername || '').trim().replace(/^@+/, '');
-            const tbrId = String(uInfo.userId || '').replace(/\D/g, '').padStart(6, '0') || '000001';
-            const displayName = rawUsername ? rawUsername : (uInfo.fullName || `trader${tbrId}`);
+            let displayName = rawUsername;
+
+            if (!displayName) {
+                // ዩዘርነም ከሌለ የሲስተሙን ትክክለኛ የ ID ቁጥር (userId) እንወስዳለን
+                displayName = uInfo.userId || `TBR-${String(uInfo.numericId || index + 1).padStart(6, '0')}`;
+            }
             
             return {
                 rank: index + 1,
                 userId: rank.userId,
-                name: displayName,
+                name: displayName, // 🔥 አሁን trader000000 ፈጽሞ አይመጣም፣ ትክክለኛው ID ወይም Username ይመጣል
                 traderUsername: rawUsername,
                 tbrId: uInfo.userId || '',
                 kycStatus: uInfo.kycStatus || 'unverified',
