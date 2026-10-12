@@ -4463,6 +4463,7 @@ async function calculateLeaderboardBackground() {
             .slice(0, 15);
 
         const userIds = rankedList.map(u => u.userId);
+        // 🔥 የዩዘሩን ትክክለኛ userId (TBR ID) ከዳታቤዝ እንጠራለን
         const usersInfo = await User.find({ _id: { $in: userIds } })
             .select('fullName traderUsername email userId numericId kycStatus lastActive avatar')
             .lean();
@@ -4474,18 +4475,18 @@ async function calculateLeaderboardBackground() {
             const rawUsername = (uInfo.traderUsername || '').trim().replace(/^@+/, '');
             let displayName = rawUsername;
 
-            // Bwe waba tewali username, kozesa ID y'omukozesa ey'amazima okuva mu database (nga TBR-000004)
+            // ዩዘርነም ከሌለ በግምት የተሰጠ ሳይሆን የዚያው ዩዘር ትክክለኛ የሰርቨር ID (userId) እንዲወጣ ይደረጋል
             if (!displayName) {
                 displayName = uInfo.userId || (uInfo.numericId ? 'TBR-' + String(uInfo.numericId).padStart(6, '0') : '');
             }
             if (!displayName) {
-                displayName = `TBR-${String(rank.userId).slice(-6)}`;
+                displayName = `trader${String(rank.userId).slice(-6)}`;
             }
             
             return {
                 rank: index + 1,
                 userId: rank.userId,
-                name: displayName, 
+                name: displayName, // 🔥 አሁን እያንዳንዱ ዩዘር የራሱን ትክክለኛ ID ወይም Username ብቻ ያሳያል
                 traderUsername: rawUsername,
                 tbrId: uInfo.userId || '',
                 kycStatus: uInfo.kycStatus || 'unverified',
