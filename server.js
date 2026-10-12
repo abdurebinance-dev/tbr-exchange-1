@@ -1367,9 +1367,6 @@ app.post('/api/withdraw/verify-otp', verifyToken, async (req, res) => {
     }
 });
 
-// ============================================================================
-// ⚡ ULTRA-FAST PROFILE, REAL P2P STATS & INSTANT BALANCE ⚡
-// ============================================================================
 async function getRealUserTradeStats(userId, userEmail) {
     try {
         const cacheKey = `${String(userId || '')}_${String(userEmail || '').toLowerCase()}`;
@@ -1390,7 +1387,7 @@ async function getRealUserTradeStats(userId, userEmail) {
         }
 
         if (orQuery.length === 0) {
-            return { totalTrades: 0, volumeUsdt: 0, volume: '0 USDT', completionRate: '100%', reputation: '100%' };
+            return { totalTrades: 0, volumeUsdt: 0, volume: '0 USDT', completionRate: '0%', reputation: '100%' };
         }
 
         const userTrades = await Trade.find({ $or: orQuery })
@@ -1421,16 +1418,15 @@ async function getRealUserTradeStats(userId, userEmail) {
             }
         });
 
+        // 🔥 ማስተካከያ 1: አጠቃላይ የተሳካውን እና ያልተሳካውን ይደምራል
         const totalFinished = completedCount + cancelledCount;
         const rawCompletionPct = totalFinished > 0
             ? Math.round((completedCount / totalFinished) * 100)
-            : 100;
+            : 0;
 
         const rawReputationPct = completedCount > 0
             ? Math.round(((completedCount - disputesLost) / completedCount) * 100)
             : 100;
-
-        const completionPct = completedCount === 0 ? 100 : Math.min(100, Math.floor(80 + (rawCompletionPct * 0.4)));
 
         const formattedVol = Number(totalVolumeUsdt.toFixed(2)).toLocaleString('en-US', {
             minimumFractionDigits: totalVolumeUsdt % 1 === 0 ? 0 : 2,
@@ -1438,17 +1434,17 @@ async function getRealUserTradeStats(userId, userEmail) {
         }) + ' USDT';
 
         const result = {
-            totalTrades: completedCount,
+            totalTrades: totalFinished, // 🔥 የተሳካውንም ያልተሳካውንም ይዟል
             volumeUsdt: Number(totalVolumeUsdt.toFixed(2)),
-            volume: formattedVol,
-            completionRate: `${completionPct}%`,
-            reputation: `${reputationPct}%`
+            volume: formattedVol, // 🔥 ቮሊዩም ተስተካክሏል
+            completionRate: `${rawCompletionPct}%`, // 🔥 ፐርሰንቱ ተስተካክሏል
+            reputation: `${rawReputationPct}%`
         };
 
         tradeStatsCache.set(cacheKey, { ts: Date.now(), data: result });
         return result;
     } catch (err) {
-        return { totalTrades: 0, volumeUsdt: 0, volume: '0 USDT', completionRate: '100%', reputation: '100%' };
+        return { totalTrades: 0, volumeUsdt: 0, volume: '0 USDT', completionRate: '0%', reputation: '100%' };
     }
 }
 
@@ -3151,10 +3147,11 @@ app.get('/api/ads', async (req, res) => {
             const fastAvatarUrl = getFastAvatarUrl(ownerIdStr);
 
             const uStat = statsByUser[ownerIdStr.toLowerCase()] || statsByUser[ownerEmailStr] || { completed: 0, cancelled: 0, volume: 0 };
+            
+            // 🔥 ማስተካከያ 2: አጠቃላይ ትሬድ እና ፐርሰንት ለማርኬት
             const totalFinished = uStat.completed + uStat.cancelled;
-            const rawCompRate = totalFinished > 0 ? Math.round((uStat.completed / totalFinished) * 100) : 100;
+            const rawCompRate = totalFinished > 0 ? Math.round((uStat.completed / totalFinished) * 100) : 0;
 
-            const compRateNum = (!uStat || uStat.completed === 0) ? 100 : Math.min(100, Math.floor(80 + (rawCompRate * 0.4)));
             return {
                 ...ad,
                 totalAmount: Number(availUsdt.toFixed(4)),
@@ -3167,12 +3164,12 @@ app.get('/api/ads', async (req, res) => {
                 avatar: fastAvatarUrl,
                 profilePic: fastAvatarUrl,
                 isOnline: isOnline,
-                tradesCount: uStat.completed,
-                totalTrades: uStat.completed,
+                tradesCount: totalFinished, // 🔥 አጠቃላይ ትሬድ
+                totalTrades: totalFinished,
                 completedTrades: uStat.completed,
-                orders: uStat.completed,
-                completionRate: `${compRateNum}%`,
-                rate: `${compRateNum}%`
+                orders: totalFinished,
+                completionRate: `${rawCompRate}%`, // 🔥 ትክክለኛ ፐርሰንት
+                rate: `${rawCompRate}%`
             };
         });
 
@@ -4570,28 +4567,33 @@ app.get('/api/user/profile/:username', async (req, res) => {
             ] 
         });
 
-        const completedTrades = allTrades.filter(t => t.status === 'completed');
+        // 🔥 ማስተካከያ 3: ለፕሮፋይል ፖፕ-አፕ (Modal)
+        const completedTrades = allTrades.filter(t => ['completed', 'resolved', 'released'].includes(t.status));
+        const cancelledTrades = allTrades.filter(t => ['cancelled', 'refunded'].includes(t.status));
+        const totalFinished = completedTrades.length + cancelledTrades.length;
         
         // የ 30 ቀን መረጃዎችን ማሰላት
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
         
-        const last30dTrades = allTrades.filter(t => t.createdAt && new Date(t.createdAt) >= thirtyDaysAgo);
-        const last30dCompleted = last30dTrades.filter(t => t.status === 'completed');
+        const last30dTrades = allTrades.filter(t => t.createdAt && new Date(t.createdAt) >= thirtyDaysAgo && ['completed', 'resolved', 'released', 'cancelled', 'refunded'].includes(t.status));
+        const last30dCompleted = last30dTrades.filter(t => ['completed', 'resolved', 'released'].includes(t.status));
 
-        let completionRate = '100.0%';
+        let completionRate = '0%';
         if (last30dTrades.length > 0) {
-            completionRate = ((last30dCompleted.length / last30dTrades.length) * 100).toFixed(1) + '%';
+            completionRate = Math.round((last30dCompleted.length / last30dTrades.length) * 100) + '%';
+        } else if (totalFinished > 0) {
+             completionRate = Math.round((completedTrades.length / totalFinished) * 100) + '%';
         }
 
         res.json({
             success: true,
             username: username,
-            totalTrades: allTrades.length > 0 ? allTrades.length : 1, // ዜሮ እንዳይሆን አነስተኛ ቁጥር ይሰጠዋል
+            totalTrades: totalFinished, // 🔥 ትክክለኛው አጠቃላይ ቁጥር
             completedTrades: completedTrades.length,
             thirtyDayTrades: last30dTrades.length,
-            thirtyDayCompleted: last30dCompleted.length > 0 ? last30dCompleted.length : (allTrades.length > 0 ? allTrades.length : 1),
-            completionRate: completionRate,
+            thirtyDayCompleted: last30dCompleted.length,
+            completionRate: completionRate, // 🔥 ትክክለኛው ፐርሰንት
             followers: Math.floor(Math.random() * 40) + 15, 
             avgReleaseTime: '12 min'
         });
