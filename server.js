@@ -2017,7 +2017,6 @@ app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
             KYC.countDocuments({ status: { $in: ['pending', 'under_review', 'submitted', 'Pending', ''] } }),
             User.countDocuments({ kycStatus: { $in: ['pending', 'under_review', 'submitted'] } }),
             Ad.find({ status: 'active', totalAmount: { $gt: 0.0001 } }).select('tradeType totalAmount').lean(),
-            // 🔥 የድሮ ትሬዶችን (በካፒታል ሌተር ያሉትንም) አጠቃልሎ እንዲያመጣ የተደረገው የራስህ ትክክለኛ ኮድ
             Trade.find({ status: { $in: ['completed', 'Completed', 'released', 'Released', 'resolved'] } })
                 .select('usdtAmount amount netUsdt buyerFeeUsdt sellerFeeUsdt totalPlatformFeeUsdt feeUsdt createdAt updatedAt')
                 .lean(),
