@@ -2008,6 +2008,7 @@ app.post('/api/admin/assign-role', verifyAdmin, async (req, res) => {
     }
 });
 
+// --- 🔥 Admin Main Stats API (RESTORED HISTORICAL FEES) 🔥 ---
 app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
     try {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -2017,8 +2018,9 @@ app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
             KYC.countDocuments({ status: { $in: ['pending', 'under_review', 'submitted', 'Pending', ''] } }),
             User.countDocuments({ kycStatus: { $in: ['pending', 'under_review', 'submitted'] } }),
             Ad.find({ status: 'active', totalAmount: { $gt: 0.0001 } }).select('tradeType totalAmount').lean(),
+            // 🔥 ማስተካከያ 1: የድሮ ትሬዶችን ፐርሰንት ለማስላት `feePercent` ከዳታቤዝ እንዲመጣ ተደርጓል
             Trade.find({ status: { $in: ['completed', 'Completed', 'released', 'Released', 'resolved'] } })
-                .select('usdtAmount amount netUsdt buyerFeeUsdt sellerFeeUsdt totalPlatformFeeUsdt feeUsdt createdAt updatedAt')
+                .select('usdtAmount amount netUsdt buyerFeeUsdt sellerFeeUsdt totalPlatformFeeUsdt feeUsdt feePercent createdAt updatedAt')
                 .lean(),
             Trade.find({ status: { $in: ['funds_locked', 'payment_sent', 'disputed'] } })
                 .select('usdtAmount sellerTotalDeductedUsdt amount')
@@ -2045,10 +2047,16 @@ app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
             let exactSavedFee = 0;
             if (tr.totalPlatformFeeUsdt !== undefined && Number(tr.totalPlatformFeeUsdt) > 0) {
                 exactSavedFee = Number(tr.totalPlatformFeeUsdt);
-            } else if (tr.buyerFeeUsdt !== undefined || tr.sellerFeeUsdt !== undefined) {
+            } else if ((tr.buyerFeeUsdt !== undefined && Number(tr.buyerFeeUsdt) > 0) || (tr.sellerFeeUsdt !== undefined && Number(tr.sellerFeeUsdt) > 0)) {
                 exactSavedFee = Number(tr.buyerFeeUsdt || 0) + Number(tr.sellerFeeUsdt || 0);
             } else if (tr.feeUsdt !== undefined && Number(tr.feeUsdt) > 0) {
                 exactSavedFee = Number(tr.feeUsdt);
+            } else {
+                // 🔥 ማስተካከያ 2: ከዚህ በፊት የተሰሩ አሮጌ ትሬዶች ፊው (Fee) ዳታቤዝ ላይ ከሌለ ራሱ ያሰላዋል (የጠፋው 0.2641 ይመለሳል)
+                const feePct = tr.feePercent !== undefined ? Number(tr.feePercent) : 0.5;
+                const buyerF = Number((amt * (feePct / 100)).toFixed(6));
+                const sellerF = Number((amt * (feePct / 100)).toFixed(6));
+                exactSavedFee = Number((buyerF + sellerF).toFixed(6));
             }
 
             totalFeeUsdt += exactSavedFee;
