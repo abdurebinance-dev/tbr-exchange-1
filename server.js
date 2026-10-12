@@ -4412,95 +4412,95 @@ app.post('/api/admin/escrow-action', verifyAdminToken, async (req, res) => {
 // ============================================================================
 let leaderboardCache = [];
 
-app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
+async function calculateLeaderboardBackground() {
     try {
-        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+        const allTrades = await Trade.find({ status: { $in: ['completed', 'resolved', 'released', 'cancelled', 'refunded'] } })
+            .select('buyerId sellerId status usdtAmount disputeWinner')
+            .lean();
 
-        const [totalUsers, kycPendingFromKyc, kycPendingFromUsers, activeAds, completedTrades, activeEscrowTrades] = await Promise.all([
-            User.countDocuments({}),
-            KYC.countDocuments({ status: { $in: ['pending', 'under_review', 'submitted', 'Pending', ''] } }),
-            User.countDocuments({ kycStatus: { $in: ['pending', 'under_review', 'submitted'] } }),
-            Ad.find({ status: 'active', totalAmount: { $gt: 0.0001 } }).select('tradeType totalAmount').lean(),
-            // 🔥 ማስተካከያ 1: .select() የሚለውን አጥፍተነዋል፣ ዳታቤዝ ላይ ያለውን ማንኛውንም የቆየ የ Fee መረጃ እንዳይደብቅ
-            Trade.find({ status: { $in: ['completed', 'Completed', 'released', 'Released', 'resolved'] } }).lean(),
-            Trade.find({ status: { $in: ['funds_locked', 'payment_sent', 'disputed'] } }).lean()
-        ]);
+        const userStats = {};
+        allTrades.forEach(tr => {
+            const isComp = ['completed', 'resolved', 'released'].includes(String(tr.status).toLowerCase());
+            const amt = Number(tr.usdtAmount || 0);
 
-        const kycPending = kycPendingFromKyc;
+            const addStat = (uid, isBuyer) => {
+                if (!uid) return;
+                const idStr = String(uid);
+                if (!userStats[idStr]) userStats[idStr] = { completed: 0, cancelled: 0, volume: 0, disputesLost: 0 };
+                
+                if (isComp) {
+                    userStats[idStr].completed += 1;
+                    userStats[idStr].volume += amt;
+                } else if (tr.status === 'cancelled' || tr.status === 'refunded') {
+                    userStats[idStr].cancelled += 1;
+                }
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+                if (tr.disputeWinner) {
+                    if ((isBuyer && tr.disputeWinner === 'seller') || (!isBuyer && tr.disputeWinner === 'buyer')) {
+                        userStats[idStr].disputesLost += 1;
+                    }
+                }
+            };
 
-        let totalTrades = 0;
-        let totalP2pUsdt = 0;
-        let todayP2pUsdt = 0;
-        let activeEscrowUsdt = 0;
-        let totalFeeUsdt = 0;
-        let todayFeeUsdt = 0;
+            addStat(tr.buyerId, true);
+            addStat(tr.sellerId, false);
+        });
 
-        completedTrades.forEach(tr => {
-            const amt = Number(tr.usdtAmount || tr.amount || tr.netUsdt || 0);
-            totalTrades += 1;
-            totalP2pUsdt += amt;
+        const rankedList = Object.entries(userStats)
+            .map(([uid, stats]) => {
+                const totalFinished = stats.completed + stats.cancelled;
+                const rawCompRate = totalFinished > 0 ? Math.round((stats.completed / totalFinished) * 100) : 100;
+                return {
+                    userId: uid,
+                    volume: Number(stats.volume.toFixed(2)),
+                    tradesCount: stats.completed,
+                    totalFinished: totalFinished,
+                    completionRate: rawCompRate
+                };
+            })
+            .filter(u => u.volume > 0 || u.tradesCount > 0)
+            .sort((a, b) => b.volume - a.volume)
+            .slice(0, 15);
 
-            // 🔥 ማስተካከያ 2: ሁሉንም አይነት የ Fee ስሞች ከዳታቤዙ እንዲለቅም ተደርጓል
-            let exactSavedFee = 0;
-            if (tr.totalPlatformFeeUsdt !== undefined && Number(tr.totalPlatformFeeUsdt) > 0) {
-                exactSavedFee = Number(tr.totalPlatformFeeUsdt);
-            } else if ((tr.buyerFeeUsdt !== undefined && Number(tr.buyerFeeUsdt) > 0) || (tr.sellerFeeUsdt !== undefined && Number(tr.sellerFeeUsdt) > 0)) {
-                exactSavedFee = Number(tr.buyerFeeUsdt || 0) + Number(tr.sellerFeeUsdt || 0);
-            } else if (tr.feeUsdt !== undefined && Number(tr.feeUsdt) > 0) {
-                exactSavedFee = Number(tr.feeUsdt);
-            } else if (tr.fee !== undefined && Number(tr.fee) > 0) {
-                exactSavedFee = Number(tr.fee); // አሮጌ ዳታዎች 'fee' በሚል ተመዝግበው ከሆነ ያመጣዋል
+        const userIds = rankedList.map(u => u.userId);
+        const usersInfo = await User.find({ _id: { $in: userIds } })
+            .select('fullName traderUsername email userId numericId kycStatus lastActive avatar')
+            .lean();
+
+        const now = Date.now();
+        leaderboardCache = rankedList.map((rank, index) => {
+            const uInfo = usersInfo.find(u => String(u._id) === String(rank.userId)) || {};
+            
+            const rawUsername = (uInfo.traderUsername || '').trim().replace(/^@+/, '');
+            let displayName = rawUsername;
+
+            // Bwe waba tewali username, kozesa ID y'omukozesa ey'amazima okuva mu database (nga TBR-000004)
+            if (!displayName) {
+                displayName = uInfo.userId || (uInfo.numericId ? 'TBR-' + String(uInfo.numericId).padStart(6, '0') : '');
             }
-
-            totalFeeUsdt += exactSavedFee;
-
-            const tradeDate = tr.updatedAt ? new Date(tr.updatedAt) : new Date(tr.createdAt);
-            if (tradeDate >= today) {
-                todayP2pUsdt += amt;
-                todayFeeUsdt += exactSavedFee;
+            if (!displayName) {
+                displayName = `TBR-${String(rank.userId).slice(-6)}`;
             }
+            
+            return {
+                rank: index + 1,
+                userId: rank.userId,
+                name: displayName, 
+                traderUsername: rawUsername,
+                tbrId: uInfo.userId || '',
+                kycStatus: uInfo.kycStatus || 'unverified',
+                avatar: getFastAvatarUrl(rank.userId),
+                isOnline: uInfo.lastActive ? (now - new Date(uInfo.lastActive).getTime() <= 10 * 60 * 1000) : false,
+                volume: rank.volume,
+                tradesCount: rank.tradesCount,
+                completionRate: `${rank.completionRate}%`
+            };
         });
-
-        activeEscrowTrades.forEach(tr => {
-            const lockedAmt = Number(tr.usdtAmount || tr.sellerTotalDeductedUsdt || tr.amount || 0);
-            activeEscrowUsdt += lockedAmt;
-        });
-
-        const livePosts = activeAds.length;
-        let onMarketLockedUsdt = 0;
-        activeAds.forEach(ad => {
-            if (ad.tradeType === 'sell') {
-                onMarketLockedUsdt += Number(ad.totalAmount || 0);
-            }
-        });
-
-        const statsPayload = {
-            totalUsers,
-            kycPending,
-            onMarket: `${Number(onMarketLockedUsdt.toFixed(2)).toLocaleString('en-US')} USDT`,
-            livePosts,
-            totalTrades,
-            activeEscrow: `${Number(activeEscrowUsdt.toFixed(2)).toLocaleString('en-US')} USDT`,
-            totalVolume: `${Number(totalP2pUsdt.toFixed(2)).toLocaleString('en-US')} USDT`,
-            todayVolume: `${Number(todayP2pUsdt.toFixed(2)).toLocaleString('en-US')} USDT`,
-            totalFeeEarned: `${Number(totalFeeUsdt.toFixed(4)).toLocaleString('en-US', { maximumFractionDigits: 4 })} USDT`,
-            todayFeeEarned: `${Number(todayFeeUsdt.toFixed(4)).toLocaleString('en-US', { maximumFractionDigits: 4 })} USDT`
-        };
-
-        res.json({
-            success: true,
-            data: statsPayload,
-            stats: statsPayload,
-            ...statsPayload
-        });
+        console.log("✅ Leaderboard background calculation completed.");
     } catch (error) {
-        console.error("Stats Error:", error);
-        res.status(500).json({ success: false, message: 'Error fetching stats' });
+        console.error("Leaderboard Background Calc Error:", error);
     }
-});
+}
 
 // ሰርቨሩ ሲነሳ ወዲያውኑ 1 ጊዜ ያሰላል፣ ከዛ በኋላ በየ 5 ደቂቃው ራሱ ያሰላል
 setTimeout(calculateLeaderboardBackground, 5000);
