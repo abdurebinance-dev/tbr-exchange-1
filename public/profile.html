@@ -439,11 +439,11 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", () => {
-    const token = localStorage.getItem("token") || localStorage.getItem("authToken");
-    if (!token) {
-        window.location.replace("signin.html");
-    }
-});
+            const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+            if (!token) {
+                window.location.replace("signin.html");
+            }
+        });
 
         const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
             ? 'http://localhost:5000'
@@ -647,23 +647,26 @@
                             localStorage.setItem('firstName', user.firstName);
                         }
 
-                        // ✅ ከሰርቨር የመጡትን 4ቱን የስታቲስቲክስ ቁጥሮች ወዲያውኑ ማዘመን
-                        if (user.totalTrades !== undefined) {
-                            localStorage.setItem('totalTrades', String(user.totalTrades));
-                            document.getElementById('statTotalTrades').innerText = user.totalTrades;
-                        }
-                        if (user.volume !== undefined) {
-                            localStorage.setItem('volume', String(user.volume));
-                            document.getElementById('statVolume').innerText = user.volume;
-                        }
-                        if (user.completionRate !== undefined) {
-                            localStorage.setItem('completionRate', String(user.completionRate));
-                            document.getElementById('statCompletionRate').innerText = user.completionRate;
-                        }
-                        if (user.reputation !== undefined) {
-                            localStorage.setItem('reputation', String(user.reputation));
-                            document.getElementById('statReputation').innerText = user.reputation;
-                        }
+                        // ✅ ከሰርቨር የመጡትን 4ቱን የስታቲስቲክስ ቁጥሮች በትክክል ማዘመን
+                        const tTrades = user.totalTrades ?? user.tradesCount ?? user.ordersCount ?? 0;
+                        const cRate = user.completionRate ?? user.lifetimeRate ?? '0';
+                        const vol = user.volume ?? user.totalVolume ?? user.tradeVolume ?? '0';
+                        const rep = user.reputation ?? '0';
+
+                        const formattedCRate = String(cRate).includes('%') ? cRate : `${cRate}%`;
+                        const formattedVol = String(vol).includes('USDT') ? vol : `${vol} USDT`;
+                        const formattedRep = String(rep).includes('%') ? rep : `${rep}%`;
+
+                        localStorage.setItem('totalTrades', String(tTrades));
+                        localStorage.setItem('completionRate', formattedCRate);
+                        localStorage.setItem('volume', formattedVol);
+                        localStorage.setItem('reputation', formattedRep);
+
+                        document.getElementById('statTotalTrades').innerText = tTrades;
+                        document.getElementById('statVolume').innerText = formattedVol;
+                        document.getElementById('statCompletionRate').innerText = formattedCRate;
+                        document.getElementById('statReputation').innerText = formattedRep;
+
                         if (user.createdAt) {
                             const year = String(new Date(user.createdAt).getFullYear());
                             localStorage.setItem('memberSince', year);

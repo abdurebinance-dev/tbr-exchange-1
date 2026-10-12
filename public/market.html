@@ -256,7 +256,9 @@
             align-items: center;
             gap: 5px;
             margin-bottom: 4px;
+            cursor: pointer;
         }
+        .adv-name:hover { color: var(--accent-gold); }
         .adv-name i {
             color: var(--accent-gold);
             font-size: 11px;
@@ -1000,9 +1002,7 @@
                 gap: 4px;
                 cursor: pointer;
             }
-            .m-name:hover {
-                color: var(--accent-gold);
-            }
+            .m-name:hover { color: var(--accent-gold); }
             .m-stats {
                 font-size: 11px;
                 color: #848e9c;
@@ -1083,6 +1083,12 @@
                 padding: 12px 8px;
                 font-size: 12px;
             }
+        }
+        
+        /* Isolated Custom Alert CSS */
+        @keyframes alertPopIn {
+            0% { transform: scale(0.9); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
         }
     </style>
 </head>
@@ -1308,6 +1314,21 @@
             <div class="tm-footer">
                 <button type="button" id="tmConfirmOrderBtn" class="tm-submit-btn buy-btn" disabled onclick="confirmTrade()">Confirm Buy</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Custom Independent Alert for Missing Payment Method -->
+    <div id="customAlertModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+        <div style="background: #11141a; border: 1px solid #222731; border-radius: 16px; width: 90%; max-width: 340px; padding: 24px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.9); animation: alertPopIn 0.25s ease-out;">
+            <div style="font-size: 36px; color: var(--accent-gold); margin-bottom: 12px;">
+                <i class="fa-solid fa-wallet"></i>
+            </div>
+            <h3 style="color: #fff; font-size: 16px; margin-bottom: 8px; font-weight: 700;">Payment Method Required</h3>
+            <p style="color: #848e9c; font-size: 13px; line-height: 1.5; margin-bottom: 22px;">
+                You need to add a payment method before you can start trading.
+            </p>
+            <button onclick="window.location.href='settings.html?tab=payments'" style="width: 100%; background: var(--accent-gold); border: none; color: #000; padding: 13px; border-radius: 10px; font-weight: 700; font-size: 13px; cursor: pointer; margin-bottom: 10px; transition: 0.2s;">Add Payment Method</button>
+            <button onclick="document.getElementById('customAlertModal').style.display='none'" style="width: 100%; background: transparent; border: 1px solid #222731; color: #848e9c; padding: 10px; border-radius: 10px; font-weight: 600; font-size: 13px; cursor: pointer; transition: 0.2s;">Cancel</button>
         </div>
     </div>
 
@@ -1832,22 +1853,15 @@
 
                 const createdTime = getAdCreatedTimestamp(ad);
 
-                // ⚡ ትክክለኛውን ፐርሰንት ከሰርቨር ማምጣት፣ ከሌለ 100% ማድረግ ⚡
-                let rawComp = ad.completionRate;
-                let finalComp = '100%';
-                if (rawComp !== undefined && rawComp !== null && rawComp !== '') {
-                    finalComp = String(rawComp);
-                    if (!finalComp.includes('%')) finalComp += '%';
-                }
-
+                // ⚡ ትክክለኛው የትሬድ ብዛትና ፐርሰንት እንዲያነብ ተደርጓል ⚡
                 return {
                     adId: ad._id || '',
                     name: traderInfo.displayName,
                     avatarUrl: traderInfo.avatarUrl,
                     isOnline: traderInfo.isOnline,
                     verified: true,
-                    orders: ad.ordersCount || ad.tradesCount || ad.totalTrades || 0,
-                    comp: finalComp,
+                    orders: ad.totalTrades ?? ad.tradesCount ?? ad.ordersCount ?? 0,
+                    comp: ad.completionRate || '100%',
                     numericPrice,
                     numericAvail,
                     numericMin,
@@ -1894,10 +1908,9 @@
                 const statusClass = t.isOnline ? 'online' : 'offline';
                 const statusTitle = t.isOnline ? 'Online' : 'Offline';
 
-                // ⚡ ስሙን ሲጫኑ ፕሮፋይል ሞዳሉ እንዲከፈት
+                // ⚡ ስሙን ሲጫኑ ሞዳሉ በትክክል እንዲከፈት ተስተካክሏል ⚡
                 const safeName = String(t.name).replace(/'/g, "\\'");
 
-                // ⚡ t.comp በመጠቀም ትክክለኛው ፐርሰንት እንዲታይ ተደርጓል ⚡
                 html += `
                 <tr class="pc-table-row">
                     <td>
@@ -1979,6 +1992,17 @@
         }
 
         function openOrderModalByIndex(index) {
+            // ⚡ የክፍያ መንገድ ከሌለው ቀጥታ ይህ ማስጠንቀቂያ ይወጣል ⚡
+            if (!currentUserSavedPayments || currentUserSavedPayments.length === 0) {
+                const alertModal = document.getElementById('customAlertModal');
+                if (alertModal) {
+                    alertModal.style.display = 'flex';
+                } else {
+                    window.location.href = 'settings.html?tab=payments';
+                }
+                return;
+            }
+
             const isBuy = currentType === 'buy';
             const ad = currentRenderedAds[index];
             if (!ad) return;
@@ -2017,10 +2041,8 @@
                 : firstLetter;
             document.getElementById('tmTraderStatusDot').className = `status-dot ${ad.isOnline ? 'online' : 'offline'}`;
             document.getElementById('tmTraderName').innerText = ad.name;
-            
-            // ⚡ ትክክለኛውን ፐርሰንትና የትሬድ ብዛት መሙላት ⚡
-            document.getElementById('tmTraderComp').innerText = ad.comp;
-            document.getElementById('tmTraderOrders').innerText = ad.orders;
+            document.getElementById('tmTraderComp').innerText = ad.comp || '100%';
+            document.getElementById('tmTraderOrders').innerText = ad.orders || 1;
 
             document.getElementById('tmMethodSectionLabel').innerText = isBuy
                 ? 'Payment method — select one'
@@ -2362,7 +2384,7 @@
             }
         }
 
-        // ⚡ በየ 4 ሴኮንዱ ከዳታቤዝ አዲስ ፐርሰንት በማምጣት HTML ላይ ያሳያል ⚡
+        // ⚡ ትክክለኛውን የትሬድ ብዛትና ፐርሰንት ከሰርቨር በማምጣት ማርኬቱ ላይ በየጊዜው (Sync) ያደርጋል ⚡
         (function syncRealMarketTraderStats() {
             const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
                 ? 'http://localhost:5000'
@@ -2397,16 +2419,12 @@
 
                     if (traderName && traderStatsMap[traderName]) {
                         const st = traderStatsMap[traderName];
-                        
-                        let syncComp = st.completionRate || '100%';
-                        if (!String(syncComp).includes('%')) syncComp += '%';
-
                         textElements.forEach(el => {
                             if (el.children.length === 0) {
                                 const txt = (el.innerText || '').trim();
-                                // የ 100% ጽሁፍን በትክክለኛው ዳታ ይተካዋል
+                                // የ 0 trades 100% ጽሁፍን በትክክለኛው ዳታ ይተካዋል
                                 if (/^\d+\s*(trades|orders)\s*[·•|-]\s*\d+(\.\d+)?%$/i.test(txt)) {
-                                    const targetText = `${st.totalTrades} trades • ${syncComp}`;
+                                    const targetText = `${st.totalTrades} trades · ${st.completionRate}`;
                                     if (el.innerText !== targetText) {
                                         el.innerText = targetText;
                                     }
