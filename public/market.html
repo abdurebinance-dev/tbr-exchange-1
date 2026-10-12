@@ -258,9 +258,7 @@
             margin-bottom: 4px;
             cursor: pointer;
         }
-        .adv-name:hover {
-            color: var(--accent-gold);
-        }
+        .adv-name:hover { color: var(--accent-gold); }
         .adv-name i {
             color: var(--accent-gold);
             font-size: 11px;
@@ -1004,9 +1002,7 @@
                 gap: 4px;
                 cursor: pointer;
             }
-            .m-name:hover {
-                color: var(--accent-gold);
-            }
+            .m-name:hover { color: var(--accent-gold); }
             .m-stats {
                 font-size: 11px;
                 color: #848e9c;
@@ -1088,9 +1084,9 @@
                 font-size: 12px;
             }
         }
-
-        /* Isolated Animation for Alert Modal */
-        @keyframes popIn {
+        
+        /* Isolated Custom Alert CSS */
+        @keyframes alertPopIn {
             0% { transform: scale(0.9); opacity: 0; }
             100% { transform: scale(1); opacity: 1; }
         }
@@ -1217,21 +1213,6 @@
         </div>
     </div>
 
-    <!-- Custom Isolated Payment Warning Modal -->
-    <div id="customAlertModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
-        <div style="background: #11141a; border: 1px solid #222731; border-radius: 16px; width: 90%; max-width: 340px; padding: 24px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.9); animation: popIn 0.25s ease-out;">
-            <div style="font-size: 36px; color: var(--accent-gold); margin-bottom: 12px;">
-                <i class="fa-solid fa-wallet"></i>
-            </div>
-            <h3 style="color: #fff; font-size: 16px; margin-bottom: 8px; font-weight: 700;">Payment Method Required</h3>
-            <p style="color: #848e9c; font-size: 13px; line-height: 1.5; margin-bottom: 22px;">
-                You need to add a payment method before you can start trading.
-            </p>
-            <button onclick="window.location.href='settings.html?tab=payments'" style="width: 100%; background: var(--accent-gold); border: none; color: #000; padding: 13px; border-radius: 10px; font-weight: 700; font-size: 13px; cursor: pointer; margin-bottom: 10px; transition: 0.2s;">Add Payment Method</button>
-            <button onclick="document.getElementById('customAlertModal').style.display='none'" style="width: 100%; background: transparent; border: 1px solid #222731; color: #848e9c; padding: 10px; border-radius: 10px; font-weight: 600; font-size: 13px; cursor: pointer; transition: 0.2s;">Cancel</button>
-        </div>
-    </div>
-
     <!-- P2P Buy / Sell Order Action Modal -->
     <div class="modal-overlay" id="orderModal" onclick="if(event.target === this) closeOrderModal()">
         <div class="trade-modal-card">
@@ -1336,7 +1317,22 @@
         </div>
     </div>
 
-    <!-- User Profile Stats Modal (Exact match with reference design) -->
+    <!-- Custom Independent Alert for Missing Payment Method -->
+    <div id="customAlertModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+        <div style="background: #11141a; border: 1px solid #222731; border-radius: 16px; width: 90%; max-width: 340px; padding: 24px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.9); animation: alertPopIn 0.25s ease-out;">
+            <div style="font-size: 36px; color: var(--accent-gold); margin-bottom: 12px;">
+                <i class="fa-solid fa-wallet"></i>
+            </div>
+            <h3 style="color: #fff; font-size: 16px; margin-bottom: 8px; font-weight: 700;">Payment Method Required</h3>
+            <p style="color: #848e9c; font-size: 13px; line-height: 1.5; margin-bottom: 22px;">
+                You need to add a payment method before you can start trading.
+            </p>
+            <button onclick="window.location.href='settings.html?tab=payments'" style="width: 100%; background: var(--accent-gold); border: none; color: #000; padding: 13px; border-radius: 10px; font-weight: 700; font-size: 13px; cursor: pointer; margin-bottom: 10px; transition: 0.2s;">Add Payment Method</button>
+            <button onclick="document.getElementById('customAlertModal').style.display='none'" style="width: 100%; background: transparent; border: 1px solid #222731; color: #848e9c; padding: 10px; border-radius: 10px; font-weight: 600; font-size: 13px; cursor: pointer; transition: 0.2s;">Cancel</button>
+        </div>
+    </div>
+
+    <!-- User Profile Stats Modal -->
     <div class="sheet-overlay" id="userProfileModal" onclick="if(event.target === this) this.style.display='none'" style="display: none; z-index: 3000; align-items: flex-end; justify-content: center;">
         <div class="sheet-box" style="background: #0b0d10; border-top: 1px solid #1e2229; border-radius: 20px 20px 0 0; width: 100%; max-width: 440px; padding: 20px; color: white;">
             <div class="sheet-handle"></div>
@@ -1367,11 +1363,8 @@
                 <span style="font-weight: bold; color: var(--green);" id="modalProfile30dTrades">-</span>
             </div>
             <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #1e2229; font-size: 13px;">
-                <div>
-                    <span style="color: #848e9c; display: block;">30d Completion Rate</span>
-                    <small style="color: #6c7583; font-size: 10px;" id="modalProfileLifetime">Lifetime: 100%</small>
-                </div>
-                <span style="font-weight: bold; color: var(--accent-gold); font-size: 15px;" id="modalProfileCompRate">-</span>
+                <span style="color: #848e9c;">30d Completion Rate</span>
+                <span style="font-weight: bold; color: var(--accent-gold);" id="modalProfileCompRate">-</span>
             </div>
             <div style="display: flex; justify-content: space-between; padding: 8px 0; font-size: 13px;">
                 <span style="color: #848e9c;">Avg. Release Time</span>
@@ -1382,6 +1375,7 @@
 
     <script>
         const API_BASE = '';
+        // ⚡ ቀላል (2KB) የማርኬት ካሽ ቁልፍ (QuotaExceededError ፈጽሞ እንዳይፈጠርና በ 0.00s እንዲከፍት!) ⚡
         const LIGHT_ADS_CACHE_KEY = 'tbr_market_light_ads_v5';
         const AVATAR_THUMB_CACHE_KEY = 'tbr_market_avatars_v5';
         let currentType = 'buy';
@@ -1414,6 +1408,7 @@
             return localStorage.getItem('token') || localStorage.getItem('jwtToken') || localStorage.getItem('authToken') || '';
         }
 
+        // ⚡ ትላልቅ የፕሮፋይል ፎቶዎችን ወደ 2KB ትንሽ Thumbnail ቀይሮ በካሽ የሚያስቀምጥ (ገጹ በ 0.00s እንዲከፍት) ⚡
         function cacheSmallAvatarThumb(traderKey, rawDataUrl) {
             if (!traderKey || !rawDataUrl) return;
             if (avatarThumbMemory[traderKey]) return;
@@ -1443,6 +1438,7 @@
             img.src = rawDataUrl;
         }
 
+        // ⚡ ማስታወቂያዎቹን ያለ ክብደት (2KB ብቻ) በ localStorage እና sessionStorage ውስጥ ማስቀመጥ ⚡
         function saveLightweightAdsCache(adsArray) {
             try {
                 const lightAds = adsArray.map(ad => {
@@ -1542,6 +1538,7 @@
                 document.getElementById('buyTabBtn').className = 'toggle-btn';
             }
 
+            // ⚡ 1. ገጹ ሲከፈት፣ Refresh ሲደረግ ወይም ከዳሽቦርድ ስትመለስ በ 0.00 ሰከንድ ወዲያውኑ ከ2KB ካሽ ማሳየት! ⚡
             try {
                 const savedAvatars = sessionStorage.getItem(AVATAR_THUMB_CACHE_KEY) || localStorage.getItem(AVATAR_THUMB_CACHE_KEY);
                 if (savedAvatars) avatarThumbMemory = JSON.parse(savedAvatars) || {};
@@ -1560,10 +1557,12 @@
                 }
             } catch (e) {}
 
+            // 2. ከበስተጀርባ (Background) ያለ ምንም Loading ስክሪን ትኩስ መረጃ ማምጣት
             fetchLiveAdsFromServer();
             fetchAdminSettings();
             fetchCurrentUserWalletAndPayments();
 
+            // 3. Auto-sync
             sendHeartbeat();
             setInterval(sendHeartbeat, 30000);
             setInterval(fetchLiveAdsFromServer, 2500);
@@ -1854,14 +1853,15 @@
 
                 const createdTime = getAdCreatedTimestamp(ad);
 
+                // ⚡ ትክክለኛው የትሬድ ብዛትና ፐርሰንት እንዲያነብ ተደርጓል ⚡
                 return {
                     adId: ad._id || '',
                     name: traderInfo.displayName,
                     avatarUrl: traderInfo.avatarUrl,
                     isOnline: traderInfo.isOnline,
                     verified: true,
-                    orders: ad.ordersCount || 0,
-                    comp: ad.completionRate || '100.0%',
+                    orders: ad.totalTrades ?? ad.tradesCount ?? ad.ordersCount ?? 0,
+                    comp: ad.completionRate || '100%',
                     numericPrice,
                     numericAvail,
                     numericMin,
@@ -1908,7 +1908,7 @@
                 const statusClass = t.isOnline ? 'online' : 'offline';
                 const statusTitle = t.isOnline ? 'Online' : 'Offline';
 
-                // ⚡ ትክክለኛው የትሬድ ብዛትና ፐርሰንት (hardcoded የነበረው ጠፍቷል)
+                // ⚡ ስሙን ሲጫኑ ሞዳሉ በትክክል እንዲከፈት ተስተካክሏል ⚡
                 const safeName = String(t.name).replace(/'/g, "\\'");
 
                 html += `
@@ -1920,7 +1920,7 @@
                                 <span class="status-dot ${statusClass}"></span>
                             </div>
                             <div>
-                                <div class="adv-name" onclick="openUserProfileStats('${safeName}')">${t.name} ${t.verified ? '<i class="fa-solid fa-circle-check"></i>' : ''}</div>
+                                <div class="adv-name" onclick="openUserProfileStats('${safeName}')" style="cursor: pointer;">${t.name} ${t.verified ? '<i class="fa-solid fa-circle-check"></i>' : ''}</div>
                                 <div class="adv-stats">${t.orders} trades &bull; ${t.comp}</div>
                             </div>
                         </div>
@@ -1954,7 +1954,7 @@
                                         <span class="status-dot ${statusClass}"></span>
                                     </div>
                                     <div>
-                                        <div class="m-name" onclick="openUserProfileStats('${safeName}')">${t.name} ${t.verified ? '<i class="fa-solid fa-circle-check" style="font-size:11px; color:var(--accent-gold);"></i>' : ''}</div>
+                                        <div class="m-name" onclick="openUserProfileStats('${safeName}')" style="cursor: pointer;">${t.name} ${t.verified ? '<i class="fa-solid fa-circle-check" style="font-size:11px; color:var(--accent-gold);"></i>' : ''}</div>
                                         <div class="m-stats">${t.orders} trades &bull; ${t.comp}</div>
                                     </div>
                                 </div>
@@ -1992,7 +1992,7 @@
         }
 
         function openOrderModalByIndex(index) {
-            // ⚡ ምንም የሎጊን ጥያቄ አይጠይቅም (Login Check Removed)
+            // ⚡ የክፍያ መንገድ ከሌለው ቀጥታ ይህ ማስጠንቀቂያ ይወጣል ⚡
             if (!currentUserSavedPayments || currentUserSavedPayments.length === 0) {
                 const alertModal = document.getElementById('customAlertModal');
                 if (alertModal) {
@@ -2042,7 +2042,7 @@
             document.getElementById('tmTraderStatusDot').className = `status-dot ${ad.isOnline ? 'online' : 'offline'}`;
             document.getElementById('tmTraderName').innerText = ad.name;
             document.getElementById('tmTraderComp').innerText = ad.comp || '100%';
-            document.getElementById('tmTraderOrders').innerText = ad.orders || 0;
+            document.getElementById('tmTraderOrders').innerText = ad.orders || 1;
 
             document.getElementById('tmMethodSectionLabel').innerText = isBuy
                 ? 'Payment method — select one'
@@ -2354,7 +2354,7 @@
             }
         }
 
-        // ⚡ የፕሮፋይል ፖፕ-አፕ ትክክለኛውን ዩዘርነም እንዲቀበል ተስተካክሏል ⚡
+        // ⚡ ፕሮፋይል ሲነካ ትክክለኛውን ዳታ ከሰርቨር ያመጣል ⚡
         async function openUserProfileStats(username) {
             const cleanName = String(username || '').trim().replace(/^@+/, '');
             const modal = document.getElementById('userProfileModal');
@@ -2366,53 +2366,108 @@
             document.getElementById('modalProfileCompRate').innerText = '...';
             document.getElementById('modalProfileFollowers').innerText = '...';
             document.getElementById('modalProfileReleaseTime').innerText = '...';
-            document.getElementById('modalProfileLifetime').innerText = 'Lifetime: ...';
 
             try {
                 const res = await fetch(`${API_BASE}/api/user/profile/${encodeURIComponent(cleanName)}`);
                 if (res.ok) {
                     const data = await res.json();
                     if (data.success) {
-                        document.getElementById('modalProfileTotalTrades').innerText = data.totalTrades || '0';
-                        document.getElementById('modalProfile30dTrades').innerText = data.thirtyDayCompleted || '0';
-                        document.getElementById('modalProfileCompRate').innerText = data.completionRate || '100.0%';
-                        document.getElementById('modalProfileFollowers').innerText = data.followers || '0';
-                        document.getElementById('modalProfileReleaseTime').innerText = data.avgReleaseTime || '-';
-                        document.getElementById('modalProfileLifetime').innerText = `Lifetime: ${data.lifetimeRate || data.completionRate || '100.0%'}`;
-                        return;
+                        document.getElementById('modalProfileTotalTrades').innerText = data.totalTrades;
+                        document.getElementById('modalProfile30dTrades').innerText = data.thirtyDayCompleted;
+                        document.getElementById('modalProfileCompRate').innerText = data.completionRate;
+                        document.getElementById('modalProfileFollowers').innerText = data.followers;
+                        document.getElementById('modalProfileReleaseTime').innerText = data.avgReleaseTime;
                     }
                 }
             } catch (e) {
                 console.error("Error fetching profile stats", e);
             }
-            // Error ቢፈጠር እንኳን ዜሮ ሆኖ እንዲታይ
-            document.getElementById('modalProfileTotalTrades').innerText = '0';
-            document.getElementById('modalProfile30dTrades').innerText = '0';
-            document.getElementById('modalProfileCompRate').innerText = '0%';
-            document.getElementById('modalProfileFollowers').innerText = '0';
-            document.getElementById('modalProfileReleaseTime').innerText = '-';
-            document.getElementById('modalProfileLifetime').innerText = 'Lifetime: 0%';
         }
 
-        async function loadRealAdsStats() {
-            try {
-                const res = await fetch(`${API_BASE}/api/ads?t=${Date.now()}`, { cache: 'no-store' });
-                if (!res.ok) return;
-                const json = await res.json();
-                const ads = (json && json.ads) || [];
-                // The actual stat injection logic for rows was moved up into renderOrderBook
-            } catch (e) {}
-        }
+        // ⚡ ትክክለኛውን የትሬድ ብዛትና ፐርሰንት ከሰርቨር በማምጣት ማርኬቱ ላይ በየጊዜው (Sync) ያደርጋል ⚡
+        (function syncRealMarketTraderStats() {
+            const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+                ? 'http://localhost:5000'
+                : 'https://tbr-exchange-backend.onrender.com';
 
-        document.addEventListener('DOMContentLoaded', () => {
+            let traderStatsMap = {};
+
+            function applyRealStatsToMarketDOM() {
+                if (Object.keys(traderStatsMap).length === 0) return;
+
+                document.querySelectorAll('tr, .ad-card, .market-card, .offer-row, .mobile-card-row').forEach(row => {
+                    const textElements = row.querySelectorAll('div, span, small, p, strong, b');
+                    let traderName = '';
+
+                    textElements.forEach(el => {
+                        if (el.classList && (el.classList.contains('adv-name') || el.classList.contains('m-name'))) {
+                            const t = (el.innerText || '').trim().toLowerCase();
+                            if (traderStatsMap[t]) {
+                                traderName = t;
+                            }
+                        }
+                    });
+
+                    if (!traderName) {
+                        textElements.forEach(el => {
+                            const t = (el.innerText || '').trim().toLowerCase();
+                            if (traderStatsMap[t]) {
+                                traderName = t;
+                            }
+                        });
+                    }
+
+                    if (traderName && traderStatsMap[traderName]) {
+                        const st = traderStatsMap[traderName];
+                        textElements.forEach(el => {
+                            if (el.children.length === 0) {
+                                const txt = (el.innerText || '').trim();
+                                // የ 0 trades 100% ጽሁፍን በትክክለኛው ዳታ ይተካዋል
+                                if (/^\d+\s*(trades|orders)\s*[·•|-]\s*\d+(\.\d+)?%$/i.test(txt)) {
+                                    const targetText = `${st.totalTrades} trades · ${st.completionRate}`;
+                                    if (el.innerText !== targetText) {
+                                        el.innerText = targetText;
+                                    }
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+
+            async function loadRealAdsStats() {
+                try {
+                    const res = await fetch(`${API_BASE}/api/ads?t=${Date.now()}`, { cache: 'no-store' });
+                    if (!res.ok) return;
+                    const json = await res.json();
+                    const ads = (json && json.ads) || [];
+                    ads.forEach(ad => {
+                        const key = String(ad.name || ad.traderUsername || '').toLowerCase().trim();
+                        if (key) {
+                            traderStatsMap[key] = {
+                                totalTrades: ad.totalTrades ?? ad.tradesCount ?? ad.ordersCount ?? 0,
+                                completionRate: ad.completionRate || '100%'
+                            };
+                        }
+                    });
+                    applyRealStatsToMarketDOM();
+                } catch (e) {}
+            }
+
+            const observer = new MutationObserver(() => applyRealStatsToMarketDOM());
+            document.addEventListener('DOMContentLoaded', () => {
+                loadRealAdsStats();
+                setInterval(loadRealAdsStats, 4000);
+                observer.observe(document.body, { childList: true, subtree: true });
+            });
             loadRealAdsStats();
-            setInterval(loadRealAdsStats, 4000);
-        });
+        })();
 
         // ⚡ PROFESSIONAL SELL MODAL PAYMENT METHOD & LIMIT FIX ⚡
         (function fixMarketSellModalAccounts() {
             let mySavedPayments = [];
 
+            // የገባውን ዩዘር የባንክ አካውንቶች ከሰርቨር ማምጣት
             async function loadMyPaymentMethods() {
                 try {
                     const token = localStorage.getItem('token') || localStorage.getItem('authToken');
@@ -2429,6 +2484,7 @@
 
             loadMyPaymentMethods();
 
+            // ፎርሙ (Modal) ሲከፈት ወዲያውኑ ማስተካከል
             const observer = new MutationObserver(() => {
                 const sellModal = document.querySelector('.modal, #sellModal, [id*="sell"], .trade-modal');
                 if (!sellModal || sellModal.style.display === 'none') return;
@@ -2437,6 +2493,7 @@
                 const isSellModal = modalTitle && modalTitle.innerText.toLowerCase().includes('sell');
                 if (!isSellModal) return;
 
+                // 1. Min / Max limit የተገለበጠውን ማስተካከል (ለምሳሌ 500 - 131.56 ወደ 131.56 - 500)
                 const limitTexts = sellModal.querySelectorAll('span, p, div, small');
                 limitTexts.forEach(el => {
                     const txt = el.innerText || '';
@@ -2450,6 +2507,7 @@
                     }
                 });
 
+                // 2. Sell ፎርም ላይ የሌላ ሰውን አካውንት አጥፍቶ የራስህን (የሻጩን) ማስገባት
                 if (mySavedPayments.length > 0) {
                     const activeMethodBtn = sellModal.querySelector('.method-btn.active, .payment-btn.active, button.active');
                     const selectedMethodType = activeMethodBtn ? activeMethodBtn.innerText.trim().toLowerCase() : '';
@@ -2461,6 +2519,7 @@
                     if (matchedAcc) {
                         const myName = localStorage.getItem('fullName') || localStorage.getItem('userName') || matchedAcc.name;
                         
+                        // Screenshot ላይ ያለውን 'Buyer will send to' ቦክስ በራስህ አካውንት መተካት
                         const detailLines = sellModal.querySelectorAll('p, div, span');
                         detailLines.forEach(line => {
                             if (line.innerText.includes('rahmet ali') || line.innerText.includes('1000397691652')) {
