@@ -4412,7 +4412,6 @@ app.post('/api/admin/escrow-action', verifyAdminToken, async (req, res) => {
 // ============================================================================
 let leaderboardCache = [];
 
-// Xisaabinta (Calculation) ከጀርባ ይሰራል፣ ዩዘሩን አያስጠብቅም
 async function calculateLeaderboardBackground() {
     try {
         const allTrades = await Trade.find({ status: { $in: ['completed', 'resolved', 'released', 'cancelled', 'refunded'] } })
@@ -4464,6 +4463,7 @@ async function calculateLeaderboardBackground() {
             .slice(0, 15);
 
         const userIds = rankedList.map(u => u.userId);
+        // 🔥 የዩዘሩን ትክክለኛ userId (TBR ID) ከዳታቤዝ እንጠራለን
         const usersInfo = await User.find({ _id: { $in: userIds } })
             .select('fullName traderUsername email userId numericId kycStatus lastActive avatar')
             .lean();
@@ -4472,19 +4472,21 @@ async function calculateLeaderboardBackground() {
         leaderboardCache = rankedList.map((rank, index) => {
             const uInfo = usersInfo.find(u => String(u._id) === String(rank.userId)) || {};
             
-            // 🔥 ዩዘርነም ከሌለው trader000000 ሳይሆን ትክክለኛውን የዩዘር ID (ለምሳሌ TBR-000004) እንዲያሳይ ማድረግ
             const rawUsername = (uInfo.traderUsername || '').trim().replace(/^@+/, '');
             let displayName = rawUsername;
 
+            // ዩዘርነም ከሌለ በግምት የተሰጠ ሳይሆን የዚያው ዩዘር ትክክለኛ የሰርቨር ID (userId) እንዲወጣ ይደረጋል
             if (!displayName) {
-                // ዩዘርነም ከሌለ የሲስተሙን ትክክለኛ የ ID ቁጥር (userId) እንወስዳለን
-                displayName = uInfo.userId || `TBR-${String(uInfo.numericId || index + 1).padStart(6, '0')}`;
+                displayName = uInfo.userId || (uInfo.numericId ? 'TBR-' + String(uInfo.numericId).padStart(6, '0') : '');
+            }
+            if (!displayName) {
+                displayName = `trader${String(rank.userId).slice(-6)}`;
             }
             
             return {
                 rank: index + 1,
                 userId: rank.userId,
-                name: displayName, // 🔥 አሁን trader000000 ፈጽሞ አይመጣም፣ ትክክለኛው ID ወይም Username ይመጣል
+                name: displayName, // 🔥 አሁን እያንዳንዱ ዩዘር የራሱን ትክክለኛ ID ወይም Username ብቻ ያሳያል
                 traderUsername: rawUsername,
                 tbrId: uInfo.userId || '',
                 kycStatus: uInfo.kycStatus || 'unverified',
