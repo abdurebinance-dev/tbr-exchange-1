@@ -388,7 +388,7 @@
         <div class="stats-row">
             <div class="stat-card">
                 <div class="title">Reputation</div>
-                <div class="value" id="statReputation">100%</div>
+                <div class="value" id="statReputation">0%</div>
             </div>
             <div class="stat-card">
                 <div class="title">Total Trades</div>
@@ -396,7 +396,7 @@
             </div>
             <div class="stat-card">
                 <div class="title">Completion Rate</div>
-                <div class="value" id="statCompletionRate">100%</div>
+                <div class="value" id="statCompletionRate">0%</div>
             </div>
             <div class="stat-card">
                 <div class="title">Volume</div>
@@ -449,7 +449,6 @@
             ? 'http://localhost:5000'
             : 'https://tbr-exchange-backend.onrender.com';
 
-        // ⚡ በ Settings ላይ የተቀየረ ፎቶ በ Profile ላይ ወዲያውኑ እንዲመጣ የሚያደርግ ፈጣን አገናኝ ⚡
         function resolveProfileAvatarUrl(raw) {
             if (!raw || raw === 'null' || raw === 'undefined') return '';
             let str = String(raw).trim();
@@ -521,7 +520,6 @@
 
             const isVerified = (kycStatus === 'approved' || kycStatus === 'verified');
 
-            // ✅ Verified ከሆነ ሙሉ ስም (Full Name)፣ ካልሆነ የኢሜይል ስም
             const displayName = (isVerified && verifiedFullName) ? verifiedFullName : emailPrefix;
 
             const userId = getStoredId();
@@ -529,11 +527,17 @@
                 localStorage.getItem('userAvatar') || localStorage.getItem('profilePicture') || localStorage.getItem('profilePic')
             );
             
-            // ✅ ትክክለኛ የስታቲስቲክስ መረጃዎች
-            const totalTrades = localStorage.getItem('totalTrades') || '0';
-            const volume = localStorage.getItem('volume') || '0 USDT';
-            const completionRate = localStorage.getItem('completionRate') || '100%';
-            const reputation = localStorage.getItem('reputation') || '100%';
+            // ✅ Read mapped stats from local storage safely and remove hardcoded defaults
+            let totalTrades = localStorage.getItem('totalTrades');
+            let volume = localStorage.getItem('volume');
+            let completionRate = localStorage.getItem('completionRate');
+            let reputation = localStorage.getItem('reputation');
+
+            if (!totalTrades || totalTrades === 'undefined') totalTrades = '0';
+            if (!volume || volume === 'undefined') volume = '0 USDT';
+            if (!completionRate || completionRate === 'undefined') completionRate = '0%';
+            if (!reputation || reputation === 'undefined') reputation = '0%';
+
             const is2FA = localStorage.getItem('is2FA') === 'true' || localStorage.getItem('twoFactorEnabled') === 'true';
             const memberSince = localStorage.getItem('memberSince') || '2026';
 
@@ -614,6 +618,37 @@
             }
         }
 
+        // ⚡ FALLBACK LOGIC: If backend profile route fails to send stats, fetch from market ads ⚡
+        async function fetchFallbackStats() {
+            try {
+                const res = await fetch(`${API_BASE}/api/ads?t=${Date.now()}`);
+                if (res.ok) {
+                    const json = await res.json();
+                    const ads = json.ads || [];
+                    const email = localStorage.getItem('userEmail') || '';
+                    const myId = getStoredId() || '';
+                    
+                    const myAd = ads.find(ad => 
+                        (email && ad.email === email) || 
+                        (myId && ad.tbrId === myId) || 
+                        (myId && ad.userId === myId)
+                    );
+
+                    if (myAd) {
+                        const tTrades = myAd.totalTrades ?? myAd.tradesCount ?? myAd.ordersCount ?? 0;
+                        let cRate = myAd.completionRate || '0%';
+                        if (!String(cRate).includes('%')) cRate += '%';
+
+                        document.getElementById('statTotalTrades').innerText = tTrades;
+                        document.getElementById('statCompletionRate').innerText = cRate;
+                        
+                        localStorage.setItem('totalTrades', String(tTrades));
+                        localStorage.setItem('completionRate', cRate);
+                    }
+                }
+            } catch (e) {}
+        }
+
         async function syncWithServer() {
             try {
                 const token = localStorage.getItem('token') || localStorage.getItem('authToken');
@@ -647,11 +682,23 @@
                             localStorage.setItem('firstName', user.firstName);
                         }
 
-                        // ✅ ከሰርቨር የመጡትን 4ቱን የስታቲስቲክስ ቁጥሮች በትክክል ማዘመን
-                        const tTrades = user.totalTrades ?? user.tradesCount ?? user.ordersCount ?? 0;
-                        const cRate = user.completionRate ?? user.lifetimeRate ?? '0';
-                        const vol = user.volume ?? user.totalVolume ?? user.tradeVolume ?? '0';
-                        const rep = user.reputation ?? '0';
+                        // ✅ DYNAMIC STATS MAPPING: Parses both flat and nested stats object
+                        let tTrades = 0;
+                        let cRate = "0%";
+                        let vol = "0 USDT";
+                        let rep = "0%";
+
+                        if (user.stats) {
+                            tTrades = user.stats.totalTrades ?? user.stats.tradesCount ?? 0;
+                            cRate = user.stats.completionRate ?? "0%";
+                            vol = user.stats.volume ?? "0 USDT";
+                            rep = user.stats.reputation ?? "0%";
+                        } else {
+                            tTrades = user.totalTrades ?? user.tradesCount ?? user.ordersCount ?? 0;
+                            cRate = user.completionRate ?? user.lifetimeRate ?? "0%";
+                            vol = user.volume ?? user.totalVolume ?? user.tradeVolume ?? "0 USDT";
+                            rep = user.reputation ?? "0%";
+                        }
 
                         const formattedCRate = String(cRate).includes('%') ? cRate : `${cRate}%`;
                         const formattedVol = String(vol).includes('USDT') ? vol : `${vol} USDT`;
@@ -662,15 +709,9 @@
                         localStorage.setItem('volume', formattedVol);
                         localStorage.setItem('reputation', formattedRep);
 
-                        document.getElementById('statTotalTrades').innerText = tTrades;
-                        document.getElementById('statVolume').innerText = formattedVol;
-                        document.getElementById('statCompletionRate').innerText = formattedCRate;
-                        document.getElementById('statReputation').innerText = formattedRep;
-
                         if (user.createdAt) {
                             const year = String(new Date(user.createdAt).getFullYear());
                             localStorage.setItem('memberSince', year);
-                            document.getElementById('memberSince').innerText = year;
                         }
 
                         let newId = "";
@@ -685,38 +726,39 @@
                         if (newId !== "") {
                             localStorage.setItem('tbrId', newId);
                             localStorage.setItem('tbrExchangeId', newId);
-                            document.getElementById('userUniqueId').innerText = newId;
                         }
                         
-                        // ✅ በ Settings ላይ የተቀየረ ፎቶ ካለ ወዲያውኑ አድሶ ማስቀመጥ
                         if (user.avatar && user.avatar !== 'null' && user.avatar.trim() !== '') {
                             const fullAvUrl = resolveProfileAvatarUrl(user.avatar);
                             localStorage.setItem('userAvatar', fullAvUrl);
                             localStorage.setItem('profilePicture', fullAvUrl);
-                            const avatarBox = document.getElementById('avatarInitial');
-                            avatarBox.style.backgroundImage = `url('${fullAvUrl}')`;
-                            avatarBox.innerText = "";
                         }
 
                         updateProfileUI(); 
+                        
+                        // Fallback API call if stats still show 0 
+                        if (tTrades == 0) {
+                            fetchFallbackStats();
+                        }
                     }
                 }
             } catch (e) {}
         }
 
-        // ⚡ ተጠቃሚው ከ Settings ፎቶ ቀይሮ ወደዚህ ገጽ ሲመለስ (Back ሲል) ወዲያውኑ የሚያድስ ⚡
         window.addEventListener('pageshow', () => {
             updateProfileUI();
             syncWithServer();
         });
 
         document.addEventListener('DOMContentLoaded', () => {
+            // Force clear old localStorage stats to prevent stuck 100%
+            localStorage.removeItem('completionRate');
+            localStorage.removeItem('reputation');
+            
             updateProfileUI();
             syncWithServer();
         });
 
-        updateProfileUI(); 
-        syncWithServer();  
     </script>
 </body>
 </html>
