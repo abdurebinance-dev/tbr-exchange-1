@@ -2516,6 +2516,24 @@ app.get('/api/admin/withdrawals', verifyAdminToken, async (req, res) => {
 });
 
 // ==========================================
+// 🚀 ADMIN: GET ALL DEPOSITS 🚀
+// ==========================================
+app.get('/api/admin/deposits', verifyAdminToken, async (req, res) => {
+    try {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+        // አይነት (type) 'deposit' የሆኑትን ትራንዛክሽኖች ከዳታቤዝ አምጥቶ ለአድሚን ይሰጣል
+        const deposits = await Transaction.find({ type: 'deposit' })
+            .sort({ createdAt: -1 })
+            .limit(100)
+            .lean();
+        res.json({ success: true, data: deposits });
+    } catch (error) {
+        console.error("Admin Deposits Fetch Error:", error);
+        res.status(500).json({ success: false, message: 'Server error fetching deposits' });
+    }
+});
+
+// ==========================================
 // 🚀 ADMIN: APPROVE WITHDRAWAL (Sends Crypto) 🚀
 // ==========================================
 app.post('/api/admin/withdrawals/approve', verifyAdminToken, async (req, res) => {

@@ -219,6 +219,7 @@
             <button class="nav-tab" onclick="switchTab('escrow', event)"><i class="fa-solid fa-scale-balanced"></i> 4. P2P Escrow & Disputes</button>
             <button class="nav-tab" onclick="switchTab('users', event)"><i class="fa-solid fa-users"></i> 5. User Control & Ban</button>
             <button class="nav-tab" onclick="switchTab('withdrawals', event)"><i class="fa-solid fa-money-bill-transfer"></i> 6. Withdrawals</button>
+            <button class="nav-btn" onclick="switchTab('deposits')"><i class="fa-solid fa-arrow-down"></i> 7. Deposits</button>
         </div>
 
         <!-- TAB 1: OVERVIEW -->
@@ -471,6 +472,27 @@
             </thead>
             <tbody id="withdrawalsTableBody">
                 <tr><td colspan="6" style="text-align:center; color:var(--text-muted);">Loading withdrawals...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- TAB 7: DEPOSITS -->
+<div id="tab-deposits" class="tab-content" style="display: none;">
+    <div class="section-title"><i class="fa-solid fa-arrow-down" style="color: var(--green-color);"></i> User Deposits History</div>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>User Email</th>
+                    <th>Amount (USDT)</th>
+                    <th>Wallet Address (BEP20)</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="depositsTableBody">
+                <tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Loading deposits...</td></tr>
             </tbody>
         </table>
     </div>
@@ -1601,6 +1623,42 @@ async function rejectWithdrawal(txId, amount) {
             alert('❌ Error: ' + json.message);
         }
     } catch(e) { alert('Network error'); }
+}
+
+async function loadDeposits() {
+    try {
+        const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
+        const res = await fetch('/api/admin/deposits', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        
+        const tbody = document.getElementById('depositsTableBody');
+        tbody.innerHTML = '';
+        
+        if (data.success && data.data && data.data.length > 0) {
+            data.data.forEach(dep => {
+                const dateObj = new Date(dep.createdAt);
+                const dateStr = dateObj.toLocaleDateString() + ', ' + dateObj.toLocaleTimeString();
+                const addressStr = dep.destinationAddress ? dep.destinationAddress : 'N/A';
+                
+                const row = `
+                <tr>
+                    <td style="color: var(--text-muted); font-size: 13px;">${dateStr}</td>
+                    <td style="font-weight: 600; color: #fff;">${dep.email}</td>
+                    <td style="color: #0ecb81; font-weight: bold;">+${parseFloat(dep.amount).toFixed(2)} USDT</td>
+                    <td style="color: var(--text-muted); font-size: 13px;">${addressStr}</td>
+                    <td><span style="color: #0ecb81; background: rgba(14, 203, 129, 0.1); padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;">COMPLETED</span></td>
+                </tr>`;
+                tbody.insertAdjacentHTML('beforeend', row);
+            });
+        } else {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No deposits found.</td></tr>';
+        }
+    } catch (error) {
+        console.error("Error loading deposits:", error);
+        document.getElementById('depositsTableBody').innerHTML = '<tr><td colspan="5" style="text-align:center; color:#f6465d;">Error loading deposits.</td></tr>';
+    }
 }
 
     </script>
