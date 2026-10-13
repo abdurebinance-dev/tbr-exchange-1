@@ -4745,6 +4745,84 @@ app.get('/api/user/profile/:username', async (req, res) => {
     }
 });
 
+// ============================================================================
+// ⏱️ AUTO-CANCEL EXPIRED TRADES BACKGROUND WORKER (RUNS EVERY 30 SECONDS) ⏱️
+// ============================================================================
+setInterval(async () => {
+    try {
+        const now = Date.now();
+
+        // 1. ሰዓታቸው ያለቀባቸው ግን እስካሁን ማስጠንቀቂያ ያልተሰጣቸው ትሬዶች (+2 ደቂቃ ማራዘሚያ)
+        const expiredUnwarned = await Trade.find({
+            status: 'funds_locked',
+            warningExtended: false,
+            expiresAt: { $lt: new Date(now) }
+        });
+
+        for (let trade of expiredUnwarned) {
+            trade.warningExtended = true;
+            trade.expiresAt = new Date(now + 2 * 60 * 1000); // 2 ደቂቃ ተጨማሪ ተሰጠ
+            trade.messages.push({
+                senderId: 'system',
+                senderName: 'System',
+                text: '⚠️ Warning: Payment window expired! 2 extra minutes granted. Please complete payment or order will cancel.',
+                isSystem: true,
+                createdAt: new Date()
+            });
+            await trade.save();
+        }
+
+        // 2. የተሰጣቸው የ 2 ደቂቃ ማስጠንቀቂያ ሰዓት ያለቀባቸውን ትሬዶች አውቶማቲካሊ Cancel ማድረግ
+        const expiredWarned = await Trade.find({
+            status: 'funds_locked',
+            warningExtended: true,
+            expiresAt: { $lt: new Date(now) }
+        });
+
+        for (let trade of expiredWarned) {
+            trade.status = 'cancelled';
+            trade.messages.push({
+                senderId: 'system',
+                senderName: 'System',
+                text: 'Trade automatically cancelled by the system due to timeout. Escrow refunded safely.',
+                isSystem: true,
+                createdAt: new Date()
+            });
+            await trade.save();
+
+            // ብሩን ወደ ሻጩ ወይም ወደ ማርኬቱ መመለስ (Refund)
+            await refundEscrowOnCancel(trade);
+
+            // ለሻጭ እና ገዢ ኖቲፊኬሽን መላክ
+            notifyUser({
+                userId: trade.sellerId,
+                email: trade.sellerEmail,
+                title: `Trade #${trade.tradeNumber} Cancelled`,
+                message: `Trade #${trade.tradeNumber} was automatically cancelled due to timeout. Escrowed USDT has been returned.`,
+                type: 'trade',
+                link: `trades.html?tradeId=${trade._id}`
+            });
+            notifyUser({
+                userId: trade.buyerId,
+                email: trade.buyerEmail,
+                title: `Trade #${trade.tradeNumber} Cancelled`,
+                message: `Trade #${trade.tradeNumber} was automatically cancelled because the payment window expired.`,
+                type: 'trade',
+                link: `trades.html?tradeId=${trade._id}`
+            });
+        }
+
+        // ማርኬቱ ላይ ለውጥ ስለተፈጠረ Cache-ውን አፅዳ
+        if (expiredWarned.length > 0) {
+            adsCacheData = null;
+            if (typeof tradeStatsCache !== 'undefined') tradeStatsCache.clear();
+        }
+
+    } catch (error) {
+        console.error("Background Auto-Cancel Error:", error.message);
+    }
+}, 30 * 1000); // በየ 30 ሰከንዱ ይሰራል
+
 app.listen(PORT, () => {
     console.log(`TBR Exchange Server is running on port ${PORT} 🚀`);
 });
