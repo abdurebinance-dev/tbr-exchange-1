@@ -1253,14 +1253,20 @@ app.get('/api/check-deposits/:walletAddress', async (req, res) => {
     }
 });
 
-// ✅ MANUAL WITHDRAWAL REQUEST (PASSKEY & EMAIL) - NO AUTO TRANSFER ✅
+// ✅ MANUAL WITHDRAWAL REQUEST (PASSKEY & EMAIL) - PROTECTED WITH ADDRESS VALIDATION ✅
 app.post('/api/withdraw/request', verifyToken, async (req, res) => {
     try {
         const { amount, destinationAddress, useEmailFallback, passkeyVerified } = req.body;
         const withdrawAmount = parseFloat(amount);
 
         if (!withdrawAmount || withdrawAmount < 2) return res.status(400).json({ success: false, message: 'Minimum withdrawal amount is 2 USDT.' });
-        if (!destinationAddress) return res.status(400).json({ success: false, message: 'Destination address is required.' });
+        
+        // 🛑 አዲሱ የ BEP20 አድራሻ ማጣሪያ (Security Update) 🛑
+        if (!destinationAddress || !/^0x[a-fA-F0-9]{40}$/.test(destinationAddress.trim())) {
+            return res.status(400).json({ success: false, message: 'Invalid destination address. Must be a valid BEP20 (BSC) wallet address starting with 0x.' });
+        }
+
+        const safeDestination = destinationAddress.trim();
 
         const user = await User.findById(req.user.id).select('-kycData -avatar');
         if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
@@ -1278,7 +1284,6 @@ app.post('/api/withdraw/request', verifyToken, async (req, res) => {
         if (hasPasskey && passkeyVerified && !useEmailFallback) {
             const amountToSend = withdrawAmount - 1; // 1 USDT fee
 
-            // ብሩን ከደንበኛው ላይ እንቀንሳለን (ወደ ኔትወርክ ስለማንልክ Lock ማድረግ አያስፈልግም)
             const updatedUser = await User.findOneAndUpdate(
                 { 
                     _id: user._id, 
@@ -1297,15 +1302,14 @@ app.post('/api/withdraw/request', verifyToken, async (req, res) => {
                 return res.status(400).json({ success: false, message: 'Insufficient balance or request is processing. Please wait.' });
             }
 
-            // 트ራንዛክሽኑን 'pending' አድርገን እንመዘግባለን
             await Transaction.create({ 
                 userId: user._id, 
                 email: user.email, 
                 type: 'withdrawal', 
                 amount: amountToSend, 
                 fee: 1, 
-                status: 'pending', // ⚠️ Admin Approve እስኪያደርግ ይጠብቃል
-                destinationAddress: destinationAddress 
+                status: 'pending', 
+                destinationAddress: safeDestination 
             });
             
             notifyUser({ userId: user._id, email: user.email, title: 'Withdrawal Pending', message: `Your withdrawal of ${amountToSend.toFixed(2)} USDT is pending admin approval.`, type: 'withdrawal', link: 'wallet.html' });
@@ -1324,6 +1328,7 @@ app.post('/api/withdraw/request', verifyToken, async (req, res) => {
                 <p style="color: #b0b0b0;">Your confirmation code for withdrawing ${withdrawAmount} USDT is:</p>
                 <h1 style="color: #f3c653; font-size: 38px; letter-spacing: 5px; margin: 20px 0;">${otp}</h1>
                 <p style="color: #b0b0b0;">Fee: 1.00 USDT | You will receive: ${(withdrawAmount - 1).toFixed(2)} USDT</p>
+                <p style="color: #b0b0b0; font-size: 11px; margin-top: 10px; word-break: break-all;">Destination: ${safeDestination}</p>
                 <p style="color: #f6465d; font-size: 12px; margin-top: 15px;">If you did not request this, secure your account immediately.</p>
             </div>
         </div>`;
