@@ -3963,9 +3963,10 @@ app.post('/api/trades/:id/mark-paid', async (req, res) => {
     }
 });
 
-// 6. ⚡ Release USDT ⚡
+// 6. ⚡ Secure Release USDT (Protected against unauthorized hacker triggers) ⚡
 app.post('/api/trades/:id/release', async (req, res) => {
     try {
+        const currentUser = await resolveUserFromRequest(req);
         const existingTrade = await Trade.findById(req.params.id).select('-receiptImage');
         if (!existingTrade) return res.status(404).json({ success: false, message: 'Trade not found.' });
 
@@ -3974,6 +3975,26 @@ app.post('/api/trades/:id/release', async (req, res) => {
         }
         if (existingTrade.status === 'cancelled' || existingTrade.status === 'refunded') {
             return res.status(400).json({ success: false, message: 'Trade was already cancelled.' });
+        }
+
+        // 🛑 ጥብቅ የደህንነት ማጣሪያ (Security Check): ሪኬስቱን የላከው ሻጭ (Seller) ወይም አድሚን መሆኑን ማረጋገጥ 🛑
+        const callerId = currentUser ? String(currentUser._id) : String(req.body.userId || '');
+        const callerEmail = String((currentUser && currentUser.email) || req.body.email || '').toLowerCase().trim();
+        const isSuperAdmin = currentUser && (currentUser.email === 'binanceme73@gmail.com' || currentUser.isAdmin || currentUser.role === 'super_admin');
+
+        let isAuthorizedSeller = false;
+        if (callerId && existingTrade.sellerId && String(existingTrade.sellerId) === callerId) {
+            isAuthorizedSeller = true;
+        } else if (callerEmail && existingTrade.sellerEmail && String(existingTrade.sellerEmail).toLowerCase() === callerEmail) {
+            isAuthorizedSeller = true;
+        }
+
+        // 🚨 ሻጭም ሆነ አድሚን ካልሆነ (ሀከሩ ከሆነ) ፈጽሞ እንዲለቀቅ (Release) አይፈቀድም! 🚨
+        if (!isSuperAdmin && !isAuthorizedSeller) {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Unauthorized release attempt blocked! Only the genuine seller or admin can release escrow funds.' 
+            });
         }
 
         const baseUsdt = Number(existingTrade.usdtAmount || 0);
@@ -3995,13 +4016,7 @@ app.post('/api/trades/:id/release', async (req, res) => {
         const lockedTrade = await Trade.findOneAndUpdate(
             { _id: req.params.id, status: { $nin: ['completed', 'resolved', 'cancelled', 'refunded'] } },
             {
-                $set: {
-                    status: 'completed',
-                    buyerFeeUsdt: buyerFee,
-                    sellerFeeUsdt: sellerFee,
-                    totalPlatformFeeUsdt: totalPlatformFee
-                },
-                $push: {
+                $set: { status: 'completed', buyerFeeUsdt: buyerFee, sellerFeeUsdt: sellerFee, totalPlatformFeeUsdt: totalPlatformFee },$push: {
                     messages: {
                         senderId: 'system',
                         senderName: 'System',
