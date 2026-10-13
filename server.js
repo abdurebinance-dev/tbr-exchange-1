@@ -2434,7 +2434,8 @@ app.post('/api/admin/user-action', verifyAdmin, async (req, res) => {
 // 🚀 ADMIN: GET USER DETAILS & STATS 🚀
 app.get('/api/admin/user-details/:id', verifyAdminToken, async (req, res) => {
     try {
-        const user = await User.findById(req.params.id).select('email fullName traderUsername userId kycStatus isBanned').lean();
+        // 🔥 balance የሚለው ተጨምሯል 🔥
+        const user = await User.findById(req.params.id).select('email fullName traderUsername userId kycStatus isBanned balance').lean();
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
         
         const cleanEmail = String(user.email).toLowerCase().trim();
@@ -2466,6 +2467,23 @@ app.get('/api/admin/user-details/:id', verifyAdminToken, async (req, res) => {
     } catch (error) {
         console.error("User Details Error:", error);
         res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// 🚀 ADMIN: UPDATE USER BALANCE 🚀
+app.post('/api/admin/update-user-balance', verifyAdminToken, async (req, res) => {
+    try {
+        const { userId, newBalance } = req.body;
+        if (!userId || newBalance === undefined) return res.status(400).json({ success: false, message: 'Invalid data' });
+        
+        const numericBalance = Number(newBalance);
+        if (isNaN(numericBalance) || numericBalance < 0) return res.status(400).json({ success: false, message: 'Invalid balance amount' });
+
+        await User.findByIdAndUpdate(userId, { $set: { balance: numericBalance } });
+        
+        res.json({ success: true, message: 'User balance updated successfully!', newBalance: numericBalance });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error updating balance.' });
     }
 });
 

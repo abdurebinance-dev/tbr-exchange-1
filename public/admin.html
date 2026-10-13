@@ -429,6 +429,16 @@
         </div>
     </div>
 
+    <div style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px;">
+    <span style="color: #b0b0b0;">Account Balance:</span>
+    <span style="color: #0ecb81; font-weight: bold; display: flex; align-items: center; gap: 8px;">
+        <span id="modalUserBalance">${data.user.balance || 0} USDT</span>
+        <button onclick="editAdminUserBalance('${data.user._id}', ${data.user.balance || 0})" style="background: transparent; border: none; color: #f0b90b; cursor: pointer; padding: 0; font-size: 16px;" title="Edit Balance">
+            ✏️
+        </button>
+    </span>
+</div>
+
 <!-- Live Posts Admin Modal -->
 <div id="adminLivePostsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 99999; justify-content: center; align-items: center; font-family: sans-serif;">
     <div style="background: #151a21; border: 1px solid #232d3f; border-radius: 12px; width: 90%; max-width: 900px; padding: 24px; max-height: 80vh; overflow-y: auto; color: white; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
@@ -1438,6 +1448,48 @@ async function adminDeleteAd(adId) {
         }
     } catch (error) {
         alert('Failed to delete the post. Check your connection.');
+    }
+}
+
+// ⚡ Admin Balance Edit Function ⚡
+async function editAdminUserBalance(userId, currentBalance) {
+    // አድሚኑን አዲስ ብር ይጠይቃል (ማጥፋት ከፈለግክ 0 ብለህ መጻፍ ነው)
+    const newBalInput = prompt(`Enter new balance in USDT for this user.\n\nCurrent Balance: ${currentBalance} USDT`, currentBalance);
+    
+    // Cancel ከተባለ ወይንም ባዶ ከሆነ ያቋርጣል
+    if (newBalInput === null || newBalInput.trim() === "") return;
+    
+    const numericBal = Number(newBalInput);
+    if (isNaN(numericBal) || numericBal < 0) {
+        alert("❌ Error: Please enter a valid positive number.");
+        return;
+    }
+
+    if (!confirm(`Are you sure you want to CHANGE this user's balance to ${numericBal} USDT?`)) return;
+
+    try {
+        const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
+        const response = await fetch('/api/admin/update-user-balance', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ userId: userId, newBalance: numericBal })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert('✅ Success! User balance has been updated.');
+            // ሞዳሉ ላይ ያለውን የብር መጠን በቅጽበት ያዘምናል
+            const balanceElement = document.getElementById('modalUserBalance');
+            if(balanceElement) balanceElement.innerText = `${data.newBalance} USDT`;
+        } else {
+            alert('❌ Error: ' + data.message);
+        }
+    } catch (error) {
+        alert('❌ Failed to update balance. Check your connection.');
     }
 }
 
