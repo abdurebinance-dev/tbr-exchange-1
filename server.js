@@ -1227,7 +1227,7 @@ app.get('/api/check-deposits/:walletAddress', async (req, res) => {
     }
 });
 
-// ✅ ATOMIC WITHDRAWAL FIX: Race Condition & Double Spend Solved ✅
+// ✅ MANUAL WITHDRAWAL REQUEST (PASSKEY & EMAIL) - NO AUTO TRANSFER ✅
 app.post('/api/withdraw/request', verifyToken, async (req, res) => {
     try {
         const { amount, destinationAddress, useEmailFallback, passkeyVerified } = req.body;
@@ -1248,20 +1248,20 @@ app.post('/api/withdraw/request', verifyToken, async (req, res) => {
             return res.json({ success: true, requiresPasskeyPrompt: true, message: 'Security verification required.' });
         }
 
+        // 1. Passkey ተጠቅሞ ካረጋገጠ (ወዲያውኑ ወደ Pending ይገባል)
         if (hasPasskey && passkeyVerified && !useEmailFallback) {
-            const amountToSend = withdrawAmount - 1;
+            const amountToSend = withdrawAmount - 1; // 1 USDT fee
 
-            // ⚡ ATOMIC DOUBLE-CLICK LOCK & DEDUCTION ⚡ 
+            // ብሩን ከደንበኛው ላይ እንቀንሳለን (ወደ ኔትወርክ ስለማንልክ Lock ማድረግ አያስፈልግም)
             const updatedUser = await User.findOneAndUpdate(
                 { 
                     _id: user._id, 
-                    balance: { $gte: withdrawAmount },$or: [{ withdrawLockUntil: { $exists: false } }, { withdrawLockUntil: {$lt: new Date() } }]
+                    balance: { $gte: withdrawAmount }
                 },
                 { 
                     $inc: { balance: -withdrawAmount },$set: { 
                         dailyWithdrawnAmount: userDailyWithdrawn + withdrawAmount, 
-                        dailyWithdrawnDate: new Date(),
-                        withdrawLockUntil: new Date(Date.now() + 60 * 1000) // 60 ሰከንድ ይቆለፋል
+                        dailyWithdrawnDate: new Date()
                     }
                 },
                 { new: true }
@@ -1271,34 +1271,23 @@ app.post('/api/withdraw/request', verifyToken, async (req, res) => {
                 return res.status(400).json({ success: false, message: 'Insufficient balance or request is processing. Please wait.' });
             }
 
-            let txHash = null;
-            try {
-                const amountInWei = ethers.parseUnits(amountToSend.toString(), 18);
-                const tx = await usdtContractMaster.transfer(destinationAddress, amountInWei);
-                txHash = tx.hash;
-                await tx.wait(); // Confirm
+            // 트ራንዛክሽኑን 'pending' አድርገን እንመዘግባለን
+            await Transaction.create({ 
+                userId: user._id, 
+                email: user.email, 
+                type: 'withdrawal', 
+                amount: amountToSend, 
+                fee: 1, 
+                status: 'pending', // ⚠️ Admin Approve እስኪያደርግ ይጠብቃል
+                destinationAddress: destinationAddress 
+            });
+            
+            notifyUser({ userId: user._id, email: user.email, title: 'Withdrawal Pending', message: `Your withdrawal of ${amountToSend.toFixed(2)} USDT is pending admin approval.`, type: 'withdrawal', link: 'wallet.html' });
 
-                // Unlock
-                await User.updateOne({ _id: user._id }, { $unset: { withdrawLockUntil: '' } });
-                await Transaction.create({ userId: user._id, email: user.email, type: 'withdrawal', amount: amountToSend, fee: 1, status: 'completed', destinationAddress: destinationAddress });
-                notifyUser({ userId: user._id, email: user.email, title: 'Withdrawal Completed', message: `Your withdrawal of ${amountToSend.toFixed(2)} USDT has been sent.`, type: 'withdrawal', link: 'wallet.html' });
-
-                return res.json({ success: true, balance: updatedUser.balance, message: `Successfully withdrew ${amountToSend.toFixed(2)} USDT via Passkey.` });
-            } catch (txError) {
-                if (!txHash) {
-                    await User.updateOne(
-                        { _id: user._id },
-                        { $inc: { balance: withdrawAmount }, $set: { dailyWithdrawnAmount: userDailyWithdrawn },$unset: { withdrawLockUntil: '' } }
-                    );
-                    return res.status(500).json({ success: false, message: 'Blockchain transfer failed. Check Master Wallet balance or gas fee. Balance refunded.' });
-                } else {
-                    await User.updateOne({ _id: user._id }, { $unset: { withdrawLockUntil: '' } });
-                    return res.status(500).json({ success: false, message: 'Transfer broadcasted but delayed. Please check BSCScan.' });
-                }
-            }
+            return res.json({ success: true, balance: updatedUser.balance, message: `Withdrawal requested successfully! Your ${amountToSend.toFixed(2)} USDT is pending admin approval.` });
         }
 
-        // Email OTP Generation
+        // 2. በኢሜይል ኦቲፒ (OTP) ከሆነ ኮድ ይላካል
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         await User.updateOne({ _id: user._id }, { $set: { verificationCode: otp, verificationCodeExpire: new Date(Date.now() + 10 * 60 * 1000) } });
 
@@ -1321,7 +1310,8 @@ app.post('/api/withdraw/request', verifyToken, async (req, res) => {
     }
 });
 
-// ✅ ATOMIC WITHDRAWAL VERIFY FIX (OTP) ✅
+
+// ✅ MANUAL WITHDRAWAL VERIFY OTP - NO AUTO TRANSFER ✅
 app.post('/api/withdraw/verify-otp', verifyToken, async (req, res) => {
     try {
         const { otp, amount, destinationAddress } = req.body;
@@ -1330,49 +1320,38 @@ app.post('/api/withdraw/verify-otp', verifyToken, async (req, res) => {
 
         const amountToSend = withdrawAmount - 1;
 
-        // ⚡ ATOMIC VERIFY, DEDUCT & LOCK ⚡
-        // በተመሳሳይ ሰከንድ የሚመጡ ጥያቄዎችን አግዶ አንድ ብቻ እንዲያልፍ ያደርጋል
+        // ⚡ ATOMIC VERIFY & DEDUCT (No Auto Transfer) ⚡
         const user = await User.findOneAndUpdate(
             { 
                 _id: req.user.id, 
                 verificationCode: otp, 
                 verificationCodeExpire: { $gt: new Date() },
-                balance: { $gte: withdrawAmount },$or: [{ withdrawLockUntil: { $exists: false } }, { withdrawLockUntil: {$lt: new Date() } }]
+                balance: { $gte: withdrawAmount }
             },
             {
-                $unset: { verificationCode: '', verificationCodeExpire: '' },
-                $inc: { balance: -withdrawAmount },$set: { withdrawLockUntil: new Date(Date.now() + 60 * 1000) } // ለ 60 ሰከንድ ይቆለፋል
+                $unset: { verificationCode: '', verificationCodeExpire: '' },$inc: { balance: -withdrawAmount }
             },
-            { new: true, select: 'email balance dailyWithdrawnAmount dailyWithdrawnDate bscAddress' }
+            { new: true, select: 'email balance dailyWithdrawnAmount dailyWithdrawnDate' }
         );
 
-        if (!user) return res.status(400).json({ success: false, message: 'Invalid OTP, insufficient balance, or concurrent request detected.' });
+        if (!user) return res.status(400).json({ success: false, message: 'Invalid OTP or insufficient balance.' });
 
         const userDailyWithdrawn = user.dailyWithdrawnDate && new Date(user.dailyWithdrawnDate).toDateString() === new Date().toDateString() ? user.dailyWithdrawnAmount : 0;
-        let txHash = null;
+        await User.updateOne({ _id: user._id }, { $set: { dailyWithdrawnAmount: userDailyWithdrawn + withdrawAmount, dailyWithdrawnDate: new Date() } });
 
-        try {
-            const amountInWei = ethers.parseUnits(amountToSend.toString(), 18);
-            const tx = await usdtContractMaster.transfer(destinationAddress, amountInWei);
-            txHash = tx.hash;
-            await tx.wait(); // ብሎክቼይን ላይ እስኪረጋገጥ ይጠብቃል
+        // ትራንዛክሽኑን 'pending' አድርገን እንመዘግባለን
+        await Transaction.create({ 
+            userId: user._id, 
+            email: user.email, 
+            type: 'withdrawal', 
+            amount: amountToSend, 
+            fee: 1, 
+            status: 'pending', // ⚠️ Admin Approve እስኪያደርግ ይጠብቃል
+            destinationAddress: destinationAddress 
+        });
 
-            // ከረጋገጠ በኋላ መቆለፊያውን ይፈታል
-            await User.updateOne({ _id: user._id }, { $set: { dailyWithdrawnAmount: userDailyWithdrawn + withdrawAmount, dailyWithdrawnDate: new Date() },$unset: { withdrawLockUntil: '' } });
-            await Transaction.create({ userId: user._id, email: user.email, type: 'withdrawal', amount: amountToSend, fee: 1, status: 'completed', destinationAddress: destinationAddress });
-
-            res.json({ success: true, balance: user.balance, message: `Withdrawal of ${amountToSend.toFixed(2)} USDT Sent!` });
-        } catch (txError) {
-            if (!txHash) {
-                // ብሎክቼይን ላይ ሳይላክ ካቋረጠ ብሩን ይመልሳል፣ መቆለፊያውንም ይፈታል
-                await User.updateOne({ _id: user._id }, { $inc: { balance: withdrawAmount },$unset: { withdrawLockUntil: '' } });
-                return res.status(500).json({ success: false, message: 'Blockchain transfer failed. Balance refunded.' });
-            } else {
-                // ተልኮ ግን ሪስፖንስ ከዘገየ መቆለፊያውን ብቻ ይፈታል (ብሩን አይመልስም)
-                await User.updateOne({ _id: user._id }, { $unset: { withdrawLockUntil: '' } });
-                return res.status(500).json({ success: false, message: 'Transfer broadcasted but delayed. Please check BSCScan.' });
-            }
-        }
+        res.json({ success: true, balance: user.balance, message: `Verification successful! Withdrawal of ${amountToSend.toFixed(2)} USDT is pending admin approval.` });
+        
     } catch (error) {
         res.status(500).json({ success: false, message: 'Server error during verification.' });
     }
@@ -2495,6 +2474,71 @@ app.post('/api/admin/update-user-balance', verifyAdminToken, async (req, res) =>
         res.json({ success: true, message: 'User balance updated successfully!', newBalance: numericBalance });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Server error updating balance.' });
+    }
+});
+
+// ==========================================
+// 🚀 ADMIN: GET PENDING WITHDRAWALS 🚀
+// ==========================================
+app.get('/api/admin/withdrawals', verifyAdminToken, async (req, res) => {
+    try {
+        const withdrawals = await Transaction.find({ type: 'withdrawal' }).sort({ createdAt: -1 }).limit(100).lean();
+        res.json({ success: true, data: withdrawals });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// ==========================================
+// 🚀 ADMIN: APPROVE WITHDRAWAL (Sends Crypto) 🚀
+// ==========================================
+app.post('/api/admin/withdrawals/approve', verifyAdminToken, async (req, res) => {
+    try {
+        const { txId } = req.body;
+        const tx = await Transaction.findById(txId);
+        if (!tx || tx.type !== 'withdrawal' || tx.status !== 'pending') {
+            return res.status(400).json({ success: false, message: 'Invalid or already processed transaction.' });
+        }
+
+        // 1. ብሩን ከ Master Wallet ወደ ዩዘሩ በብሎክቼይን ይልካል
+        const amountInWei = ethers.parseUnits(tx.amount.toString(), 18);
+        const blockchainTx = await usdtContractMaster.transfer(tx.destinationAddress, amountInWei);
+        await blockchainTx.wait();
+
+        // 2. ዳታቤዙን ያዘምናል
+        tx.status = 'completed';
+        tx.txHash = blockchainTx.hash;
+        await tx.save();
+
+        res.json({ success: true, message: `Successfully sent ${tx.amount} USDT to user!` });
+    } catch (error) {
+        console.error('Approve Withdrawal Error:', error);
+        res.status(500).json({ success: false, message: 'Blockchain transfer failed. Check master wallet balance or gas.' });
+    }
+});
+
+// ==========================================
+// 🚀 ADMIN: REJECT WITHDRAWAL (Refunds Balance) 🚀
+// ==========================================
+app.post('/api/admin/withdrawals/reject', verifyAdminToken, async (req, res) => {
+    try {
+        const { txId } = req.body;
+        const tx = await Transaction.findById(txId);
+        if (!tx || tx.type !== 'withdrawal' || tx.status !== 'pending') {
+            return res.status(400).json({ success: false, message: 'Invalid or already processed transaction.' });
+        }
+
+        // 1. ብሩን ለዩዘሩ ይመልሳል (የጠየቀው ብር + 1 USDT የተቆረጠበት ፊክስድ ፊ)
+        const refundAmount = tx.amount + (tx.fee || 1);
+        await User.findByIdAndUpdate(tx.userId, { $inc: { balance: refundAmount } });
+
+        // 2. ስታተሱን ያዘምናል
+        tx.status = 'rejected';
+        await tx.save();
+
+        res.json({ success: true, message: `Withdrawal rejected and ${refundAmount} USDT refunded to user.` });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error during rejection.' });
     }
 });
 
