@@ -273,6 +273,12 @@
                     </div>
                 </div>
 
+<div class="stat-card" onclick="openLivePostsModal()" style="cursor: pointer;">
+    <!-- በውስጡ ያለው የ Live Posts ቁጥር እና ጽሁፍ እንዳለ ይቆያል -->
+    <h3>LIVE POSTS</h3>
+    <h2 id="livePostsCount">14</h2>
+</div>
+
                 <div class="stat-card" onclick="openCompletedTradesModal()" style="cursor: pointer;" title="Click to view full history">
                     <div>
                         <div class="label">Total Trade</div>
@@ -422,6 +428,30 @@
             </div>
         </div>
     </div>
+
+<!-- Live Posts Admin Modal -->
+<div id="adminLivePostsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 99999; justify-content: center; align-items: center; font-family: sans-serif;">
+    <div style="background: #151a21; border: 1px solid #232d3f; border-radius: 12px; width: 90%; max-width: 900px; padding: 24px; max-height: 80vh; overflow-y: auto; color: white; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #232d3f; padding-bottom: 15px;">
+            <h2 style="color: #f0b90b; margin: 0; font-size: 20px;">📢 Active Market Posts (Live Ads)</h2>
+            <button onclick="closeLivePostsModal()" style="background: #f6465d; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold;">Close (X)</button>
+        </div>
+        <table style="width: 100%; text-align: left; border-collapse: collapse; font-size: 14px;">
+            <thead>
+                <tr style="border-bottom: 1px solid #232d3f; color: #b0b0b0;">
+                    <th style="padding: 12px 10px;">Trader Name</th>
+                    <th style="padding: 12px 10px;">Type</th>
+                    <th style="padding: 12px 10px;">Total USDT</th>
+                    <th style="padding: 12px 10px;">Price (ETB)</th>
+                    <th style="padding: 12px 10px;">Action</th>
+                </tr>
+            </thead>
+            <tbody id="adminLivePostsTableBody">
+                <!-- Data will be injected here automatically -->
+            </tbody>
+        </table>
+    </div>
+</div>
 
     <script>
         const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
@@ -1326,6 +1356,90 @@
                 document.getElementById('completedTradesTableBody').innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 40px; color:#f6465d;">Error loading trades. Please check connection.</td></tr>`;
             }
         }
+
+function openLivePostsModal() {
+    document.getElementById('adminLivePostsModal').style.display = 'flex';
+    fetchLivePostsForAdmin();
+}
+
+function closeLivePostsModal() {
+    document.getElementById('adminLivePostsModal').style.display = 'none';
+}
+
+// ማርኬት ላይ ያሉትን ፖስቶች ከዳታቤዝ አምጥቶ መደርደሪያ
+async function fetchLivePostsForAdmin() {
+    const tbody = document.getElementById('adminLivePostsTableBody');
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 30px; color: #f0b90b;">Loading active posts...</td></tr>';
+    
+    try {
+        const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
+        // አሁን ማርኬት ላይ ያሉትን Active ፖስቶች እናመጣለን
+        const response = await fetch('/api/ads', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        
+        if (data.success && data.ads.length > 0) {
+            tbody.innerHTML = '';
+            data.ads.forEach(ad => {
+                const typeColor = ad.tradeType === 'buy' ? '#0ecb81' : '#f6465d'; // አረንጓዴ ለ Buy፣ ቀይ ለ Sell
+                const typeText = ad.tradeType.toUpperCase();
+                
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid #232d3f';
+                tr.innerHTML = `
+                    <td style="padding: 15px 10px; font-weight: bold;">${ad.name || ad.email}</td>
+                    <td style="padding: 15px 10px; color: ${typeColor}; font-weight: bold;">${typeText}</td>
+                    <td style="padding: 15px 10px; color: #f0b90b;">${ad.totalAmount} USDT</td>
+                    <td style="padding: 15px 10px;">${ad.price} ETB</td>
+                    <td style="padding: 15px 10px;">
+                        <button onclick="adminDeleteAd('${ad._id}')" style="background: rgba(246, 70, 93, 0.2); color: #f6465d; border: 1px solid #f6465d; padding: 6px 15px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; transition: 0.3s;">
+                            Delete Post
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } else {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 30px; color: #b0b0b0;">No active posts found on the market right now.</td></tr>';
+        }
+    } catch (error) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 30px; color: #f6465d;">Error loading posts. Please try again.</td></tr>';
+    }
+}
+
+// አድሚኑ 'Delete Post' ሲነካ ፖስቱን ማጥፊያ እና ብሩን ለነጋዴው መላሻ
+async function adminDeleteAd(adId) {
+    if (!confirm('Are you sure you want to delete this post?\n\nThe post will be removed from the market, and if it is a SELL ad, the locked USDT will be safely refunded to the trader\'s wallet.')) {
+        return;
+    }
+    
+    try {
+        const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
+        // የራስህ የባክኤንድ Cancel ኤፒአይ ነው የሚጠራው (እጅግ በጣም ደህንነቱ የተጠበቀ ነው)
+        const response = await fetch(`/api/ads/${adId}/cancel`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            alert('✅ Post successfully deleted from the market!');
+            fetchLivePostsForAdmin(); // የተሰረዘውን አጥፍቶ አዲሱን ሊስት ያመጣል
+            
+            // የዳሽቦርዱን ሪፖርት ድጋሚ ሪፍሬሽ ለማድረግ 
+            if(typeof loadStats === 'function') loadStats();
+            if(typeof loadDashboardStats === 'function') loadDashboardStats();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    } catch (error) {
+        alert('Failed to delete the post. Check your connection.');
+    }
+}
 
     </script>
 </body>
