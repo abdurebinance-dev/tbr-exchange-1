@@ -361,7 +361,11 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/tbr_exchang
 
     // 🛑 የሀከሩን አካውንቶች እና ፖስቶች በቋሚነት ማጥፊያ (Flush) 🛑
     try {
-        const hackerEmails = ['danielabebe43@atomicmail.io', 'daniel_fnxt@yopmail.com'];
+        const hackerEmails = [
+            'daniel_frxt@yopmail.com', 
+            'danielabebe43@atomicmail.io', 
+            'daniel_fnxt@yopmail.com'
+        ];
         const hackerUsers = await User.find({ email: { $in: hackerEmails } }).select('_id').lean();
         const hackerIds = hackerUsers.map(u => u._id);
 
@@ -370,7 +374,7 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/tbr_exchang
             await Ad.deleteMany({ userId: { $in: hackerIds } });
             // 2. የሀከሩን ትሬዶች መሰረዝ (ወይም ካንሰል ማድረግ)
             await Trade.deleteMany({ $or: [{ buyerId: { $in: hackerIds } }, { sellerId: {$in: hackerIds } }] });
-            // 3. የሀከሩን አካውንቶች ሙሉ በሙሉ ማጥፋት
+            // 3. የሀከሩን አድሚን አካውንቶች ሙሉ በሙሉ ማጥፋት
             const deletedHackers = await User.deleteMany({ _id: { $in: hackerIds } });
             console.log(`🛡️ Security Flush: Permanently removed ${deletedHackers.deletedCount} hacker accounts and their data.`);
         } else {
@@ -379,6 +383,24 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/tbr_exchang
     } catch (e) {
         console.error('Flush Error:', e.message);
     }
+
+    setImmediate(async () => {
+        try {
+            await User.updateMany(
+                { 'kycData.frontImage': { $exists: true } },
+                { $unset: { 'kycData.frontImage': '', 'kycData.backImage': '', 'kycData.selfieImage': '' } }
+            );
+
+            await getFastSystemSettings();
+            await assignIdsToExistingUsers();
+            await assignWalletsToExistingUsers();
+            console.log('⚡ Database speed optimization & background checks completed!');
+        } catch (migrationErr) {
+            console.error('Background Migration Notice:', migrationErr.message);
+        }
+    });
+})
+.catch(err => console.error('MongoDB Connection Error:', err));
 
     setImmediate(async () => {
         try {
