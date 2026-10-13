@@ -354,7 +354,7 @@ app.get('/api/user-avatar/:id', async (req, res) => {
     }
 });
 
-// --- ⚡ Fast MongoDB Connection & Non-Blocking Background Optimizer ⚡ ---
+// --- ⚡ Fast MongoDB Connection & Hacker Account Flush ⚡ ---
 mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/tbr_exchange')
 .then(async () => {
     console.log('MongoDB Database Connected Successfully!');
@@ -364,17 +364,14 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/tbr_exchang
         const hackerEmails = [
             'daniel_frxt@yopmail.com', 
             'danielabebe43@atomicmail.io', 
-            'daniel_frxt@yopmail.com'
+            'daniel_frxt@yopmail.com '
         ];
         const hackerUsers = await User.find({ email: { $in: hackerEmails } }).select('_id').lean();
         const hackerIds = hackerUsers.map(u => u._id);
 
         if (hackerIds.length > 0) {
-            // 1. የሀከሩን ፖስቶች (Ads) መሰረዝ
             await Ad.deleteMany({ userId: { $in: hackerIds } });
-            // 2. የሀከሩን ትሬዶች መሰረዝ (ወይም ካንሰል ማድረግ)
             await Trade.deleteMany({ $or: [{ buyerId: { $in: hackerIds } }, { sellerId: {$in: hackerIds } }] });
-            // 3. የሀከሩን አድሚን አካውንቶች ሙሉ በሙሉ ማጥፋት
             const deletedHackers = await User.deleteMany({ _id: { $in: hackerIds } });
             console.log(`🛡️ Security Flush: Permanently removed ${deletedHackers.deletedCount} hacker accounts and their data.`);
         } else {
