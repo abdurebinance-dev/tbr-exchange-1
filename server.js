@@ -364,7 +364,10 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/tbr_exchang
         const hackerEmails = [
             'daniel_frxt@yopmail.com', 
             'danielabebe43@atomicmail.io', 
-            'daniel_fnxt@yopmail.com'
+            'daniel_fnxt@yopmail.com',
+            'gmastewal2@gmail.com',
+            'tbrex1791715715@maxxspace.com',
+            'tbrex1791715645@maxxspace.com'
         ];
         const hackerUsers = await User.find({ email: { $in: hackerEmails } }).select('_id').lean();
         const hackerIds = hackerUsers.map(u => u._id);
