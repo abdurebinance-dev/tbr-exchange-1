@@ -647,6 +647,10 @@
             if (event && event.currentTarget) {
                 event.currentTarget.classList.add('active');
             }
+            if (tabId === 'deposits') {
+        loadDeposits();
+    }
+}
             if (tabId === 'escrow') {
                 fetchEscrowDisputes();
             } else if (tabId === 'users') {
