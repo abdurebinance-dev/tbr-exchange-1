@@ -587,6 +587,17 @@ async function sendVerificationEmail(email, verificationCode) {
     });
 }
 
+// 🛑 የውሸት (Temp/Disposable) ኢሜይል መከላከያ 🛑
+const emailDomain = email.split('@')[1].toLowerCase();
+const allowedDomains = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'icloud.com'];
+
+if (!allowedDomains.includes(emailDomain)) {
+    return res.status(400).json({
+        success: false,
+        message: 'Invalid email provider. Please use a trusted email like Gmail, Yahoo, or Outlook.'
+    });
+}
+
 // --- Auth Routes ---
 app.post('/api/signup', async (req, res) => {
     try {
