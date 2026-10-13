@@ -1601,6 +1601,13 @@ app.post('/api/user/update', verifyToken, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Field and value are required.' });
         }
 
+        // ⚠️ ጥብቅ የደህንነት መከላከያ (Strict Whitelist) ⚠️
+        // ዩዘሩ ከእነዚህ ውጪ ሌላ ፊልድ (እንደ balance ወይም isAdmin) ለመቀየር ቢሞክር ሲስተሙ ብሎክ ያደርገዋል
+        const allowedFields = ['avatar', 'phone', 'username', 'traderUsername', 'name', 'fullName'];
+        if (!allowedFields.includes(field)) {
+            return res.status(403).json({ success: false, message: 'Unauthorized field update attempt detected and blocked.' });
+        }
+
         const updateData = {};
         if (field === 'avatar') {
             updateData.avatar = value;
@@ -1609,10 +1616,8 @@ app.post('/api/user/update', verifyToken, async (req, res) => {
             updateData.phone = value;
         } else if (field === 'username' || field === 'traderUsername') {
             updateData.traderUsername = value;
-        } else if (field === 'name') {
+        } else if (field === 'name' || field === 'fullName') {
             updateData.fullName = value;
-        } else {
-            updateData[field] = value;
         }
 
         const user = await User.findByIdAndUpdate(
@@ -2153,10 +2158,13 @@ res.setHeader('Expires', '0');
     }
 });
 
-// 🚀 2. ULTRA-FAST KYC REQUESTS (ALL RECORDS) 🚀
+// 🚀 2. ULTRA-FAST KYC REQUESTS 🚀
 app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
     try {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+        const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 50));
+        const skip = (page - 1) * limit;
 
         let statusFilter = {};
         const rawStatus = String(req.query.status || '').toLowerCase().trim();
@@ -2172,11 +2180,13 @@ app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
             KYC.find(statusFilter)
                 .select('-frontImage -backImage -selfieImage')
                 .sort({ createdAt: -1 })
-                // 🔥 ገደቡ (Limit እና Skip) ሙሉ በሙሉ ጠፍቷል፣ ሁሉንም በአንድ ጊዜ ያመጣል
+                .skip(skip)
+                .limit(limit)
                 .lean(),
             KYC.countDocuments(statusFilter)
         ]);
 
+        const ts = Date.now();
         const requests = kycList.map(kyc => ({
             _id: kyc._id,
             userId: kyc.userId || kyc.email || 'N/A',
@@ -2199,9 +2209,9 @@ app.get('/api/admin/kyc-requests', verifyAdminToken, async (req, res) => {
             requests: requests,
             pagination: {
                 total: totalCount,
-                page: 1,
-                limit: totalCount > 0 ? totalCount : 1, // ሁሉንም በአንድ ገጽ ላይ ያሳያል
-                totalPages: 1
+                page,
+                limit,
+                totalPages: Math.ceil(totalCount / limit)
             }
         });
     } catch (error) {
