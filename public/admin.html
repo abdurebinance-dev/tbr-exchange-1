@@ -641,26 +641,25 @@
         }
 
         function switchTab(tabId, event) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
-            document.getElementById('tab-' + tabId).classList.add('active');
-            if (event && event.currentTarget) {
-                event.currentTarget.classList.add('active');
-            }
-            if (tabId === 'deposits') {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+    document.getElementById('tab-' + tabId).classList.add('active');
+    if (event && event.currentTarget) {
+        event.currentTarget.classList.add('active');
+    }
+
+    if (tabId === 'escrow') {
+        fetchEscrowDisputes();
+    } else if (tabId === 'users') {
+        fetchUsersList();
+    } else if (tabId === 'overview') {
+        fetchStats();
+    } else if (tabId === 'withdrawals') {
+        fetchAdminWithdrawals();
+    } else if (tabId === 'deposits') {  // 👈 አዲሱ ኮድ እዚህ ተጨመረ
         loadDeposits();
     }
 }
-            if (tabId === 'escrow') {
-                fetchEscrowDisputes();
-            } else if (tabId === 'users') {
-            fetchUsersList();
-        } else if (tabId === 'overview') {
-            fetchStats();
-        } else if (tabId === 'withdrawals') {
-            fetchAdminWithdrawals();
-        }
-        }
 
         function formatUsdtOnly(val) {
             if (!val) return '0 USDT';
