@@ -219,7 +219,7 @@
             <button class="nav-tab" onclick="switchTab('escrow', event)"><i class="fa-solid fa-scale-balanced"></i> 4. P2P Escrow & Disputes</button>
             <button class="nav-tab" onclick="switchTab('users', event)"><i class="fa-solid fa-users"></i> 5. User Control & Ban</button>
             <button class="nav-tab" onclick="switchTab('withdrawals', event)"><i class="fa-solid fa-money-bill-transfer"></i> 6. Withdrawals</button>
-            <button class="nav-btn" onclick="switchTab('deposits')"><i class="fa-solid fa-arrow-down"></i> 7. Deposits</button>
+            <button class="nav-tab" onclick="switchTab('deposits', event)"><i class="fa-solid fa-arrow-down"></i> 7. Deposits</button>
         </div>
 
         <!-- TAB 1: OVERVIEW -->
@@ -478,7 +478,7 @@
 </div>
 
 <!-- TAB 7: DEPOSITS -->
-<div id="tab-deposits" class="tab-content" style="display: none;">
+<div id="tab-deposits" class="tab-content">
     <div class="section-title"><i class="fa-solid fa-arrow-down" style="color: var(--green-color);"></i> User Deposits History</div>
     <div class="table-container">
         <table>
