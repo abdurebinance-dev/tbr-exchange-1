@@ -666,7 +666,7 @@
             <div id="withdraw-form-box" style="display: none;">
                 <div class="form-group">
                     <label>Withdrawal Address</label>
-                    <input type="text" class="form-control" id="withdraw-address" placeholder="Enter Destination USDT Address" oninput="validateWithdrawForm()">
+                    <input type="text" class="form-control" id="withdraw-address" placeholder="Enter Destination USDT Address" maxlength="42" oninput="validateWithdrawForm()">
                 </div>
 
                 <div class="form-group" style="margin-bottom: 25px;">
@@ -1460,6 +1460,7 @@
 
             let isValid = true;
 
+            // 1. የገንዘብ (Amount) ማጣሪያ
             if (amountInput.value !== "") {
                 if (val < 2) {
                     errorText.innerText = "Minimum is 2.00 USDT";
@@ -1486,8 +1487,20 @@
                 isValid = false;
             }
 
-            if (address === "") {
+            // 🚀 2. የክሪፕቶ አድራሻ (Address) ጥብቅ ማጣሪያ 🚀
+            // አድራሻው በ '0x' መጀመር እና ልክ 42 ፊደል መሆን አለበት
+            const addressRegex = /^0x[a-fA-F0-9]{40}$/;
+            if (address === "" || !addressRegex.test(address)) {
                 isValid = false;
+                if (address !== "") {
+                    // ልክ ያልሆነ አድራሻ ከገባ ሳጥኑን በቀይ ያበራዋል
+                    addressInput.classList.add('input-error');
+                } else {
+                    addressInput.classList.remove('input-error');
+                }
+            } else {
+                // ትክክለኛ አድራሻ ሲሆን ቀዩን ያጠፋዋል
+                addressInput.classList.remove('input-error');
             }
 
             const netEl = document.getElementById('withdraw-net-receive');
@@ -1497,6 +1510,7 @@
                 netEl.innerText = "0.00 USDT";
             }
 
+            // ሁሉም ትክክል ከሆነ ብቻ በተኑ ይበራል
             if (isValid) {
                 submitBtn.classList.remove('btn-disabled');
                 submitBtn.disabled = false;
