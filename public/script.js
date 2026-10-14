@@ -868,3 +868,231 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 });
+
+// =========================================================
+// 🔴 SIGNUP EMAIL VERIFICATION LOGIC (verify.html) 🔴
+// =========================================================
+document.addEventListener("DOMContentLoaded", () => {
+    const signupVerifyForm = document.getElementById('verifyForm');
+    
+    if (signupVerifyForm) {
+        const signupEmail = localStorage.getItem('signupEmail');
+        if (!signupEmail) {
+            alert('Session not found. Please sign up again.');
+            window.location.href = 'signup.html';
+        } else {
+            const masked = signupEmail.substring(0, 2) + '***' + signupEmail.substring(signupEmail.indexOf('@'));
+            const emailDisplay = document.getElementById('userEmailDisplay');
+            if (emailDisplay) emailDisplay.innerText = masked;
+        }
+
+        const inputs = document.querySelectorAll('#verifyForm .code-input');
+
+        inputs.forEach((input, index) => {
+            input.addEventListener('focus', () => input.select());
+
+            input.addEventListener('input', (e) => {
+                const val = e.target.value;
+                const numericVal = val.replace(/\D/g, '');
+                
+                if (numericVal) {
+                    const chars = numericVal.split('');
+                    let currentIndex = index;
+                    for (let i = 0; i < chars.length && currentIndex < inputs.length; i++) {
+                        inputs[currentIndex].value = chars[i];
+                        currentIndex++;
+                    }
+                    if (currentIndex < inputs.length) {
+                        inputs[currentIndex].focus();
+                    } else {
+                        inputs[inputs.length - 1].focus();
+                    }
+                } else {
+                    e.target.value = '';
+                }
+            });
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace') {
+                    e.preventDefault();
+                    if (input.value !== '') {
+                        input.value = '';
+                    } else if (index > 0) {
+                        inputs[index - 1].focus();
+                        inputs[index - 1].value = '';
+                    }
+                }
+            });
+
+            input.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const pasteData = e.clipboardData.getData('text').trim();
+                handleSignupPaste(pasteData);
+            });
+        });
+
+        function handleSignupPaste(pasteData) {
+            const digits = pasteData.replace(/\D/g, '').split('');
+            inputs.forEach((inp, idx) => {
+                if (digits[idx]) {
+                    inp.value = digits[idx];
+                }
+            });
+            if (digits.length > 0) {
+                inputs[Math.min(digits.length - 1, 5)].focus();
+            }
+        }
+
+        // ግሎባል (Global) የሆነ የ Paste መቆጣጠሪያ ለ Signup Verification 
+        window.pasteSignupCode = async function() {
+            try {
+                const text = await navigator.clipboard.readText();
+                handleSignupPaste(text);
+            } catch (err) {
+                console.error('Failed to read clipboard');
+            }
+        };
+
+        // የ 10 ደቂቃ ቆጣሪ (Expiration Timer)
+        let expireSeconds = 600;
+        const expireTimerEl = document.getElementById('expireTimer');
+        
+        const expireInterval = setInterval(() => {
+            if (expireSeconds <= 0) {
+                clearInterval(expireInterval);
+                if (expireTimerEl) {
+                    expireTimerEl.innerText = "Expired";
+                    expireTimerEl.style.color = "#e95454";
+                }
+            } else {
+                expireSeconds--;
+                let mins = Math.floor(expireSeconds / 60);
+                let secs = expireSeconds % 60;
+                if (expireTimerEl) {
+                    expireTimerEl.innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+                }
+            }
+        }, 1000);
+
+        // የ 60 ሰከንድ ድጋሚ መላኪያ (Resend Timer)
+        let resendSeconds = 60;
+        const resendBtn = document.getElementById('resendBtn');
+        const resendTimerSpan = document.getElementById('resendTimer');
+        let resendInterval;
+        
+        function startSignupResendTimer() {
+            resendSeconds = 60;
+            if (resendBtn) {
+                resendBtn.disabled = true;
+                resendBtn.classList.remove('active');
+            }
+            resendInterval = setInterval(() => {
+                if (resendSeconds <= 0) {
+                    clearInterval(resendInterval);
+                    if (resendBtn) {
+                        resendBtn.disabled = false;
+                        resendBtn.classList.add('active');
+                        resendBtn.innerHTML = "Resend Code";
+                    }
+                } else {
+                    resendSeconds--;
+                    if (resendTimerSpan) {
+                        resendTimerSpan.innerText = resendSeconds;
+                    } else if (resendBtn) {
+                        resendBtn.innerHTML = `Resend in <span id="resendTimer">${resendSeconds}</span>s`;
+                    }
+                }
+            }, 1000);
+        }
+        startSignupResendTimer();
+
+        if (resendBtn) {
+            resendBtn.addEventListener('click', async () => {
+                if (resendBtn.disabled) return;
+
+                const messageDiv = document.getElementById('message');
+                resendBtn.innerText = "Sending...";
+
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/resend`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: signupEmail })
+                    });
+                    const data = await response.json();
+
+                    if (data.success) {
+                        if (messageDiv) {
+                            messageDiv.style.color = '#51cf66';
+                            messageDiv.innerText = 'New verification code sent successfully!';
+                        }
+                        clearInterval(resendInterval);
+                        startSignupResendTimer();
+                    } else {
+                        if (messageDiv) {
+                            messageDiv.style.color = '#ff6b6b';
+                            messageDiv.innerText = data.message;
+                        }
+                        resendBtn.innerHTML = "Resend Code";
+                    }
+                } catch (err) {
+                    console.error('Resend Error:', err);
+                    if (messageDiv) {
+                        messageDiv.style.color = '#ff6b6b';
+                        messageDiv.innerText = 'Server error while resending.';
+                    }
+                    resendBtn.innerHTML = "Resend Code";
+                }
+            });
+        }
+
+        signupVerifyForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            let code = '';
+            inputs.forEach(input => code += input.value);
+
+            const messageDiv = document.getElementById('message');
+
+            if (code.length < 6) {
+                if (messageDiv) {
+                    messageDiv.style.color = '#ff6b6b';
+                    messageDiv.innerText = 'Please enter the complete 6-digit code.';
+                }
+                return;
+            }
+
+            try {
+                const endpoint = `${API_BASE_URL}/api/verify`;
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: signupEmail, code })
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    if (messageDiv) {
+                        messageDiv.style.color = '#51cf66';
+                        messageDiv.innerText = 'Account verified successfully! Redirecting...';
+                    }
+                    localStorage.removeItem('signupEmail');
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 1500);
+                } else {
+                    if (messageDiv) {
+                        messageDiv.style.color = '#ff6b6b';
+                        messageDiv.innerText = data.message;
+                    }
+                }
+            } catch (err) {
+                console.error('Error:', err);
+                if (messageDiv) {
+                    messageDiv.style.color = '#ff6b6b';
+                    messageDiv.innerText = 'Error connecting to server!';
+                }
+            }
+        });
+    }
+});
