@@ -1,7 +1,218 @@
-document.addEventListener('DOMContentLoaded', () => {
+// 🔴 1. URL Auto-Cleaner: በሊንኩ ላይ የድሮ ኢሜይል ወይም ፓስወርድ ካለ ብሮውዘሩ ላይ እንዳይታይ ወዲያውኑ ያጸዳዋል 🔴
+if (window.location.search.includes('email=') || window.location.search.includes('password=')) {
+    const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+    window.history.replaceState({}, document.title, cleanUrl);
+}
+
+// 🔴 2. Base API URL
+const API_BASE_URL = window.location.hostname.includes('localhost') 
+    ? '' 
+    : 'https://tbr-exchange-backend.onrender.com';
+
+// 🔴 3. Helper Functions (የፓስወርድ አይን ማብሪያ፣ ቤዝ 64 መቀየሪያ ወዘተ) 🔴
+function togglePass(id, icon) {
+    const input = document.getElementById(id);
+    if (!input) return;
+    if (input.type === "password") {
+        input.type = "text";
+        icon.classList.remove("fa-eye");
+        icon.classList.add("fa-eye-slash");
+    } else {
+        input.type = "password";
+        icon.classList.remove("fa-eye-slash");
+        icon.classList.add("fa-eye");
+    }
+}
+
+function base64UrlToUint8Array(base64UrlData) {
+    const padding = '='.repeat((4 - base64UrlData.length % 4) % 4);
+    const base64 = (base64UrlData + padding).replace(/\-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
+function arrayBufferToBase64(buffer) {
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return window.btoa(binary);
+}
+
+// የኤረር ማሳያ ኮዶች
+function showError(title, message) {
+    const msgBox = document.getElementById('responseMessage');
+    const errorTitle = document.getElementById('errorTitle');
+    const errorText = document.getElementById('errorText');
+    if(errorTitle) errorTitle.textContent = title;
+    if(errorText) errorText.textContent = message;
+    if(msgBox) msgBox.style.display = 'block';
+}
+
+function hideError() {
+    const msgBox = document.getElementById('responseMessage');
+    if(msgBox) msgBox.style.display = 'none';
+}
+
+function showErrorToast(msg) {
+    showError("Error", msg);
+}
+
+async function preFetchAndRedirect(token, redirectUrl) {
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.user) {
+                if (data.user.fullName) localStorage.setItem('userName', data.user.fullName);
+                localStorage.setItem('kycStatus', data.user.kycStatus || 'unverified');
+                if (data.user.avatar) {
+                    localStorage.setItem('userAvatar', data.user.avatar);
+                    localStorage.setItem('profilePicture', data.user.avatar);
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Prefetch failed", e);
+    }
+    window.location.href = redirectUrl || 'dashboard.html';
+}
+
+// የሎጊን መቆለፊያ ቆጣሪ (Rate Limit Countdown)
+let countdownInterval = null;
+
+function checkSignInRateLimit(identifier) {
+    const lockoutKey = 'tbr_signin_lockout_' + identifier;
+    const lockoutUntil = localStorage.getItem(lockoutKey);
+    
+    if (lockoutUntil) {
+        const lockoutTimeNum = Number(lockoutUntil);
+        const remainingTime = lockoutTimeNum - new Date().getTime();
+        if (!isNaN(remainingTime) && remainingTime > 0) {
+            startCountdownFromTarget(lockoutTimeNum);
+        } else {
+            localStorage.removeItem(lockoutKey);
+            localStorage.removeItem('tbr_signin_attempts_' + identifier);
+            unlockSignInForm();
+        }
+    } else {
+        unlockSignInForm();
+    }
+}
+
+function startCountdown(durationMs) {
+    const emailInputElement = document.getElementById('signin-email');
+    if (!emailInputElement) return;
+    const identifier = emailInputElement.value.trim();
+    const lockoutEnd = new Date().getTime() + Number(durationMs);
+    localStorage.setItem('tbr_signin_lockout_' + identifier, lockoutEnd);
+    startCountdownFromTarget(lockoutEnd);
+}
+
+function startCountdownFromTarget(lockoutEndTime) {
+    const submitBtn = document.getElementById('submitBtn');
+    const passInput = document.getElementById('signin-pass');
+
+    if(passInput) passInput.disabled = true;
+    if(submitBtn) submitBtn.disabled = true;
+
+    if (countdownInterval) clearInterval(countdownInterval);
+
+    countdownInterval = setInterval(() => {
+        const now = new Date().getTime();
+        const distance = Number(lockoutEndTime) - now;
+
+        if (isNaN(distance) || distance <= 0) {
+            clearInterval(countdownInterval);
+            const emailInputElement = document.getElementById('signin-email');
+            const identifier = emailInputElement ? emailInputElement.value.trim() : "";
+            if (identifier) {
+                localStorage.removeItem('tbr_signin_lockout_' + identifier);
+                localStorage.removeItem('tbr_signin_attempts_' + identifier);
+            }
+            unlockSignInForm();
+        } else {
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+            
+            if(submitBtn) submitBtn.textContent = `Locked (${minutes}m ${seconds}s)`;
+            showError("Access Locked", `Too many failed attempts. Try again in ${minutes}m ${seconds}s.`);
+        }
+    }, 1000);
+}
+
+function unlockSignInForm() {
+    if (countdownInterval) clearInterval(countdownInterval);
+    const submitBtn = document.getElementById('submitBtn');
+    const emailInput = document.getElementById('signin-email');
+    const passInput = document.getElementById('signin-pass');
+
+    if(emailInput) emailInput.disabled = false;
+    if(passInput) passInput.disabled = false;
+    if(submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Sign In →';
+    }
+    hideError();
+}
+
+// የ Google Login ምላሽ ተቀባይ
+async function handleGoogleResponse(response) {
+    try {
+        localStorage.clear(); 
+        sessionStorage.clear();
+
+        const res = await fetch(`${API_BASE_URL}/api/google-auth`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                token: response.credential,
+                action: 'signin' 
+            })
+        });
+
+        const data = await res.json();
+        
+        if (data.requiresSignup) {
+            window.location.href = 'signup.html';
+            return;
+        }
+
+        if (data.success) {
+            if (data.token) {
+                localStorage.setItem('authToken', data.token);
+                localStorage.setItem('token', data.token);
+            }
+            if (data.user && data.user.email) {
+                localStorage.setItem('userEmail', data.user.email);
+            } else if (data.email) {
+                localStorage.setItem('userEmail', data.email);
+            }
+
+            await preFetchAndRedirect(data.token, data.redirectUrl);
+        } else {
+            showErrorToast(data.message || 'Google authentication failed.');
+        }
+    } catch (err) {
+        console.error('Error:', err);
+        showErrorToast('Server error during Google sign-in.');
+    }
+}
+
+
+// 🔴 4. ዌብሳይቱ (HTML) ሎድ አድርጎ ሲጨርስ አዝራሮቹ የሚሰሩበት ትዕዛዝ 🔴
+document.addEventListener("DOMContentLoaded", () => {
+
     console.log('TBR Exchange JavaScript is working successfully!');
     
-    // ለአዝራሮቹ መጫን (Click) የሚሆን ሙከራ
+    // የ P2P አዝራሮቹ ሙከራ ኮድ (ካለ)
     const buttons = document.querySelectorAll('button, a.btn');
     buttons.forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -32,7 +243,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             result = amount / rate;
         }
-
         calcResult.innerHTML = `${result.toFixed(2)} <span style="font-size: 12px; color: #777; font-weight: normal;">${receiveUnitText}</span>`;
     }
 
@@ -61,11 +271,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (calcInput) {
         calcInput.addEventListener('input', calculate);
     }
-});
-document.addEventListener("DOMContentLoaded", function() {
+
+    // የ Theme Toggle Logic
     const themeBtn = document.getElementById("theme-toggle");
-    
-    // 1. ፔጅ ሲከፈት ሎካል ስቶሬጅ ላይ Light መሆኑ ከታወቀ ወዲያውኑ ከለሩን መቀየር
     if (localStorage.getItem("theme") === "light") {
         document.body.style.backgroundColor = "#f4f5f7";
         document.body.style.color = "#121212";
@@ -76,21 +284,17 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
-    // 2. አዝራሩ በየትኛውም ፔጅ ላይ ቢጫን የሚፈጠር ክንውን
     if (themeBtn) {
         themeBtn.style.cursor = "pointer";
         themeBtn.addEventListener("click", function() {
             const currentBg = window.getComputedStyle(document.body).backgroundColor;
-            
             if (currentBg === "rgb(244, 245, 247)" || document.body.style.backgroundColor === "rgb(244, 245, 247)" || document.body.style.backgroundColor === "#f4f5f7") {
-                // ወደ ጥቁር መመለስ
                 document.body.style.backgroundColor = "#080808";
                 document.body.style.color = "#ffffff";
                 themeBtn.classList.remove("fa-sun");
                 themeBtn.classList.add("fa-moon");
                 localStorage.setItem("theme", "dark");
             } else {
-                // ወደ ነጭ መቀየር
                 document.body.style.backgroundColor = "#f4f5f7";
                 document.body.style.color = "#121212";
                 themeBtn.classList.remove("fa-moon");
@@ -99,29 +303,8 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         });
     }
-});
 
-const API_BASE_URL = window.location.hostname.includes('localhost') 
-    ? '' 
-    : 'https://tbr-exchange-backend.onrender.com';
-
-function togglePass(id, icon) {
-    const input = document.getElementById(id);
-    if (input.type === "password") {
-        input.type = "text";
-        icon.classList.remove("fa-eye");
-        icon.classList.add("fa-eye-slash");
-    } else {
-        input.type = "password";
-        icon.classList.remove("fa-eye-slash");
-        icon.classList.add("fa-eye");
-    }
-}
-
-// 🔴 ገፁ ሙሉ በሙሉ ሎድ አድርጎ ሲጨርስ ሁሉም ኮዶች እንዲሰሩ ታዟል 🔴
-document.addEventListener("DOMContentLoaded", () => {
-
-    // የፓስወርድ ማሳያ/መደበቂያ አይኮን ሲነካ
+    // የፓስወርድ ማሳያ አይኮን Event
     const toggleIcon = document.getElementById('togglePasswordIcon');
     if (toggleIcon) {
         toggleIcon.addEventListener('click', function() {
@@ -132,7 +315,7 @@ document.addEventListener("DOMContentLoaded", () => {
     localStorage.removeItem('userEmail');
     localStorage.removeItem('authToken');
 
-    // Google Login ማዋቀር
+    // የ Google Login ቁልፍ ማሳያ ማዋቀር
     if (typeof google !== 'undefined' && google.accounts) {
         google.accounts.id.initialize({
             client_id: "661544926174-8kp01crhke9m1vmjf6kcts5o2e7sqek8.apps.googleusercontent.com",
@@ -170,7 +353,8 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Passkey ሎጊን
+    // የ Passkey አዝራር Event
+    let passkeyAbortController = new AbortController();
     const passkeyBtn = document.getElementById('passkeyBtn');
     if(passkeyBtn) {
         passkeyBtn.addEventListener('click', async () => {
@@ -247,14 +431,13 @@ document.addEventListener("DOMContentLoaded", () => {
                     console.log('Previous passkey request aborted successfully.');
                     return;
                 }
-                
                 console.error('Passkey login error:', err);
                 showError("Passkey Error", err.message || "Passkey authentication was cancelled or not supported.");
             }
         });
     }
 
-    // መደበኛ የኢሜይል ሎጊን
+    // የኢሜይል Sign in ፎርም Event
     const signinForm = document.getElementById('signinForm');
     if(signinForm) {
         signinForm.addEventListener('submit', async (e) => {
@@ -337,186 +520,5 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
+
 });
-
-
-async function preFetchAndRedirect(token, redirectUrl) {
-    try {
-        const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) {
-            const data = await res.json();
-            if (data.success && data.user) {
-                if (data.user.fullName) localStorage.setItem('userName', data.user.fullName);
-                localStorage.setItem('kycStatus', data.user.kycStatus || 'unverified');
-                if (data.user.avatar) {
-                    localStorage.setItem('userAvatar', data.user.avatar);
-                    localStorage.setItem('profilePicture', data.user.avatar);
-                }
-            }
-        }
-    } catch (e) {
-        console.error("Prefetch failed", e);
-    }
-    window.location.href = redirectUrl || 'dashboard.html';
-}
-
-function base64UrlToUint8Array(base64UrlData) {
-    const padding = '='.repeat((4 - base64UrlData.length % 4) % 4);
-    const base64 = (base64UrlData + padding).replace(/\-/g, '+').replace(/_/g, '/');
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-    for (let i = 0; i < rawData.length; ++i) {
-        outputArray[i] = rawData.charCodeAt(i);
-    }
-    return outputArray;
-}
-
-function arrayBufferToBase64(buffer) {
-    let binary = '';
-    const bytes = new Uint8Array(buffer);
-    for (let i = 0; i < bytes.byteLength; i++) {
-        binary += String.fromCharCode(bytes[i]);
-    }
-    return window.btoa(binary);
-}
-
-let passkeyAbortController = new AbortController();
-let countdownInterval = null;
-
-function checkSignInRateLimit(identifier) {
-    const lockoutKey = 'tbr_signin_lockout_' + identifier;
-    const lockoutUntil = localStorage.getItem(lockoutKey);
-    
-    if (lockoutUntil) {
-        const lockoutTimeNum = Number(lockoutUntil);
-        const remainingTime = lockoutTimeNum - new Date().getTime();
-        if (!isNaN(remainingTime) && remainingTime > 0) {
-            startCountdownFromTarget(lockoutTimeNum);
-        } else {
-            localStorage.removeItem(lockoutKey);
-            localStorage.removeItem('tbr_signin_attempts_' + identifier);
-            unlockSignInForm();
-        }
-    } else {
-        unlockSignInForm();
-    }
-}
-
-function startCountdown(durationMs) {
-    const emailInputElement = document.getElementById('signin-email');
-    if (!emailInputElement) return;
-    const identifier = emailInputElement.value.trim();
-    const lockoutEnd = new Date().getTime() + Number(durationMs);
-    localStorage.setItem('tbr_signin_lockout_' + identifier, lockoutEnd);
-    startCountdownFromTarget(lockoutEnd);
-}
-
-function startCountdownFromTarget(lockoutEndTime) {
-    const submitBtn = document.getElementById('submitBtn');
-    const passInput = document.getElementById('signin-pass');
-
-    if(passInput) passInput.disabled = true;
-    if(submitBtn) submitBtn.disabled = true;
-
-    if (countdownInterval) clearInterval(countdownInterval);
-
-    countdownInterval = setInterval(() => {
-        const now = new Date().getTime();
-        const distance = Number(lockoutEndTime) - now;
-
-        if (isNaN(distance) || distance <= 0) {
-            clearInterval(countdownInterval);
-            const emailInputElement = document.getElementById('signin-email');
-            const identifier = emailInputElement ? emailInputElement.value.trim() : "";
-            if (identifier) {
-                localStorage.removeItem('tbr_signin_lockout_' + identifier);
-                localStorage.removeItem('tbr_signin_attempts_' + identifier);
-            }
-            unlockSignInForm();
-        } else {
-            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-            
-            if(submitBtn) submitBtn.textContent = `Locked (${minutes}m ${seconds}s)`;
-            showError("Access Locked", `Too many failed attempts. Try again in ${minutes}m ${seconds}s.`);
-        }
-    }, 1000);
-}
-
-function unlockSignInForm() {
-    if (countdownInterval) clearInterval(countdownInterval);
-    const submitBtn = document.getElementById('submitBtn');
-    const emailInput = document.getElementById('signin-email');
-    const passInput = document.getElementById('signin-pass');
-
-    if(emailInput) emailInput.disabled = false;
-    if(passInput) passInput.disabled = false;
-    if(submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Sign In →';
-    }
-    hideError();
-}
-
-async function handleGoogleResponse(response) {
-    try {
-        localStorage.clear(); 
-        sessionStorage.clear();
-
-        const res = await fetch(`${API_BASE_URL}/api/google-auth`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                token: response.credential,
-                action: 'signin' 
-            })
-        });
-
-        const data = await res.json();
-        
-        if (data.requiresSignup) {
-            window.location.href = 'signup.html';
-            return;
-        }
-
-        if (data.success) {
-            if (data.token) {
-                localStorage.setItem('authToken', data.token);
-                localStorage.setItem('token', data.token);
-            }
-            if (data.user && data.user.email) {
-                localStorage.setItem('userEmail', data.user.email);
-            } else if (data.email) {
-                localStorage.setItem('userEmail', data.email);
-            }
-
-            await preFetchAndRedirect(data.token, data.redirectUrl);
-        } else {
-            showErrorToast(data.message || 'Google authentication failed.');
-        }
-    } catch (err) {
-        console.error('Error:', err);
-        showErrorToast('Server error during Google sign-in.');
-    }
-}
-
-function showError(title, message) {
-    const msgBox = document.getElementById('responseMessage');
-    const errorTitle = document.getElementById('errorTitle');
-    const errorText = document.getElementById('errorText');
-    
-    if(errorTitle) errorTitle.textContent = title;
-    if(errorText) errorText.textContent = message;
-    if(msgBox) msgBox.style.display = 'block';
-}
-
-function hideError() {
-    const msgBox = document.getElementById('responseMessage');
-    if(msgBox) msgBox.style.display = 'none';
-}
-
-function showErrorToast(msg) {
-    showError("Error", msg);
-}
