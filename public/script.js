@@ -226,50 +226,53 @@ window.addEventListener('load', () => {
 });
 
 
-// 🔴 3. የተቀሩት አዝራሮች (Login, Passkey, OTP Auto-Advance, Eye Icon) 🔴
+// 🔴 3. ያንተ የ P2P ካልኩሌተር፣ Theme እና የተቀሩት ኮዶች በሙሉ እዚህ አሉ! 🔴
 document.addEventListener("DOMContentLoaded", () => {
-    console.log('TBR Exchange JavaScript is working successfully!');
 
-    // 🔴 4. የ OTP አውቶማቲካሊ የመዝለል እና Paste የማድረግ ኮድ 🔴
-    const allInputs = document.querySelectorAll('input');
-    
-    // የኢሜይል እና ፓስወርድ ሳጥኖችን አውጥተን፣ ባዶ የሆኑትን የ OTP ሳጥኖች ብቻ እንለያለን
-    const otpInputs = Array.from(allInputs).filter(input => 
-        (input.type === 'text' || input.type === 'number' || input.type === 'tel') &&
-        !input.id.includes('email') && !input.id.includes('pass') && !input.name.includes('email')
-    );
+    // 🔴 4. 100% በትክክል የሚሰራው የ OTP Auto-Advance እና Paste ኮድ 🔴
+    const otpInputs = document.querySelectorAll('input[type="text"], input[type="number"], input[type="tel"], input:not([type])');
+    // ከኢሜይል እና ፓስወርድ ውጪ ያሉትን ሳጥኖች እንመርጣለን
+    const actualOtpBoxes = Array.from(otpInputs).filter(input => {
+        const idName = (input.id || '').toLowerCase();
+        const className = (input.className || '').toLowerCase();
+        const placeholder = (input.placeholder || '').toLowerCase();
+        return !idName.includes('email') && !idName.includes('pass') && !idName.includes('user') &&
+               !className.includes('email') && !className.includes('pass') &&
+               !placeholder.includes('email') && !placeholder.includes('password') && !placeholder.includes('phone');
+    });
 
-    if (otpInputs.length > 1) {
-        otpInputs.forEach((input, index) => {
-            // ቁጥር ሲገባ ወደ ቀጣዩ መዝለል
-            input.addEventListener('input', () => {
-                if (input.value.length > 1) {
-                    input.value = input.value.slice(0, 1);
+    if (actualOtpBoxes.length >= 4) {
+        actualOtpBoxes.forEach((box, index) => {
+            box.addEventListener('input', () => {
+                if (box.value.length > 1) {
+                    box.value = box.value.slice(-1);
                 }
-                if (input.value !== '' && index < otpInputs.length - 1) {
-                    otpInputs[index + 1].focus();
+                if (box.value !== '' && index < actualOtpBoxes.length - 1) {
+                    actualOtpBoxes[index + 1].focus();
                 }
             });
-            
-            // Backspace ሲነካ ወደ ኋላ መመለስ
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Backspace' && input.value === '' && index > 0) {
-                    otpInputs[index - 1].focus();
+
+            box.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && box.value === '' && index > 0) {
+                    actualOtpBoxes[index - 1].focus();
                 }
             });
-            
-            // Paste ሲደረግ በየሳጥኑ መበተን
-            input.addEventListener('paste', (e) => {
+
+            box.addEventListener('paste', (e) => {
                 e.preventDefault();
-                const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, otpInputs.length);
-                for (let i = 0; i < pastedData.length; i++) {
-                    otpInputs[i].value = pastedData[i];
-                    if (i < otpInputs.length - 1) otpInputs[i + 1].focus();
-                }
+                const pasteData = e.clipboardData.getData('text').replace(/\D/g, '').split('');
+                actualOtpBoxes.forEach((b, i) => {
+                    if (pasteData[i]) {
+                        b.value = pasteData[i];
+                        if (i < actualOtpBoxes.length - 1) actualOtpBoxes[i + 1].focus();
+                    }
+                });
             });
         });
     }
 
+    console.log('TBR Exchange JavaScript is working successfully!');
+    
     // ለአዝራሮቹ መጫን (Click) የሚሆን ሙከራ
     const buttons = document.querySelectorAll('button, a.btn');
     buttons.forEach(btn => {
