@@ -41,17 +41,22 @@ const usdtAbi = [
 ];
 const usdtContractMaster = masterWallet ? new ethers.Contract(USDT_CONTRACT_ADDRESS, usdtAbi, masterWallet) : null;
 
-// 🛡️ የደህንነት መከላከያዎች (Security Headers) 🛡️
+// 🛡️ የደህንነት መከላከያዎች (Security Headers - Grade A+ & 130/100) 🛡️
 app.use((req, res, next) => {
-    // 1. ዲዛይኑ እና ጃቫስክሪፕቱ በትክክል እንዲሰራ የተስተካከለ CSP
+    // 1. CSP: ጃቫስክሪፕትን ('script-src') አጥብቀን፣ ዲዛይኑን ('style-src') ክፍት ('unsafe-inline') እናደርጋለን!
+    // 'form-action' ደግሞ 'self' አድርገን ቦነስ ነጥብ እንወስዳለን።
     res.setHeader(
         'Content-Security-Policy',
-        "default-src * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline'; img-src * data: blob: 'unsafe-inline'; connect-src * 'unsafe-inline' wss:; object-src 'none'; frame-ancestors 'none';"
+        "default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' wss: https://api.brevo.com https://bsc-dataseed.binance.org; object-src 'none'; frame-ancestors 'none'; form-action 'self';"
     );
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    
+    // 🚀 የ 130% ቦነስ ነጥብ (+10 Passed) ሚስጥር 🚀
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+
     next();
 });
 
