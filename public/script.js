@@ -202,7 +202,7 @@ async function handleGoogleResponse(response) {
 }
 
 // 🔴 2. የ Google Login ቁልፍ ዌብሳይቱ ሎድ አድርጎ ሲጨርስ ብቻ እንዲመጣ 🔴
-window.addEventListener('load', () => {
+function renderGoogleBtn() {
     if (typeof google !== 'undefined' && google.accounts) {
         google.accounts.id.initialize({
             client_id: "661544926174-8kp01crhke9m1vmjf6kcts5o2e7sqek8.apps.googleusercontent.com",
@@ -222,8 +222,12 @@ window.addEventListener('load', () => {
                 }
             );
         }
+    } else {
+        // Google ገና ሎድ አድርጎ ካልጨረሰ፣ እስኪመጣ ድረስ በየ 100 ሚሊ-ሰከንድ ደጋግሞ ይፈልገዋል
+        setTimeout(renderGoogleBtn, 100);
     }
-});
+}
+window.addEventListener('load', renderGoogleBtn);
 
 
 // 🔴 3. ያንተ የ P2P ካልኩሌተር፣ Theme እና የተቀሩት ኮዶች በሙሉ እዚህ አሉ! 🔴
