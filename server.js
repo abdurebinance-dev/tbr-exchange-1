@@ -44,9 +44,10 @@ const usdtContractMaster = masterWallet ? new ethers.Contract(USDT_CONTRACT_ADDR
 // 🛡️ ጥብቅ የደህንነት መከላከያዎች (Security Headers) 🛡️
 app.use((req, res, next) => {
     // 1. የተስተካከለ CSP (Content Security Policy) - አደገኛ የሆኑትን የ (*) ፈቃዶች ዘግተናል
+    // 1. በጣም ጥብቅ የሆነ CSP (Content Security Policy)
     res.setHeader(
         'Content-Security-Policy',
-        "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' wss: https://api.brevo.com https://bsc-dataseed.binance.org;"
+        "default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' https://cdnjs.cloudflare.com; img-src 'self' blob: https:; connect-src 'self' wss: https://api.brevo.com https://bsc-dataseed.binance.org; object-src 'none'; frame-ancestors 'none';"
     );
     
     // 2. HSTS (Strict Transport Security) - ዌብሳይትህ ሁልጊዜ በ HTTPS ብቻ እንዲሰራ ያስገድዳል
