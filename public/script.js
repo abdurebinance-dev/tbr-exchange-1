@@ -1119,11 +1119,30 @@ async function handleGoogleSignUpResponse(response) {
             })
         });
         const data = await res.json();
+        
+        // ባክኤንድህ የሚመልሰው አዲስ አካውንት ከሆነ (exists: false) እና ቶከን ከሌለ፣ 
+        // ዩዘሩ ኢሜይሉን አግኝቶ ራሱ ፓስወርድ እንዲሞላ እናደርጋለን (ወይም እንደ ባክኤንድህ አሰራር ይቀጥላል)
         if (data.success) {
-            if (data.token) localStorage.setItem('authToken', data.token);
-            if (data.user && data.user.email) localStorage.setItem('userEmail', data.user.email);
-            else if (data.email) localStorage.setItem('userEmail', data.email);
-            window.location.href = data.redirectUrl || 'dashboard.html';
+            if (data.token) {
+                localStorage.setItem('authToken', data.token);
+                if (data.user && data.user.email) localStorage.setItem('userEmail', data.user.email);
+                else if (data.email) localStorage.setItem('userEmail', data.email);
+                window.location.href = data.redirectUrl || 'dashboard.html';
+            } else if (data.exists === false) {
+                // አዲስ አካውንት ከሆነ እና ባክኤንድ ቶከን ካልሰጠ፣ ኢሜይሉን ፎርሙ ላይ እንሞላለን
+                const emailInput = document.getElementById('signup-email');
+                if (emailInput && data.email) {
+                    emailInput.value = data.email;
+                    localStorage.setItem('signupEmail', data.email);
+                    if (window.showSignupErrorToast) {
+                        window.showSignupErrorToast("Google verified! Please create a password to complete sign up.");
+                        const toastMsg = document.getElementById('toastMessage');
+                        if(toastMsg) toastMsg.style.color = '#51cf66'; // አረንጓዴ ቀለም
+                    }
+                } else {
+                    window.location.href = data.redirectUrl || 'signup.html';
+                }
+            }
         } else {
             if (window.showSignupErrorToast) window.showSignupErrorToast(data.message || 'Google authentication failed.');
         }
@@ -1133,9 +1152,10 @@ async function handleGoogleSignUpResponse(response) {
     }
 }
 
+// 🔴 ጉግልን ያለምንም መዘግየት ለማምጣት (Timing Issue Fixed) 🔴
 function renderGoogleSignUpBtn() {
     const googleBtnContainer = document.getElementById("googleSignUpBtnContainer");
-    if (!googleBtnContainer) return;
+    if (!googleBtnContainer) return; // በዚህ ገጽ ላይ ጉግል ከሌለ (signup ካልሆነ) ያልፈዋል
 
     if (typeof google !== 'undefined' && google.accounts) {
         google.accounts.id.initialize({
@@ -1150,14 +1170,17 @@ function renderGoogleSignUpBtn() {
     }
 }
 
-window.addEventListener('load', renderGoogleSignUpBtn);
+// ፔጁ እንደጀመረ ፈልጎ እንዲያመጣው
+renderGoogleSignUpBtn();
 
 
+// =========================================================
+// 🔴 የፎርም፣ የፓስወርድ እና የተቀሩት ሎጂኮች 🔴
+// =========================================================
 document.addEventListener("DOMContentLoaded", () => {
     const signupForm = document.getElementById('signupForm');
     
     if (signupForm) {
-        // የድሮ ዳታዎችን ማጽዳት
         localStorage.removeItem('userEmail');
         localStorage.removeItem('authToken');
 
@@ -1179,7 +1202,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
 
-        // Error Toast ማሳያ (Signup ልዩ)
+        // Error Toast 
         let toastTimer = null;
         window.showSignupErrorToast = function(message) {
             const toast = document.getElementById('errorToast');
@@ -1187,11 +1210,14 @@ document.addEventListener("DOMContentLoaded", () => {
             if(!toast || !toastMsg) return;
             
             toastMsg.innerText = message;
+            toastMsg.style.color = '#fff'; // ነባሪ ቀለም
             toast.style.display = 'flex';
             if (toastTimer) clearTimeout(toastTimer);
             
-            if (!message.includes('try again in')) {
+            if (!message.includes('try again in') && !message.includes('Google verified')) {
                 toastTimer = setTimeout(() => { window.hideErrorToast(); }, 4000);
+            } else if (message.includes('Google verified')) {
+                toastTimer = setTimeout(() => { window.hideErrorToast(); }, 6000);
             }
         };
 
@@ -1312,7 +1338,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
 
-        // ፓስወርድ አሳይ/ደብቅ (Toggle Visibility)
+        // ፓስወርድ አሳይ/ደብቅ
         const togglePwd = document.getElementById('toggle-password');
         const toggleConfirm = document.getElementById('toggle-confirm');
         
