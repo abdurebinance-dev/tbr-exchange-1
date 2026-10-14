@@ -1105,7 +1105,7 @@ document.addEventListener("DOMContentLoaded", () => {
 // 🔴 SIGNUP PAGE LOGIC (signup.html) 🔴
 // =========================================================
 
-// 🔴 ጉግል ሁልጊዜ እንዲታይ ከ DOMContentLoaded ውጪ መሆን አለበት 🔴
+// 1. ጉግል ሲነካ ወደ ሰርቨር መረጃ የሚልከው (በነፃ ይቀመጣል)
 async function handleGoogleSignUpResponse(response) {
     try {
         localStorage.clear(); 
@@ -1120,8 +1120,6 @@ async function handleGoogleSignUpResponse(response) {
         });
         const data = await res.json();
         
-        // ባክኤንድህ የሚመልሰው አዲስ አካውንት ከሆነ (exists: false) እና ቶከን ከሌለ፣ 
-        // ዩዘሩ ኢሜይሉን አግኝቶ ራሱ ፓስወርድ እንዲሞላ እናደርጋለን (ወይም እንደ ባክኤንድህ አሰራር ይቀጥላል)
         if (data.success) {
             if (data.token) {
                 localStorage.setItem('authToken', data.token);
@@ -1129,15 +1127,14 @@ async function handleGoogleSignUpResponse(response) {
                 else if (data.email) localStorage.setItem('userEmail', data.email);
                 window.location.href = data.redirectUrl || 'dashboard.html';
             } else if (data.exists === false) {
-                // አዲስ አካውንት ከሆነ እና ባክኤንድ ቶከን ካልሰጠ፣ ኢሜይሉን ፎርሙ ላይ እንሞላለን
                 const emailInput = document.getElementById('signup-email');
                 if (emailInput && data.email) {
                     emailInput.value = data.email;
                     localStorage.setItem('signupEmail', data.email);
                     if (window.showSignupErrorToast) {
-                        window.showSignupErrorToast("Google verified! Please create a password to complete sign up.");
+                        window.showSignupErrorToast("Google verified! Please create a password.");
                         const toastMsg = document.getElementById('toastMessage');
-                        if(toastMsg) toastMsg.style.color = '#51cf66'; // አረንጓዴ ቀለም
+                        if(toastMsg) toastMsg.style.color = '#51cf66';
                     }
                 } else {
                     window.location.href = data.redirectUrl || 'signup.html';
@@ -1152,35 +1149,30 @@ async function handleGoogleSignUpResponse(response) {
     }
 }
 
-// 🔴 ጉግልን ያለምንም መዘግየት ለማምጣት (Timing Issue Fixed) 🔴
-function renderGoogleSignUpBtn() {
-    const googleBtnContainer = document.getElementById("googleSignUpBtnContainer");
-    if (!googleBtnContainer) return; // በዚህ ገጽ ላይ ጉግል ከሌለ (signup ካልሆነ) ያልፈዋል
 
-    if (typeof google !== 'undefined' && google.accounts) {
-        google.accounts.id.initialize({
-            client_id: "661544926174-8kp01crhke9m1vmjf6kcts5o2e7sqek8.apps.googleusercontent.com",
-            callback: handleGoogleSignUpResponse
-        });
-        google.accounts.id.renderButton(googleBtnContainer, { 
-            theme: "filled_black", size: "large", width: "340", shape: "rectangular", text: "continue_with"
-        });
-    } else {
-        setTimeout(renderGoogleSignUpBtn, 100);
-    }
-}
-
-// ፔጁ እንደጀመረ ፈልጎ እንዲያመጣው
-renderGoogleSignUpBtn();
-
-
-// =========================================================
-// 🔴 የፎርም፣ የፓስወርድ እና የተቀሩት ሎጂኮች 🔴
-// =========================================================
+// 2. 🔴 የተቀሩት የ Signup ፎርም ኮዶች እና የተስተካከለው የጉግል ማምጫ 🔴
 document.addEventListener("DOMContentLoaded", () => {
-    const signupForm = document.getElementById('signupForm');
     
+    // 🔴 100% አስተማማኝ የጉግል ማምጫ (DOM ሎድ ካደረገ በኋላ ብቻ ይሰራል) 🔴
+    const signupContainer = document.getElementById("googleSignUpBtnContainer");
+    if (signupContainer) {
+        const waitForGoogle = setInterval(() => {
+            if (typeof google !== 'undefined' && google.accounts) {
+                clearInterval(waitForGoogle); // ጉግል ሲመጣ ፍለጋውን ያቆማል
+                google.accounts.id.initialize({
+                    client_id: "661544926174-8kp01crhke9m1vmjf6kcts5o2e7sqek8.apps.googleusercontent.com",
+                    callback: handleGoogleSignUpResponse
+                });
+                google.accounts.id.renderButton(signupContainer, { 
+                    theme: "filled_black", size: "large", width: "340", shape: "rectangular", text: "continue_with"
+                });
+            }
+        }, 100); // በየ 100 ሚሊ-ሰከንድ ያጣራል
+    }
+
+    const signupForm = document.getElementById('signupForm');
     if (signupForm) {
+        // የድሮ ዳታዎችን ማጽዳት
         localStorage.removeItem('userEmail');
         localStorage.removeItem('authToken');
 
@@ -1202,7 +1194,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
 
-        // Error Toast 
+        // Error Toast ማሳያ (Signup ልዩ)
         let toastTimer = null;
         window.showSignupErrorToast = function(message) {
             const toast = document.getElementById('errorToast');
@@ -1210,7 +1202,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if(!toast || !toastMsg) return;
             
             toastMsg.innerText = message;
-            toastMsg.style.color = '#fff'; // ነባሪ ቀለም
+            toastMsg.style.color = '#fff';
             toast.style.display = 'flex';
             if (toastTimer) clearTimeout(toastTimer);
             
@@ -1338,7 +1330,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
 
-        // ፓስወርድ አሳይ/ደብቅ
+        // ፓስወርድ አሳይ/ደብቅ (Toggle Visibility)
         const togglePwd = document.getElementById('toggle-password');
         const toggleConfirm = document.getElementById('toggle-confirm');
         
