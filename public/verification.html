@@ -10,293 +10,54 @@
     <link rel="manifest" href="/manifest.json?v=3">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body {
-            background-color: #080808;
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            color: #fff;
-            padding-top: 75px;
-            padding-bottom: 70px;
-        }
-
-        .navbar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            background: #121212;
-            border-bottom: 1px solid #262626;
-            padding: 12px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            z-index: 1000;
-            box-sizing: border-box;
-        }
-        .nav-left {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-        .logo-container img {
-            height: 32px;
-            width: auto;
-            object-fit: contain;
-            display: block;
-        }
-        .nav-links {
-            display: flex;
-            gap: 15px;
-        }
-        .nav-links a {
-            color: #888;
-            text-decoration: none;
-            font-size: 13px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 10px;
-            border-radius: 8px;
-            transition: 0.2s;
-        }
-        .nav-links a.active, .nav-links a:hover {
-            color: #d4af37;
-            background: rgba(212, 175, 55, 0.08);
-            border: 1px solid rgba(212, 175, 55, 0.2);
-        }
-        .nav-right {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            color: #aaa;
-        }
-
-        .container {
-            max-width: 800px;
-            margin: 30px auto;
-            padding: 0 20px;
-        }
-
-        /* Verification Steps Indicator */
-        .steps-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-            position: relative;
-            padding: 0 30px;
-        }
-        .step-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 6px;
-            z-index: 2;
-        }
-        .step-circle {
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            background: #121212;
-            border: 2px solid #333;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #777;
-            font-size: 13px;
-        }
-        .step-item.active .step-circle {
-            border-color: #d4af37;
-            color: #d4af37;
-            background: rgba(212, 175, 55, 0.1);
-        }
-        .step-label {
-            font-size: 11px;
-            color: #777;
-            text-transform: uppercase;
-            font-weight: bold;
-        }
-        .step-item.active .step-label {
-            color: #d4af37;
-        }
-        .step-line {
-            position: absolute;
-            top: 17px;
-            left: 80px;
-            right: 80px;
-            height: 2px;
-            background: #222;
-            z-index: 1;
-        }
-
-        /* Limits Grid Info */
-        .limits-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-            margin-bottom: 20px;
-            background: #181818;
-            padding: 15px;
-            border-radius: 12px;
-            border: 1px solid #222;
-        }
-        .limit-item {
-            text-align: center;
-        }
-        .limit-item .label {
-            font-size: 11px;
-            color: #777;
-            margin-bottom: 4px;
-        }
-        .limit-item .val {
-            font-size: 13px;
-            font-weight: bold;
-            color: #d4af37;
-        }
-        .limit-item .old-val {
-            text-decoration: line-through;
-            color: #777;
-            margin-right: 4px;
-            font-size: 11px;
-            font-weight: normal;
-        }
-
-        /* KYC Card */
-        .kyc-card {
-            background: #121212;
-            border: 1px solid rgba(212, 175, 55, 0.2);
-            border-radius: 18px;
-            padding: 30px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-        .form-group label {
-            display: block;
-            font-size: 13px;
-            color: #888;
-            margin-bottom: 8px;
-        }
-        .form-group label span {
-            color: #10b981;
-        }
-
-        .select-box, .input-box {
-            width: 100%;
-            background: #181818;
-            border: 1px solid #262626;
-            border-radius: 10px;
-            padding: 12px 16px;
-            color: #fff;
-            font-size: 14px;
-            box-sizing: border-box;
-            outline: none;
-            transition: 0.2s;
-        }
-        .select-box:focus, .input-box:focus {
-            border-color: #d4af37;
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-
-        /* Upload Zones */
-        .upload-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        .upload-box {
-            background: #181818;
-            border: 1px dashed #333;
-            border-radius: 12px;
-            padding: 35px 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .upload-box:hover {
-            border-color: #d4af37;
-            background: #1c1c1c;
-        }
-        .upload-box i {
-            font-size: 20px;
-            color: #888;
-            margin-bottom: 10px;
-            display: block;
-        }
-        .upload-box .upload-title {
-            font-size: 13px;
-            color: #aaa;
-        }
-
-        .upload-box-full {
-            background: #181818;
-            border: 1px dashed #333;
-            border-radius: 12px;
-            padding: 30px 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: 0.2s;
-            margin-bottom: 20px;
-        }
-        .upload-box-full:hover {
-            border-color: #d4af37;
-            background: #1c1c1c;
-        }
-        .upload-box-full i {
-            font-size: 20px;
-            color: #888;
-            margin-bottom: 10px;
-            display: block;
-        }
-        .upload-box-full .upload-title {
-            font-size: 13px;
-            color: #aaa;
-        }
-
-        .security-note {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 12px;
-            color: #666;
-            margin-bottom: 25px;
-        }
-        .security-note a {
-            color: #d4af37;
-            text-decoration: none;
-        }
-
-        .submit-btn {
-            width: 100%;
-            background: #10b981;
-            color: #fff;
-            border: none;
-            border-radius: 12px;
-            padding: 14px;
-            font-size: 15px;
-            font-weight: bold;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            transition: 0.2s;
-        }
-        .submit-btn:hover {
-            background: #059669;
-        }
-
-        @media(max-width: 768px) {
-            .form-row, .upload-grid, .limits-grid { grid-template-columns: 1fr; }
-        }
+        body { background-color: #080808; margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #fff; padding-top: 75px; padding-bottom: 70px; }
+        .navbar { position: fixed; top: 0; left: 0; width: 100%; background: #121212; border-bottom: 1px solid #262626; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 1000; box-sizing: border-box; }
+        .nav-left { display: flex; align-items: center; gap: 20px; }
+        .logo-container img { height: 32px; width: auto; object-fit: contain; display: block; }
+        .nav-links { display: flex; gap: 15px; }
+        .nav-links a { color: #888; text-decoration: none; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 8px; transition: 0.2s; }
+        .nav-links a.active, .nav-links a:hover { color: #d4af37; background: rgba(212, 175, 55, 0.08); border: 1px solid rgba(212, 175, 55, 0.2); }
+        .nav-right { display: flex; align-items: center; gap: 15px; color: #aaa; }
+        .container { max-width: 800px; margin: 30px auto; padding: 0 20px; }
+        .steps-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; position: relative; padding: 0 30px; }
+        .step-item { display: flex; flex-direction: column; align-items: center; gap: 6px; z-index: 2; }
+        .step-circle { width: 34px; height: 34px; border-radius: 50%; background: #121212; border: 2px solid #333; display: flex; align-items: center; justify-content: center; color: #777; font-size: 13px; }
+        .step-item.active .step-circle { border-color: #d4af37; color: #d4af37; background: rgba(212, 175, 55, 0.1); }
+        .step-label { font-size: 11px; color: #777; text-transform: uppercase; font-weight: bold; }
+        .step-item.active .step-label { color: #d4af37; }
+        .step-line { position: absolute; top: 17px; left: 80px; right: 80px; height: 2px; background: #222; z-index: 1; }
+        .limits-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; background: #181818; padding: 15px; border-radius: 12px; border: 1px solid #222; }
+        .limit-item { text-align: center; }
+        .limit-item .label { font-size: 11px; color: #777; margin-bottom: 4px; }
+        .limit-item .val { font-size: 13px; font-weight: bold; color: #d4af37; }
+        .limit-item .old-val { text-decoration: line-through; color: #777; margin-right: 4px; font-size: 11px; font-weight: normal; }
+        .kyc-card { background: #121212; border: 1px solid rgba(212, 175, 55, 0.2); border-radius: 18px; padding: 30px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 13px; color: #888; margin-bottom: 8px; }
+        .form-group label span { color: #10b981; }
+        .select-box, .input-box { width: 100%; background: #181818; border: 1px solid #262626; border-radius: 10px; padding: 12px 16px; color: #fff; font-size: 14px; box-sizing: border-box; outline: none; transition: 0.2s; }
+        .select-box:focus, .input-box:focus { border-color: #d4af37; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .upload-box { background: #181818; border: 1px dashed #333; border-radius: 12px; padding: 35px 20px; text-align: center; cursor: pointer; transition: 0.2s; position: relative; overflow: hidden; }
+        .upload-box:hover { border-color: #d4af37; background: #1c1c1c; }
+        .upload-box i { font-size: 20px; color: #888; margin-bottom: 10px; display: block; }
+        .upload-box .upload-title { font-size: 13px; color: #aaa; }
+        .upload-box img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: none; }
+        .upload-box input[type="file"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+        .upload-box-full { background: #181818; border: 1px dashed #333; border-radius: 12px; padding: 30px 20px; text-align: center; cursor: pointer; transition: 0.2s; margin-bottom: 20px; position: relative; overflow: hidden; }
+        .upload-box-full:hover { border-color: #d4af37; background: #1c1c1c; }
+        .upload-box-full i { font-size: 20px; color: #888; margin-bottom: 10px; display: block; }
+        .upload-box-full .upload-title { font-size: 13px; color: #aaa; }
+        .upload-box-full img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: none; }
+        .upload-box-full input[type="file"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+        .security-note { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #666; margin-bottom: 25px; }
+        .security-note a { color: #d4af37; text-decoration: none; }
+        .submit-btn { width: 100%; background: #10b981; color: #fff; border: none; border-radius: 12px; padding: 14px; font-size: 15px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; }
+        .submit-btn:hover { background: #059669; }
+        .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        #kycMessage { font-size: 13px; text-align: center; margin-bottom: 15px; display: none; font-weight: bold; }
+        @media(max-width: 768px) { .form-row, .upload-grid, .limits-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
@@ -315,7 +76,7 @@
             </div>
         </div>
         <div class="nav-right">
-            <div style="color: #d4af37; font-size: 13px;"><i class="fa-solid fa-shield-halved"></i> Verified</div>
+            <div style="color: #d4af37; font-size: 13px;"><i class="fa-solid fa-shield-halved"></i> Unverified</div>
         </div>
     </div>
 
@@ -338,77 +99,90 @@
         </div>
 
         <div class="kyc-card">
-            <!-- Limits Grid Info -->
-            <div class="limits-grid">
-                <div class="limit-item">
-                    <div class="label">Daily trade</div>
-                    <div class="val"><span class="old-val">1K USDT</span> 10K USDT</div>
-                </div>
-                <div class="limit-item">
-                    <div class="label">Withdrawal</div>
-                    <div class="val"><span class="old-val">1K USDT</span> 10K USDT</div>
-                </div>
-                <div class="limit-item">
-                    <div class="label">Post ads</div>
-                    <div class="val" style="color: #22c55e;">Unlocked</div>
-                </div>
-            </div>
+            <div id="kycMessage"></div>
 
-            <div class="form-group">
-                <label>Document type</label>
-                <select class="select-box">
-                    <option>National ID</option>
-                    <option>Passport</option>
-                    <option>Driver's License</option>
-                </select>
-            </div>
+            <form id="kycForm">
+                <!-- Limits Grid Info -->
+                <div class="limits-grid">
+                    <div class="limit-item">
+                        <div class="label">Daily trade</div>
+                        <div class="val"><span class="old-val">1K USDT</span> 10K USDT</div>
+                    </div>
+                    <div class="limit-item">
+                        <div class="label">Withdrawal</div>
+                        <div class="val"><span class="old-val">1K USDT</span> 10K USDT</div>
+                    </div>
+                    <div class="limit-item">
+                        <div class="label">Post ads</div>
+                        <div class="val" style="color: #22c55e;">Unlocked</div>
+                    </div>
+                </div>
 
-            <div class="form-row">
                 <div class="form-group">
-                    <label>ID Number <span style="color:#666;">(opt.)</span></label>
-                    <input type="text" class="input-box" placeholder="e.g. 1234567890">
+                    <label>Document type</label>
+                    <select id="kycDocType" class="select-box">
+                        <option value="National ID">National ID</option>
+                        <option value="Passport">Passport</option>
+                        <option value="Driver's License">Driver's License</option>
+                    </select>
                 </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>ID Number <span style="color:#666;">(opt.)</span></label>
+                        <input type="text" id="kycIdNumber" class="input-box" placeholder="e.g. 1234567890">
+                    </div>
+                    <div class="form-group">
+                        <label>Date of Birth <span style="color:#666;">(opt.)</span></label>
+                        <input type="date" id="kycDob" class="input-box">
+                    </div>
+                </div>
+
                 <div class="form-group">
-                    <label>Date of Birth <span style="color:#666;">(opt.)</span></label>
-                    <input type="text" class="input-box" placeholder="dd/mm/yyyy">
+                    <label>Residential Address <span style="color:#666;">(opt.)</span></label>
+                    <input type="text" id="kycAddress" class="input-box" placeholder="e.g. Bole Sub-city, Addis Ababa, Ethiopia">
                 </div>
-            </div>
 
-            <div class="form-group">
-                <label>Residential Address <span style="color:#666;">(opt.)</span></label>
-                <input type="text" class="input-box" placeholder="e.g. Bole Sub-city, Addis Ababa, Ethiopia">
-            </div>
-
-            <div class="form-group" style="margin-top: 25px;">
-                <label>Documents <span>* required</span></label>
-            </div>
-
-            <div class="upload-grid">
-                <div class="upload-box">
-                    <i class="fa-solid fa-id-card"></i>
-                    <div class="upload-title">Front side</div>
+                <div class="form-group" style="margin-top: 25px;">
+                    <label>Documents <span>required</span></label>
                 </div>
-                <div class="upload-box">
-                    <i class="fa-solid fa-file-lines"></i>
-                    <div class="upload-title">Back side</div>
+
+                <div class="upload-grid">
+                    <div class="upload-box" onclick="document.getElementById('uploadFront').click()">
+                        <i class="fa-solid fa-id-card" id="iconFront"></i>
+                        <div class="upload-title" id="textFront">Front side</div>
+                        <img id="previewFront" src="" alt="Front Preview">
+                        <input type="file" id="uploadFront" accept="image/*">
+                    </div>
+                    <div class="upload-box" onclick="document.getElementById('uploadBack').click()">
+                        <i class="fa-solid fa-file-lines" id="iconBack"></i>
+                        <div class="upload-title" id="textBack">Back side</div>
+                        <img id="previewBack" src="" alt="Back Preview">
+                        <input type="file" id="uploadBack" accept="image/*">
+                    </div>
                 </div>
-            </div>
 
-            <div class="form-group">
-                <label>Selfie with ID <span>* required</span></label>
-            </div>
-            <div class="upload-box-full">
-                <i class="fa-solid fa-camera"></i>
-                <div class="upload-title">Hold ID next to your face</div>
-            </div>
+                <div class="form-group">
+                    <label>Selfie with ID <span>required</span></label>
+                </div>
+                <div class="upload-box-full" onclick="document.getElementById('uploadSelfie').click()">
+                    <i class="fa-solid fa-camera" id="iconSelfie"></i>
+                    <div class="upload-title" id="textSelfie">Hold ID next to your face</div>
+                    <img id="previewSelfie" src="" alt="Selfie Preview">
+                    <input type="file" id="uploadSelfie" accept="image/*">
+                </div>
 
-            <div class="security-note">
-                <span><i class="fa-solid fa-lock"></i> Encrypted · viewed only by compliance · never shared</span>
-                <a href="#">Why KYC?</a>
-            </div>
+                <div class="security-note">
+                    <span><i class="fa-solid fa-lock"></i> Encrypted · viewed only by compliance · never shared</span>
+                    <a href="#">Why KYC?</a>
+                </div>
 
-            <button class="submit-btn"><i class="fa-solid fa-paper-plane"></i> Submit for Review</button>
+                <button type="submit" id="kycSubmitBtn" class="submit-btn"><i class="fa-solid fa-paper-plane"></i> Submit for Review</button>
+            </form>
         </div>
     </div>
+
+    <!-- 🔴 ውጫዊውን ጃቫስክሪፕት የምንጠራበት ኮድ 🔴 -->
+    <script src="script.js"></script>
 </body>
 </html>

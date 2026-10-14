@@ -745,3 +745,126 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 });
+
+// =========================================================
+// 🔴 IDENTITY VERIFICATION (KYC) LOGIC (verification.html) 🔴
+// =========================================================
+document.addEventListener("DOMContentLoaded", () => {
+    const kycForm = document.getElementById('kycForm');
+    
+    if (kycForm) {
+        // 1. ፎቶ ሲመረጥ Preview የሚያደርግ ፈንክሽን
+        function setupImagePreview(inputId, previewId, iconId, textId) {
+            const input = document.getElementById(inputId);
+            const preview = document.getElementById(previewId);
+            const icon = document.getElementById(iconId);
+            const text = document.getElementById(textId);
+            
+            if (!input || !preview) return;
+
+            input.addEventListener('change', function() {
+                const file = this.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        preview.src = e.target.result;
+                        preview.style.display = 'block';
+                        if (icon) icon.style.display = 'none';
+                        if (text) text.style.display = 'none';
+                        
+                        // የሳጥኑን ቦርደር ወደ ወርቃማ እንቀይረዋለን
+                        const box = input.closest('.upload-box, .upload-box-full');
+                        if(box) {
+                            box.style.borderStyle = 'solid';
+                            box.style.borderColor = '#d4af37';
+                        }
+                    }
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        // ለሶስቱም የፎቶ ሳጥኖች Preview እንዲሰራ እናደርጋለን
+        setupImagePreview('uploadFront', 'previewFront', 'iconFront', 'textFront');
+        setupImagePreview('uploadBack', 'previewBack', 'iconBack', 'textBack');
+        setupImagePreview('uploadSelfie', 'previewSelfie', 'iconSelfie', 'textSelfie');
+
+        // 2. ፎርሙ ሲላክ (Submit) ሲደረግ 
+        kycForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('kycSubmitBtn');
+            const messageDiv = document.getElementById('kycMessage');
+            
+            // ፎቶዎቹ መመረጣቸውን ማረጋገጥ
+            const frontFile = document.getElementById('uploadFront').files[0];
+            const backFile = document.getElementById('uploadBack').files[0];
+            const selfieFile = document.getElementById('uploadSelfie').files[0];
+
+            if (!frontFile || !backFile || !selfieFile) {
+                messageDiv.style.display = 'block';
+                messageDiv.style.color = '#ff6b6b';
+                messageDiv.innerText = 'Please upload all required documents (Front, Back, and Selfie).';
+                return;
+            }
+
+            // አዝራሩን Disable አድርጎ "Submitting..." ማሳየት
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting...';
+            messageDiv.style.display = 'none';
+
+            // ዳታውን እና ፎቶዎቹን ወደ ሰርቨር ለመላክ ማዘጋጀት (FormData)
+            const formData = new FormData();
+            formData.append('documentType', document.getElementById('kycDocType').value);
+            formData.append('idNumber', document.getElementById('kycIdNumber').value);
+            formData.append('dob', document.getElementById('kycDob').value);
+            formData.append('address', document.getElementById('kycAddress').value);
+            formData.append('frontImage', frontFile);
+            formData.append('backImage', backFile);
+            formData.append('selfieImage', selfieFile);
+
+            try {
+                const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+                
+                // ወደ ባክኤንድ መላክ
+                const response = await fetch(`${API_BASE_URL}/api/kyc/submit`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                        // ማሳሰቢያ፡ FormData ስንጠቀም 'Content-Type' አንጽፍም፣ ብሮውዘሩ ራሱ ያስተካክለዋል
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    messageDiv.style.display = 'block';
+                    messageDiv.style.color = '#51cf66';
+                    messageDiv.innerText = 'KYC Documents submitted successfully! Pending review.';
+                    
+                    // ፎርሙን ማጽዳት
+                    kycForm.reset();
+                    
+                    // ከ 2 ሰከንድ በኋላ ወደ ዳሽቦርድ መመለስ
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 2000);
+                } else {
+                    messageDiv.style.display = 'block';
+                    messageDiv.style.color = '#ff6b6b';
+                    messageDiv.innerText = data.message || 'Failed to submit KYC. Please try again.';
+                }
+            } catch (error) {
+                console.error('KYC Submit Error:', error);
+                messageDiv.style.display = 'block';
+                messageDiv.style.color = '#ff6b6b';
+                messageDiv.innerText = 'Error connecting to server!';
+            } finally {
+                // አዝራሩን ወደ ነበረበት መመለስ
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit for Review';
+            }
+        });
+    }
+});
