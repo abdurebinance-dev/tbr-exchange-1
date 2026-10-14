@@ -100,3 +100,423 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 });
+
+const API_BASE_URL = window.location.hostname.includes('localhost') 
+    ? '' 
+    : 'https://tbr-exchange-backend.onrender.com';
+
+function togglePass(id, icon) {
+    const input = document.getElementById(id);
+    if (input.type === "password") {
+        input.type = "text";
+        icon.classList.remove("fa-eye");
+        icon.classList.add("fa-eye-slash");
+    } else {
+        input.type = "password";
+        icon.classList.remove("fa-eye-slash");
+        icon.classList.add("fa-eye");
+    }
+}
+
+// 🔴 ገፁ ሙሉ በሙሉ ሎድ አድርጎ ሲጨርስ ሁሉም ኮዶች እንዲሰሩ ታዟል 🔴
+document.addEventListener("DOMContentLoaded", () => {
+
+    // የፓስወርድ ማሳያ/መደበቂያ አይኮን ሲነካ
+    const toggleIcon = document.getElementById('togglePasswordIcon');
+    if (toggleIcon) {
+        toggleIcon.addEventListener('click', function() {
+            togglePass('signin-pass', this);
+        });
+    }
+
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('authToken');
+
+    // Google Login ማዋቀር
+    if (typeof google !== 'undefined' && google.accounts) {
+        google.accounts.id.initialize({
+            client_id: "661544926174-8kp01crhke9m1vmjf6kcts5o2e7sqek8.apps.googleusercontent.com",
+            callback: handleGoogleResponse
+        });
+
+        const googleBtnContainer = document.getElementById("googleSignInBtnContainer");
+        if(googleBtnContainer) {
+            google.accounts.id.renderButton(
+                googleBtnContainer,
+                { 
+                    theme: "filled_black", 
+                    size: "large", 
+                    width: "340",
+                    shape: "rectangular",
+                    text: "continue_with"
+                }
+            );
+        }
+    }
+
+    const savedEmail = localStorage.getItem('signinEmail');
+    const emailInput = document.getElementById('signin-email');
+    if (savedEmail && emailInput) {
+        emailInput.value = savedEmail;
+        checkSignInRateLimit(savedEmail);
+    }
+
+    if (emailInput) {
+        emailInput.addEventListener('input', function() {
+            const identifier = this.value.trim();
+            if (identifier) {
+                checkSignInRateLimit(identifier);
+            }
+        });
+    }
+
+    // Passkey ሎጊን
+    const passkeyBtn = document.getElementById('passkeyBtn');
+    if(passkeyBtn) {
+        passkeyBtn.addEventListener('click', async () => {
+            if (!window.PublicKeyCredential) {
+                showError("Unsupported", "Passkeys are not supported on this device/browser.");
+                return;
+            }
+
+            if (passkeyAbortController) {
+                passkeyAbortController.abort();
+                passkeyAbortController = new AbortController();
+            }
+
+            try {
+                showError("Passkey", "Requesting biometric authentication...");
+                
+                const res = await fetch(`${API_BASE_URL}/api/passkey/login-options`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                const optionsData = await res.json();
+                
+                if (!optionsData.success) {
+                    showError("Passkey Failed", optionsData.message || "No passkey found for this device.");
+                    return;
+                }
+
+                const challengeArray = base64UrlToUint8Array(optionsData.options.challenge);
+
+                const publicKeyCredentialRequestOptions = {
+                    challenge: challengeArray,
+                    timeout: 60000,
+                    userVerification: "preferred",
+                    rpId: window.location.hostname
+                };
+
+                const assertion = await navigator.credentials.get({
+                    publicKey: publicKeyCredentialRequestOptions,
+                    signal: passkeyAbortController.signal
+                });
+
+                const authResponse = await fetch(`${API_BASE_URL}/api/passkey/login-verify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: assertion.id,
+                        rawId: arrayBufferToBase64(assertion.rawId),
+                        response: {
+                            clientDataJSON: arrayBufferToBase64(assertion.response.clientDataJSON),
+                            authenticatorData: arrayBufferToBase64(assertion.response.authenticatorData),
+                            signature: arrayBufferToBase64(assertion.response.signature),
+                            userHandle: assertion.response.userHandle ? arrayBufferToBase64(assertion.response.userHandle) : null
+                        },
+                        type: assertion.type
+                    })
+                });
+
+                const verifyData = await authResponse.json();
+
+                if (verifyData.success && verifyData.token) {
+                    localStorage.setItem('authToken', verifyData.token);
+                    localStorage.setItem('token', verifyData.token);
+                    if (verifyData.user && verifyData.user.email) {
+                        localStorage.setItem('userEmail', verifyData.user.email);
+                    }
+                    await preFetchAndRedirect(verifyData.token, verifyData.redirectUrl);
+                } else {
+                    showError("Passkey Failed", verifyData.message || "Passkey verification failed.");
+                }
+
+            } catch (err) {
+                if (err.name === 'AbortError') {
+                    console.log('Previous passkey request aborted successfully.');
+                    return;
+                }
+                
+                console.error('Passkey login error:', err);
+                showError("Passkey Error", err.message || "Passkey authentication was cancelled or not supported.");
+            }
+        });
+    }
+
+    // መደበኛ የኢሜይል ሎጊን
+    const signinForm = document.getElementById('signinForm');
+    if(signinForm) {
+        signinForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const emailInputElement = document.getElementById('signin-email');
+            const passInputElement = document.getElementById('signin-pass');
+            const identifier = emailInputElement ? emailInputElement.value.trim() : "";
+            const password = passInputElement ? passInputElement.value : "";
+            const submitBtn = document.getElementById('submitBtn');
+
+            const attemptsKey = 'tbr_signin_attempts_' + identifier;
+            let currentAttempts = parseInt(localStorage.getItem(attemptsKey) || '0', 10);
+            currentAttempts++;
+            localStorage.setItem(attemptsKey, currentAttempts);
+
+            if (currentAttempts > 5) {
+                const lockoutDurationMs = 25 * 60 * 1000;
+                startCountdown(lockoutDurationMs);
+                return;
+            }
+
+            if(submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Signing in...';
+            }
+            hideError();
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/signin`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: identifier, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    localStorage.removeItem(attemptsKey); 
+                    if (data.email) {
+                        localStorage.setItem('userEmail', data.email);
+                    }
+                    if (data.requiresVerification) {
+                        localStorage.setItem('verifyEmail', data.email);
+                        window.location.href = 'login-verify.html';
+                    } else {
+                        if(data.token) {
+                            localStorage.setItem('token', data.token);
+                            localStorage.setItem('authToken', data.token);
+                            await preFetchAndRedirect(data.token, data.redirectUrl);
+                        } else {
+                            window.location.href = data.redirectUrl || 'dashboard.html';
+                        }
+                    }
+                } else {
+                    const errorMsg = data.message ? data.message.toLowerCase() : '';
+                    if (currentAttempts >= 5 || errorMsg.includes('too many') || response.status === 429) {
+                        let lockoutDurationMs = 25 * 60 * 1000;
+                        if (data.lockUntil) {
+                            const serverLockTime = new Date(data.lockUntil).getTime();
+                            if (!isNaN(serverLockTime)) {
+                                lockoutDurationMs = Math.max(serverLockTime - new Date().getTime(), lockoutDurationMs);
+                            }
+                        }
+                        startCountdown(lockoutDurationMs);
+                    } else {
+                        showError("Sign in failed", data.message || 'Incorrect email or password.');
+                        if(submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.textContent = 'Sign In →';
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('Error:', err);
+                showError("Connection Error", 'Server connection error. Please try again.');
+                if(submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Sign In →';
+                }
+            }
+        });
+    }
+});
+
+
+async function preFetchAndRedirect(token, redirectUrl) {
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.user) {
+                if (data.user.fullName) localStorage.setItem('userName', data.user.fullName);
+                localStorage.setItem('kycStatus', data.user.kycStatus || 'unverified');
+                if (data.user.avatar) {
+                    localStorage.setItem('userAvatar', data.user.avatar);
+                    localStorage.setItem('profilePicture', data.user.avatar);
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Prefetch failed", e);
+    }
+    window.location.href = redirectUrl || 'dashboard.html';
+}
+
+function base64UrlToUint8Array(base64UrlData) {
+    const padding = '='.repeat((4 - base64UrlData.length % 4) % 4);
+    const base64 = (base64UrlData + padding).replace(/\-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
+function arrayBufferToBase64(buffer) {
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return window.btoa(binary);
+}
+
+let passkeyAbortController = new AbortController();
+let countdownInterval = null;
+
+function checkSignInRateLimit(identifier) {
+    const lockoutKey = 'tbr_signin_lockout_' + identifier;
+    const lockoutUntil = localStorage.getItem(lockoutKey);
+    
+    if (lockoutUntil) {
+        const lockoutTimeNum = Number(lockoutUntil);
+        const remainingTime = lockoutTimeNum - new Date().getTime();
+        if (!isNaN(remainingTime) && remainingTime > 0) {
+            startCountdownFromTarget(lockoutTimeNum);
+        } else {
+            localStorage.removeItem(lockoutKey);
+            localStorage.removeItem('tbr_signin_attempts_' + identifier);
+            unlockSignInForm();
+        }
+    } else {
+        unlockSignInForm();
+    }
+}
+
+function startCountdown(durationMs) {
+    const emailInputElement = document.getElementById('signin-email');
+    if (!emailInputElement) return;
+    const identifier = emailInputElement.value.trim();
+    const lockoutEnd = new Date().getTime() + Number(durationMs);
+    localStorage.setItem('tbr_signin_lockout_' + identifier, lockoutEnd);
+    startCountdownFromTarget(lockoutEnd);
+}
+
+function startCountdownFromTarget(lockoutEndTime) {
+    const submitBtn = document.getElementById('submitBtn');
+    const passInput = document.getElementById('signin-pass');
+
+    if(passInput) passInput.disabled = true;
+    if(submitBtn) submitBtn.disabled = true;
+
+    if (countdownInterval) clearInterval(countdownInterval);
+
+    countdownInterval = setInterval(() => {
+        const now = new Date().getTime();
+        const distance = Number(lockoutEndTime) - now;
+
+        if (isNaN(distance) || distance <= 0) {
+            clearInterval(countdownInterval);
+            const emailInputElement = document.getElementById('signin-email');
+            const identifier = emailInputElement ? emailInputElement.value.trim() : "";
+            if (identifier) {
+                localStorage.removeItem('tbr_signin_lockout_' + identifier);
+                localStorage.removeItem('tbr_signin_attempts_' + identifier);
+            }
+            unlockSignInForm();
+        } else {
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+            
+            if(submitBtn) submitBtn.textContent = `Locked (${minutes}m ${seconds}s)`;
+            showError("Access Locked", `Too many failed attempts. Try again in ${minutes}m ${seconds}s.`);
+        }
+    }, 1000);
+}
+
+function unlockSignInForm() {
+    if (countdownInterval) clearInterval(countdownInterval);
+    const submitBtn = document.getElementById('submitBtn');
+    const emailInput = document.getElementById('signin-email');
+    const passInput = document.getElementById('signin-pass');
+
+    if(emailInput) emailInput.disabled = false;
+    if(passInput) passInput.disabled = false;
+    if(submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Sign In →';
+    }
+    hideError();
+}
+
+async function handleGoogleResponse(response) {
+    try {
+        localStorage.clear(); 
+        sessionStorage.clear();
+
+        const res = await fetch(`${API_BASE_URL}/api/google-auth`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                token: response.credential,
+                action: 'signin' 
+            })
+        });
+
+        const data = await res.json();
+        
+        if (data.requiresSignup) {
+            window.location.href = 'signup.html';
+            return;
+        }
+
+        if (data.success) {
+            if (data.token) {
+                localStorage.setItem('authToken', data.token);
+                localStorage.setItem('token', data.token);
+            }
+            if (data.user && data.user.email) {
+                localStorage.setItem('userEmail', data.user.email);
+            } else if (data.email) {
+                localStorage.setItem('userEmail', data.email);
+            }
+
+            await preFetchAndRedirect(data.token, data.redirectUrl);
+        } else {
+            showErrorToast(data.message || 'Google authentication failed.');
+        }
+    } catch (err) {
+        console.error('Error:', err);
+        showErrorToast('Server error during Google sign-in.');
+    }
+}
+
+function showError(title, message) {
+    const msgBox = document.getElementById('responseMessage');
+    const errorTitle = document.getElementById('errorTitle');
+    const errorText = document.getElementById('errorText');
+    
+    if(errorTitle) errorTitle.textContent = title;
+    if(errorText) errorText.textContent = message;
+    if(msgBox) msgBox.style.display = 'block';
+}
+
+function hideError() {
+    const msgBox = document.getElementById('responseMessage');
+    if(msgBox) msgBox.style.display = 'none';
+}
+
+function showErrorToast(msg) {
+    showError("Error", msg);
+}
