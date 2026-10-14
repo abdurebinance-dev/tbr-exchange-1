@@ -1195,8 +1195,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 setTimeout(renderGoogleSignUpBtn, 100);
             }
         }
-        window.addEventListener('load', renderGoogleSignUpBtn);
-
+        
+        // 🔴 አዲሱ ማስተካከያ: ያለምንም መዘግየት ራሱን ደጋግሞ እየፈለገ በቀጥታ ያመጣዋል 🔴
+        renderGoogleSignUpBtn();
+        
         // Rate Limiting (መቆለፊያ)
         let signupCountdownInterval = null;
         function checkSignupRateLimit(email) {
