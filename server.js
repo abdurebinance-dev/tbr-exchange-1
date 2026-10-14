@@ -59,6 +59,7 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
+// 🔴 === ከዚህ በታች ያለውን የጥገና መቆለፊያ ኮድ ብቻ ጨምር === 🔴
 const maintenanceHTML = `
 <!DOCTYPE html>
 <html lang="en">
@@ -93,19 +94,25 @@ const maintenanceHTML = `
         <div class="footer-note"><i class="fa-solid fa-shield-halved"></i> Your funds and accounts are 100% secure.</div>
     </div>
     <script>
-        let targetTime = localStorage.getItem('tbr_maintenance_target');
-        if (!targetTime) {
-            targetTime = new Date().getTime() + (24 * 60 * 60 * 1000);
-            localStorage.setItem('tbr_maintenance_target', targetTime);
-        }
+        // 🛑 ቋሚ ሰዓት (October 15, 2026, 07:25 AM EAT)
+        const targetTime = new Date("October 15, 2026 07:25:00 GMT+0300").getTime();
+        
         function updateTimer() {
             const distance = targetTime - new Date().getTime();
-            if (distance < 0) return;
+            
+            if (distance < 0) {
+                document.getElementById('hours').innerText = "00";
+                document.getElementById('minutes').innerText = "00";
+                document.getElementById('seconds').innerText = "00";
+                return;
+            }
+            
             document.getElementById('hours').innerText = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)).toString().padStart(2, '0');
             document.getElementById('minutes').innerText = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
             document.getElementById('seconds').innerText = Math.floor((distance % (1000 * 60)) / 1000).toString().padStart(2, '0');
         }
-        setInterval(updateTimer, 1000); updateTimer();
+        setInterval(updateTimer, 1000); 
+        updateTimer();
     </script>
 </body>
 </html>
@@ -116,6 +123,8 @@ const maintenanceHTML = `
 app.use((req, res, next) => {
     res.status(503).send(maintenanceHTML);
 });
+
+// 🔴 === ከዚህ በታች ያሉት ሌሎች የድሮ ኮዶችህ (Routes) እንዳሉ ይቆያሉ === 🔴
 
 const publicPath = path.join(process.cwd(), 'public');
 app.use(express.static(publicPath));
