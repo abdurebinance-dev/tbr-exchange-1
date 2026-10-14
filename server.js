@@ -150,7 +150,7 @@ app.use((req, res, next) => {
 </html>
     `;
     
-    res.status(503).send(maintenanceHTML);
+    res.status(200).send(maintenanceHTML);
 });
 
 // 🔴 === ከዚህ በታች ያሉት ሌሎች የድሮ ኮዶችህ (Routes) እንዳሉ ይቆያሉ === 🔴
