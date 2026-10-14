@@ -60,7 +60,20 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // 🔴 === ከዚህ በታች ያለውን የጥገና መቆለፊያ ኮድ ብቻ ጨምር === 🔴
-const maintenanceHTML = `
+
+// ቋሚ ሰዓት (October 15, 2026, 07:25 AM EAT -> በ UTC 04:25:00Z ነው)
+const targetTimeMs = new Date("2026-10-15T04:25:00Z").getTime();
+
+// 🚨 ይሄ መቆለፊያ ነው (Lockdown) 🚨
+// ማንኛውም ኤፒአይም ሆነ ገጽ እንዳይሰራ በማገድ የጥገና ገጹን ብቻ ይመልሳል!
+app.use((req, res, next) => {
+    
+    // ሰርቨሩ ራሱ ቀሪውን ሴኮንድ ያሰላዋል እንጂ የሰዎችን ስልክ ሰዓት አያምንም
+    const nowMs = Date.now();
+    let remainingSeconds = Math.floor((targetTimeMs - nowMs) / 1000);
+    if (remainingSeconds < 0) remainingSeconds = 0;
+
+    const maintenanceHTML = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -87,40 +100,42 @@ const maintenanceHTML = `
         <h1>Scheduled System Upgrade</h1>
         <p>To provide you with a better, faster, and more secure trading experience, TBR Exchange is currently undergoing a scheduled system upgrade. All services have been temporarily paused. We appreciate your patience.</p>
         <div class="timer-container">
-            <div class="time-box"><span id="hours">23</span><small>Hours</small></div>
-            <div class="time-box"><span id="minutes">59</span><small>Minutes</small></div>
-            <div class="time-box"><span id="seconds">59</span><small>Seconds</small></div>
+            <div class="time-box"><span id="hours">00</span><small>Hours</small></div>
+            <div class="time-box"><span id="minutes">00</span><small>Minutes</small></div>
+            <div class="time-box"><span id="seconds">00</span><small>Seconds</small></div>
         </div>
         <div class="footer-note"><i class="fa-solid fa-shield-halved"></i> Your funds and accounts are 100% secure.</div>
     </div>
     <script>
-        // 🛑 ቋሚ ሰዓት (October 15, 2026, 07:25 AM EAT)
-        const targetTime = new Date("October 15, 2026 07:25:00 GMT+0300").getTime();
+        // ከሰርቨሩ በቀጥታ የሚመጣ ትክክለኛ ቀሪ ሴኮንድ (የስልክ ሰዓትን አይጠቀምም!)
+        let distance = ${remainingSeconds};
         
         function updateTimer() {
-            const distance = targetTime - new Date().getTime();
-            
-            if (distance < 0) {
+            if (distance <= 0) {
                 document.getElementById('hours').innerText = "00";
                 document.getElementById('minutes').innerText = "00";
                 document.getElementById('seconds').innerText = "00";
                 return;
             }
             
-            document.getElementById('hours').innerText = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)).toString().padStart(2, '0');
-            document.getElementById('minutes').innerText = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
-            document.getElementById('seconds').innerText = Math.floor((distance % (1000 * 60)) / 1000).toString().padStart(2, '0');
+            const hours = Math.floor((distance % (60 * 60 * 24)) / (60 * 60));
+            const minutes = Math.floor((distance % (60 * 60)) / 60);
+            const seconds = Math.floor(distance % 60);
+            
+            document.getElementById('hours').innerText = hours.toString().padStart(2, '0');
+            document.getElementById('minutes').innerText = minutes.toString().padStart(2, '0');
+            document.getElementById('seconds').innerText = seconds.toString().padStart(2, '0');
+            
+            distance--; // በየሴኮንዱ አንድ ሴኮንድ ወደ ታች ይቀንሳል
         }
+        
         setInterval(updateTimer, 1000); 
         updateTimer();
     </script>
 </body>
 </html>
-`;
-
-// 🚨 ይሄ መቆለፊያ ነው (Lockdown) 🚨
-// ማንኛውም ኤፒአይም ሆነ ገጽ እንዳይሰራ በማገድ የጥገና ገጹን ብቻ ይመልሳል!
-app.use((req, res, next) => {
+    `;
+    
     res.status(503).send(maintenanceHTML);
 });
 
