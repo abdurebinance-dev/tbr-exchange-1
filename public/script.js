@@ -1,13 +1,15 @@
-// 🔴 1. URL Auto-Cleaner: በሊንኩ ላይ የድሮ ኢሜይል ወይም ፓስወርድ ካለ ብሮውዘሩ ላይ እንዳይታይ ወዲያውኑ ያጸዳዋል
+// 🔴 1. URL Auto-Cleaner: በሊንኩ ላይ የድሮ ኢሜይል ወይም ፓስወርድ ካለ ብሮውዘሩ ላይ እንዳይታይ ወዲያውኑ ያጸዳዋል 🔴
 if (window.location.search.includes('email=') || window.location.search.includes('password=')) {
     const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
     window.history.replaceState({}, document.title, cleanUrl);
 }
 
+// 🔴 2. Base API URL
 const API_BASE_URL = window.location.hostname.includes('localhost') 
     ? '' 
     : 'https://tbr-exchange-backend.onrender.com';
 
+// 🔴 3. Helper Functions (የፓስወርድ አይን ማብሪያ፣ ቤዝ 64 መቀየሪያ ወዘተ) 🔴
 function togglePass(id, icon) {
     const input = document.getElementById(id);
     if (!input) return;
@@ -42,6 +44,7 @@ function arrayBufferToBase64(buffer) {
     return window.btoa(binary);
 }
 
+// የኤረር ማሳያ ኮዶች
 function showError(title, message) {
     const msgBox = document.getElementById('responseMessage');
     const errorTitle = document.getElementById('errorTitle');
@@ -82,6 +85,7 @@ async function preFetchAndRedirect(token, redirectUrl) {
     window.location.href = redirectUrl || 'dashboard.html';
 }
 
+// የሎጊን መቆለፊያ ቆጣሪ (Rate Limit Countdown)
 let countdownInterval = null;
 
 function checkSignInRateLimit(identifier) {
@@ -159,6 +163,7 @@ function unlockSignInForm() {
     hideError();
 }
 
+// የ Google Login ምላሽ ተቀባይ
 async function handleGoogleResponse(response) {
     try {
         localStorage.clear(); 
@@ -201,79 +206,13 @@ async function handleGoogleResponse(response) {
     }
 }
 
-// 🔴 2. የ Google Login ቁልፍ ዌብሳይቱ ሎድ አድርጎ ሲጨርስ ብቻ እንዲመጣ 🔴
-window.addEventListener('load', () => {
-    if (typeof google !== 'undefined' && google.accounts) {
-        google.accounts.id.initialize({
-            client_id: "661544926174-8kp01crhke9m1vmjf6kcts5o2e7sqek8.apps.googleusercontent.com",
-            callback: handleGoogleResponse
-        });
 
-        const googleBtnContainer = document.getElementById("googleSignInBtnContainer");
-        if(googleBtnContainer) {
-            google.accounts.id.renderButton(
-                googleBtnContainer,
-                { 
-                    theme: "filled_black", 
-                    size: "large", 
-                    width: "340",
-                    shape: "rectangular",
-                    text: "continue_with"
-                }
-            );
-        }
-    }
-});
-
-
-// 🔴 3. ያንተ የ P2P ካልኩሌተር፣ Theme እና የተቀሩት ኮዶች በሙሉ እዚህ አሉ! 🔴
+// 🔴 4. ዌብሳይቱ (HTML) ሎድ አድርጎ ሲጨርስ አዝራሮቹ የሚሰሩበት ትዕዛዝ 🔴
 document.addEventListener("DOMContentLoaded", () => {
-
-    // 🔴 4. 100% በትክክል የሚሰራው የ OTP Auto-Advance እና Paste ኮድ 🔴
-    const otpInputs = document.querySelectorAll('input[type="text"], input[type="number"], input[type="tel"], input:not([type])');
-    // ከኢሜይል እና ፓስወርድ ውጪ ያሉትን ሳጥኖች እንመርጣለን
-    const actualOtpBoxes = Array.from(otpInputs).filter(input => {
-        const idName = (input.id || '').toLowerCase();
-        const className = (input.className || '').toLowerCase();
-        const placeholder = (input.placeholder || '').toLowerCase();
-        return !idName.includes('email') && !idName.includes('pass') && !idName.includes('user') &&
-               !className.includes('email') && !className.includes('pass') &&
-               !placeholder.includes('email') && !placeholder.includes('password') && !placeholder.includes('phone');
-    });
-
-    if (actualOtpBoxes.length >= 4) {
-        actualOtpBoxes.forEach((box, index) => {
-            box.addEventListener('input', () => {
-                if (box.value.length > 1) {
-                    box.value = box.value.slice(-1);
-                }
-                if (box.value !== '' && index < actualOtpBoxes.length - 1) {
-                    actualOtpBoxes[index + 1].focus();
-                }
-            });
-
-            box.addEventListener('keydown', (e) => {
-                if (e.key === 'Backspace' && box.value === '' && index > 0) {
-                    actualOtpBoxes[index - 1].focus();
-                }
-            });
-
-            box.addEventListener('paste', (e) => {
-                e.preventDefault();
-                const pasteData = e.clipboardData.getData('text').replace(/\D/g, '').split('');
-                actualOtpBoxes.forEach((b, i) => {
-                    if (pasteData[i]) {
-                        b.value = pasteData[i];
-                        if (i < actualOtpBoxes.length - 1) actualOtpBoxes[i + 1].focus();
-                    }
-                });
-            });
-        });
-    }
 
     console.log('TBR Exchange JavaScript is working successfully!');
     
-    // ለአዝራሮቹ መጫን (Click) የሚሆን ሙከራ
+    // የ P2P አዝራሮቹ ሙከራ ኮድ (ካለ)
     const buttons = document.querySelectorAll('button, a.btn');
     buttons.forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -304,7 +243,6 @@ document.addEventListener("DOMContentLoaded", () => {
         } else {
             result = amount / rate;
         }
-
         calcResult.innerHTML = `${result.toFixed(2)} <span style="font-size: 12px; color: #777; font-weight: normal;">${receiveUnitText}</span>`;
     }
 
@@ -350,16 +288,13 @@ document.addEventListener("DOMContentLoaded", () => {
         themeBtn.style.cursor = "pointer";
         themeBtn.addEventListener("click", function() {
             const currentBg = window.getComputedStyle(document.body).backgroundColor;
-            
             if (currentBg === "rgb(244, 245, 247)" || document.body.style.backgroundColor === "rgb(244, 245, 247)" || document.body.style.backgroundColor === "#f4f5f7") {
-                // ወደ ጥቁር መመለስ
                 document.body.style.backgroundColor = "#080808";
                 document.body.style.color = "#ffffff";
                 themeBtn.classList.remove("fa-sun");
                 themeBtn.classList.add("fa-moon");
                 localStorage.setItem("theme", "dark");
             } else {
-                // ወደ ነጭ መቀየር
                 document.body.style.backgroundColor = "#f4f5f7";
                 document.body.style.color = "#121212";
                 themeBtn.classList.remove("fa-moon");
@@ -380,6 +315,28 @@ document.addEventListener("DOMContentLoaded", () => {
     localStorage.removeItem('userEmail');
     localStorage.removeItem('authToken');
 
+    // የ Google Login ቁልፍ ማሳያ ማዋቀር
+    if (typeof google !== 'undefined' && google.accounts) {
+        google.accounts.id.initialize({
+            client_id: "661544926174-8kp01crhke9m1vmjf6kcts5o2e7sqek8.apps.googleusercontent.com",
+            callback: handleGoogleResponse
+        });
+
+        const googleBtnContainer = document.getElementById("googleSignInBtnContainer");
+        if(googleBtnContainer) {
+            google.accounts.id.renderButton(
+                googleBtnContainer,
+                { 
+                    theme: "filled_black", 
+                    size: "large", 
+                    width: "340",
+                    shape: "rectangular",
+                    text: "continue_with"
+                }
+            );
+        }
+    }
+
     const savedEmail = localStorage.getItem('signinEmail');
     const emailInput = document.getElementById('signin-email');
     if (savedEmail && emailInput) {
@@ -390,11 +347,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (emailInput) {
         emailInput.addEventListener('input', function() {
             const identifier = this.value.trim();
-            if (identifier) checkSignInRateLimit(identifier);
+            if (identifier) {
+                checkSignInRateLimit(identifier);
+            }
         });
     }
 
-    // Passkey ሎጊን
+    // የ Passkey አዝራር Event
     let passkeyAbortController = new AbortController();
     const passkeyBtn = document.getElementById('passkeyBtn');
     if(passkeyBtn) {
@@ -468,7 +427,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
 
             } catch (err) {
-                if (err.name === 'AbortError') return;
+                if (err.name === 'AbortError') {
+                    console.log('Previous passkey request aborted successfully.');
+                    return;
+                }
                 console.error('Passkey login error:', err);
                 showError("Passkey Error", err.message || "Passkey authentication was cancelled or not supported.");
             }

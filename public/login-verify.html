@@ -276,14 +276,10 @@
 
         inputs.forEach((input, index) => {
             input.addEventListener('input', (e) => {
-                const val = e.target.value.replace(/\D/g, '');
-                if (val.length > 0) {
-                    e.target.value = val.charAt(val.length - 1);
-                    if (index < inputs.length - 1) {
-                        inputs[index + 1].focus();
-                    }
-                } else {
-                    e.target.value = '';
+                const val = e.target.value;
+                e.target.value = val.replace(/\D/g, '').slice(-1);
+                if (e.target.value && index < inputs.length - 1) {
+                    inputs[index + 1].focus();
                 }
             });
 
@@ -454,15 +450,18 @@
                     messageDiv.style.color = '#51cf66';
                     messageDiv.innerText = 'Verification successful! Loading dashboard...';
                     
+                    // Token ማከማቻ (localStorage)
                     if (data.token) {
                         localStorage.setItem('token', data.token);
                         localStorage.setItem('authToken', data.token);
                     }
                     localStorage.setItem('userEmail', email);
 
+                    // የማያስፈልጉትን ማጽዳት
                     localStorage.removeItem('verifyEmail');
                     localStorage.removeItem('loginEmail');
                     
+                    // አዲሱን ዳታ Pre-fetch አድርጎ ዳሽቦርድ ላይ መላክ
                     await preFetchAndRedirect(data.token, data.redirectUrl);
                 } else {
                     verifyBtn.disabled = false;
