@@ -41,15 +41,18 @@ const usdtAbi = [
 ];
 const usdtContractMaster = masterWallet ? new ethers.Contract(USDT_CONTRACT_ADDRESS, usdtAbi, masterWallet) : null;
 
-// 🛡️ ጥብቅ የደህንነት መከላከያዎች (Security Headers) 🛡️
 app.use((req, res, next) => {
-    // 1. የተስተካከለ CSP (Content Security Policy) - አደገኛ የሆኑትን የ (*) ፈቃዶች ዘግተናል
-    // 1. በጣም ጥብቅ የሆነ CSP (Content Security Policy)
+    // 1. ዲዛይኑ እና ጃቫስክሪፕቱ በትክክል እንዲሰራ የተስተካከለ CSP
     res.setHeader(
         'Content-Security-Policy',
-        "default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' https://cdnjs.cloudflare.com; img-src 'self' blob: https:; connect-src 'self' wss: https://api.brevo.com https://bsc-dataseed.binance.org; object-src 'none'; frame-ancestors 'none';"
+        "default-src * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline'; img-src * data: blob: 'unsafe-inline'; connect-src * 'unsafe-inline' wss:; object-src 'none'; frame-ancestors 'none';"
     );
-    
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    next();
+});
     // 2. HSTS (Strict Transport Security) - ዌብሳይትህ ሁልጊዜ በ HTTPS ብቻ እንዲሰራ ያስገድዳል
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
     
