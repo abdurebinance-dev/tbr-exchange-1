@@ -228,6 +228,38 @@ window.addEventListener('load', () => {
 
 // 🔴 3. ያንተ የ P2P ካልኩሌተር፣ Theme እና የተቀሩት ኮዶች በሙሉ እዚህ አሉ! 🔴
 document.addEventListener("DOMContentLoaded", () => {
+   // 🔴 OTP Auto-Advance (የማረጋገጫ ሳጥኖቹ በራሱ ጊዜ ወደ ቀጣዩ እንዲዘል እና Paste እንዲሰራ) 🔴
+    const otpInputs = document.querySelectorAll('.code-input, .otp-input, input[type="text"][maxlength="1"], input[type="number"][maxlength="1"], input[maxlength="1"]');
+    
+    if (otpInputs.length > 0) {
+        otpInputs.forEach((input, index) => {
+            // ቁጥር ሲገባ ወደ ቀጣዩ ሳጥን መዝለል
+            input.addEventListener('input', (e) => {
+                if (e.target.value.length === 1 && index < otpInputs.length - 1) {
+                    otpInputs[index + 1].focus();
+                }
+            });
+            
+            // Backspace ሲነካ ወደ ኋላ መመለስ
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && e.target.value === '' && index > 0) {
+                    otpInputs[index - 1].focus();
+                }
+            });
+            
+            // ኮዱን Paste ሲያደርግ በየሳጥኑ መበተን
+            input.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const pastedData = e.clipboardData.getData('text').trim().slice(0, otpInputs.length);
+                if (/^\d+$/.test(pastedData)) {
+                    for (let i = 0; i < pastedData.length; i++) {
+                        otpInputs[i].value = pastedData[i];
+                        if (i < otpInputs.length - 1) otpInputs[i + 1].focus();
+                    }
+                }
+            });
+        });
+    } 
     console.log('TBR Exchange JavaScript is working successfully!');
     
     // ለአዝራሮቹ መጫን (Click) የሚሆን ሙከራ
