@@ -1104,6 +1104,55 @@ document.addEventListener("DOMContentLoaded", () => {
 // =========================================================
 // 🔴 SIGNUP PAGE LOGIC (signup.html) 🔴
 // =========================================================
+
+// 🔴 ጉግል ሁልጊዜ እንዲታይ ከ DOMContentLoaded ውጪ መሆን አለበት 🔴
+async function handleGoogleSignUpResponse(response) {
+    try {
+        localStorage.clear(); 
+        sessionStorage.clear();
+        const res = await fetch(`${API_BASE_URL}/api/google-auth`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                token: response.credential,
+                action: 'signup'
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            if (data.token) localStorage.setItem('authToken', data.token);
+            if (data.user && data.user.email) localStorage.setItem('userEmail', data.user.email);
+            else if (data.email) localStorage.setItem('userEmail', data.email);
+            window.location.href = data.redirectUrl || 'dashboard.html';
+        } else {
+            if (window.showSignupErrorToast) window.showSignupErrorToast(data.message || 'Google authentication failed.');
+        }
+    } catch (err) {
+        console.error('Error:', err);
+        if (window.showSignupErrorToast) window.showSignupErrorToast('Server error during Google sign-up.');
+    }
+}
+
+function renderGoogleSignUpBtn() {
+    const googleBtnContainer = document.getElementById("googleSignUpBtnContainer");
+    if (!googleBtnContainer) return;
+
+    if (typeof google !== 'undefined' && google.accounts) {
+        google.accounts.id.initialize({
+            client_id: "661544926174-8kp01crhke9m1vmjf6kcts5o2e7sqek8.apps.googleusercontent.com",
+            callback: handleGoogleSignUpResponse
+        });
+        google.accounts.id.renderButton(googleBtnContainer, { 
+            theme: "filled_black", size: "large", width: "340", shape: "rectangular", text: "continue_with"
+        });
+    } else {
+        setTimeout(renderGoogleSignUpBtn, 100);
+    }
+}
+
+window.addEventListener('load', renderGoogleSignUpBtn);
+
+
 document.addEventListener("DOMContentLoaded", () => {
     const signupForm = document.getElementById('signupForm');
     
@@ -1151,54 +1200,6 @@ document.addEventListener("DOMContentLoaded", () => {
             if(toast) toast.style.display = 'none';
         };
 
-        // Google Sign-Up ቁልፍን በተገቢው ሰዓት ማምጣት
-        async function handleGoogleSignUpResponse(response) {
-            try {
-                localStorage.clear(); 
-                sessionStorage.clear();
-                const res = await fetch(`${API_BASE_URL}/api/google-auth`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        token: response.credential,
-                        action: 'signup' // Signup መሆኑን ለሰርቨሩ ይነግራል
-                    })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    if (data.token) localStorage.setItem('authToken', data.token);
-                    if (data.user && data.user.email) localStorage.setItem('userEmail', data.user.email);
-                    else if (data.email) localStorage.setItem('userEmail', data.email);
-                    window.location.href = data.redirectUrl || 'dashboard.html';
-                } else {
-                    window.showSignupErrorToast(data.message || 'Google authentication failed.');
-                }
-            } catch (err) {
-                console.error('Error:', err);
-                window.showSignupErrorToast('Server error during Google sign-up.');
-            }
-        }
-
-        function renderGoogleSignUpBtn() {
-            if (typeof google !== 'undefined' && google.accounts) {
-                google.accounts.id.initialize({
-                    client_id: "661544926174-8kp01crhke9m1vmjf6kcts5o2e7sqek8.apps.googleusercontent.com",
-                    callback: handleGoogleSignUpResponse
-                });
-                const googleBtnContainer = document.getElementById("googleSignUpBtnContainer");
-                if (googleBtnContainer) {
-                    google.accounts.id.renderButton(googleBtnContainer, { 
-                        theme: "filled_black", size: "large", width: "340", shape: "rectangular", text: "continue_with"
-                    });
-                }
-            } else {
-                setTimeout(renderGoogleSignUpBtn, 100);
-            }
-        }
-        
-        // 🔴 አዲሱ ማስተካከያ: ያለምንም መዘግየት ራሱን ደጋግሞ እየፈለገ በቀጥታ ያመጣዋል 🔴
-        renderGoogleSignUpBtn();
-        
         // Rate Limiting (መቆለፊያ)
         let signupCountdownInterval = null;
         function checkSignupRateLimit(email) {
