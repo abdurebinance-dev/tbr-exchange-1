@@ -41,12 +41,26 @@ const usdtAbi = [
 ];
 const usdtContractMaster = masterWallet ? new ethers.Contract(USDT_CONTRACT_ADDRESS, usdtAbi, masterWallet) : null;
 
-// Middleware - Content Security Policy (CSP) headers
+// 🛡️ ጥብቅ የደህንነት መከላከያዎች (Security Headers) 🛡️
 app.use((req, res, next) => {
+    // 1. የተስተካከለ CSP (Content Security Policy) - አደገኛ የሆኑትን የ (*) ፈቃዶች ዘግተናል
     res.setHeader(
         'Content-Security-Policy',
-        "default-src * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src * 'unsafe-inline'; img-src * data: blob: 'unsafe-inline'; style-src * 'unsafe-inline';"
+        "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' wss: https://api.brevo.com https://bsc-dataseed.binance.org;"
     );
+    
+    // 2. HSTS (Strict Transport Security) - ዌብሳይትህ ሁልጊዜ በ HTTPS ብቻ እንዲሰራ ያስገድዳል
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+    
+    // 3. X-Frame-Options (XFO) - ሀከሮች ዌብሳይትህን ሌላ ቦታ Frame አድርገው እንዳያጭበረብሩ ይከላከላል
+    res.setHeader('X-Frame-Options', 'DENY');
+    
+    // 4. X-Content-Type-Options - አደገኛ የፋይል አይነቶች እንዳይነበቡ ይከላከላል
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    
+    // 5. Referrer Policy - መረጃህ ወደ ሌላ ዌብሳይት እንዳይሾልክ ያደርጋል
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    
     next();
 });
 
