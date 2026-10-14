@@ -259,7 +259,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             });
         });
-    } 
+    }
     console.log('TBR Exchange JavaScript is working successfully!');
     
     // ለአዝራሮቹ መጫን (Click) የሚሆን ሙከራ
