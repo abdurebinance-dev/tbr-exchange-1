@@ -41,9 +41,9 @@ const usdtAbi = [
 ];
 const usdtContractMaster = masterWallet ? new ethers.Contract(USDT_CONTRACT_ADDRESS, usdtAbi, masterWallet) : null;
 
-// 🛡️ የደህንነት መከላከያዎች (130/100 A+ Score - ebr.exchange style) 🛡️
+// 🛡️ የደህንነት መከላከያዎች (130/100 A+ Score) 🛡️
 app.use((req, res, next) => {
-    // 1. 'unsafe-inline' ከ script-src ላይ ሙሉ በሙሉ ተወግዷል (130 ለማምጣት ግዴታ ነው)
+    // 1. 'unsafe-inline' ከ script-src ላይ ጠፍቷል!
     res.setHeader(
         'Content-Security-Policy',
         "default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://accounts.google.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://accounts.google.com; font-src 'self' data: https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' https://tbr-exchange-backend.onrender.com wss: https://api.brevo.com https://bsc-dataseed.binance.org https://accounts.google.com; frame-src 'self' https://accounts.google.com; object-src 'none'; frame-ancestors 'none'; form-action 'self';"
@@ -52,8 +52,6 @@ app.use((req, res, next) => {
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-    
-    // 🚀 የ 130/100 (+10 Passed) ሚስጥር የሆነው COOP 🚀
     res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
 
     next();
