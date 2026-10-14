@@ -41,6 +41,7 @@ const usdtAbi = [
 ];
 const usdtContractMaster = masterWallet ? new ethers.Contract(USDT_CONTRACT_ADDRESS, usdtAbi, masterWallet) : null;
 
+// 🛡️ የደህንነት መከላከያዎች (Security Headers) 🛡️
 app.use((req, res, next) => {
     // 1. ዲዛይኑ እና ጃቫስክሪፕቱ በትክክል እንዲሰራ የተስተካከለ CSP
     res.setHeader(
@@ -51,20 +52,6 @@ app.use((req, res, next) => {
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-    next();
-});
-    // 2. HSTS (Strict Transport Security) - ዌብሳይትህ ሁልጊዜ በ HTTPS ብቻ እንዲሰራ ያስገድዳል
-    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
-    
-    // 3. X-Frame-Options (XFO) - ሀከሮች ዌብሳይትህን ሌላ ቦታ Frame አድርገው እንዳያጭበረብሩ ይከላከላል
-    res.setHeader('X-Frame-Options', 'DENY');
-    
-    // 4. X-Content-Type-Options - አደገኛ የፋይል አይነቶች እንዳይነበቡ ይከላከላል
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    
-    // 5. Referrer Policy - መረጃህ ወደ ሌላ ዌብሳይት እንዳይሾልክ ያደርጋል
-    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-    
     next();
 });
 
