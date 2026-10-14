@@ -1,15 +1,13 @@
-// 🔴 1. URL Auto-Cleaner: በሊንኩ ላይ የድሮ ኢሜይል ወይም ፓስወርድ ካለ ብሮውዘሩ ላይ እንዳይታይ ወዲያውኑ ያጸዳዋል 🔴
+// 🔴 1. URL Auto-Cleaner: በሊንኩ ላይ የድሮ ኢሜይል ወይም ፓስወርድ ካለ ብሮውዘሩ ላይ እንዳይታይ ወዲያውኑ ያጸዳዋል
 if (window.location.search.includes('email=') || window.location.search.includes('password=')) {
     const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
     window.history.replaceState({}, document.title, cleanUrl);
 }
 
-// 🔴 2. Base API URL
 const API_BASE_URL = window.location.hostname.includes('localhost') 
     ? '' 
     : 'https://tbr-exchange-backend.onrender.com';
 
-// 🔴 3. Helper Functions (የፓስወርድ አይን ማብሪያ፣ ቤዝ 64 መቀየሪያ ወዘተ) 🔴
 function togglePass(id, icon) {
     const input = document.getElementById(id);
     if (!input) return;
@@ -44,7 +42,6 @@ function arrayBufferToBase64(buffer) {
     return window.btoa(binary);
 }
 
-// የኤረር ማሳያ ኮዶች
 function showError(title, message) {
     const msgBox = document.getElementById('responseMessage');
     const errorTitle = document.getElementById('errorTitle');
@@ -85,7 +82,6 @@ async function preFetchAndRedirect(token, redirectUrl) {
     window.location.href = redirectUrl || 'dashboard.html';
 }
 
-// የሎጊን መቆለፊያ ቆጣሪ (Rate Limit Countdown)
 let countdownInterval = null;
 
 function checkSignInRateLimit(identifier) {
@@ -163,7 +159,6 @@ function unlockSignInForm() {
     hideError();
 }
 
-// የ Google Login ምላሽ ተቀባይ
 async function handleGoogleResponse(response) {
     try {
         localStorage.clear(); 
@@ -206,13 +201,36 @@ async function handleGoogleResponse(response) {
     }
 }
 
+// 🔴 2. የ Google Login ቁልፍ ዌብሳይቱ ሎድ አድርጎ ሲጨርስ ብቻ እንዲመጣ 🔴
+window.addEventListener('load', () => {
+    if (typeof google !== 'undefined' && google.accounts) {
+        google.accounts.id.initialize({
+            client_id: "661544926174-8kp01crhke9m1vmjf6kcts5o2e7sqek8.apps.googleusercontent.com",
+            callback: handleGoogleResponse
+        });
 
-// 🔴 4. ዌብሳይቱ (HTML) ሎድ አድርጎ ሲጨርስ አዝራሮቹ የሚሰሩበት ትዕዛዝ 🔴
+        const googleBtnContainer = document.getElementById("googleSignInBtnContainer");
+        if(googleBtnContainer) {
+            google.accounts.id.renderButton(
+                googleBtnContainer,
+                { 
+                    theme: "filled_black", 
+                    size: "large", 
+                    width: "340",
+                    shape: "rectangular",
+                    text: "continue_with"
+                }
+            );
+        }
+    }
+});
+
+
+// 🔴 3. ያንተ የ P2P ካልኩሌተር፣ Theme እና የተቀሩት ኮዶች በሙሉ እዚህ አሉ! 🔴
 document.addEventListener("DOMContentLoaded", () => {
-
     console.log('TBR Exchange JavaScript is working successfully!');
     
-    // የ P2P አዝራሮቹ ሙከራ ኮድ (ካለ)
+    // ለአዝራሮቹ መጫን (Click) የሚሆን ሙከራ
     const buttons = document.querySelectorAll('button, a.btn');
     buttons.forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -243,6 +261,7 @@ document.addEventListener("DOMContentLoaded", () => {
         } else {
             result = amount / rate;
         }
+
         calcResult.innerHTML = `${result.toFixed(2)} <span style="font-size: 12px; color: #777; font-weight: normal;">${receiveUnitText}</span>`;
     }
 
@@ -288,13 +307,16 @@ document.addEventListener("DOMContentLoaded", () => {
         themeBtn.style.cursor = "pointer";
         themeBtn.addEventListener("click", function() {
             const currentBg = window.getComputedStyle(document.body).backgroundColor;
+            
             if (currentBg === "rgb(244, 245, 247)" || document.body.style.backgroundColor === "rgb(244, 245, 247)" || document.body.style.backgroundColor === "#f4f5f7") {
+                // ወደ ጥቁር መመለስ
                 document.body.style.backgroundColor = "#080808";
                 document.body.style.color = "#ffffff";
                 themeBtn.classList.remove("fa-sun");
                 themeBtn.classList.add("fa-moon");
                 localStorage.setItem("theme", "dark");
             } else {
+                // ወደ ነጭ መቀየር
                 document.body.style.backgroundColor = "#f4f5f7";
                 document.body.style.color = "#121212";
                 themeBtn.classList.remove("fa-moon");
@@ -315,28 +337,6 @@ document.addEventListener("DOMContentLoaded", () => {
     localStorage.removeItem('userEmail');
     localStorage.removeItem('authToken');
 
-    // የ Google Login ቁልፍ ማሳያ ማዋቀር
-    if (typeof google !== 'undefined' && google.accounts) {
-        google.accounts.id.initialize({
-            client_id: "661544926174-8kp01crhke9m1vmjf6kcts5o2e7sqek8.apps.googleusercontent.com",
-            callback: handleGoogleResponse
-        });
-
-        const googleBtnContainer = document.getElementById("googleSignInBtnContainer");
-        if(googleBtnContainer) {
-            google.accounts.id.renderButton(
-                googleBtnContainer,
-                { 
-                    theme: "filled_black", 
-                    size: "large", 
-                    width: "340",
-                    shape: "rectangular",
-                    text: "continue_with"
-                }
-            );
-        }
-    }
-
     const savedEmail = localStorage.getItem('signinEmail');
     const emailInput = document.getElementById('signin-email');
     if (savedEmail && emailInput) {
@@ -347,13 +347,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (emailInput) {
         emailInput.addEventListener('input', function() {
             const identifier = this.value.trim();
-            if (identifier) {
-                checkSignInRateLimit(identifier);
-            }
+            if (identifier) checkSignInRateLimit(identifier);
         });
     }
 
-    // የ Passkey አዝራር Event
+    // Passkey ሎጊን
     let passkeyAbortController = new AbortController();
     const passkeyBtn = document.getElementById('passkeyBtn');
     if(passkeyBtn) {
@@ -427,10 +425,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
 
             } catch (err) {
-                if (err.name === 'AbortError') {
-                    console.log('Previous passkey request aborted successfully.');
-                    return;
-                }
+                if (err.name === 'AbortError') return;
                 console.error('Passkey login error:', err);
                 showError("Passkey Error", err.message || "Passkey authentication was cancelled or not supported.");
             }
@@ -521,4 +516,232 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+});
+
+// =========================================================
+// 🔴 LOGIN VERIFICATION PAGE LOGIC (login-verify.html) 🔴
+// =========================================================
+document.addEventListener("DOMContentLoaded", () => {
+    const verifyForm = document.getElementById('verifyLoginOtpForm');
+    
+    if (verifyForm) {
+        const verifyEmail = localStorage.getItem('verifyEmail') || localStorage.getItem('signinEmail') || localStorage.getItem('loginEmail') || localStorage.getItem('signupEmail');
+        if (!verifyEmail) {
+            alert('Session not found. Please sign in again.');
+            window.location.href = 'signin.html';
+        } else {
+            const masked = verifyEmail.substring(0, 2) + '***' + verifyEmail.substring(verifyEmail.indexOf('@'));
+            const emailDisplay = document.getElementById('userEmailDisplay');
+            if (emailDisplay) emailDisplay.innerText = masked;
+        }
+
+        const verifyInputs = document.querySelectorAll('#verifyLoginOtpForm .code-input');
+
+        verifyInputs.forEach((input, index) => {
+            input.addEventListener('input', (e) => {
+                const val = e.target.value.replace(/\D/g, '');
+                if (val.length > 0) {
+                    e.target.value = val.charAt(val.length - 1);
+                    if (index < verifyInputs.length - 1) {
+                        verifyInputs[index + 1].focus();
+                    }
+                } else {
+                    e.target.value = '';
+                }
+            });
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && !input.value && index > 0) {
+                    verifyInputs[index - 1].focus();
+                }
+            });
+
+            input.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const text = (e.clipboardData || window.clipboardData).getData('text');
+                handleVerificationPaste(text);
+            });
+        });
+
+        function handleVerificationPaste(text) {
+            const digits = text.trim().replace(/\D/g, '').split('');
+            verifyInputs.forEach((input, idx) => {
+                if (digits[idx]) {
+                    input.value = digits[idx];
+                }
+            });
+            if (digits.length > 0) {
+                verifyInputs[Math.min(digits.length - 1, 5)].focus();
+            }
+        }
+
+        // ግሎባል (Global) ለሆነው የ Paste አዝራር
+        window.pasteCode = async function() {
+            try {
+                const text = await navigator.clipboard.readText();
+                handleVerificationPaste(text);
+            } catch (err) {
+                console.error('Failed to read clipboard');
+            }
+        };
+
+        // የ 10 ደቂቃ ቆጣሪ
+        let expireTimeLeft = 10 * 60; 
+        const expireTimerDisplay = document.getElementById('expireTimer');
+        const messageDiv = document.getElementById('message');
+        const verifyBtn = document.getElementById('verifyBtn');
+
+        const expireInterval = setInterval(() => {
+            if (expireTimeLeft <= 0) {
+                clearInterval(expireInterval);
+                if (expireTimerDisplay) {
+                    expireTimerDisplay.innerText = "Expired";
+                    expireTimerDisplay.style.color = "#ff6b6b";
+                }
+                verifyInputs.forEach(input => input.disabled = true);
+                if (verifyBtn) verifyBtn.disabled = true;
+                if (messageDiv) {
+                    messageDiv.style.color = '#ff6b6b';
+                    messageDiv.innerText = 'Verification code has expired. Please request a new one.';
+                }
+                return;
+            }
+            expireTimeLeft--;
+            const minutes = Math.floor(expireTimeLeft / 60);
+            const seconds = expireTimeLeft % 60;
+            if (expireTimerDisplay) {
+                expireTimerDisplay.innerText = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+            }
+        }, 1000);
+
+        // የ 60 ሰከንድ Resend ቆጣሪ
+        let resendCountdown = 60;
+        const resendBtn = document.getElementById('resendBtn');
+
+        function startResendTimer() {
+            resendCountdown = 60;
+            if (resendBtn) {
+                resendBtn.disabled = true;
+                resendBtn.innerHTML = `Resend in <span id="resendTimer">60</span>s`;
+            }
+            
+            const resendInterval = setInterval(() => {
+                resendCountdown--;
+                const resendTimerSpan = document.getElementById('resendTimer');
+                if (resendCountdown <= 0) {
+                    clearInterval(resendInterval);
+                    if (resendBtn) {
+                        resendBtn.disabled = false;
+                        resendBtn.innerHTML = "Resend Code";
+                    }
+                } else if (resendTimerSpan) {
+                    resendTimerSpan.innerText = resendCountdown;
+                }
+            }, 1000);
+        }
+
+        startResendTimer();
+
+        if (resendBtn) {
+            resendBtn.addEventListener('click', async () => {
+                if (resendBtn.disabled) return;
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/resend-code`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: verifyEmail })
+                    });
+                    const data = await response.json();
+                    if (response.ok && data.success) {
+                        if (messageDiv) {
+                            messageDiv.style.color = '#51cf66';
+                            messageDiv.innerText = 'New verification code sent successfully!';
+                        }
+                        expireTimeLeft = 10 * 60;
+                        verifyInputs.forEach(input => {
+                            input.disabled = false;
+                            input.value = '';
+                        });
+                        if (verifyBtn) verifyBtn.disabled = false;
+                        if (verifyInputs[0]) verifyInputs[0].focus();
+                        startResendTimer();
+                    } else {
+                        if (messageDiv) {
+                            messageDiv.style.color = '#ff6b6b';
+                            messageDiv.innerText = data.message || 'Failed to resend code.';
+                        }
+                    }
+                } catch (err) {
+                    if (messageDiv) {
+                        messageDiv.style.color = '#ff6b6b';
+                        messageDiv.innerText = 'Error connecting to server!';
+                    }
+                }
+            });
+        }
+
+        verifyForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            let code = '';
+            verifyInputs.forEach(input => code += input.value);
+
+            if (code.length < 6) {
+                if (messageDiv) {
+                    messageDiv.style.color = '#ff6b6b';
+                    messageDiv.innerText = 'Please enter the complete 6-digit code.';
+                }
+                return;
+            }
+
+            if (verifyBtn) {
+                verifyBtn.disabled = true;
+                verifyBtn.innerText = 'Verifying...';
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/verify-login-otp`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: verifyEmail, otp: code })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    if (messageDiv) {
+                        messageDiv.style.color = '#51cf66';
+                        messageDiv.innerText = 'Verification successful! Loading dashboard...';
+                    }
+                    if (data.token) {
+                        localStorage.setItem('token', data.token);
+                        localStorage.setItem('authToken', data.token);
+                    }
+                    localStorage.setItem('userEmail', verifyEmail);
+                    localStorage.removeItem('verifyEmail');
+                    localStorage.removeItem('loginEmail');
+                    
+                    // preFetchAndRedirect ሎጂክ (script.js ውስጥ አስቀድሞ ስላለ በቀጥታ ይጠራል)
+                    await preFetchAndRedirect(data.token, data.redirectUrl);
+                } else {
+                    if (verifyBtn) {
+                        verifyBtn.disabled = false;
+                        verifyBtn.innerText = 'Verify & Sign In';
+                    }
+                    if (messageDiv) {
+                        messageDiv.style.color = '#ff6b6b';
+                        messageDiv.innerText = data.message || 'Invalid verification code.';
+                    }
+                }
+            } catch (err) {
+                if (verifyBtn) {
+                    verifyBtn.disabled = false;
+                    verifyBtn.innerText = 'Verify & Sign In';
+                }
+                if (messageDiv) {
+                    messageDiv.style.color = '#ff6b6b';
+                    messageDiv.innerText = 'Error connecting to server!';
+                }
+            }
+        });
+    }
 });
