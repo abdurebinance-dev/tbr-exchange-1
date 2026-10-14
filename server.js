@@ -513,40 +513,34 @@ function generateBscWallet() {
     }
 }
 
-// --- 🔥 Smart & Fast Admin Middlewares 🔥 ---
+// --- 🔥 Smart & Fast Admin Middlewares (100% SECURED) 🔥 ---
 const verifyAdmin = async (req, res, next) => {
     try {
         const authHeader = req.headers['authorization'] || req.headers['Authorization'];
         let token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : authHeader;
 
-        if (!token) {
-            token = req.headers['token'] || req.headers['x-auth-token'] || (req.body && req.body.token) || (req.query && req.query.token);
+        if (!token) token = req.headers['token'] || req.headers['x-auth-token'];
+        if (token) token = String(token).replace(/^["']|["']$/g, '').trim();
+
+        if (!token || token === 'null' || token === 'undefined') {
+            return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
         }
 
-        if (token) {
-            token = String(token).replace(/^["']|["']$/g, '').trim();
+        const verified = jwt.verify(token, JWT_SECRET);
+        const user = await User.findById(verified.id || verified._id).select('_id email isAdmin role isBanned fullName').lean();
+        
+        if (!user || user.isBanned) {
+            return res.status(403).json({ success: false, message: 'Access denied or account banned.' });
         }
 
-        if (token && token !== 'null' && token !== 'undefined') {
-            try {
-                const verified = jwt.verify(token, JWT_SECRET);
-                const user = await User.findById(verified.id || verified._id).select('_id email isAdmin role isBanned fullName').lean();
-                if (user) {
-                    req.user = user;
-                    return next();
-                }
-            } catch (jwtErr) {}
+        if (!user.isAdmin && user.role !== 'super_admin' && user.role !== 'finance_admin') {
+            return res.status(403).json({ success: false, message: 'Access denied. Admin privileges required.' });
         }
 
-        const superAdmin = await User.findOne({
-            $or: [{ email: 'binanceme73@gmail.com' }, { isAdmin: true }, { role: 'super_admin' }]
-        }).select('_id email isAdmin role fullName').lean();
-
-        req.user = superAdmin || { email: 'binanceme73@gmail.com', isAdmin: true, role: 'super_admin' };
+        req.user = user;
         next();
     } catch (err) {
-        req.user = { email: 'binanceme73@gmail.com', isAdmin: true, role: 'super_admin' };
-        next();
+        return res.status(403).json({ success: false, message: 'Invalid or expired admin token.' });
     }
 };
 
@@ -555,46 +549,30 @@ const verifyAdminToken = verifyAdmin;
 
 const verifyToken = async (req, res, next) => {
     try {
-        let token = null;
         const authHeader = req.headers['authorization'] || req.headers['Authorization'];
+        let token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : authHeader;
 
-        if (authHeader && authHeader.startsWith('Bearer ')) {
-            token = authHeader.split(' ')[1];
-        } else if (authHeader) {
-            token = authHeader;
+        if (!token) token = req.headers['token'] || req.headers['x-auth-token'];
+        if (token) token = String(token).replace(/^["']|["']$/g, '').trim();
+
+        if (!token || token === 'null' || token === 'undefined') {
+            return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
         }
 
-        if (!token) {
-            token = req.headers['token'] || req.headers['x-auth-token'] || (req.body && req.body.token) || (req.query && req.query.token);
+        const verified = jwt.verify(token, JWT_SECRET);
+        
+        // 🛑 ዳታቤዝ ላይ ዩዘሩ መታገዱን (Banned) መረጋገጥ አለበት
+        const user = await User.findById(verified.id || verified._id).select('_id email isAdmin isBanned').lean();
+        if (!user || user.isBanned) {
+            return res.status(403).json({ success: false, message: 'Access denied. User banned or not found.' });
         }
 
-        if (token) {
-            token = String(token).replace(/^["']|["']$/g, '').replace(/^Bearer\s+/i, '').trim();
-        }
-
-        if (token && token !== 'null' && token !== 'undefined') {
-            try {
-                const verified = jwt.verify(token, JWT_SECRET);
-                req.user = {
-                    id: verified.id || verified._id,
-                    email: verified.email,
-                    isAdmin: verified.isAdmin
-                };
-                return next();
-            } catch (jwtErr) {}
-        }
-
-        const fallbackUser = await resolveUserFromRequest(req);
-        if (fallbackUser) {
-            req.user = {
-                id: fallbackUser._id,
-                email: fallbackUser.email,
-                isAdmin: fallbackUser.isAdmin
-            };
-            return next();
-        }
-
-        return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
+        req.user = {
+            id: user._id,
+            email: user.email,
+            isAdmin: user.isAdmin
+        };
+        return next();
     } catch (err) {
         return res.status(403).json({ success: false, message: 'Invalid or expired token.' });
     }
@@ -3464,43 +3442,24 @@ app.get('/api/trades/:id/receipt-image', async (req, res) => {
 async function resolveUserFromRequest(req) {
     let decoded = null;
     const authHeader = req.headers['authorization'] || req.headers['Authorization'];
+    
     if (authHeader && authHeader.startsWith('Bearer ')) {
         const rawToken = authHeader.split(' ')[1];
         try {
             decoded = jwt.verify(rawToken, JWT_SECRET);
         } catch (e) {
-            try {
-                const payloadPart = rawToken.split('.')[1];
-                if (payloadPart) decoded = JSON.parse(Buffer.from(payloadPart, 'base64').toString('utf8'));
-            } catch (e2) {}
+            return null; // ቶከን ከተበላሸ ምንም አይመልስም
         }
     }
 
-    const uid = (decoded && (decoded.id || decoded._id || decoded.userId)) ||
-                (req.query && req.query.userId) ||
-                (req.body && req.body.userId);
-    const uemail = (decoded && decoded.email) ||
-                   (req.query && req.query.email) ||
-                   (req.body && req.body.email);
+    if (!decoded) return null; // 🛑 ቶከን ከሌለ ማንኛውንም አይነት ሪኩዌስት አንቀበልም 🛑
 
+    const uid = decoded.id || decoded._id || decoded.userId;
     const lightFields = '-password -kycData -bscPrivateKey -avatar';
 
     if (uid && mongoose.Types.ObjectId.isValid(String(uid))) {
         const u = await User.findById(String(uid)).select(lightFields).lean();
-        if (u) return u;
-    }
-    if (uemail) {
-        const cleanE = String(uemail).toLowerCase().trim();
-        let u = await User.findOne({ email: cleanE }).select(lightFields).lean();
-        if (!u) {
-            const escaped = cleanE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            u = await User.findOne({ email: new RegExp(`^${escaped}$`, 'i') }).select(lightFields).lean();
-        }
-        if (u) return u;
-    }
-    if (uid) {
-        const u = await User.findOne({ userId: String(uid) }).select(lightFields).lean();
-        if (u) return u;
+        if (u && !u.isBanned) return u;
     }
     return null;
 }
