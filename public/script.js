@@ -1100,3 +1100,276 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 });
+
+// =========================================================
+// 🔴 SIGNUP PAGE LOGIC (signup.html) 🔴
+// =========================================================
+document.addEventListener("DOMContentLoaded", () => {
+    const signupForm = document.getElementById('signupForm');
+    
+    if (signupForm) {
+        // የድሮ ዳታዎችን ማጽዳት
+        localStorage.removeItem('userEmail');
+        localStorage.removeItem('authToken');
+
+        const emailInput = document.getElementById('signup-email');
+        const savedEmail = localStorage.getItem('signupEmail');
+        
+        if (savedEmail && emailInput) {
+            emailInput.value = savedEmail;
+            checkSignupRateLimit(savedEmail);
+        }
+
+        if (emailInput) {
+            emailInput.addEventListener('input', function() {
+                const em = this.value.trim();
+                if (em) {
+                    localStorage.setItem('signupEmail', em);
+                    checkSignupRateLimit(em);
+                }
+            });
+        }
+
+        // Error Toast ማሳያ (Signup ልዩ)
+        let toastTimer = null;
+        window.showSignupErrorToast = function(message) {
+            const toast = document.getElementById('errorToast');
+            const toastMsg = document.getElementById('toastMessage');
+            if(!toast || !toastMsg) return;
+            
+            toastMsg.innerText = message;
+            toast.style.display = 'flex';
+            if (toastTimer) clearTimeout(toastTimer);
+            
+            if (!message.includes('try again in')) {
+                toastTimer = setTimeout(() => { window.hideErrorToast(); }, 4000);
+            }
+        };
+
+        window.hideErrorToast = function() {
+            const toast = document.getElementById('errorToast');
+            if(toast) toast.style.display = 'none';
+        };
+
+        // Google Sign-Up ቁልፍን በተገቢው ሰዓት ማምጣት
+        async function handleGoogleSignUpResponse(response) {
+            try {
+                localStorage.clear(); 
+                sessionStorage.clear();
+                const res = await fetch(`${API_BASE_URL}/api/google-auth`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        token: response.credential,
+                        action: 'signup' // Signup መሆኑን ለሰርቨሩ ይነግራል
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    if (data.token) localStorage.setItem('authToken', data.token);
+                    if (data.user && data.user.email) localStorage.setItem('userEmail', data.user.email);
+                    else if (data.email) localStorage.setItem('userEmail', data.email);
+                    window.location.href = data.redirectUrl || 'dashboard.html';
+                } else {
+                    window.showSignupErrorToast(data.message || 'Google authentication failed.');
+                }
+            } catch (err) {
+                console.error('Error:', err);
+                window.showSignupErrorToast('Server error during Google sign-up.');
+            }
+        }
+
+        function renderGoogleSignUpBtn() {
+            if (typeof google !== 'undefined' && google.accounts) {
+                google.accounts.id.initialize({
+                    client_id: "661544926174-8kp01crhke9m1vmjf6kcts5o2e7sqek8.apps.googleusercontent.com",
+                    callback: handleGoogleSignUpResponse
+                });
+                const googleBtnContainer = document.getElementById("googleSignUpBtnContainer");
+                if (googleBtnContainer) {
+                    google.accounts.id.renderButton(googleBtnContainer, { 
+                        theme: "filled_black", size: "large", width: "340", shape: "rectangular", text: "continue_with"
+                    });
+                }
+            } else {
+                setTimeout(renderGoogleSignUpBtn, 100);
+            }
+        }
+        window.addEventListener('load', renderGoogleSignUpBtn);
+
+        // Rate Limiting (መቆለፊያ)
+        let signupCountdownInterval = null;
+        function checkSignupRateLimit(email) {
+            const lockoutKey = 'signup_lockout_' + email;
+            const lockoutUntil = localStorage.getItem(lockoutKey);
+            if (lockoutUntil) {
+                const remainingTime = parseInt(lockoutUntil, 10) - new Date().getTime();
+                if (remainingTime > 0) {
+                    lockSignupForm(remainingTime);
+                } else {
+                    localStorage.removeItem(lockoutKey);
+                    unlockSignupForm();
+                }
+            } else {
+                unlockSignupForm();
+            }
+        }
+
+        function lockSignupForm(durationMs) {
+            const submitBtn = document.getElementById('submitBtn');
+            const pwdInput = document.getElementById('password-input');
+            const confirmPwdInput = document.getElementById('confirm-password-input');
+            const refCode = document.getElementById('referralCode');
+
+            if(pwdInput) pwdInput.disabled = true;
+            if(confirmPwdInput) confirmPwdInput.disabled = true;
+            if(refCode) refCode.disabled = true;
+            if(submitBtn) submitBtn.disabled = true;
+
+            if (signupCountdownInterval) clearInterval(signupCountdownInterval);
+            const lockoutEnd = new Date().getTime() + durationMs;
+
+            signupCountdownInterval = setInterval(() => {
+                const distance = lockoutEnd - new Date().getTime();
+                if (distance <= 0) {
+                    clearInterval(signupCountdownInterval);
+                    const em = emailInput ? emailInput.value.trim() : '';
+                    if (em) localStorage.removeItem('signup_lockout_' + em);
+                    unlockSignupForm();
+                } else {
+                    const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                    const s = Math.floor((distance % (1000 * 60)) / 1000);
+                    window.showSignupErrorToast(`Too many attempts. Please try again in ${m}m ${s}s.`);
+                }
+            }, 1000);
+        }
+
+        function unlockSignupForm() {
+            if (signupCountdownInterval) clearInterval(signupCountdownInterval);
+            const submitBtn = document.getElementById('submitBtn');
+            const pwdInput = document.getElementById('password-input');
+            const confirmPwdInput = document.getElementById('confirm-password-input');
+            const refCode = document.getElementById('referralCode');
+
+            if(emailInput) emailInput.disabled = false;
+            if(pwdInput) pwdInput.disabled = false;
+            if(confirmPwdInput) confirmPwdInput.disabled = false;
+            if(refCode) refCode.disabled = false;
+            if(submitBtn) submitBtn.disabled = false;
+            window.hideErrorToast();
+        }
+
+        // Password Strength (ጥንካሬ መለኪያ)
+        const passwordInput = document.getElementById('password-input');
+        if(passwordInput) {
+            passwordInput.addEventListener('input', function() {
+                const pwd = this.value;
+                const container = document.getElementById('strength-container');
+                if (pwd.length > 0) container.style.display = 'block';
+                else { container.style.display = 'none'; return; }
+
+                const hasLength = pwd.length >= 8;
+                const hasUpper = /[A-Z]/.test(pwd);
+                const hasLower = /[a-z]/.test(pwd);
+                const hasNumber = /[0-9]/.test(pwd);
+                const hasSpecial = /[^A-Za-z0-9]/.test(pwd);
+
+                function updateReq(elId, isValid) {
+                    const el = document.getElementById(elId);
+                    if(el) {
+                        if(isValid) el.classList.add('valid');
+                        else el.classList.remove('valid');
+                    }
+                }
+
+                updateReq('req-length', hasLength);
+                updateReq('req-upper', hasUpper);
+                updateReq('req-lower', hasLower);
+                updateReq('req-number', hasNumber);
+                updateReq('req-special', hasSpecial);
+
+                let score = 0;
+                if (hasLength) score++; if (hasUpper) score++; if (hasLower) score++; if (hasNumber) score++; if (hasSpecial) score++;
+
+                const bars = [
+                    document.getElementById('bar-1'), document.getElementById('bar-2'),
+                    document.getElementById('bar-3'), document.getElementById('bar-4'),
+                    document.getElementById('bar-5')
+                ];
+                const strengthText = document.getElementById('strength-text');
+                bars.forEach(bar => { if(bar) bar.style.background = '#262626'; });
+                if(strengthText) strengthText.innerText = '';
+
+                let color = '#e95454'; let text = 'Weak';
+                if (score >= 3 && score < 5) { color = '#f5d77f'; text = 'Medium'; }
+                else if (score === 5) { color = '#00c087'; text = 'Strong'; }
+
+                for (let i = 0; i < score; i++) { if(bars[i]) bars[i].style.background = color; }
+                if(strengthText) { strengthText.style.color = color; strengthText.innerText = text; }
+            });
+        }
+
+        // ፓስወርድ አሳይ/ደብቅ (Toggle Visibility)
+        const togglePwd = document.getElementById('toggle-password');
+        const toggleConfirm = document.getElementById('toggle-confirm');
+        
+        function togglePasswordVis(fieldId, icon) {
+            const f = document.getElementById(fieldId);
+            if(f && f.type === 'password') { f.type = 'text'; icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); }
+            else if(f) { f.type = 'password'; icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); }
+        }
+        if(togglePwd) togglePwd.addEventListener('click', function() { togglePasswordVis('password-input', this); });
+        if(toggleConfirm) toggleConfirm.addEventListener('click', function() { togglePasswordVis('confirm-password-input', this); });
+
+        // Referral Code አሳይ/ደብቅ
+        const refBtn = document.getElementById('referralToggleBtn');
+        if(refBtn) {
+            refBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const refGroup = document.getElementById('referral-group');
+                if(refGroup) refGroup.style.display = refGroup.style.display === 'block' ? 'none' : 'block';
+            });
+        }
+
+        // ፎርም መላክ (Submit Event)
+        signupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const pwd = document.getElementById('password-input').value;
+            const confirmVal = document.getElementById('confirm-password-input').value;
+            const email = document.getElementById('signup-email').value.trim();
+            const refCode = document.getElementById('referralCode') ? document.getElementById('referralCode').value : '';
+
+            if (pwd !== confirmVal) {
+                window.showSignupErrorToast("Passwords do not match!");
+                return;
+            }
+            localStorage.setItem('signupEmail', email);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/signup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password: pwd, referralCode: refCode })
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    localStorage.setItem('signupEmail', email);
+                    window.location.href = 'verify.html';
+                } else {
+                    if (response.status === 429 && data.lockUntil) {
+                        const remainingMs = data.lockUntil - new Date().getTime();
+                        localStorage.setItem('signup_lockout_' + email, data.lockUntil);
+                        lockSignupForm(remainingMs);
+                    } else {
+                        window.showSignupErrorToast(data.message || "Something went wrong. Please try again.");
+                        if(emailInput) emailInput.style.borderColor = '#ff4d4d';
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+                window.showSignupErrorToast("Error connecting to server!");
+            }
+        });
+    }
+});
