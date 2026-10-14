@@ -74,18 +74,20 @@
 
         <div class="divider"><span>OR</span></div>
 
-        <form id="signinForm">
+        <!-- 🔴 onsubmit="return false;" በመጨመሩ ፎርሙ ሊንኩን ፈጽሞ አይቀይርም 🔴 -->
+        <form id="signinForm" onsubmit="return false;">
             <label>Email or Phone</label>
             <div class="input-box">
                 <i class="fa-regular fa-user input-icon"></i>
-                <input type="text" name="email" id="signin-email" placeholder="Enter email or phone" required>
+                <!-- 🔴 'name' የሚለው ቃል ጠፍቷል፣ ስለዚህ ሊንኩ ላይ መቼም አይወጣም -->
+                <input type="text" id="signin-email" placeholder="Enter email or phone" required>
             </div>
 
             <label>Password</label>
             <div class="input-box">
                 <i class="fa-solid fa-lock input-icon"></i>
-                <input type="password" name="password" id="signin-pass" placeholder="Enter password" required>
-                <!-- 🔴 እዚህ ጋር የነበረው 'onclick' ጠፍቶ በ id ተቀይሯል 🔴 -->
+                <!-- 🔴 'name' የሚለው ቃል ጠፍቷል -->
+                <input type="password" id="signin-pass" placeholder="Enter password" required>
                 <i id="togglePasswordIcon" class="fa-regular fa-eye toggle-password" style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: #777; cursor: pointer;"></i>
             </div>
 
@@ -106,7 +108,7 @@
 
             <button type="submit" id="submitBtn" class="submit-btn">Sign In →</button>
         </form>
-
+        
         <div class="signin-text">
             Don't have an account? <a href="signup.html">Create one</a>
         </div>
