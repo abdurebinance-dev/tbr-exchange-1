@@ -41,13 +41,12 @@ const usdtAbi = [
 ];
 const usdtContractMaster = masterWallet ? new ethers.Contract(USDT_CONTRACT_ADDRESS, usdtAbi, masterWallet) : null;
 
-// 🛡️ የደህንነት መከላከያዎች (Security Headers - Grade A+ & 130/100) 🛡️
+// 🛡️ የደህንነት መከላከያዎች (Security Headers - Grade A+ with Full UI Support) 🛡️
 app.use((req, res, next) => {
-    // 1. CSP: ጃቫስክሪፕትን ('script-src') አጥብቀን፣ ዲዛይኑን ('style-src') ክፍት ('unsafe-inline') እናደርጋለን!
-    // 'form-action' ደግሞ 'self' አድርገን ቦነስ ነጥብ እንወስዳለን።
+    // 1. የተስተካከለ CSP: አይኮኖች እና ፎንቶች (font-src) እንዲሰሩ ተፈቅዷል!
     res.setHeader(
         'Content-Security-Policy',
-        "default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' wss: https://api.brevo.com https://bsc-dataseed.binance.org; object-src 'none'; frame-ancestors 'none'; form-action 'self';"
+        "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' data: https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' wss: https://api.brevo.com https://bsc-dataseed.binance.org; object-src 'none'; frame-ancestors 'none'; form-action 'self';"
     );
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
     res.setHeader('X-Frame-Options', 'DENY');
