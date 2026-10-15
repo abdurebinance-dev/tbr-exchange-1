@@ -1659,10 +1659,22 @@ app.post('/api/user/update', verifyToken, async (req, res) => {
 // ==========================================
 app.get('/api/payment-methods', verifyToken, async (req, res) => {
     try {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
         const user = await User.findById(req.user.id).select('paymentMethods').lean();
         if (!user) return res.status(404).json({ success: false, message: "User not found" });
-        res.json({ success: true, paymentMethods: user.paymentMethods || [] });
+
+        // የድሮዎቹ እና አዲሶቹ ክፍያዎች በትክክል እንዲመጡ ማስተካከል
+        const formattedMethods = (user.paymentMethods || []).map(pm => ({
+            _id: pm._id,
+            type: pm.type,
+            accountName: pm.accountName || pm.name || 'Unknown',
+            accountNumber: pm.accountNumber || pm.account || 'Unknown',
+            isDefault: pm.isDefault || false
+        }));
+
+        res.json({ success: true, paymentMethods: formattedMethods });
     } catch (error) {
+        console.error("Fetch payments error:", error);
         res.status(500).json({ success: false, message: "Server error fetching payments" });
     }
 });
@@ -1673,12 +1685,24 @@ app.post('/api/payment-methods', verifyToken, async (req, res) => {
         const user = await User.findById(req.user.id).select('paymentMethods');
         if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
-        const newPayment = { type, accountName, accountNumber };
+        const isFirstPayment = !user.paymentMethods || user.paymentMethods.length === 0;
+        
+        // በድሮውም በአዲሱም ፎርማት ሴቭ እናደርገዋለን
+        const newPayment = {
+            type,
+            name: accountName,       // ለድሮው ፎርማት እንዳይበላሽ
+            account: accountNumber,  // ለድሮው ፎርማት እንዳይበላሽ
+            accountName: accountName, 
+            accountNumber: accountNumber, 
+            isDefault: isFirstPayment
+        };
+
         user.paymentMethods.push(newPayment);
         await user.save();
 
         res.status(201).json({ success: true, message: "Payment method added", paymentMethods: user.paymentMethods });
     } catch (error) {
+        console.error("Add payment error:", error);
         res.status(500).json({ success: false, message: "Server error adding payment" });
     }
 });
@@ -1688,11 +1712,20 @@ app.delete('/api/payment-methods/:id', verifyToken, async (req, res) => {
         const user = await User.findById(req.user.id).select('paymentMethods');
         if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
-        user.paymentMethods.pull({ _id: req.params.id });
-        await user.save();
+        const payment = user.paymentMethods.id(req.params.id);
+        if (!payment) return res.status(404).json({ success: false, message: "Payment method not found" });
 
+        const wasDefault = payment.isDefault;
+        user.paymentMethods.pull({ _id: req.params.id });
+
+        if (wasDefault && user.paymentMethods.length > 0) {
+            user.paymentMethods[0].isDefault = true;
+        }
+
+        await user.save();
         res.json({ success: true, message: "Payment method deleted" });
     } catch (error) {
+        console.error("Delete payment error:", error);
         res.status(500).json({ success: false, message: "Server error deleting payment" });
     }
 });
