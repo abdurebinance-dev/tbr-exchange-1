@@ -1,16 +1,49 @@
-const API_BASE_URL = window.location.hostname.includes('localhost') ? '' : 'https://tbr-exchange-backend.onrender.com';
-let currentField = "";
+// =========================================================
+// 🔴 SETTINGS PAGE LOGIC (settings.js) 🔴
+// =========================================================
 
-// ==========================================
-// 1. MODAL AND TOAST FUNCTIONS (GLOBAL)
-// ==========================================
+const API_BASE_URL = window.location.hostname.includes('localhost') 
+    ? '' 
+    : 'https://tbr-exchange-backend.onrender.com';
+
+let currentField = "";
+let paymentMethods = [];
+let editingPaymentId = null;
+
+// ==========================================================
+// 🔴 1. MODAL FUNCTIONS (ከ DOMContentLoaded ውጪ መሆን አለባቸው) 🔴
+// ==========================================================
+
 window.showToast = function(message) {
     const toast = document.getElementById("toastNotification");
     const msgEl = document.getElementById("toastMessage");
     if (!toast || !msgEl) return;
+    
     msgEl.innerText = message;
     toast.classList.add("show");
     setTimeout(() => toast.classList.remove("show"), 2500);
+};
+
+window.showCenterNotification = function(title, message, isSuccess = true) {
+    const modal = document.getElementById('centerNotifyModal');
+    const icon = document.getElementById('notifyIcon');
+    const titleEl = document.getElementById('notifyTitle');
+    const descEl = document.getElementById('notifyDesc');
+    if(!modal || !titleEl || !descEl) return;
+
+    titleEl.innerText = title;
+    descEl.innerHTML = message;
+    if (icon) {
+        icon.innerHTML = isSuccess 
+            ? '<i class="fa-solid fa-circle-check" style="color: var(--green-color);"></i>'
+            : '<i class="fa-solid fa-triangle-exclamation" style="color: var(--red-color);"></i>';
+    }
+    modal.style.display = 'flex';
+};
+
+window.closeCenterNotification = function() {
+    const m = document.getElementById('centerNotifyModal');
+    if(m) m.style.display = 'none';
 };
 
 window.openModal = function(field) {
@@ -80,16 +113,18 @@ window.saveModalData = async function() {
     }
     
     window.showToast("Profile updated successfully!");
-    window.closeModal();
 
     try {
         const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+        const dataToSend = (currentField === 'username') ? finalVal : val;
         await fetch(`${API_BASE_URL}/api/user/update`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-            body: JSON.stringify({ field: apiField, value: finalVal })
+            body: JSON.stringify({ field: apiField, value: dataToSend })
         });
     } catch (e) { console.error("Sync update error:", e); }
+
+    window.closeModal();
 };
 
 window.copyId = function() {
@@ -100,9 +135,6 @@ window.copyId = function() {
     }
 };
 
-// ==========================================
-// 2. IMAGE UPLOAD FUNCTIONS
-// ==========================================
 window.triggerImageUpload = function() {
     const fileInput = document.getElementById("profileImageInput");
     if (fileInput) fileInput.click();
@@ -129,63 +161,65 @@ window.handleImageUpload = function(event) {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ field: "avatar", value: base64Image })
-        });
+        }).catch(e => console.error(e));
     };
     reader.readAsDataURL(file);
 };
 
-// ==========================================
-// 3. PAYMENT & OTHER PLACEHOLDER FUNCTIONS
-// ==========================================
-window.toggleAddPaymentForm = function() {
-    const form = document.getElementById("pm-add-form");
-    if (form) form.style.display = form.style.display === "none" ? "block" : "none";
-};
-
-window.handlePaymentTypeChange = function() {
-    const group = document.getElementById("pm-account-number-group");
-    if (group) group.style.display = "block";
-};
-
-window.savePaymentMethod = function() {
-    window.showToast("Payment method saved!");
-    window.toggleAddPaymentForm();
-};
-
-window.closeCenterNotification = function() {
-    const modal = document.getElementById("centerNotifyModal");
-    if (modal) modal.style.display = "none";
-};
-
-window.closeDeleteModal = function() {
-    const modal = document.getElementById("deleteConfirmModal");
-    if (modal) modal.style.display = "none";
-};
 
 // ==========================================
-// 4. PAGE LOAD & SYNC LOGIC
+// 🔴 2. INITIALIZATION (ፔጁ ሲከፈት የሚሰራ) 🔴
 // ==========================================
 document.addEventListener("DOMContentLoaded", async function() {
+    // 1. መግቢያ (Auth) መኖሩን ማረጋገጥ
     const token = localStorage.getItem("token") || localStorage.getItem("authToken");
     if (!token) {
         window.location.replace("signin.html");
         return;
     }
 
-    // Tab Switcher
+    // 🚀 Tab Switcher 🚀
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault();
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
+
             const target = btn.getAttribute('data-tab');
-            document.querySelectorAll('.content-section').forEach(section => section.style.display = 'none');
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.style.display = 'none';
+            });
+
             const targetSection = document.getElementById(target + '-section');
             if (targetSection) targetSection.style.display = 'block';
         });
     });
 
-    // LocalStorage Data Display Fast
+    const urlParams = new URLSearchParams(window.location.search);
+    const activeTab = urlParams.get('tab');
+    if (activeTab) {
+        const targetBtn = document.querySelector(`.tab-btn[data-tab="${activeTab}"]`);
+        if (targetBtn) setTimeout(() => targetBtn.click(), 50);
+    }
+
+    function getStoredId() {
+        let tbrId = localStorage.getItem('tbrId') || localStorage.getItem('tbrExchangeId');
+        if (tbrId && String(tbrId).startsWith('TBR-')) return tbrId;
+        try {
+            if (token && token.includes('.')) {
+                const base64Url = token.split('.')[1];
+                const payload = JSON.parse(window.atob(base64Url.replace(/-/g, '+').replace(/_/g, '/')));
+                let exId = payload.tbrId || payload.userId || payload.numericId;
+                if (exId) {
+                    let formatted = 'TBR-' + String(exId).replace('TBR-', '').padStart(6, '0');
+                    localStorage.setItem('tbrId', formatted);
+                    return formatted;
+                }
+            }
+        } catch (e) {}
+        return ''; 
+    }
+
     function updateUI(user) {
         const nameEl = document.getElementById("profile-name");
         if (nameEl) nameEl.innerHTML = `${user.username || 'User'} <i class="fa-solid fa-pen edit-icon" onclick="window.openModal('name')"></i>`;
@@ -194,11 +228,11 @@ document.addEventListener("DOMContentLoaded", async function() {
         if (emailEl) emailEl.innerText = user.email || '';
         
         const idEl = document.getElementById("profile-id");
-        if (idEl) idEl.innerText = user.tbrId || localStorage.getItem('tbrId') || '';
+        if (idEl) idEl.innerText = user.tbrId || getStoredId();
         
         const avatarBox = document.getElementById("avatar-initials");
         if (avatarBox) {
-            if (user.avatar && user.avatar.trim() !== "" && user.avatar !== 'null') {
+            if (user.avatar && user.avatar.trim() !== "" && user.avatar !== 'null' && user.avatar !== 'undefined') {
                 avatarBox.style.backgroundImage = `url('${user.avatar}')`;
                 avatarBox.style.backgroundSize = "cover";
                 avatarBox.style.backgroundPosition = "center";
@@ -215,16 +249,35 @@ document.addEventListener("DOMContentLoaded", async function() {
 
         const usernameDisplay = document.getElementById("username-display");
         if (usernameDisplay) usernameDisplay.innerText = user.traderHandle || 'Not set — tap to choose your handle';
+
+        const kycBadge = document.getElementById('kyc-badge');
+        if (kycBadge) {
+            let status = String(user.kycStatus || 'approved').toLowerCase();
+            if (status === 'approved' || status === 'verified' || status === 'true') {
+                kycBadge.innerHTML = '<i class="fa-solid fa-check"></i> Verified';
+                kycBadge.className = 'badge-verified';
+            } else {
+                kycBadge.innerHTML = '<i class="fa-solid fa-clock"></i> Unverified';
+                kycBadge.className = 'badge-unverified';
+            }
+        }
     }
 
-    const username = localStorage.getItem("userName") || localStorage.getItem("fullName") || "User";
-    const email = localStorage.getItem("userEmail") || "";
-    const phone = localStorage.getItem("userPhone") || "";
-    const traderHandle = localStorage.getItem("traderUsername") || "";
-    const avatar = localStorage.getItem("userAvatar") || "";
-    updateUI({ username, email, phone, traderHandle, avatar });
+    function loadFromLocalStorageFallback() {
+        const username = localStorage.getItem("userName") || localStorage.getItem("fullName") || "User";
+        const email = localStorage.getItem("userEmail") || "";
+        let tbrId = getStoredId();
+        const phone = localStorage.getItem("userPhone") || "";
+        const traderHandle = localStorage.getItem("traderUsername") || "";
+        const kycStatus = localStorage.getItem("kycStatus") || "approved";
+        const avatar = localStorage.getItem("userAvatar") || "";
+        updateUI({ username, email, tbrId, phone, traderHandle, kycStatus, avatar });
+    }
 
-    // Fetch Latest Data from Backend
+    // Load initial data
+    loadFromLocalStorageFallback();
+
+    // Fetch from Backend
     try {
         const response = await fetch(`${API_BASE_URL}/api/user/profile?t=${Date.now()}`, {
             method: "GET",
@@ -235,22 +288,36 @@ document.addEventListener("DOMContentLoaded", async function() {
             const result = await response.json();
             const userData = result.user || result;
             
-            const uName = userData.fullName || userData.username || userData.name || "User";
-            const uEmail = userData.email || "";
-            let newId = userData.tbrId || userData.userId || userData._id || "";
+            const username = userData.fullName || userData.username || userData.name || localStorage.getItem("userName") || "User";
+            const email = userData.email || localStorage.getItem("userEmail") || "";
+            
+            let newId = userData.tbrId || userData.userId || userData.customId || userData.id || userData._id || "";
             if (userData.numericId && (!newId.startsWith('TBR-'))) newId = 'TBR-' + String(userData.numericId).padStart(6, '0');
-            const uPhone = userData.phoneNumber || userData.phone || "";
-            const uTraderHandle = userData.traderUsername || "";
-            let finalAvatar = userData.avatar || userData.profilePicture || "";
 
-            if (newId) localStorage.setItem("tbrId", newId);
-            if (uName) localStorage.setItem("userName", uName);
-            if (uEmail) localStorage.setItem("userEmail", uEmail);
-            if (uPhone) localStorage.setItem("userPhone", uPhone);
-            if (uTraderHandle) localStorage.setItem("traderUsername", uTraderHandle);
+            const phone = userData.phoneNumber || userData.phone || "";
+            const traderHandle = userData.traderUsername || "";
+            const kycVal = userData.kycStatus || 'approved';
+
+            let serverAvatar = userData.avatar || userData.profilePicture;
+            let finalAvatar = localStorage.getItem("userAvatar") || "";
+            if (serverAvatar && serverAvatar !== 'null' && serverAvatar !== 'undefined' && serverAvatar.trim() !== "") {
+                finalAvatar = serverAvatar;
+            }
+
+            if (newId !== "") {
+                localStorage.setItem("tbrId", newId);
+                localStorage.setItem("tbrExchangeId", newId);
+            }
+            localStorage.setItem("kycStatus", kycVal);
+            if (username) localStorage.setItem("userName", username);
+            if (email) localStorage.setItem("userEmail", email);
+            if (phone) localStorage.setItem("userPhone", phone);
+            if (traderHandle) localStorage.setItem("traderUsername", traderHandle);
             if (finalAvatar) localStorage.setItem("userAvatar", finalAvatar);
 
-            updateUI({ username: uName, email: uEmail, tbrId: newId, phone: uPhone, traderHandle: uTraderHandle, avatar: finalAvatar });
+            updateUI({ username, email, tbrId: newId, phone, traderHandle, kycStatus: kycVal, avatar: finalAvatar });
         }
-    } catch (error) { console.error("Profile sync error:", error); }
+    } catch (error) {
+        console.error("Network error during profile sync:", error);
+    }
 });
