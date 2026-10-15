@@ -1454,3 +1454,212 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 });
+
+// =========================================================
+// 🔴 RESET PASSWORD LOGIC (reset-password.html) 🔴
+// =========================================================
+document.addEventListener("DOMContentLoaded", () => {
+    const resetForm = document.getElementById('resetForm');
+    
+    if (resetForm) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+
+        const newPasswordInput = document.getElementById('new-password');
+        const confirmPasswordInput = document.getElementById('confirm-password');
+        const submitBtn = document.getElementById('resetSubmitBtn');
+        const feedbackContainer = document.getElementById('passwordFeedbackContainer');
+        const strengthText = document.getElementById('strengthText');
+        const successMessage = document.getElementById('successMessage');
+        const successText = document.getElementById('successText');
+        const responseMessage = document.getElementById('responseMessage');
+        
+        const bars = [
+            document.getElementById('bar1'), document.getElementById('bar2'),
+            document.getElementById('bar3'), document.getElementById('bar4'),
+            document.getElementById('bar5')
+        ];
+
+        const reqs = {
+            length: document.getElementById('req-length'),
+            upper: document.getElementById('req-upper'),
+            lower: document.getElementById('req-lower'),
+            number: document.getElementById('req-number'),
+            special: document.getElementById('req-special')
+        };
+
+        // ማሳያ/መደበቂያ
+        const toggleNewPass = document.getElementById('toggleNewPass');
+        const toggleConfirmPass = document.getElementById('toggleConfirmPass');
+        
+        if(toggleNewPass) {
+            toggleNewPass.addEventListener('click', () => {
+                const type = newPasswordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                newPasswordInput.setAttribute('type', type);
+                toggleNewPass.classList.toggle('fa-eye');
+                toggleNewPass.classList.toggle('fa-eye-slash');
+            });
+        }
+
+        if(toggleConfirmPass) {
+            toggleConfirmPass.addEventListener('click', () => {
+                const type = confirmPasswordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                confirmPasswordInput.setAttribute('type', type);
+                toggleConfirmPass.classList.toggle('fa-eye');
+                toggleConfirmPass.classList.toggle('fa-eye-slash');
+            });
+        }
+
+        if(newPasswordInput) {
+            newPasswordInput.addEventListener('input', () => {
+                const val = newPasswordInput.value;
+
+                if (val.length > 0) feedbackContainer.style.display = 'block';
+                else feedbackContainer.style.display = 'none';
+                
+                const hasLength = val.length >= 8;
+                const hasUpper = /[A-Z]/.test(val);
+                const hasLower = /[a-z]/.test(val);
+                const hasNumber = /[0-9]/.test(val);
+                const hasSpecial = /[\W_]/.test(val);
+
+                function updateReqUI(element, isValid) {
+                    if(!element) return;
+                    if (isValid) {
+                        element.classList.add('valid');
+                        const icon = element.querySelector('i');
+                        if(icon) icon.className = 'fa-solid fa-circle-check';
+                    } else {
+                        element.classList.remove('valid');
+                        const icon = element.querySelector('i');
+                        if(icon) icon.className = 'fa-solid fa-circle';
+                    }
+                }
+
+                updateReqUI(reqs.length, hasLength);
+                updateReqUI(reqs.upper, hasUpper);
+                updateReqUI(reqs.lower, hasLower);
+                updateReqUI(reqs.number, hasNumber);
+                updateReqUI(reqs.special, hasSpecial);
+
+                let score = [hasLength, hasUpper, hasLower, hasNumber, hasSpecial].filter(Boolean).length;
+                
+                const colors = ['#ef4444', '#f97316', '#eab308', '#3b82f6', '#22c55e'];
+                const labels = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'];
+
+                bars.forEach((bar, index) => {
+                    if(!bar) return;
+                    if (index < score) bar.style.background = colors[score - 1];
+                    else bar.style.background = '#2a2a2a';
+                });
+
+                if(strengthText) {
+                    strengthText.textContent = labels[score - 1] || 'Weak';
+                    strengthText.style.color = colors[score - 1] || '#ef4444';
+                }
+
+                checkFormValidity();
+            });
+        }
+
+        if(confirmPasswordInput) confirmPasswordInput.addEventListener('input', checkFormValidity);
+
+        function checkFormValidity() {
+            if(!newPasswordInput || !confirmPasswordInput || !submitBtn) return;
+            const val = newPasswordInput.value;
+            const confirmVal = confirmPasswordInput.value;
+            
+            const allValid = val.length >= 8 && 
+                             /[A-Z]/.test(val) && 
+                             /[a-z]/.test(val) && 
+                             /[0-9]/.test(val) && 
+                             /[\W_]/.test(val) && 
+                             val === confirmVal && 
+                             val !== '';
+
+            submitBtn.disabled = !allValid;
+        }
+
+        // ፎርሙ ሲላክ
+        resetForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newPassword = newPasswordInput.value;
+            const confirmPassword = confirmPasswordInput.value;
+
+            if(responseMessage) responseMessage.style.display = 'none';
+
+            if (newPassword !== confirmPassword) {
+                if(responseMessage) {
+                    responseMessage.style.display = 'block';
+                    responseMessage.style.background = '#331e1e';
+                    responseMessage.style.color = '#f87171';
+                    responseMessage.style.border = '1px solid #ef4444';
+                    responseMessage.textContent = 'Passwords do not match!';
+                }
+                return;
+            }
+
+            if (!token) {
+                if(responseMessage) {
+                    responseMessage.style.display = 'block';
+                    responseMessage.style.background = '#331e1e';
+                    responseMessage.style.color = '#f87171';
+                    responseMessage.style.border = '1px solid #ef4444';
+                    responseMessage.textContent = 'Invalid or missing reset token.';
+                }
+                return;
+            }
+
+            if(submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Updating...';
+            }
+
+            try {
+                // የ API_BASE_URL አስቀድሞ አለ
+                const response = await fetch(`${API_BASE_URL}/api/reset-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token, newPassword })
+                });
+                
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    resetForm.style.display = 'none';
+                    if(successText) successText.textContent = data.message || 'Your password has been successfully updated. Redirecting to login...';
+                    if(successMessage) successMessage.style.display = 'block';
+
+                    setTimeout(() => {
+                        window.location.href = 'signin.html';
+                    }, 2000);
+                } else {
+                    if(responseMessage) {
+                        responseMessage.style.display = 'block';
+                        responseMessage.style.background = '#331e1e';
+                        responseMessage.style.color = '#f87171';
+                        responseMessage.style.border = '1px solid #ef4444';
+                        responseMessage.textContent = data.message || 'Password update failed.';
+                    }
+                    if(submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Update Password';
+                    }
+                }
+            } catch (err) {
+                console.error('Fetch Error:', err);
+                if(responseMessage) {
+                    responseMessage.style.display = 'block';
+                    responseMessage.style.background = '#331e1e';
+                    responseMessage.style.color = '#f87171';
+                    responseMessage.style.border = '1px solid #ef4444';
+                    responseMessage.textContent = 'Server connection error. Please try again.';
+                }
+                if(submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Update Password';
+                }
+            }
+        });
+    }
+});
