@@ -1,5 +1,6 @@
 const API_BASE_URL = window.location.hostname.includes('localhost') ? '' : 'https://tbr-exchange-backend.onrender.com';
 let currentField = "";
+let paymentToDelete = null; // የክፍያ ማጥፊያ መለያ
 
 function showToast(message) {
     const toast = document.getElementById("toastNotification");
@@ -73,7 +74,6 @@ async function saveModalData() {
         localStorage.setItem("userName", val);
         const profileName = document.getElementById("profile-name");
         if(profileName) profileName.innerHTML = `${val} <i class="fa-solid fa-pen edit-icon" id="edit-name-btn"></i>`;
-        
         document.getElementById('edit-name-btn')?.addEventListener('click', () => openModal('name'));
         apiField = "fullName";
     }
@@ -131,7 +131,7 @@ function handleImageUpload(event) {
 }
 
 // ==========================================
-// 🚀 PASSKEY FUNCTIONS (New & Restored) 🚀
+// 🚀 PASSKEY FUNCTIONS 🚀
 // ==========================================
 async function loadPasskeys() {
     const container = document.getElementById("passkeys-list-container");
@@ -153,7 +153,6 @@ async function loadPasskeys() {
                 return;
             }
 
-            // CSP Safe Render (No onclick inside HTML string)
             container.innerHTML = passkeys.map(pk => `
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border-color);">
                     <div style="display: flex; align-items: center; gap: 10px;">
@@ -163,7 +162,6 @@ async function loadPasskeys() {
                             <div style="font-size: 11px; color: var(--text-muted);">Added recently</div>
                         </div>
                     </div>
-                    <i class="fa-solid fa-trash delete-passkey-btn" data-id="${pk._id || pk.id}" style="color: var(--red-color); cursor: pointer;"></i>
                 </div>
             `).join('');
         } else {
@@ -183,10 +181,7 @@ async function registerPasskey() {
         });
         const data = await res.json();
         
-        if (!data.success) { 
-            showToast(data.message || "Failed to start passkey registration."); 
-            return; 
-        }
+        if (!data.success) { showToast(data.message || "Failed to start passkey registration."); return; }
 
         const options = data.options;
         options.challenge = new Uint8Array(atob(options.challenge.replace(/-/g, '+').replace(/_/g, '/')).split('').map(c => c.charCodeAt(0)));
@@ -211,16 +206,13 @@ async function registerPasskey() {
         if (verifyResult.success) { 
             showToast("Passkey registered successfully! 🎉"); 
             loadPasskeys(); 
-        } else { 
-            showToast(verifyResult.message || "Passkey registration failed."); 
-        }
-    } catch (err) { 
-        console.error(err);
-        showToast("Passkey registration cancelled or not supported."); 
-    }
+        } else { showToast(verifyResult.message || "Registration failed."); }
+    } catch (err) { showToast("Passkey registration cancelled."); }
 }
 
-// Payment UI Functions
+// ==========================================
+// 🚀 PAYMENT FUNCTIONS (Load, Add, Delete) 🚀
+// ==========================================
 function toggleAddPaymentForm() {
     const form = document.getElementById("pm-add-form");
     if (form) form.style.display = form.style.display === "none" ? "block" : "none";
@@ -231,9 +223,103 @@ function handlePaymentTypeChange() {
     if (group) group.style.display = "block";
 }
 
-function savePaymentMethod() {
-    showToast("Payment method saved!");
-    toggleAddPaymentForm();
+// 1. የነበሩትን Payments ማምጣት
+async function loadPaymentMethods() {
+    const pmList = document.getElementById("pm-list");
+    const emptyState = document.getElementById("pm-empty-state");
+    if (!pmList || !emptyState) return;
+
+    try {
+        const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+        // ማሳሰቢያ: የባክኤንድህ ሊንክ የተለየ ከሆነ (ለምሳሌ /api/payment) እዚህ ጋር ቀይረው
+        const response = await fetch(`${API_BASE_URL}/api/payment-methods`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            const methods = data.paymentMethods || data.data || data;
+
+            if (!methods || methods.length === 0) {
+                emptyState.style.display = "block";
+                pmList.innerHTML = "";
+            } else {
+                emptyState.style.display = "none";
+                pmList.innerHTML = methods.map(pm => `
+                    <div class="pm-item-box">
+                        <div>
+                            <div class="pm-item-type">${pm.type || pm.bankName}</div>
+                            <div class="pm-item-holder">${pm.accountName}</div>
+                            <div class="pm-item-number">${pm.accountNumber}</div>
+                        </div>
+                        <div class="pm-item-actions">
+                            <i class="fa-solid fa-trash delete-pm-btn" data-id="${pm._id || pm.id}" style="color: var(--red-color); cursor: pointer;"></i>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+    } catch (error) { console.error("Error loading payments:", error); }
+}
+
+// 2. አዲስ Payment ማስገባት
+async function savePaymentMethod() {
+    const type = document.getElementById("pm-type")?.value;
+    const accountName = document.getElementById("pm-account-name")?.value.trim();
+    const accountNumber = document.getElementById("pm-account-number")?.value.trim();
+
+    if (!type || !accountName || !accountNumber) {
+        showToast("እባክህ ሙሉ መረጃ አስገባ!");
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+        const response = await fetch(`${API_BASE_URL}/api/payment-methods`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+            body: JSON.stringify({ type, accountName, accountNumber })
+        });
+
+        if (response.ok) {
+            showToast("Payment method added successfully!");
+            toggleAddPaymentForm();
+            
+            // ፎርሙን ባዶ ማድረግ
+            document.getElementById("pm-type").value = "";
+            document.getElementById("pm-account-name").value = "";
+            document.getElementById("pm-account-number").value = "";
+            document.getElementById("pm-account-number-group").style.display = "none";
+            
+            loadPaymentMethods(); // አዲሱን አብሮ እንዲያመጣው
+        } else {
+            showToast("Failed to save payment method.");
+        }
+    } catch (e) {
+        console.error(e);
+        showToast("Network error. Please try again.");
+    }
+}
+
+// 3. Payment ማጥፋት
+async function confirmDeletePayment() {
+    if (!paymentToDelete) return;
+    try {
+        const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+        const response = await fetch(`${API_BASE_URL}/api/payment-methods/${paymentToDelete}`, {
+            method: "DELETE",
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+            showToast("Payment method deleted!");
+            loadPaymentMethods();
+        }
+    } catch (e) { console.error(e); }
+    
+    document.getElementById("deleteConfirmModal").style.display = "none";
+    paymentToDelete = null;
 }
 
 // =========================================================
@@ -241,7 +327,6 @@ function savePaymentMethod() {
 // =========================================================
 document.addEventListener("DOMContentLoaded", async function() {
     
-    // Bind all buttons safely
     const bindSafe = (id, func) => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('click', func);
@@ -254,34 +339,31 @@ document.addEventListener("DOMContentLoaded", async function() {
     bindSafe('copy-id-btn', copyId);
     bindSafe('add-phone-btn', () => openModal('phone'));
     bindSafe('edit-username-btn', () => openModal('username'));
-    
-    // Passkey binding
     bindSafe('add-passkey-btn', registerPasskey);
     
-    // Load passkeys on start
-    loadPasskeys();
-
-    // CSP Safe Event Delegation for dynamically created passkey delete buttons
-    document.getElementById('passkeys-list-container')?.addEventListener('click', (e) => {
-        if (e.target.classList.contains('delete-passkey-btn')) {
-            showToast("Passkey delete requested (API pending)");
-            // Add your backend delete passkey logic here if needed
-        }
-    });
-    
+    // Payments Bindings
     bindSafe('pm-add-btn', toggleAddPaymentForm);
     document.getElementById('pm-type')?.addEventListener('change', handlePaymentTypeChange);
     bindSafe('pm-save-btn', savePaymentMethod);
     bindSafe('pm-cancel-btn', toggleAddPaymentForm);
+    bindSafe('confirmDeleteBtn', confirmDeletePayment);
+    
+    // የ Payment ማጥፊያ ምልክት ሲነካ መለየት
+    document.getElementById('pm-list')?.addEventListener('click', (e) => {
+        if (e.target.classList.contains('delete-pm-btn')) {
+            paymentToDelete = e.target.getAttribute('data-id');
+            const modal = document.getElementById("deleteConfirmModal");
+            if (modal) modal.style.display = "flex";
+        }
+    });
     
     bindSafe('merchant-apply-btn', () => alert('Merchant application submitted successfully!'));
-    
     bindSafe('center-notify-ok-btn', () => { document.getElementById("centerNotifyModal").style.display = "none"; });
     bindSafe('modal-cancel-btn', closeModal);
     bindSafe('modal-save-btn', saveModalData);
     bindSafe('delete-cancel-btn', () => { document.getElementById("deleteConfirmModal").style.display = "none"; });
 
-    // Tab Switcher logic
+    // Tab Switcher
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -294,12 +376,15 @@ document.addEventListener("DOMContentLoaded", async function() {
         });
     });
 
-    // Profile UI loading
     const token = localStorage.getItem("token") || localStorage.getItem("authToken");
     if (!token) {
         window.location.replace("signin.html");
         return;
     }
+
+    // Load initial data
+    loadPasskeys();
+    loadPaymentMethods(); // ክፍያዎቹን አምጣ
 
     function updateUI(user) {
         const nameEl = document.getElementById("profile-name");
