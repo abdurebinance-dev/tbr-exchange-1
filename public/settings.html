@@ -795,16 +795,16 @@
         <div id="profile-section" class="content-section" style="display: block;">
             <div class="profile-card">
                 <div class="profile-top">
-                    <div class="avatar-box" id="avatar-initials" onclick="window.triggerImageUpload && window.triggerImageUpload()">
+                    <div class="avatar-box" id="avatar-initials" onclick="triggerImageUpload()">
                         UI <div class="camera-badge"><i class="fa-solid fa-camera"></i></div>
                     </div>
-                    <input type="file" id="profileImageInput" accept="image/*" style="display: none;" onchange="window.handleImageUpload && window.handleImageUpload(event)">
+                    <input type="file" id="profileImageInput" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
 
                     <div class="user-info">
-                        <h3 id="profile-name"> <i class="fa-solid fa-pen edit-icon" onclick="window.openModal && window.openModal('name')"></i></h3>
+                        <h3 id="profile-name"> <i class="fa-solid fa-pen edit-icon" onclick="openModal('name')"></i></h3>
                         <div class="id-container">
                             <span>ID:</span> <span id="profile-id">Loading...</span> 
-                            <i class="fa-solid fa-copy" style="cursor:pointer;" title="Copy ID" onclick="window.copyId && window.copyId()"></i>
+                            <i class="fa-solid fa-copy" style="cursor:pointer;" title="Copy ID" onclick="copyId()"></i>
                         </div>
                     </div>
                 </div>
@@ -830,7 +830,7 @@
                         <div class="info-title">Phone Number</div>
                         <div class="info-value" id="phone-display">Not added</div>
                     </div>
-                    <span class="action-link" onclick="window.openModal && window.openModal('phone')"><i class="fa-solid fa-plus"></i> Add</span>
+                    <span class="action-link" onclick="openModal('phone')"><i class="fa-solid fa-plus"></i> Add</span>
                 </div>
 
                 <div class="info-row">
@@ -838,7 +838,7 @@
                         <div class="info-title">Trader Username</div>
                         <div class="info-value" id="username-display">Not set — tap to choose your handle</div>
                     </div>
-                    <span class="action-link" onclick="window.openModal && window.openModal('username')"><i class="fa-solid fa-pen"></i> Edit</span>
+                    <span class="action-link" onclick="openModal('username')"><i class="fa-solid fa-pen"></i> Edit</span>
                 </div>
             </div>
         </div>
@@ -876,7 +876,7 @@
                             <div class="info-value">Sign in with Face ID, Touch ID, or your device PIN</div>
                         </div>
                     </div>
-                    <span class="action-link" onclick="window.registerPasskey && window.registerPasskey()"><i class="fa-solid fa-plus"></i> Add passkey</span>
+                    <span class="action-link" onclick="registerPasskey()"><i class="fa-solid fa-plus"></i> Add passkey</span>
                 </div>
 
                 <!-- Passkeys Dynamic List Container -->
@@ -898,7 +898,7 @@
                         </div>
                         <p class="pm-subtitle">Your ETB receiving accounts used in P2P trades</p>
                     </div>
-                    <button class="pm-add-btn" id="pm-add-btn" onclick="window.toggleAddPaymentForm && window.toggleAddPaymentForm()">
+                    <button class="pm-add-btn" id="pm-add-btn" onclick="toggleAddPaymentForm()">
                         <i class="fa-solid fa-plus"></i> Add
                     </button>
                 </div>
@@ -909,7 +909,7 @@
                     
                     <div class="form-group">
                         <label>Payment Type</label>
-                        <select class="form-control pm-select" id="pm-type" onchange="window.handlePaymentTypeChange && window.handlePaymentTypeChange()">
+                        <select class="form-control pm-select" id="pm-type" onchange="handlePaymentTypeChange()">
                             <option value="" disabled selected>Select payment method</option>
                             <option value="Telebirr">Telebirr</option>
                             <option value="M-Pesa">M-Pesa</option>
@@ -932,10 +932,10 @@
                     </div>
 
                     <div class="pm-actions">
-                        <button class="pm-submit-btn" onclick="window.savePaymentMethod && window.savePaymentMethod()">
+                        <button class="pm-submit-btn" onclick="savePaymentMethod()">
                             <i class="fa-solid fa-plus"></i> Add Payment Method
                         </button>
-                        <span class="pm-cancel-text" onclick="window.toggleAddPaymentForm && window.toggleAddPaymentForm()">Cancel</span>
+                        <span class="pm-cancel-text" onclick="toggleAddPaymentForm()">Cancel</span>
                     </div>
                 </div>
 
@@ -1013,7 +1013,7 @@
             <div class="center-notify-icon" id="notifyIcon"></div>
             <div class="center-notify-title" id="notifyTitle">Notification</div>
             <div class="center-notify-desc" id="notifyDesc">Message details...</div>
-            <button class="center-notify-ok-btn" onclick="window.closeCenterNotification && window.closeCenterNotification()">OK</button>
+            <button class="center-notify-ok-btn" onclick="closeCenterNotification()">OK</button>
         </div>
     </div>
 
@@ -1022,8 +1022,8 @@
             <h3 id="modalTitle">Update Info</h3>
             <input type="text" id="modalInput" placeholder="Enter value...">
             <div class="modal-buttons">
-                <button class="modal-btn btn-cancel" onclick="window.closeModal && window.closeModal()">Cancel</button>
-                <button class="modal-btn btn-confirm" onclick="window.saveModalData && window.saveModalData()">Save</button>
+                <button class="modal-btn btn-cancel" onclick="closeModal()">Cancel</button>
+                <button class="modal-btn btn-confirm" onclick="saveModalData()">Save</button>
             </div>
         </div>
     </div>
@@ -1045,13 +1045,104 @@
                 Are you sure you want to remove this payment method? This action cannot be undone.
             </p>
             <div style="display: flex; gap: 10px; justify-content: center;">
-                <button class="btn-outline" onclick="window.closeDeleteModal && window.closeDeleteModal()" style="flex: 1; justify-content: center;">Cancel</button>
+                <button class="btn-outline" onclick="closeDeleteModal()" style="flex: 1; justify-content: center;">Cancel</button>
                 <button class="btn-pill" id="confirmDeleteBtn" style="flex: 1; background: var(--red-color); color: #fff; justify-content: center;">Yes, Delete</button>
             </div>
         </div>
     </div>
 
-    <!-- 🔴 ከውጭ የሚጠራው ዋናው የጃቫስክሪፕት ፋይል (settings.js) 🔴 -->
-    <script src="settings.js?v=100"></script>
+    <!-- Javascript Directly in HTML so it ALWAYS works -->
+    <script>
+        let currentField = "";
+        
+        function openModal(field) {
+            currentField = field;
+            const modal = document.getElementById("customModal");
+            const title = document.getElementById("modalTitle");
+            const input = document.getElementById("modalInput");
+            if (!modal || !input) return;
+
+            modal.style.display = "flex";
+            input.oninput = null; 
+
+            if(field === 'phone') {
+                const phoneDisplay = document.getElementById("phone-display");
+                let existingPhone = (phoneDisplay && phoneDisplay.innerText !== 'Not added') ? phoneDisplay.innerText : "";
+                input.value = existingPhone.replace(/@/g, ''); 
+                title.innerText = "Add/Edit Phone Number";
+                input.placeholder = "e.g. +251911223344";
+            } else if(field === 'username') {
+                title.innerText = "Set Trader Username";
+                input.placeholder = "Enter handle...";
+                const usernameDisplay = document.getElementById("username-display");
+                let existingHandle = (usernameDisplay && usernameDisplay.innerText !== 'Not set — tap to choose your handle') ? usernameDisplay.innerText : "@";
+                if (!existingHandle.startsWith('@')) existingHandle = '@' + existingHandle;
+                input.value = existingHandle;
+                input.oninput = function() {
+                    if (!input.value.startsWith('@')) input.value = '@' + input.value.replace(/@/g, '');
+                };
+            } else if(field === 'name') {
+                const profileName = document.getElementById("profile-name");
+                input.value = profileName ? profileName.innerText.replace(/<i.*/, '').trim() : "";
+                title.innerText = "Edit Profile Name";
+            }
+            input.focus();
+        }
+
+        function closeModal() {
+            const modal = document.getElementById("customModal");
+            if (modal) modal.style.display = "none";
+        }
+
+        async function saveModalData() {
+            const input = document.getElementById("modalInput");
+            if (!input) return;
+            const val = input.value.trim();
+            if (!val) return;
+
+            let finalVal = val;
+            let apiField = currentField;
+            const API_URL = window.location.hostname.includes('localhost') ? '' : 'https://tbr-exchange-backend.onrender.com';
+
+            if (currentField === 'phone') {
+                const phoneDisplay = document.getElementById("phone-display");
+                if(phoneDisplay) phoneDisplay.innerText = val;
+                localStorage.setItem("userPhone", val);
+                apiField = "phoneNumber"; 
+            } else if (currentField === 'username') {
+                if (!finalVal.startsWith('@')) finalVal = '@' + finalVal;
+                const usernameDisplay = document.getElementById("username-display");
+                if(usernameDisplay) usernameDisplay.innerText = finalVal;
+                localStorage.setItem("traderUsername", finalVal);
+                apiField = "traderUsername"; 
+            } else if (currentField === 'name') {
+                localStorage.setItem("userName", val);
+                const profileName = document.getElementById("profile-name");
+                if(profileName) profileName.innerHTML = `${val} <i class="fa-solid fa-pen edit-icon" onclick="openModal('name')"></i>`;
+                apiField = "fullName";
+            }
+            
+            closeModal();
+            
+            const toast = document.getElementById("toastNotification");
+            const msgEl = document.getElementById("toastMessage");
+            if (toast && msgEl) {
+                msgEl.innerText = "Profile updated successfully!";
+                toast.classList.add("show");
+                setTimeout(() => toast.classList.remove("show"), 2500);
+            }
+
+            try {
+                const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+                await fetch(`${API_URL}/api/user/update`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                    body: JSON.stringify({ field: apiField, value: finalVal })
+                });
+            } catch (e) { console.error("Sync update error:", e); }
+        }
+    </script>
+    
+    <script src="settings.js"></script>
 </body>
 </html>
