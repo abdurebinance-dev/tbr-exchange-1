@@ -1265,47 +1265,19 @@ document.addEventListener("DOMContentLoaded", () => {
             }, 1000);
         }
 
-        function lockSignupForm(durationMs) {
+        function unlockSignupForm() {
+            if (signupCountdownInterval) clearInterval(signupCountdownInterval);
             const submitBtn = document.getElementById('submitBtn');
             const pwdInput = document.getElementById('password-input');
             const confirmPwdInput = document.getElementById('confirm-password-input');
             const refCode = document.getElementById('referralCode');
 
-            if(pwdInput) pwdInput.disabled = true;
-            if(confirmPwdInput) confirmPwdInput.disabled = true;
-            if(refCode) refCode.disabled = true;
-            if(submitBtn) submitBtn.disabled = true;
-
-            if (signupCountdownInterval) clearInterval(signupCountdownInterval);
-            const lockoutEnd = new Date().getTime() + durationMs;
-            
-            window.showSignupErrorToast("Too many attempts. Please wait.");
-
-            signupCountdownInterval = setInterval(() => {
-                const distance = lockoutEnd - new Date().getTime();
-                if (distance <= 0) {
-                    clearInterval(signupCountdownInterval);
-                    const emailInput = document.getElementById('signup-email');
-                    const em = emailInput ? emailInput.value.trim() : '';
-                    if (em) localStorage.removeItem('signup_lockout_' + em);
-                    unlockSignupForm();
-                } else {
-                    // 🔴 የተስተካከለው የ 12 ሰዓት ቀመር (Hours, Minutes, Seconds) 🔴
-                    const h = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                    const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-                    const s = Math.floor((distance % (1000 * 60)) / 1000);
-                    
-                    if(submitBtn) {
-                        if (h > 0) {
-                            // ሰዓት ካለው በሰዓት ይቆጥራል (ምሳሌ፡ Locked (11h 59m 50s))
-                            submitBtn.textContent = `Locked (${h}h ${m}m ${s}s)`;
-                        } else {
-                            // ከ 1 ሰዓት በታች ሲሆን በደቂቃ ብቻ ይቆጥራል
-                            submitBtn.textContent = `Locked (${m}m ${s}s)`;
-                        }
-                    }
-                }
-            }, 1000);
+            if(emailInput) emailInput.disabled = false;
+            if(pwdInput) pwdInput.disabled = false;
+            if(confirmPwdInput) confirmPwdInput.disabled = false;
+            if(refCode) refCode.disabled = false;
+            if(submitBtn) submitBtn.disabled = false;
+            window.hideErrorToast();
         }
 
         // Password Strength (ጥንካሬ መለኪያ)
