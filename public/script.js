@@ -1679,3 +1679,542 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 });
+
+// =========================================================
+// 🔴 DASHBOARD PAGE LOGIC (dashboard.html) 🔴
+// =========================================================
+document.addEventListener("DOMContentLoaded", () => {
+    // ይህ ኮድ የሚሰራው Dashboard ላይ ብቻ መሆኑን ማረጋገጫ
+    const balanceValEl = document.getElementById('user-balance');
+    if (!balanceValEl) return;
+
+    // 1. መግቢያ (Auth) መኖሩን ማረጋገጥ
+    const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+    if (!token) {
+        window.location.replace("signin.html");
+        return;
+    }
+
+    let isBalanceHidden = false;
+    let actualBalance = localStorage.getItem("user_balance_val") || "0.00";
+
+    function getDashboardIdentity() {
+        let t = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('jwt') || localStorage.getItem('jwtToken') || '';
+        let email = localStorage.getItem('userEmail') || localStorage.getItem('email') || '';
+        let userId = localStorage.getItem('userId') || localStorage.getItem('tbr_resolved_uid') || '';
+        try {
+            const u = JSON.parse(localStorage.getItem('user') || localStorage.getItem('currentUser') || '{}');
+            if (!t && u.token) t = u.token;
+            if (!email && u.email) email = u.email;
+            if (!userId && (u._id || u.id || u.userId)) userId = u._id || u.id || u.userId;
+        } catch (e) {}
+        return { token: String(t || '').replace(/^Bearer\s+/i, '').trim(), email: String(email || '').trim(), userId: String(userId || '').trim() };
+    }
+
+    // 2. የባላንስ መደበቂያ
+    const balanceEyeBtn = document.getElementById('balance-eye-btn');
+    if (balanceEyeBtn) {
+        balanceEyeBtn.addEventListener('click', () => {
+            isBalanceHidden = !isBalanceHidden;
+            if (isBalanceHidden) {
+                balanceValEl.innerText = '******';
+                balanceEyeBtn.classList.replace('fa-eye', 'fa-eye-slash');
+            } else {
+                balanceValEl.innerText = actualBalance;
+                balanceEyeBtn.classList.replace('fa-eye-slash', 'fa-eye');
+                if (!balanceEyeBtn.classList.contains('fa-eye')) balanceEyeBtn.classList.add('fa-eye');
+            }
+        });
+    }
+
+    // 3. የ Profile Dropdown
+    const profileBtn = document.getElementById('profile-icon-btn');
+    const profileMenu = document.getElementById('profile-dropdown-menu');
+    if (profileBtn && profileMenu) {
+        profileBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            profileMenu.classList.toggle('active');
+        });
+        profileMenu.addEventListener('click', (e) => e.stopPropagation());
+        window.addEventListener('click', () => {
+            if (profileMenu.classList.contains('active')) profileMenu.classList.remove('active');
+        });
+    }
+
+    // 4. Sign Out
+    const signOutBtn = document.getElementById('signOutBtn');
+    if (signOutBtn) {
+        signOutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            localStorage.clear();
+            window.location.href = 'signin.html';
+        });
+    }
+
+    // 5. Dashboard UI ማስተካከያ (ስም እና KYC)
+    function updateDashboardUI() {
+        const userEmail = localStorage.getItem('userEmail') || localStorage.getItem('email');
+        if (!userEmail) return;
+
+        const kycStatus = (localStorage.getItem('kycStatus') || 'not_submitted').toLowerCase();
+        const isVerified = (kycStatus === 'verified' || kycStatus === 'approved' || kycStatus === 'true');
+        const emailPrefix = userEmail.split('@')[0];
+
+        let storedName = localStorage.getItem('kycFullName') || localStorage.getItem('fullName') || localStorage.getItem('userName') || localStorage.getItem('name') || '';
+        let rawName = (isVerified && storedName) ? storedName : emailPrefix;
+        const fullNameUpper = rawName.toUpperCase();
+        
+        // የ YIMAM መፍትሄ
+        ['firstName', 'fullName', 'kycFullName', 'userName', 'name'].forEach(k => {
+            const val = (localStorage.getItem(k) || '').trim().toLowerCase();
+            if (val === 'yimam') localStorage.removeItem(k);
+        });
+
+        const fullKyc = (localStorage.getItem('kycFullName') || localStorage.getItem('fullName') || localStorage.getItem('firstName') || localStorage.getItem('userName') || emailPrefix).trim();
+        const firstWord = (isVerified ? fullKyc.split(/\s+/)[0] : emailPrefix).toUpperCase();
+
+        const hour = new Date().getHours();
+        let timeGreeting = "EVENING";
+        if (hour < 12) timeGreeting = "MORNING";
+        else if (hour < 17) timeGreeting = "AFTERNOON";
+
+        const greetingEl = document.getElementById('userGreeting');
+        if (greetingEl) {
+            greetingEl.innerHTML = `${timeGreeting}, <span class="user-name" style="color: #fff; font-weight: 600;">${firstWord}</span>`;
+        }
+
+        const menuUserName = document.getElementById('menuUserName');
+        if (menuUserName) menuUserName.innerText = fullNameUpper;
+        const menuUserEmail = document.getElementById('menuUserEmail');
+        if (menuUserEmail) menuUserEmail.innerText = userEmail;
+
+        const badgeEl = document.getElementById('headerKycBadge');
+        if (badgeEl) {
+            badgeEl.className = 'nav-kyc-badge';
+            if (kycStatus === 'not_submitted' || kycStatus === 'unverified') {
+                badgeEl.classList.add('unverified');
+                badgeEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Unverified`;
+            } else if (kycStatus === 'pending' || kycStatus === 'under_review') {
+                badgeEl.classList.add('pending');
+                badgeEl.innerHTML = `<i class="fa-solid fa-clock"></i> Under Review`;
+            } else if (isVerified) {
+                badgeEl.classList.add('approved');
+                badgeEl.innerHTML = `<i class="fa-solid fa-circle-check"></i> Verified`;
+            } else if (kycStatus === 'rejected') {
+                badgeEl.classList.add('rejected');
+                badgeEl.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> Rejected`;
+            } else {
+                badgeEl.classList.add('unverified');
+                badgeEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Unverified`;
+            }
+        }
+    }
+
+    // 6. ዳታን ከሰርቨር ማምጣት
+    async function syncWithServer() {
+        try {
+            const { token, email, userId } = getDashboardIdentity();
+            if (!token && !email && !userId) return;
+
+            const params = new URLSearchParams();
+            if (email) params.set('email', email);
+            if (userId) params.set('userId', userId);
+            params.set('t', Date.now());
+            
+            const res = await fetch(`${API_BASE_URL}/api/user/profile?${params.toString()}`, { 
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                cache: 'no-store'
+            });
+            
+            if (res.ok) {
+                const data = await res.json(); 
+                const userObj = data.user || data.data || data;
+                if (userObj && (userObj.email || userObj._id)) {
+                    if (userObj._id) {
+                        localStorage.setItem('userId', String(userObj._id));
+                        localStorage.setItem('tbr_resolved_uid', String(userObj._id));
+                    }
+                    if (userObj.email) localStorage.setItem('userEmail', userObj.email);
+                    if (userObj.fullName || userObj.name) {
+                        localStorage.setItem('userName', userObj.fullName || userObj.name);
+                        localStorage.setItem('fullName', userObj.fullName || userObj.name);
+                        localStorage.setItem('kycFullName', userObj.fullName || userObj.name);
+                    }
+                    if (userObj.firstName) localStorage.setItem('firstName', userObj.firstName);
+                    if (userObj.kycStatus) localStorage.setItem('kycStatus', userObj.kycStatus);
+                    if (userObj.bscAddress) localStorage.setItem('user_bsc_address', userObj.bscAddress);
+                    if (userObj.tbrId || userObj.userId) localStorage.setItem('tbrId', userObj.tbrId || userObj.userId);
+                    
+                    if (userObj.balance !== undefined) {
+                        actualBalance = Number(userObj.balance).toFixed(2);
+                        localStorage.setItem("user_balance_val", actualBalance); 
+                        if (!isBalanceHidden) balanceValEl.innerText = actualBalance;
+                    }
+                    updateDashboardUI();
+                }
+            }
+        } catch (e) {
+            console.error('Background sync failed:', e);
+        }
+    }
+
+    async function fetchMyAdsBalance(tkn) {
+        try {
+            const { email, userId } = getDashboardIdentity();
+            const params = newSearchParams();
+            if (email) params.set('email', email);
+            if (userId) params.set('userId', userId);
+
+            const res = await fetch(`${API_BASE_URL}/api/ads/my?${params.toString()}`, {
+                headers: tkn ? { 'Authorization': `Bearer ${tkn}` } : {},
+                cache: 'no-store'
+            });
+            
+            if (res.ok) {
+                const json = await res.json();
+                let totalLocked = 0;
+                
+                if (json.success && json.ads) {
+                    json.ads.forEach(ad => {
+                        if (ad.tradeType === 'sell' && ad.status === 'active') {
+                            totalLocked += Number(ad.totalAmount);
+                        }
+                    });
+                }
+
+                const onMarketContainer = document.getElementById('on-market-container');
+                const onMarketPlaceholder = document.getElementById('on-market-placeholder');
+                const displayLocked = document.getElementById('display-locked-balance');
+
+                if (totalLocked > 0) {
+                    if(displayLocked) displayLocked.innerText = `${totalLocked.toFixed(2)} USDT`;
+                    if(onMarketContainer) onMarketContainer.style.display = 'flex';
+                    if(onMarketPlaceholder) onMarketPlaceholder.style.display = 'none';
+                } else {
+                    if(onMarketContainer) onMarketContainer.style.display = 'none';
+                    if(onMarketPlaceholder) onMarketPlaceholder.style.display = 'block';
+                }
+            }
+        } catch (error) {}
+    }
+
+    async function checkDepositSilently() {
+        try {
+            const bscAddress = localStorage.getItem('user_bsc_address');
+            if (!bscAddress || bscAddress.startsWith("Error") || !bscAddress.startsWith("0x")) return;
+
+            const depositRes = await fetch(`${API_BASE_URL}/api/check-deposits/${bscAddress}`, { method: 'GET', cache: 'no-store' });
+            const depositData = await depositRes.json();
+
+            if (depositData && depositData.success && depositData.balance !== undefined) {
+                const finalBal = parseFloat(depositData.balance);
+                if (!isNaN(finalBal)) {
+                    actualBalance = finalBal.toFixed(2);
+                    localStorage.setItem("user_balance_val", actualBalance);
+                    if (!isBalanceHidden) balanceValEl.innerText = actualBalance;
+                }
+            }
+        } catch (error) {}
+    }
+
+    async function loadLiveMarketRates() {
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/ads`);
+            if (res.ok) {
+                const json = await res.json();
+                if (json.success && json.ads && json.ads.length > 0) {
+                    let totalRate = 0, count = 0, bestBuy = 0, bestSell = 999999; 
+                    
+                    json.ads.forEach(ad => {
+                        if (ad.status === 'active') {
+                            totalRate += ad.price;
+                            count++;
+                            if (ad.tradeType === 'sell') {
+                                if(ad.price < bestSell) bestSell = ad.price;
+                            } else if (ad.tradeType === 'buy') {
+                                if(ad.price > bestBuy) bestBuy = ad.price;
+                            }
+                        }
+                    });
+
+                    if (count > 0) {
+                        const avg = totalRate / count;
+                        document.getElementById('liveRateValue').innerText = `${avg.toFixed(2)}`;
+                    }
+                    if (bestBuy > 0) document.getElementById('bestBuyValue').innerText = `${bestBuy.toFixed(2)} ETB`;
+                    if (bestSell < 999999) document.getElementById('bestSellValue').innerText = `${bestSell.toFixed(2)} ETB`;
+                }
+            }
+        } catch(e) {}
+    }
+
+    async function loadDashboardData() {
+        const { token } = getDashboardIdentity();
+        await Promise.all([syncWithServer(), fetchMyAdsBalance(token)]);
+        checkDepositSilently();
+        setInterval(checkDepositSilently, 15000);
+    }
+
+    if (!isBalanceHidden) balanceValEl.innerText = actualBalance;
+    updateDashboardUI();
+    loadDashboardData();
+    loadLiveMarketRates();
+
+    // 7. Active Trade Alert Banner
+    const BANNER_CACHE_KEY = 'tbr_dash_active_banner_v2';
+    function createBannerIfMissing() {
+        let banner = document.getElementById('dashboardActiveTradeBanner');
+        if (banner) return banner;
+
+        banner = document.createElement('a');
+        banner.id = 'dashboardActiveTradeBanner';
+        banner.className = 'active-trade-alert-banner';
+        banner.href = 'trades.html';
+        banner.innerHTML = `
+            <div class="atb-left">
+                <span class="atb-pulse-dot"></span>
+                <span id="dashboardActiveTradeText">1 trade awaiting you for action</span>
+            </div>
+            <div class="atb-right">
+                <span id="dashboardActiveTradeNum">Open Trade</span>
+                <i class="fa-solid fa-arrow-right" style="font-size: 11px;"></i>
+            </div>
+        `;
+
+        const mainContainer = document.querySelector('.container');
+        if (mainContainer) {
+            mainContainer.prepend(banner);
+        }
+        return banner;
+    }
+
+    function applyBannerData(data) {
+        const banner = createBannerIfMissing();
+        if (data && data.count > 0 && data.latestTrade) {
+            const count = data.count;
+            const trade = data.latestTrade;
+            const tradeNum = String(trade.tradeNumber || '00001').padStart(5, '0');
+            const isBuyer = data.currentUserId && String(trade.buyerId) === String(data.currentUserId);
+            const roleText = isBuyer ? 'Buyer' : 'Seller';
+
+            localStorage.setItem('tbr_active_p2p_order', JSON.stringify(trade));
+            if (data.currentUserId) localStorage.setItem('tbr_resolved_uid', String(data.currentUserId));
+
+            document.getElementById('dashboardActiveTradeText').innerText = count === 1 ? `1 trade awaiting you (${roleText}) — Click to action` : `${count} trades awaiting you — Click to view`;
+            document.getElementById('dashboardActiveTradeNum').innerText = `Trade #${tradeNum}`;
+            banner.href = `trades.html?tradeId=${trade._id}`;
+            banner.style.display = 'flex';
+        } else {
+            banner.style.display = 'none';
+        }
+    }
+
+    async function checkActiveTradesForUser() {
+        const { token, email, userId } = getDashboardIdentity();
+        if (!token && !email && !userId) return;
+        try {
+            const params = new URLSearchParams();
+            if (email) params.set('email', email);
+            if (userId) params.set('userId', userId);
+            params.set('t', Date.now());
+
+            const res = await fetch(`${API_BASE_URL}/api/user/active-trades?${params.toString()}`, {
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+            });
+            if (res.ok) {
+                const json = await res.json();
+                if (json.success) {
+                    sessionStorage.setItem(BANNER_CACHE_KEY, JSON.stringify(json));
+                    applyBannerData(json);
+                }
+            }
+        } catch (e) {}
+    }
+    
+    try {
+        const cached = sessionStorage.getItem(BANNER_CACHE_KEY);
+        if (cached) applyBannerData(JSON.parse(cached));
+    } catch (e) {}
+    checkActiveTradesForUser();
+    setInterval(checkActiveTradesForUser, 3000);
+
+    // 8. Mobile Chat Link Logic
+    document.querySelectorAll('a, button, div, span, li').forEach(el => {
+        const txt = (el.innerText || '').trim().toLowerCase();
+        const hasCommentIcon = el.querySelector('.fa-comment, .fa-comments, .fa-comment-dots, .fa-message');
+        if ((txt === 'chat' || (txt.startsWith('chat') && txt.length <= 8)) && (hasCommentIcon || el.tagName === 'A' || el.onclick)) {
+            const target = el.closest('a, button') || el;
+            if (target.tagName === 'A') target.setAttribute('href', 'trades.html');
+            target.style.cursor = 'pointer';
+            target.onclick = (e) => {
+                e.preventDefault(); e.stopPropagation(); window.location.href = 'trades.html';
+            };
+        }
+    });
+
+    // 9. Notification Center & PWA
+    let latestFiveNotifs = [];
+    let allUserNotifs = [];
+    let showingAllMode = false;
+    let seenNotifIds = new Set(JSON.parse(localStorage.getItem('tbr_seen_toast_ids') || '[]'));
+    let initialLoadDone = false;
+
+    function getIconForType(type) {
+        if (type === 'deposit') return '<i class="fa-solid fa-arrow-down" style="color:#0ecb81;"></i>';
+        if (type === 'withdrawal') return '<i class="fa-solid fa-arrow-up" style="color:#f6465d;"></i>';
+        if (type === 'transfer') return '<i class="fa-solid fa-paper-plane" style="color:#3b82f6;"></i>';
+        if (type === 'trade') return '<i class="fa-solid fa-right-left" style="color:#f0b90b;"></i>';
+        return '<i class="fa-solid fa-bell" style="color:#f0b90b;"></i>';
+    }
+
+    function formatShortTime(dateStr) {
+        if (!dateStr) return '';
+        const d = new Date(dateStr);
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+    }
+
+    function showCompactToast(notif) {
+        const container = document.getElementById('tbrCompactToastContainer');
+        if (!container) return;
+        const toast = document.createElement('div');
+        toast.className = 'tbr-compact-toast';
+        toast.onclick = () => { if (notif.link) window.location.href = notif.link; };
+        toast.innerHTML = `<div class="tbr-toast-icon">${getIconForType(notif.type)}</div><div style="flex:1;"><div class="tbr-toast-title">${notif.title}</div><div class="tbr-toast-msg">${notif.message}</div></div>`;
+        container.appendChild(toast);
+        setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 260); }, 4500);
+    }
+
+    function updateBellBadges(count) {
+        document.querySelectorAll('.tbr-bell-badge').forEach(b => {
+            if (count > 0) { b.innerText = count > 99 ? '99+' : count; b.style.display = 'inline-flex'; }
+            else { b.style.display = 'none'; }
+        });
+    }
+
+    function renderNotifList() {
+        const listEl = document.getElementById('tbrNotifListBody');
+        const titleEl = document.getElementById('tbrNotifHeaderTitle');
+        const seeAllBtn = document.getElementById('tbrSeeAllBtn');
+        if (!listEl) return;
+
+        const itemsToShow = showingAllMode ? allUserNotifs : latestFiveNotifs;
+        if(titleEl) titleEl.innerText = showingAllMode ? `All Notifications (${allUserNotifs.length})` : `Latest 5 Notifications`;
+        if (seeAllBtn) seeAllBtn.innerText = showingAllMode ? 'Show Latest 5 Only' : `See All (${allUserNotifs.length})`;
+
+        if (!itemsToShow || itemsToShow.length === 0) {
+            listEl.innerHTML = `<div style="padding:30px 16px; text-align:center; color:#848e9c; font-size:12.5px;">No notifications yet.</div>`;
+            return;
+        }
+
+        listEl.innerHTML = itemsToShow.map(n => `
+            <div class="tbr-notif-item ${n.isRead ? '' : 'unread'}" onclick="window.location.href='${n.link || 'dashboard.html'}'">
+                <div class="tbr-notif-item-icon">${getIconForType(n.type)}</div>
+                <div style="flex:1;">
+                    <div class="tbr-notif-item-title"><span>${n.title}</span><span class="tbr-notif-item-time">${formatShortTime(n.createdAt)}</span></div>
+                    <div class="tbr-notif-item-msg">${n.message}</div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    window.openTbrNotifPanel = async function() {
+        showingAllMode = false;
+        renderNotifList();
+        document.getElementById('tbrNotifPanelOverlay').style.display = 'flex';
+        updateBellBadges(0);
+        try {
+            const { token, email, userId } = getDashboardIdentity();
+            const p = new URLSearchParams(); if (email) p.set('email', email); if (userId) p.set('userId', userId);
+            await fetch(`${API_BASE_URL}/api/notifications/mark-read?${p.toString()}`, { method: 'POST', headers: token ? { 'Authorization': `Bearer ${token}` } : {} });
+        } catch (e) {}
+    };
+
+    window.closeTbrNotifPanel = function() {
+        const overlay = document.getElementById('tbrNotifPanelOverlay');
+        if(overlay) overlay.style.display = 'none';
+    };
+
+    window.toggleSeeAllNotifications = function() {
+        showingAllMode = !showingAllMode;
+        renderNotifList();
+    };
+
+    async function pollNotifications() {
+        try {
+            const { token, email, userId } = getDashboardIdentity();
+            const p = new URLSearchParams(); if (email) p.set('email', email); if (userId) p.set('userId', userId);
+            const res = await fetch(`${API_BASE_URL}/api/notifications?${p.toString()}`, { headers: token ? { 'Authorization': `Bearer ${token}` } : {}, cache: 'no-store' });
+            if (!res.ok) return;
+            const json = await res.json();
+            if (!json || !json.success) return;
+
+            latestFiveNotifs = json.latestFive || [];
+            allUserNotifs = json.allNotifications || [];
+            updateBellBadges(json.unreadCount || 0);
+
+            if (allUserNotifs.length > 0) {
+                const newest = allUserNotifs[0];
+                if (!seenNotifIds.has(String(newest._id))) {
+                    if (initialLoadDone && !newest.isRead) showCompactToast(newest);
+                    allUserNotifs.slice(0, 15).forEach(n => seenNotifIds.add(String(n._id)));
+                    localStorage.setItem('tbr_seen_toast_ids', JSON.stringify([...seenNotifIds].slice(-50)));
+                }
+            }
+            initialLoadDone = true;
+
+            const overlay = document.getElementById('tbrNotifPanelOverlay');
+            if (overlay && overlay.style.display === 'flex') renderNotifList();
+        } catch (e) {}
+    }
+
+    document.querySelectorAll('a[href*="notification"], .fa-bell').forEach(el => {
+        const clickable = el.closest('a, button') || el;
+        clickable.style.position = 'relative';
+        clickable.style.cursor = 'pointer';
+        if (!clickable.querySelector('.tbr-bell-badge')) {
+            const badge = document.createElement('span');
+            badge.className = 'tbr-bell-badge';
+            badge.innerText = '0';
+            clickable.appendChild(badge);
+        }
+        clickable.onclick = (e) => { e.preventDefault(); e.stopPropagation(); openTbrNotifPanel(); };
+    });
+
+    pollNotifications();
+    setInterval(pollNotifications, 4000);
+
+    // PWA Installer
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+    let deferredPrompt = null;
+    const banner = document.getElementById('tbrInstallAppBanner');
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    const wasDismissed = sessionStorage.getItem('tbr_app_banner_dismissed') === '1';
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        if (!isStandalone && !wasDismissed && banner) banner.style.display = 'flex';
+    });
+
+    async function triggerPwaInstall(e) {
+        if (e) e.preventDefault();
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted' && banner) banner.style.display = 'none';
+            deferredPrompt = null;
+        } else {
+            alert('To install TBR Exchange App on your phone:\n\n• Android (Chrome): Tap the top-right menu (⋮) and select "Install app" or "Add to Home screen".\n• iPhone (Safari): Tap the Share icon and select "Add to Home Screen".');
+        }
+    }
+
+    const installBtn = document.getElementById('tbrTriggerInstallBtn');
+    const dropLink = document.getElementById('dropdownDownloadAppLink');
+    if (installBtn) installBtn.addEventListener('click', triggerPwaInstall);
+    if (dropLink) dropLink.addEventListener('click', triggerPwaInstall);
+
+    window.dismissTbrAppBanner = function() {
+        sessionStorage.setItem('tbr_app_banner_dismissed', '1');
+        if (banner) banner.style.display = 'none';
+    };
+});
