@@ -67,7 +67,7 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // ቋሚ ሰዓት (October 15, 2026, 07:25 AM EAT -> በ UTC 04:25:00Z ነው)
-const targetTimeMs = new Date("2026-10-15T12:25:00Z").getTime();
+const targetTimeMs = new Date("2026-10-16T01:25:00Z").getTime();
 
 // 🚨 ይሄ መቆለፊያ ነው (Lockdown) 🚨
 // ማንኛውም ኤፒአይም ሆነ ገጽ እንዳይሰራ በማገድ የጥገና ገጹን ብቻ ይመልሳል!
