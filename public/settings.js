@@ -2,7 +2,6 @@
 // 🔴 SETTINGS PAGE LOGIC (settings.js) 🔴
 // =========================================================
 
-// 🔴 1. Global Variables & URL 🔴
 const API_BASE_URL = window.location.hostname.includes('localhost') 
     ? '' 
     : 'https://tbr-exchange-backend.onrender.com';
@@ -11,7 +10,9 @@ let currentField = "";
 let paymentMethods = [];
 let editingPaymentId = null;
 
-// 🔴 2. Global Functions (መጀመሪያ መመዝገብ አለባቸው) 🔴
+// ==========================================
+// 🔴 1. GLOBAL FUNCTIONS (ለ HTML አዝራሮች) 🔴
+// ==========================================
 window.showCenterNotification = function(title, message, isSuccess = true) {
     const modal = document.getElementById('centerNotifyModal');
     const icon = document.getElementById('notifyIcon');
@@ -38,6 +39,7 @@ window.showToast = function(message) {
     const toast = document.getElementById("toastNotification");
     const msgEl = document.getElementById("toastMessage");
     if (!toast || !msgEl) return;
+    
     msgEl.innerText = message;
     toast.classList.add("show");
     setTimeout(() => toast.classList.remove("show"), 2500);
@@ -163,25 +165,30 @@ window.handleImageUpload = function(event) {
     reader.readAsDataURL(file);
 };
 
-// =========================================================
-// 🔴 3. አንድ ነጠላ (Single) DOMContentLoaded Execution 🔴
-// =========================================================
+
+// ==========================================
+// 🔴 2. INITIALIZATION (ፔጁ ሲከፈት የሚሰራ) 🔴
+// ==========================================
 document.addEventListener("DOMContentLoaded", async function() {
-    // Auth Check
+    // 1. መግቢያ (Auth) መኖሩን ማረጋገጥ
     const token = localStorage.getItem("token") || localStorage.getItem("authToken");
     if (!token) {
         window.location.replace("signin.html");
         return;
     }
 
-    // 🚀 Tab Switcher
+    // 🚀 Tab Switcher 🚀
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault();
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
+
             const target = btn.getAttribute('data-tab');
-            document.querySelectorAll('.content-section').forEach(section => section.style.display = 'none');
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.style.display = 'none';
+            });
+
             const targetSection = document.getElementById(target + '-section');
             if (targetSection) targetSection.style.display = 'block';
         });
@@ -194,7 +201,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         if (targetBtn) setTimeout(() => targetBtn.click(), 50);
     }
 
-    // Helper: Stored ID
     function getStoredId() {
         let tbrId = localStorage.getItem('tbrId') || localStorage.getItem('tbrExchangeId');
         if (tbrId && String(tbrId).startsWith('TBR-')) return tbrId;
@@ -213,7 +219,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         return ''; 
     }
 
-    // Update UI Function
     function updateUI(user) {
         const nameEl = document.getElementById("profile-name");
         if (nameEl) nameEl.innerHTML = `${user.username || 'User'} <i class="fa-solid fa-pen edit-icon" onclick="window.openModal('name')"></i>`;
@@ -268,10 +273,10 @@ document.addEventListener("DOMContentLoaded", async function() {
         updateUI({ username, email, tbrId, phone, traderHandle, kycStatus, avatar });
     }
 
-    // 🚀 Load Initial Data (Fallbacks first to show instantly)
+    // Load initial data
     loadFromLocalStorageFallback();
 
-    // 🚀 Fetch from Backend
+    // Fetch from Backend
     try {
         const response = await fetch(`${API_BASE_URL}/api/user/profile?t=${Date.now()}`, {
             method: "GET",
@@ -288,7 +293,7 @@ document.addEventListener("DOMContentLoaded", async function() {
             let newId = userData.tbrId || userData.userId || userData.customId || userData.id || userData._id || "";
             if (userData.numericId && (!newId.startsWith('TBR-'))) newId = 'TBR-' + String(userData.numericId).padStart(6, '0');
 
-            const phone = userData.phone || userData.phoneNumber || "";
+            const phone = userData.phoneNumber || userData.phone || "";
             const traderHandle = userData.traderUsername || "";
             const kycVal = userData.kycStatus || 'approved';
 
