@@ -795,15 +795,19 @@
         <div id="profile-section" class="content-section" style="display: block;">
             <div class="profile-card">
                 <div class="profile-top">
+                    <!-- 🔴 ማስተካከያ: window.triggerImageUpload ተጨምሯል 🔴 -->
                     <div class="avatar-box" id="avatar-initials" onclick="window.triggerImageUpload && window.triggerImageUpload()">
                         UI <div class="camera-badge"><i class="fa-solid fa-camera"></i></div>
                     </div>
+                    <!-- 🔴 ማስተካከያ: window.handleImageUpload ተጨምሯል 🔴 -->
                     <input type="file" id="profileImageInput" accept="image/*" style="display: none;" onchange="window.handleImageUpload && window.handleImageUpload(event)">
 
                     <div class="user-info">
+                        <!-- 🔴 ማስተካከያ: window.openModal('name') ተጨምሯል 🔴 -->
                         <h3 id="profile-name"> <i class="fa-solid fa-pen edit-icon" onclick="window.openModal && window.openModal('name')"></i></h3>
                         <div class="id-container">
                             <span>ID:</span> <span id="profile-id">Loading...</span> 
+                            <!-- 🔴 ማስተካከያ: window.copyId ተጨምሯል 🔴 -->
                             <i class="fa-solid fa-copy" style="cursor:pointer;" title="Copy ID" onclick="window.copyId && window.copyId()"></i>
                         </div>
                     </div>
@@ -830,6 +834,7 @@
                         <div class="info-title">Phone Number</div>
                         <div class="info-value" id="phone-display">Not added</div>
                     </div>
+                    <!-- 🔴 ማስተካከያ: window.openModal('phone') ተጨምሯል 🔴 -->
                     <span class="action-link" onclick="window.openModal && window.openModal('phone')"><i class="fa-solid fa-plus"></i> Add</span>
                 </div>
 
@@ -838,6 +843,7 @@
                         <div class="info-title">Trader Username</div>
                         <div class="info-value" id="username-display">Not set — tap to choose your handle</div>
                     </div>
+                    <!-- 🔴 ማስተካከያ: window.openModal('username') ተጨምሯል 🔴 -->
                     <span class="action-link" onclick="window.openModal && window.openModal('username')"><i class="fa-solid fa-pen"></i> Edit</span>
                 </div>
             </div>
@@ -876,6 +882,7 @@
                             <div class="info-value">Sign in with Face ID, Touch ID, or your device PIN</div>
                         </div>
                     </div>
+                    <!-- 🔴 ማስተካከያ: window.registerPasskey ተጨምሯል 🔴 -->
                     <span class="action-link" onclick="window.registerPasskey && window.registerPasskey()"><i class="fa-solid fa-plus"></i> Add passkey</span>
                 </div>
 
@@ -1051,7 +1058,7 @@
         </div>
     </div>
 
-    <!-- 🔴 አዲሱ የ Settings ጃቫስክሪፕት ፋይል 🔴 -->
+    <!-- 🔴 ከውጭ የሚጠራው ዋናው የጃቫስክሪፕት ፋይል (settings.js) 🔴 -->
     <script src="settings.js"></script>
 </body>
 </html>
