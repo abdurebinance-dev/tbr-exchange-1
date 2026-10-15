@@ -1396,7 +1396,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // =========================================================
-// 🔴 FORGOT PASSWORD LOGIC (ISOLATED & BULLETPROOF) 🔴
+// 🔴 FORGOT PASSWORD LOGIC (በ script.js በጣም አናት ላይ ይቀመጥ) 🔴
 // =========================================================
 document.addEventListener("DOMContentLoaded", () => {
     const forgotForm = document.getElementById('forgotForm');
@@ -1418,7 +1418,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             if(msgBox) msgBox.style.display = 'none';
 
-            // ማሳሰቢያ፡ ከሌላ ኮድ ጋር እንዳይጋጭ የራሱን API ሊንክ በቀጥታ እዚህ አስገብተናል
+            // ራሱን የቻለ የ API ሊንክ (ከሌላ እንዳይጠብቅ)
             const BASE_URL = window.location.hostname.includes('localhost') 
                 ? '' 
                 : 'https://tbr-exchange-backend.onrender.com';
@@ -1433,7 +1433,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 const data = await response.json();
 
                 if (response.ok && data.success) {
-                    // ኢሜይሉ በትክክል ከተላከ ፎርሙን ደብቆ Success State ን ማሳየት
                     const sentDisplay = document.getElementById('sentEmailDisplay');
                     if(sentDisplay) sentDisplay.textContent = email;
                     
