@@ -1396,26 +1396,35 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // =========================================================
-// 🔴 FORGOT PASSWORD LOGIC (forgot-password.html) 🔴
+// 🔴 FORGOT PASSWORD LOGIC (ISOLATED & BULLETPROOF) 🔴
 // =========================================================
 document.addEventListener("DOMContentLoaded", () => {
     const forgotForm = document.getElementById('forgotForm');
     
     if (forgotForm) {
         forgotForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
+            e.preventDefault(); // 100% ሪፍሬሽ እንዳያደርግ ያቆማል
+            
             const emailInput = document.getElementById('forgot-email');
             const submitBtn = document.getElementById('forgotSubmitBtn');
             const msgBox = document.getElementById('responseMessage');
             
+            if(!emailInput) return;
             const email = emailInput.value.trim();
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Sending...';
-            msgBox.style.display = 'none';
+            
+            if(submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Sending...';
+            }
+            if(msgBox) msgBox.style.display = 'none';
+
+            // ማሳሰቢያ፡ ከሌላ ኮድ ጋር እንዳይጋጭ የራሱን API ሊንክ በቀጥታ እዚህ አስገብተናል
+            const BASE_URL = window.location.hostname.includes('localhost') 
+                ? '' 
+                : 'https://tbr-exchange-backend.onrender.com';
 
             try {
-                // የ API_BASE_URL አስቀድሞ ስክሪፕቱ ላይ አለ
-                const response = await fetch(`${API_BASE_URL}/api/forgot-password`, {
+                const response = await fetch(`${BASE_URL}/api/forgot-password`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email })
@@ -1424,7 +1433,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const data = await response.json();
 
                 if (response.ok && data.success) {
-                    // ኢሜይሉ በትክክል ከተላከ Form State ን ደብቆ Success State ን ማሳየት
+                    // ኢሜይሉ በትክክል ከተላከ ፎርሙን ደብቆ Success State ን ማሳየት
                     const sentDisplay = document.getElementById('sentEmailDisplay');
                     if(sentDisplay) sentDisplay.textContent = email;
                     
@@ -1433,23 +1442,31 @@ document.addEventListener("DOMContentLoaded", () => {
                     if(formState) formState.style.display = 'none';
                     if(successState) successState.style.display = 'block';
                 } else {
+                    if(msgBox) {
+                        msgBox.style.display = 'block';
+                        msgBox.style.background = '#331e1e';
+                        msgBox.style.color = '#f87171';
+                        msgBox.style.border = '1px solid #ef4444';
+                        msgBox.textContent = data.message || 'Failed to send reset link.';
+                    }
+                    if(submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Send Reset Link';
+                    }
+                }
+            } catch (err) {
+                console.error('Fetch Error:', err);
+                if(msgBox) {
                     msgBox.style.display = 'block';
                     msgBox.style.background = '#331e1e';
                     msgBox.style.color = '#f87171';
                     msgBox.style.border = '1px solid #ef4444';
-                    msgBox.textContent = data.message || 'Failed to send reset link.';
+                    msgBox.textContent = 'Server connection error. Please try again.';
+                }
+                if(submitBtn) {
                     submitBtn.disabled = false;
                     submitBtn.textContent = 'Send Reset Link';
                 }
-            } catch (err) {
-                console.error('Fetch Error:', err);
-                msgBox.style.display = 'block';
-                msgBox.style.background = '#331e1e';
-                msgBox.style.color = '#f87171';
-                msgBox.style.border = '1px solid #ef4444';
-                msgBox.textContent = 'Server connection error. Please try again.';
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Send Reset Link';
             }
         });
     }
