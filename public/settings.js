@@ -270,7 +270,7 @@ async function savePaymentMethod() {
     const accountNumber = document.getElementById("pm-account-number")?.value.trim();
 
     if (!type || !accountName || !accountNumber) {
-        showToast("እባክህ ሙሉ መረጃ አስገባ!");
+        showToast("Please fill in all details!");
         return;
     }
 
