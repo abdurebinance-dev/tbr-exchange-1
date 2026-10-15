@@ -10,9 +10,20 @@ let currentField = "";
 let paymentMethods = [];
 let editingPaymentId = null;
 
-// ==========================================
-// 🔴 1. GLOBAL FUNCTIONS 🔴
-// ==========================================
+// ==========================================================
+// 🔴 1. MODAL FUNCTIONS (ከ DOMContentLoaded ውጪ መሆን አለባቸው) 🔴
+// ==========================================================
+
+window.showToast = function(message) {
+    const toast = document.getElementById("toastNotification");
+    const msgEl = document.getElementById("toastMessage");
+    if (!toast || !msgEl) return;
+    
+    msgEl.innerText = message;
+    toast.classList.add("show");
+    setTimeout(() => toast.classList.remove("show"), 2500);
+};
+
 window.showCenterNotification = function(title, message, isSuccess = true) {
     const modal = document.getElementById('centerNotifyModal');
     const icon = document.getElementById('notifyIcon');
@@ -35,147 +46,137 @@ window.closeCenterNotification = function() {
     if(m) m.style.display = 'none';
 };
 
-window.showToast = function(message) {
-    const toast = document.getElementById("toastNotification");
-    const msgEl = document.getElementById("toastMessage");
-    if (!toast || !msgEl) return;
-    
-    msgEl.innerText = message;
-    toast.classList.add("show");
-    setTimeout(() => toast.classList.remove("show"), 2500);
+window.openModal = function(field) {
+    currentField = field;
+    const modal = document.getElementById("customModal");
+    const title = document.getElementById("modalTitle");
+    const input = document.getElementById("modalInput");
+    if (!modal || !input) return;
+
+    modal.style.display = "flex";
+    input.oninput = null; 
+
+    if(field === 'phone') {
+        const phoneDisplay = document.getElementById("phone-display");
+        let existingPhone = (phoneDisplay && phoneDisplay.innerText !== 'Not added') ? phoneDisplay.innerText : "";
+        input.value = existingPhone.replace(/@/g, ''); 
+        title.innerText = "Add/Edit Phone Number";
+        input.placeholder = "e.g. +251911223344";
+    } else if(field === 'username') {
+        title.innerText = "Set Trader Username";
+        input.placeholder = "Enter handle...";
+        const usernameDisplay = document.getElementById("username-display");
+        let existingHandle = (usernameDisplay && usernameDisplay.innerText !== 'Not set — tap to choose your handle') ? usernameDisplay.innerText : "@";
+        if (!existingHandle.startsWith('@')) existingHandle = '@' + existingHandle;
+        input.value = existingHandle;
+        input.oninput = function() {
+            if (!input.value.startsWith('@')) input.value = '@' + input.value.replace(/@/g, '');
+        };
+    } else if(field === 'name') {
+        const profileName = document.getElementById("profile-name");
+        input.value = profileName ? profileName.innerText.trim() : "";
+        title.innerText = "Edit Profile Name";
+    }
+    input.focus();
 };
+
+window.closeModal = function() {
+    const modal = document.getElementById("customModal");
+    if (modal) modal.style.display = "none";
+};
+
+window.saveModalData = async function() {
+    const modalInput = document.getElementById("modalInput");
+    if (!modalInput) return;
+    const val = modalInput.value.trim();
+    if (!val) return;
+
+    let finalVal = val;
+    let apiField = currentField;
+
+    if (currentField === 'phone') {
+        const phoneDisplay = document.getElementById("phone-display");
+        if (phoneDisplay) phoneDisplay.innerText = val;
+        localStorage.setItem("userPhone", val);
+        apiField = "phoneNumber"; 
+    } else if (currentField === 'username') {
+        if (!finalVal.startsWith('@')) finalVal = '@' + finalVal;
+        const usernameDisplay = document.getElementById("username-display");
+        if (usernameDisplay) usernameDisplay.innerText = finalVal;
+        localStorage.setItem("traderUsername", finalVal);
+        apiField = "traderUsername"; 
+    } else if (currentField === 'name') {
+        localStorage.setItem("userName", val);
+        const profileName = document.getElementById("profile-name");
+        if (profileName) profileName.innerHTML = `${val} <i class="fa-solid fa-pen edit-icon" onclick="window.openModal('name')"></i>`;
+        apiField = "fullName";
+    }
+    
+    window.showToast("Profile updated successfully!");
+
+    try {
+        const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+        const dataToSend = (currentField === 'username') ? finalVal : val;
+        await fetch(`${API_BASE_URL}/api/user/update`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+            body: JSON.stringify({ field: apiField, value: dataToSend })
+        });
+    } catch (e) { console.error("Sync update error:", e); }
+
+    window.closeModal();
+};
+
+window.copyId = function() {
+    const profileId = document.getElementById("profile-id");
+    if (profileId && profileId.innerText !== 'Loading...') {
+        navigator.clipboard.writeText(profileId.innerText);
+        window.showToast("Account ID copied to clipboard!");
+    }
+};
+
+window.triggerImageUpload = function() {
+    const fileInput = document.getElementById("profileImageInput");
+    if (fileInput) fileInput.click();
+};
+
+window.handleImageUpload = function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const base64Image = e.target.result;
+        const avatarBox = document.getElementById("avatar-initials");
+        if (avatarBox) {
+            avatarBox.style.backgroundImage = `url('${base64Image}')`;
+            avatarBox.style.backgroundSize = "cover";
+            avatarBox.style.backgroundPosition = "center";
+            avatarBox.innerHTML = `<div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
+        }
+        window.showToast("Profile picture updated successfully!");
+        localStorage.setItem("userAvatar", base64Image);
+        
+        const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+        fetch(`${API_BASE_URL}/api/user/update`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+            body: JSON.stringify({ field: "avatar", value: base64Image })
+        }).catch(e => console.error(e));
+    };
+    reader.readAsDataURL(file);
+};
+
 
 // ==========================================
 // 🔴 2. INITIALIZATION (ፔጁ ሲከፈት የሚሰራ) 🔴
 // ==========================================
 document.addEventListener("DOMContentLoaded", async function() {
-    // 1. መግቢያ (Auth) ማረጋገጥ
+    // 1. መግቢያ (Auth) መኖሩን ማረጋገጥ
     const token = localStorage.getItem("token") || localStorage.getItem("authToken");
     if (!token) {
         window.location.replace("signin.html");
         return;
     }
-
-    // 🔴 ሞዳል ፈንክሽኖች (HTML ን ካገኘ በኋላ ብቻ ይሰራል) 🔴
-    window.openModal = function(field) {
-        currentField = field;
-        const modal = document.getElementById("customModal");
-        const title = document.getElementById("modalTitle");
-        const input = document.getElementById("modalInput");
-        if (!modal || !input) return;
-
-        modal.style.display = "flex";
-        input.oninput = null; 
-
-        if(field === 'phone') {
-            const phoneDisplay = document.getElementById("phone-display");
-            let existingPhone = (phoneDisplay && phoneDisplay.innerText !== 'Not added') ? phoneDisplay.innerText : "";
-            input.value = existingPhone.replace(/@/g, ''); 
-            title.innerText = "Add/Edit Phone Number";
-            input.placeholder = "e.g. +251911223344";
-        } else if(field === 'username') {
-            title.innerText = "Set Trader Username";
-            input.placeholder = "Enter handle...";
-            const usernameDisplay = document.getElementById("username-display");
-            let existingHandle = (usernameDisplay && usernameDisplay.innerText !== 'Not set — tap to choose your handle') ? usernameDisplay.innerText : "@";
-            if (!existingHandle.startsWith('@')) existingHandle = '@' + existingHandle;
-            input.value = existingHandle;
-            input.oninput = function() {
-                if (!input.value.startsWith('@')) input.value = '@' + input.value.replace(/@/g, '');
-            };
-        } else if(field === 'name') {
-            const profileName = document.getElementById("profile-name");
-            input.value = profileName ? profileName.innerText.trim() : "";
-            title.innerText = "Edit Profile Name";
-        }
-        input.focus();
-    };
-
-    window.closeModal = function() {
-        const modal = document.getElementById("customModal");
-        if (modal) modal.style.display = "none";
-    };
-
-    window.saveModalData = async function() {
-        const modalInput = document.getElementById("modalInput");
-        if (!modalInput) return;
-        const val = modalInput.value.trim();
-        if (!val) return;
-
-        let finalVal = val;
-        let apiField = currentField;
-
-        if (currentField === 'phone') {
-            const phoneDisplay = document.getElementById("phone-display");
-            if (phoneDisplay) phoneDisplay.innerText = val;
-            localStorage.setItem("userPhone", val);
-            apiField = "phoneNumber"; 
-        } else if (currentField === 'username') {
-            if (!finalVal.startsWith('@')) finalVal = '@' + finalVal;
-            const usernameDisplay = document.getElementById("username-display");
-            if (usernameDisplay) usernameDisplay.innerText = finalVal;
-            localStorage.setItem("traderUsername", finalVal);
-            apiField = "traderUsername"; 
-        } else if (currentField === 'name') {
-            localStorage.setItem("userName", val);
-            const profileName = document.getElementById("profile-name");
-            if (profileName) profileName.innerHTML = `${val} <i class="fa-solid fa-pen edit-icon" onclick="window.openModal('name')"></i>`;
-            apiField = "fullName";
-        }
-        
-        window.showToast("Profile updated successfully!");
-
-        try {
-            const tokenToUse = localStorage.getItem("token") || localStorage.getItem("authToken");
-            const dataToSend = (currentField === 'username') ? finalVal : val;
-            await fetch(`${API_BASE_URL}/api/user/update`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${tokenToUse}` },
-                body: JSON.stringify({ field: apiField, value: dataToSend })
-            });
-        } catch (e) { console.error("Sync update error:", e); }
-
-        window.closeModal();
-    };
-
-    window.copyId = function() {
-        const profileId = document.getElementById("profile-id");
-        if (profileId && profileId.innerText !== 'Loading...') {
-            navigator.clipboard.writeText(profileId.innerText);
-            window.showToast("Account ID copied to clipboard!");
-        }
-    };
-
-    window.triggerImageUpload = function() {
-        const fileInput = document.getElementById("profileImageInput");
-        if (fileInput) fileInput.click();
-    };
-
-    window.handleImageUpload = function(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const base64Image = e.target.result;
-            const avatarBox = document.getElementById("avatar-initials");
-            if (avatarBox) {
-                avatarBox.style.backgroundImage = `url('${base64Image}')`;
-                avatarBox.style.backgroundSize = "cover";
-                avatarBox.style.backgroundPosition = "center";
-                avatarBox.innerHTML = `<div class="camera-badge"><i class="fa-solid fa-camera"></i></div>`;
-            }
-            window.showToast("Profile picture updated successfully!");
-            localStorage.setItem("userAvatar", base64Image);
-            
-            const tokenToUse = localStorage.getItem("token") || localStorage.getItem("authToken");
-            fetch(`${API_BASE_URL}/api/user/update`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${tokenToUse}` },
-                body: JSON.stringify({ field: "avatar", value: base64Image })
-            }).catch(e => console.error(e));
-        };
-        reader.readAsDataURL(file);
-    };
 
     // 🚀 Tab Switcher 🚀
     document.querySelectorAll('.tab-btn').forEach(btn => {
