@@ -1684,9 +1684,9 @@ document.addEventListener("DOMContentLoaded", () => {
 // 🔴 DASHBOARD PAGE LOGIC (dashboard.html) 🔴
 // =========================================================
 document.addEventListener("DOMContentLoaded", () => {
-    // ይህ ኮድ የሚሰራው Dashboard ላይ ብቻ መሆኑን ማረጋገጫ
+    // ይህ ኮድ የሚሰራው Dashboard ላይ ብቻ ነው
     const balanceValEl = document.getElementById('user-balance');
-    if (!balanceValEl) return;
+    if (!balanceValEl) return; // Dashboard ላይ ካልሆንን ኮዱን ያቆመዋል
 
     // 1. መግቢያ (Auth) መኖሩን ማረጋገጥ
     const token = localStorage.getItem("token") || localStorage.getItem("authToken");
@@ -1699,7 +1699,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let actualBalance = localStorage.getItem("user_balance_val") || "0.00";
 
     function getDashboardIdentity() {
-        let t = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('jwt') || localStorage.getItem('jwtToken') || '';
+        let t = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('jwt') || '';
         let email = localStorage.getItem('userEmail') || localStorage.getItem('email') || '';
         let userId = localStorage.getItem('userId') || localStorage.getItem('tbr_resolved_uid') || '';
         try {
@@ -1711,7 +1711,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return { token: String(t || '').replace(/^Bearer\s+/i, '').trim(), email: String(email || '').trim(), userId: String(userId || '').trim() };
     }
 
-    // 2. የባላንስ መደበቂያ
+    // 2. የባላንስ መደበቂያ (Eye Icon)
     const balanceEyeBtn = document.getElementById('balance-eye-btn');
     if (balanceEyeBtn) {
         balanceEyeBtn.addEventListener('click', () => {
@@ -1727,7 +1727,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 3. የ Profile Dropdown
+    // 3. Profile Dropdown ማሳያ
     const profileBtn = document.getElementById('profile-icon-btn');
     const profileMenu = document.getElementById('profile-dropdown-menu');
     if (profileBtn && profileMenu) {
@@ -1751,20 +1751,18 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 5. Dashboard UI ማስተካከያ (ስም እና KYC)
+    // 5. Dashboard UI ማስተካከያ
     function updateDashboardUI() {
-        const userEmail = localStorage.getItem('userEmail') || localStorage.getItem('email');
-        if (!userEmail) return;
-
+        const userEmail = localStorage.getItem('userEmail') || localStorage.getItem('email') || 'User';
         const kycStatus = (localStorage.getItem('kycStatus') || 'not_submitted').toLowerCase();
         const isVerified = (kycStatus === 'verified' || kycStatus === 'approved' || kycStatus === 'true');
-        const emailPrefix = userEmail.split('@')[0];
+        const emailPrefix = userEmail.includes('@') ? userEmail.split('@')[0] : userEmail;
 
         let storedName = localStorage.getItem('kycFullName') || localStorage.getItem('fullName') || localStorage.getItem('userName') || localStorage.getItem('name') || '';
         let rawName = (isVerified && storedName) ? storedName : emailPrefix;
         const fullNameUpper = rawName.toUpperCase();
         
-        // የ YIMAM መፍትሄ
+        // አሮጌ ስም (YIMAM) ካለ ማጥፋት
         ['firstName', 'fullName', 'kycFullName', 'userName', 'name'].forEach(k => {
             const val = (localStorage.getItem(k) || '').trim().toLowerCase();
             if (val === 'yimam') localStorage.removeItem(k);
@@ -1810,11 +1808,11 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // 6. ዳታን ከሰርቨር ማምጣት
+    // 6. ዳታ ከባክኤንድ ማምጣት (Profile & Balance)
     async function syncWithServer() {
         try {
             const { token, email, userId } = getDashboardIdentity();
-            if (!token && !email && !userId) return;
+            if (!token) return;
 
             const params = new URLSearchParams();
             if (email) params.set('email', email);
@@ -1822,14 +1820,14 @@ document.addEventListener("DOMContentLoaded", () => {
             params.set('t', Date.now());
             
             const res = await fetch(`${API_BASE_URL}/api/user/profile?${params.toString()}`, { 
-                headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                headers: { 'Authorization': `Bearer ${token}` },
                 cache: 'no-store'
             });
             
             if (res.ok) {
                 const data = await res.json(); 
                 const userObj = data.user || data.data || data;
-                if (userObj && (userObj.email || userObj._id)) {
+                if (userObj) {
                     if (userObj._id) {
                         localStorage.setItem('userId', String(userObj._id));
                         localStorage.setItem('tbr_resolved_uid', String(userObj._id));
@@ -1843,30 +1841,34 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (userObj.firstName) localStorage.setItem('firstName', userObj.firstName);
                     if (userObj.kycStatus) localStorage.setItem('kycStatus', userObj.kycStatus);
                     if (userObj.bscAddress) localStorage.setItem('user_bsc_address', userObj.bscAddress);
-                    if (userObj.tbrId || userObj.userId) localStorage.setItem('tbrId', userObj.tbrId || userObj.userId);
                     
-                    if (userObj.balance !== undefined) {
+                    if (userObj.balance !== undefined && userObj.balance !== null) {
                         actualBalance = Number(userObj.balance).toFixed(2);
                         localStorage.setItem("user_balance_val", actualBalance); 
                         if (!isBalanceHidden) balanceValEl.innerText = actualBalance;
                     }
-                    updateDashboardUI();
                 }
             }
+            updateDashboardUI(); // ዳታ ከመጣ በኋላ UI መታደስ አለበት
         } catch (e) {
             console.error('Background sync failed:', e);
+            updateDashboardUI(); // ቢበላሽም UI በ LocalStorage መታደስ አለበት
         }
     }
 
+    // 🚀 የተቆለፈ (On Market) ባላንስ ለማምጣት
     async function fetchMyAdsBalance(tkn) {
         try {
             const { email, userId } = getDashboardIdentity();
-            const params = newSearchParams();
+            if(!tkn) return;
+
+            // 🔴 የፊደል ስህተት ታርሟል (new URLSearchParams) 🔴
+            const params = new URLSearchParams();
             if (email) params.set('email', email);
             if (userId) params.set('userId', userId);
 
             const res = await fetch(`${API_BASE_URL}/api/ads/my?${params.toString()}`, {
-                headers: tkn ? { 'Authorization': `Bearer ${tkn}` } : {},
+                headers: { 'Authorization': `Bearer ${tkn}` },
                 cache: 'no-store'
             });
             
@@ -1895,9 +1897,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     if(onMarketPlaceholder) onMarketPlaceholder.style.display = 'block';
                 }
             }
-        } catch (error) {}
+        } catch (error) {
+            console.error("Ads balance error:", error);
+        }
     }
 
+    // ከ Blockchain ዲፖዚት ማጣራት
     async function checkDepositSilently() {
         try {
             const bscAddress = localStorage.getItem('user_bsc_address');
@@ -1906,7 +1911,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const depositRes = await fetch(`${API_BASE_URL}/api/check-deposits/${bscAddress}`, { method: 'GET', cache: 'no-store' });
             const depositData = await depositRes.json();
 
-            if (depositData && depositData.success && depositData.balance !== undefined) {
+            if (depositData && depositData.success && depositData.balance !== undefined && depositData.balance !== null) {
                 const finalBal = parseFloat(depositData.balance);
                 if (!isNaN(finalBal)) {
                     actualBalance = finalBal.toFixed(2);
@@ -1917,6 +1922,7 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (error) {}
     }
 
+    // የገበያ (Market) ዋጋ ማምጣት
     async function loadLiveMarketRates() {
         try {
             const res = await fetch(`${API_BASE_URL}/api/ads`);
@@ -1939,26 +1945,43 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     if (count > 0) {
                         const avg = totalRate / count;
-                        document.getElementById('liveRateValue').innerText = `${avg.toFixed(2)}`;
+                        const liveVal = document.getElementById('liveRateValue');
+                        if(liveVal) liveVal.innerText = `${avg.toFixed(2)}`;
                     }
-                    if (bestBuy > 0) document.getElementById('bestBuyValue').innerText = `${bestBuy.toFixed(2)} ETB`;
-                    if (bestSell < 999999) document.getElementById('bestSellValue').innerText = `${bestSell.toFixed(2)} ETB`;
+                    const bBuy = document.getElementById('bestBuyValue');
+                    const bSell = document.getElementById('bestSellValue');
+                    if (bestBuy > 0 && bBuy) bBuy.innerText = `${bestBuy.toFixed(2)} ETB`;
+                    if (bestSell < 999999 && bSell) bSell.innerText = `${bestSell.toFixed(2)} ETB`;
                 }
             }
         } catch(e) {}
     }
 
+    // ዋናው የ Dashboard ሎደር (ሁሉም ዳታዎች እዚህ ይጠራሉ)
     async function loadDashboardData() {
         const { token } = getDashboardIdentity();
-        await Promise.all([syncWithServer(), fetchMyAdsBalance(token)]);
-        checkDepositSilently();
-        setInterval(checkDepositSilently, 15000);
+        
+        // ባላንሱ ወዲያውኑ እንዲታይ LocalStorage ላይ ያለውን እናሳያለን
+        if (!isBalanceHidden && balanceValEl) balanceValEl.innerText = actualBalance;
+        
+        // ቢያንስ UI እንዲስተካከል መጀመሪያ እንጠራዋለን
+        updateDashboardUI();
+        
+        if(token) {
+            // ከሰርቨር ጋር አዲስ ዳታ ያመጣል
+            await Promise.all([
+                syncWithServer(), 
+                fetchMyAdsBalance(token)
+            ]);
+            checkDepositSilently();
+            setInterval(checkDepositSilently, 15000);
+        }
+        
+        loadLiveMarketRates();
     }
 
-    if (!isBalanceHidden) balanceValEl.innerText = actualBalance;
-    updateDashboardUI();
+    // መረጃ ማምጣት ይጀምራል
     loadDashboardData();
-    loadLiveMarketRates();
 
     // 7. Active Trade Alert Banner
     const BANNER_CACHE_KEY = 'tbr_dash_active_banner_v2';
@@ -2000,8 +2023,10 @@ document.addEventListener("DOMContentLoaded", () => {
             localStorage.setItem('tbr_active_p2p_order', JSON.stringify(trade));
             if (data.currentUserId) localStorage.setItem('tbr_resolved_uid', String(data.currentUserId));
 
-            document.getElementById('dashboardActiveTradeText').innerText = count === 1 ? `1 trade awaiting you (${roleText}) — Click to action` : `${count} trades awaiting you — Click to view`;
-            document.getElementById('dashboardActiveTradeNum').innerText = `Trade #${tradeNum}`;
+            const txtEl = document.getElementById('dashboardActiveTradeText');
+            const numEl = document.getElementById('dashboardActiveTradeNum');
+            if(txtEl) txtEl.innerText = count === 1 ? `1 trade awaiting you (${roleText}) — Click to action` : `${count} trades awaiting you — Click to view`;
+            if(numEl) numEl.innerText = `Trade #${tradeNum}`;
             banner.href = `trades.html?tradeId=${trade._id}`;
             banner.style.display = 'flex';
         } else {
@@ -2011,7 +2036,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function checkActiveTradesForUser() {
         const { token, email, userId } = getDashboardIdentity();
-        if (!token && !email && !userId) return;
+        if (!token) return;
         try {
             const params = new URLSearchParams();
             if (email) params.set('email', email);
@@ -2019,7 +2044,7 @@ document.addEventListener("DOMContentLoaded", () => {
             params.set('t', Date.now());
 
             const res = await fetch(`${API_BASE_URL}/api/user/active-trades?${params.toString()}`, {
-                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
                 const json = await res.json();
@@ -2052,7 +2077,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // 9. Notification Center & PWA
+    // 9. Notification Center & PWA (Simplified for isolation)
     let latestFiveNotifs = [];
     let allUserNotifs = [];
     let showingAllMode = false;
@@ -2120,12 +2145,14 @@ document.addEventListener("DOMContentLoaded", () => {
     window.openTbrNotifPanel = async function() {
         showingAllMode = false;
         renderNotifList();
-        document.getElementById('tbrNotifPanelOverlay').style.display = 'flex';
+        const overlay = document.getElementById('tbrNotifPanelOverlay');
+        if(overlay) overlay.style.display = 'flex';
         updateBellBadges(0);
         try {
             const { token, email, userId } = getDashboardIdentity();
+            if(!token) return;
             const p = new URLSearchParams(); if (email) p.set('email', email); if (userId) p.set('userId', userId);
-            await fetch(`${API_BASE_URL}/api/notifications/mark-read?${p.toString()}`, { method: 'POST', headers: token ? { 'Authorization': `Bearer ${token}` } : {} });
+            await fetch(`${API_BASE_URL}/api/notifications/mark-read?${p.toString()}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
         } catch (e) {}
     };
 
@@ -2142,8 +2169,9 @@ document.addEventListener("DOMContentLoaded", () => {
     async function pollNotifications() {
         try {
             const { token, email, userId } = getDashboardIdentity();
+            if(!token) return;
             const p = new URLSearchParams(); if (email) p.set('email', email); if (userId) p.set('userId', userId);
-            const res = await fetch(`${API_BASE_URL}/api/notifications?${p.toString()}`, { headers: token ? { 'Authorization': `Bearer ${token}` } : {}, cache: 'no-store' });
+            const res = await fetch(`${API_BASE_URL}/api/notifications?${p.toString()}`, { headers: { 'Authorization': `Bearer ${token}` }, cache: 'no-store' });
             if (!res.ok) return;
             const json = await res.json();
             if (!json || !json.success) return;
@@ -2177,7 +2205,7 @@ document.addEventListener("DOMContentLoaded", () => {
             badge.innerText = '0';
             clickable.appendChild(badge);
         }
-        clickable.onclick = (e) => { e.preventDefault(); e.stopPropagation(); openTbrNotifPanel(); };
+        clickable.onclick = (e) => { e.preventDefault(); e.stopPropagation(); window.openTbrNotifPanel(); };
     });
 
     pollNotifications();
