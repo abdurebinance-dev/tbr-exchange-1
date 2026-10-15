@@ -1394,3 +1394,63 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 });
+
+// =========================================================
+// 🔴 FORGOT PASSWORD LOGIC (forgot-password.html) 🔴
+// =========================================================
+document.addEventListener("DOMContentLoaded", () => {
+    const forgotForm = document.getElementById('forgotForm');
+    
+    if (forgotForm) {
+        forgotForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const emailInput = document.getElementById('forgot-email');
+            const submitBtn = document.getElementById('forgotSubmitBtn');
+            const msgBox = document.getElementById('responseMessage');
+            
+            const email = emailInput.value.trim();
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Sending...';
+            msgBox.style.display = 'none';
+
+            try {
+                // የ API_BASE_URL አስቀድሞ ስክሪፕቱ ላይ አለ
+                const response = await fetch(`${API_BASE_URL}/api/forgot-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    // ኢሜይሉ በትክክል ከተላከ Form State ን ደብቆ Success State ን ማሳየት
+                    const sentDisplay = document.getElementById('sentEmailDisplay');
+                    if(sentDisplay) sentDisplay.textContent = email;
+                    
+                    const formState = document.getElementById('formState');
+                    const successState = document.getElementById('successState');
+                    if(formState) formState.style.display = 'none';
+                    if(successState) successState.style.display = 'block';
+                } else {
+                    msgBox.style.display = 'block';
+                    msgBox.style.background = '#331e1e';
+                    msgBox.style.color = '#f87171';
+                    msgBox.style.border = '1px solid #ef4444';
+                    msgBox.textContent = data.message || 'Failed to send reset link.';
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Send Reset Link';
+                }
+            } catch (err) {
+                console.error('Fetch Error:', err);
+                msgBox.style.display = 'block';
+                msgBox.style.background = '#331e1e';
+                msgBox.style.color = '#f87171';
+                msgBox.style.border = '1px solid #ef4444';
+                msgBox.textContent = 'Server connection error. Please try again.';
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Send Reset Link';
+            }
+        });
+    }
+});
