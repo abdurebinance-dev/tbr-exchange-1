@@ -74,7 +74,6 @@ async function saveModalData() {
         const profileName = document.getElementById("profile-name");
         if(profileName) profileName.innerHTML = `${val} <i class="fa-solid fa-pen edit-icon" id="edit-name-btn"></i>`;
         
-        // Re-attach listener after innerHTML replace
         document.getElementById('edit-name-btn')?.addEventListener('click', () => openModal('name'));
         apiField = "fullName";
     }
@@ -131,6 +130,97 @@ function handleImageUpload(event) {
     reader.readAsDataURL(file);
 }
 
+// ==========================================
+// 🚀 PASSKEY FUNCTIONS (New & Restored) 🚀
+// ==========================================
+async function loadPasskeys() {
+    const container = document.getElementById("passkeys-list-container");
+    if (!container) return;
+
+    try {
+        const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+        const response = await fetch(`${API_BASE_URL}/api/passkey/list`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            const passkeys = data.passkeys || data;
+
+            if (!passkeys || passkeys.length === 0) {
+                container.innerHTML = `<div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 10px;">No passkeys added yet.</div>`;
+                return;
+            }
+
+            // CSP Safe Render (No onclick inside HTML string)
+            container.innerHTML = passkeys.map(pk => `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border-color);">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <i class="fa-solid fa-key" style="color: var(--accent-color);"></i>
+                        <div>
+                            <div style="font-size: 13px; font-weight: 500;">${pk.name || 'Device Passkey'}</div>
+                            <div style="font-size: 11px; color: var(--text-muted);">Added recently</div>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-trash delete-passkey-btn" data-id="${pk._id || pk.id}" style="color: var(--red-color); cursor: pointer;"></i>
+                </div>
+            `).join('');
+        } else {
+            container.innerHTML = `<div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 10px;">No passkeys found.</div>`;
+        }
+    } catch (error) {
+        container.innerHTML = `<div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 10px;">Ready to add new passkeys.</div>`;
+    }
+}
+
+async function registerPasskey() {
+    try {
+        showToast("Requesting device biometric setup...");
+        const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+        const res = await fetch(`${API_BASE_URL}/api/passkey/register-options`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        
+        if (!data.success) { 
+            showToast(data.message || "Failed to start passkey registration."); 
+            return; 
+        }
+
+        const options = data.options;
+        options.challenge = new Uint8Array(atob(options.challenge.replace(/-/g, '+').replace(/_/g, '/')).split('').map(c => c.charCodeAt(0)));
+        options.user.id = new Uint8Array(atob(options.user.id.replace(/-/g, '+').replace(/_/g, '/')).split('').map(c => c.charCodeAt(0)));
+        
+        const credential = await navigator.credentials.create({ publicKey: options });
+
+        const verifyRes = await fetch(`${API_BASE_URL}/api/passkey/register-verify`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({
+                id: credential.id,
+                rawId: btoa(String.fromCharCode(...new Uint8Array(credential.rawId))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, ''),
+                response: {
+                    clientDataJSON: btoa(String.fromCharCode(...new Uint8Array(credential.response.clientDataJSON))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, ''),
+                    attestationObject: btoa(String.fromCharCode(...new Uint8Array(credential.response.attestationObject))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
+                },
+                type: credential.type
+            })
+        });
+
+        const verifyResult = await verifyRes.json();
+        if (verifyResult.success) { 
+            showToast("Passkey registered successfully! 🎉"); 
+            loadPasskeys(); 
+        } else { 
+            showToast(verifyResult.message || "Passkey registration failed."); 
+        }
+    } catch (err) { 
+        console.error(err);
+        showToast("Passkey registration cancelled or not supported."); 
+    }
+}
+
+// Payment UI Functions
 function toggleAddPaymentForm() {
     const form = document.getElementById("pm-add-form");
     if (form) form.style.display = form.style.display === "none" ? "block" : "none";
@@ -164,7 +254,20 @@ document.addEventListener("DOMContentLoaded", async function() {
     bindSafe('copy-id-btn', copyId);
     bindSafe('add-phone-btn', () => openModal('phone'));
     bindSafe('edit-username-btn', () => openModal('username'));
-    bindSafe('add-passkey-btn', () => showToast("Requesting device biometric setup..."));
+    
+    // Passkey binding
+    bindSafe('add-passkey-btn', registerPasskey);
+    
+    // Load passkeys on start
+    loadPasskeys();
+
+    // CSP Safe Event Delegation for dynamically created passkey delete buttons
+    document.getElementById('passkeys-list-container')?.addEventListener('click', (e) => {
+        if (e.target.classList.contains('delete-passkey-btn')) {
+            showToast("Passkey delete requested (API pending)");
+            // Add your backend delete passkey logic here if needed
+        }
+    });
     
     bindSafe('pm-add-btn', toggleAddPaymentForm);
     document.getElementById('pm-type')?.addEventListener('change', handlePaymentTypeChange);
