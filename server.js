@@ -93,8 +93,10 @@ const userSchema = new mongoose.Schema({
 
     paymentMethods: [{
         type: { type: String, required: true },
-        name: { type: String, required: true },
-        account: { type: String, required: true },
+        name: { type: String }, // ለድሮዎቹ ዳታዎች
+        account: { type: String }, // ለድሮዎቹ ዳታዎች
+        accountName: { type: String }, // ለአዲሶቹ
+        accountNumber: { type: String }, // ለአዲሶቹ
         isDefault: { type: Boolean, default: false }
     }],
 
@@ -1655,98 +1657,42 @@ app.post('/api/user/update', verifyToken, async (req, res) => {
 // ==========================================
 // 🚀 USER PAYMENT METHODS APIs 🚀
 // ==========================================
-app.get('/api/user/payments', verifyToken, async (req, res) => {
+app.get('/api/payment-methods', verifyToken, async (req, res) => {
     try {
-        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
         const user = await User.findById(req.user.id).select('paymentMethods').lean();
         if (!user) return res.status(404).json({ success: false, message: "User not found" });
-
-        res.json({ success: true, payments: user.paymentMethods || [] });
+        res.json({ success: true, paymentMethods: user.paymentMethods || [] });
     } catch (error) {
-        console.error("Fetch payments error:", error);
         res.status(500).json({ success: false, message: "Server error fetching payments" });
     }
 });
 
-app.post('/api/user/payments', verifyToken, async (req, res) => {
+app.post('/api/payment-methods', verifyToken, async (req, res) => {
     try {
-        const { type, name, account, isDefault } = req.body;
+        const { type, accountName, accountNumber } = req.body;
         const user = await User.findById(req.user.id).select('paymentMethods');
         if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
-        const isFirstPayment = !user.paymentMethods || user.paymentMethods.length === 0;
-        const newPayment = {
-            type,
-            name,
-            account,
-            isDefault: isFirstPayment ? true : (isDefault || false)
-        };
-
+        const newPayment = { type, accountName, accountNumber };
         user.paymentMethods.push(newPayment);
         await user.save();
 
-        res.status(201).json({ success: true, message: "Payment method added", payment: newPayment });
+        res.status(201).json({ success: true, message: "Payment method added", paymentMethods: user.paymentMethods });
     } catch (error) {
-        console.error("Add payment error:", error);
         res.status(500).json({ success: false, message: "Server error adding payment" });
     }
 });
 
-app.put('/api/user/payments/:id', verifyToken, async (req, res) => {
-    try {
-        const { type, name, account } = req.body;
-        const user = await User.findById(req.user.id).select('paymentMethods');
-
-        const payment = user.paymentMethods.id(req.params.id);
-        if (!payment) return res.status(404).json({ success: false, message: "Payment method not found" });
-
-        if (type) payment.type = type;
-        if (name) payment.name = name;
-        if (account) payment.account = account;
-
-        await user.save();
-        res.json({ success: true, message: "Payment method updated", payment });
-    } catch (error) {
-        console.error("Update payment error:", error);
-        res.status(500).json({ success: false, message: "Server error updating payment" });
-    }
-});
-
-app.put('/api/user/payments/:id/default', verifyToken, async (req, res) => {
+app.delete('/api/payment-methods/:id', verifyToken, async (req, res) => {
     try {
         const user = await User.findById(req.user.id).select('paymentMethods');
-        user.paymentMethods.forEach(pm => { pm.isDefault = false; });
+        if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
-        const payment = user.paymentMethods.id(req.params.id);
-        if (!payment) return res.status(404).json({ success: false, message: "Payment method not found" });
-
-        payment.isDefault = true;
-        await user.save();
-
-        res.json({ success: true, message: "Default payment method updated" });
-    } catch (error) {
-        console.error("Set default payment error:", error);
-        res.status(500).json({ success: false, message: "Server error setting default payment" });
-    }
-});
-
-app.delete('/api/user/payments/:id', verifyToken, async (req, res) => {
-    try {
-        const user = await User.findById(req.user.id).select('paymentMethods');
-        const payment = user.paymentMethods.id(req.params.id);
-        if (!payment) return res.status(404).json({ success: false, message: "Payment method not found" });
-
-        const wasDefault = payment.isDefault;
         user.paymentMethods.pull({ _id: req.params.id });
-
-        if (wasDefault && user.paymentMethods.length > 0) {
-            user.paymentMethods[0].isDefault = true;
-        }
-
         await user.save();
+
         res.json({ success: true, message: "Payment method deleted" });
     } catch (error) {
-        console.error("Delete payment error:", error);
         res.status(500).json({ success: false, message: "Server error deleting payment" });
     }
 });
