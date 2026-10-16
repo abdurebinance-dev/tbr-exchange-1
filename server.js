@@ -127,6 +127,13 @@ const userSchema = new mongoose.Schema({
     loginAttempts: { type: Number, default: 0 },
     lockUntil: { type: Date },
     lastActive: { type: Date, default: Date.now }
+    activeSessions: [{
+        device: String,
+        browser: String,
+        ip: String,
+        token: String,
+        loginAt: { type: Date, default: Date.now }
+    }]
 }, { timestamps: true });
 
 const User = mongoose.models.User || mongoose.model('User', userSchema);
@@ -1733,23 +1740,18 @@ app.delete('/api/payment-methods/:id', verifyToken, async (req, res) => {
 // --- 🔥 Fast Admin Logins & Actions (Secured) 🔥 ---
 app.post('/api/admin/login', async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password, deviceInfo } = req.body; // deviceInfo ጨምረናል
         if (!email || !password) {
             return res.status(400).json({ success: false, message: 'Email and password are required.' });
         }
 
         const cleanEmail = email.trim().toLowerCase();
-        let user = await User.findOne({ email: cleanEmail }).select('_id email password isAdmin role bscAddress').lean();
-
-        // 🛑 1. አድሚኑን በዘፈቀደ ፓስወርድ እንደገና የሚፈጥርበትን ወይም ፓስወርድ የሚቀይርበትን አደገኛ 'if' block ሙሉ በሙሉ አጥፍተነዋል!
-        // አሁን አድሚንም ሆነ ማንም ሰው አስቀድሞ በዳታቤዝ ውስጥ መኖር አለበት።
+        let user = await User.findOne({ email: cleanEmail }).select('_id email password isAdmin role bscAddress activeSessions').lean();
 
         if (!user) {
             return res.status(400).json({ success: false, message: 'Invalid admin credentials.' });
         }
 
-        // 🛑 2. Plain text (user.password === password) የሚለውን አጥፍተን 
-        // ሁልጊዜ በ bcrypt.compare ብቻ እንዲረጋገጥ ተደርጓል! 🛑
         const isMatch = await bcrypt.compare(password, user.password);
 
         if (!isMatch) {
@@ -1761,6 +1763,27 @@ app.post('/api/admin/login', async (req, res) => {
         }
 
         const token = jwt.sign({ id: user._id, email: user.email, isAdmin: true, role: user.role || 'super_admin' }, JWT_SECRET, { expiresIn: '7d' });
+        
+        // 🛑 አዲሱ Device Tracking ኮድ 🛑
+        if (deviceInfo) {
+            const newSession = {
+                device: deviceInfo.device || 'Unknown Device',
+                browser: deviceInfo.browser || 'Unknown Browser',
+                ip: req.ip || req.headers['x-forwarded-for'] || 'Unknown IP',
+                token: token,
+                loginAt: new Date()
+            };
+            
+            // የድሮውን Session አምጥተን አዲሱን እንጨምራለን (ከ 5 በላይ ሎጊን ካለ አሮጌውን ያጠፋዋል)
+            let sessions = user.activeSessions || [];
+            sessions.push(newSession);
+            if (sessions.length > 5) {
+                sessions = sessions.slice(-5); // የቅርብ ጊዜ 5ቱን ብቻ ይይዛል
+            }
+            
+            await User.updateOne({ _id: user._id }, { $set: { activeSessions: sessions } });
+        }
+
         res.json({ success: true, token, message: 'Admin logged in successfully.' });
     } catch (error) {
         console.error('Admin Login Error:', error);

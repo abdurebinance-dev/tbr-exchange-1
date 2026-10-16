@@ -242,11 +242,27 @@ async function adminLogin() {
         loginBtn.disabled = true;
     }
 
+    // 🛑 አዲሱ Device የመለያ ኮድ 🛑
+    const ua = navigator.userAgent;
+    let deviceName = "Unknown Device";
+    if (ua.includes("Windows")) deviceName = "Windows PC";
+    else if (ua.includes("Mac")) deviceName = "Mac OS";
+    else if (ua.includes("Android")) deviceName = "Android Phone";
+    else if (ua.includes("iPhone") || ua.includes("iPad")) deviceName = "iOS Device";
+
+    let browserName = "Web Browser";
+    if (ua.includes("Chrome")) browserName = "Chrome";
+    if (ua.includes("Firefox")) browserName = "Firefox";
+    if (ua.includes("Safari") && !ua.includes("Chrome")) browserName = "Safari";
+    if (ua.includes("Edge")) browserName = "Edge";
+
+    const deviceInfo = { device: deviceName, browser: browserName };
+
     try {
         const res = await fetch(`${API_BASE}/api/admin/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
+            body: JSON.stringify({ email, password, deviceInfo }) // መረጃው አብሮ ይላካል
         });
         const data = await res.json();
         
