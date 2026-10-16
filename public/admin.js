@@ -21,11 +21,34 @@ function resolveImgUrl(raw) {
     return s;
 }
 
+// 🚀 1. Event Listeners for Login & Navigation 🚀
 document.addEventListener('DOMContentLoaded', () => {
+    // ቼክ አድርግ፣ ቶከን ካለ ቀጥታ ያስገባዋል
     if (getToken()) {
-        document.getElementById('loginOverlay').style.display = 'none';
-        document.getElementById('mainDashboard').style.display = 'block';
+        const overlay = document.getElementById('loginOverlay');
+        const dash = document.getElementById('mainDashboard');
+        if(overlay) overlay.style.display = 'none';
+        if(dash) dash.style.display = 'block';
         initAdminDataFast();
+    }
+
+    // Login Button Event Listener
+    const loginBtn = document.getElementById('loginBtn');
+    if (loginBtn) {
+        loginBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            adminLogin();
+        });
+    }
+
+    // Add enter key support for login
+    const loginPassInput = document.getElementById('loginPassword');
+    if (loginPassInput) {
+        loginPassInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                adminLogin();
+            }
+        });
     }
 
     document.getElementById('searchInput')?.addEventListener('keyup', filterTableData);
@@ -38,7 +61,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.addEventListener('click', async (e) => {
         const target = e.target;
 
-        if (target.closest('#loginBtn')) adminLogin();
         if (target.closest('#logoutBtn')) logoutAdmin();
         if (target.closest('#saveRatesBtn')) saveRates();
         
@@ -171,9 +193,25 @@ setInterval(() => {
 }, 8000);
 
 async function adminLogin() {
-    const email = document.getElementById('loginEmail').value;
-    const password = document.getElementById('loginPassword').value;
+    const emailInput = document.getElementById('loginEmail');
+    const passwordInput = document.getElementById('loginPassword');
     const errEl = document.getElementById('loginError');
+    const loginBtn = document.getElementById('loginBtn');
+
+    if (!emailInput || !passwordInput) return;
+
+    const email = emailInput.value;
+    const password = passwordInput.value;
+
+    if (!email || !password) {
+        if(errEl) errEl.innerText = 'Email and password are required.';
+        return;
+    }
+
+    if(loginBtn) {
+        loginBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Logging in...';
+        loginBtn.disabled = true;
+    }
 
     try {
         const res = await fetch(`${API_BASE}/api/admin/login`, {
@@ -182,16 +220,28 @@ async function adminLogin() {
             body: JSON.stringify({ email, password })
         });
         const data = await res.json();
+        
         if (res.ok && data.success) {
             localStorage.setItem('adminToken', data.token);
-            document.getElementById('loginOverlay').style.display = 'none';
-            document.getElementById('mainDashboard').style.display = 'block';
+            const overlay = document.getElementById('loginOverlay');
+            const dash = document.getElementById('mainDashboard');
+            if(overlay) overlay.style.display = 'none';
+            if(dash) dash.style.display = 'block';
+            if(errEl) errEl.innerText = '';
             initAdminDataFast();
         } else {
-            errEl.innerText = data.message || 'Login failed.';
+            if(errEl) errEl.innerText = data.message || 'Login failed.';
+            if(loginBtn) {
+                loginBtn.innerHTML = 'Login to Dashboard';
+                loginBtn.disabled = false;
+            }
         }
     } catch (err) {
-        errEl.innerText = 'Network error during login.';
+        if(errEl) errEl.innerText = 'Network error during login.';
+        if(loginBtn) {
+            loginBtn.innerHTML = 'Login to Dashboard';
+            loginBtn.disabled = false;
+        }
     }
 }
 
