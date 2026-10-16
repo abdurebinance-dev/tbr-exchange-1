@@ -1,12 +1,9 @@
 // 🚀 የድሮ ዩዘሮችን በሙሉ ጠራርጎ የሚያስወጣ እና የሚያጸዳ ኮድ (Force Logout All Users) 🚀
-const CURRENT_APP_VERSION = "2.0";
+const CURRENT_APP_VERSION = "2.1";
 if (localStorage.getItem("tbr_app_version") !== CURRENT_APP_VERSION) {
-    // የድሮ ቶከኖችን በሙሉ ጠራርጎ ያጠፋል!
     localStorage.clear();
     sessionStorage.clear();
-    // አዲሱን ቨርዥን ያስቀምጣል
     localStorage.setItem("tbr_app_version", CURRENT_APP_VERSION);
-    // ወደ ሎጊን ፔጅ በግድ እንዲመለስ ፔጁን ሪፍሬሽ ያደርገዋል
     window.location.reload(true);
 }
 
@@ -14,7 +11,6 @@ const API_BASE = (window.location.hostname === 'localhost' || window.location.ho
     ? 'http://localhost:5000'
     : 'https://tbr-exchange-backend.onrender.com';
 
-// 🛑 1. የተስተካከለ፡ localStorage ወደ sessionStorage ተቀይሯል! የዩዘር 'token' እንዳይሰራ ተደርጓል! 🛑
 const getToken = () => sessionStorage.getItem('adminToken') || '';
 
 const ESCROW_CACHE_KEY = 'tbr_admin_escrow_v2';
@@ -37,14 +33,10 @@ function resolveImgUrl(raw) {
 
 // 🚀 1. Event Listeners for Login & Navigation 🚀
 document.addEventListener('DOMContentLoaded', async () => {
-    // 🛑 2. የተስተካከለ፡ የድሮውን አደገኛ የ localStorage ቶከን ከብራውዘሩ ላይ ማጥፊያ 🛑
-    localStorage.removeItem('adminToken');
-
     const overlay = document.getElementById('loginOverlay');
     const dash = document.getElementById('mainDashboard');
     const currentToken = getToken();
 
-    // 🛑 ጥብቅ ሴኪዩሪቲ (Strict Admin Verification) 🛑
     if (currentToken) {
         try {
             const checkAdmin = await fetch(`${API_BASE}/api/admin/stats`, {
@@ -92,9 +84,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         userSearch.addEventListener('keyup', filterUsersTable);
     }
 
+    // 🛑 ዋናው የተስተካከለው እዚህ ጋር ነው! (Event Listener) 🛑
     document.body.addEventListener('click', async (e) => {
-        if (target.closest('#devicesBtn')) openDevicesModal();
         const target = e.target;
+        
+        if (target.closest('#devicesBtn')) openDevicesModal();
 
         if (target.closest('#logoutBtn')) logoutAdmin();
         if (target.closest('#saveRatesBtn')) saveRates();
@@ -257,7 +251,6 @@ async function adminLogin() {
         const data = await res.json();
         
         if (res.ok && data.success) {
-            // 🛑 3. የተስተካከለ፡ አዲሱ ቶከን የሚቀመጠው sessionStorage ላይ ብቻ ነው 🛑
             sessionStorage.setItem('adminToken', data.token);
             
             const overlay = document.getElementById('loginOverlay');
@@ -283,7 +276,6 @@ async function adminLogin() {
 }
 
 function logoutAdmin() {
-    // 🛑 4. የተስተካከለ፡ መውጫ ላይ sessionStorage ሙሉ በሙሉ ይጠፋል 🛑
     sessionStorage.removeItem('adminToken');
     sessionStorage.clear();
     location.reload();
@@ -1056,7 +1048,6 @@ async function fetchLivePostsForAdmin() {
     tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 30px; color: #f0b90b;">Loading active posts...</td></tr>';
     
     try {
-        // 🛑 5. የተስተካከለ፡ አድሚን ቶከንን ብቻ እንዲጠቀም ተደርጓል 🛑
         const token = getToken();
         const response = await fetch(`${API_BASE}/api/ads`, {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -1098,7 +1089,6 @@ async function adminDeleteAd(adId) {
     }
     
     try {
-        // 🛑 6. የተስተካከለ፡ አድሚን ቶከንን ብቻ እንዲጠቀም ተደርጓል 🛑
         const token = getToken();
         const response = await fetch(`${API_BASE}/api/ads/${adId}/cancel`, {
             method: 'PUT',
@@ -1134,7 +1124,6 @@ async function editAdminUserBalance(userId, currentBalance) {
     if (!confirm(`Are you sure you want to CHANGE this user's balance to ${numericBal} USDT?`)) return;
 
     try {
-        // 🛑 7. የተስተካከለ፡ አድሚን ቶከንን ብቻ እንዲጠቀም ተደርጓል 🛑
         const token = getToken();
         const response = await fetch(`${API_BASE}/api/admin/update-user-balance`, {
             method: 'POST',
@@ -1247,7 +1236,6 @@ async function rejectWithdrawal(txId, amount) {
 
 async function loadDeposits() {
     try {
-        // 🛑 8. የተስተካከለ፡ አድሚን ቶከንን ብቻ እንዲጠቀም ተደርጓል 🛑
         const token = getToken();
         const res = await fetch(`${API_BASE}/api/admin/deposits`, {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -1291,7 +1279,6 @@ function openDevicesModal() {
         document.body.appendChild(modal);
     }
 
-    // አሁን እየተጠቀምክበት ያለውን ዲቫይስ (ስልክ/ኮምፒውተር) በጃቫስክሪፕት መለየት
     const ua = navigator.userAgent;
     let deviceName = "Unknown Device";
     if (ua.includes("Windows")) deviceName = "Windows PC";
