@@ -11,152 +11,48 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --bg-color: #080808;
-            --card-bg: #16181d;
-            --card-darker: #121418;
-            --text-color: #ffffff;
-            --text-muted: #848e9c;
-            --border-color: #2b313a;
-            --accent-color: #f3ba2f;
-            --accent-hover: #e0ac2b;
-            --green-color: #0ecb81;
+            --bg-color: #080808; --card-bg: #16181d; --card-darker: #121418;
+            --text-color: #ffffff; --text-muted: #848e9c; --border-color: #2b313a;
+            --accent-color: #f3ba2f; --accent-hover: #e0ac2b; --green-color: #0ecb81;
             --red-color: #f6465d;  
         }
 
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 0;
-        }
+        body { background-color: var(--bg-color); color: var(--text-color); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+        .top-navigation-bar { display: flex; justify-content: flex-start; margin-bottom: 15px; margin-top: 10px; }
+        .ads-header-section { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .ads-header-section h1 { font-size: 24px; font-weight: 700; margin: 0; }
 
-        .container {
-            max-width: 1100px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        .top-navigation-bar {
-            display: flex;
-            justify-content: flex-start;
-            margin-bottom: 15px;
-            margin-top: 10px;
-        }
-
-        .ads-header-section {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-        }
-
-        .ads-header-section h1 {
-            font-size: 24px;
-            font-weight: 700;
-            margin: 0;
-        }
-
-        .btn-pill {
-            background-color: var(--accent-color);
-            color: #000;
-            border: none;
-            padding: 6px 16px;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 13px;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            transition: 0.2s;
-            line-height: 1.2;
-        }
+        .btn-pill { background-color: var(--accent-color); color: #000; border: none; padding: 6px 16px; border-radius: 20px; font-weight: 600; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s; line-height: 1.2; }
         .btn-pill:hover { background-color: var(--accent-hover); }
-
-        .btn-small {
-            background-color: var(--accent-color);
-            color: #000;
-            border: none;
-            padding: 5px 12px;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 12px;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            transition: 0.2s;
-            line-height: 1.1;
-        }
+        .btn-small { background-color: var(--accent-color); color: #000; border: none; padding: 5px 12px; border-radius: 12px; font-weight: 600; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: 0.2s; line-height: 1.1; }
         .btn-small:hover { background-color: var(--accent-hover); }
-
-        .btn-outline {
-            background: transparent;
-            color: var(--text-muted);
-            border: 1px solid var(--border-color);
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            transition: 0.2s;
-        }
+        .btn-outline { background: transparent; color: var(--text-muted); border: 1px solid var(--border-color); padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s; }
         .btn-outline:hover { color: #fff; border-color: var(--text-muted); }
 
         .view-section { display: none; }
         .view-section.active { display: block; animation: fadeIn 0.3s ease; }
 
-        /* 🚀 Main Tabs (Ads / Boosts) 🚀 */
-        .ads-tabs-wrapper {
-            background: #0b0e11;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            display: flex;
-            margin-bottom: 20px;
-        }
-        .ads-tab {
-            flex: 1; text-align: center; padding: 12px; color: var(--text-muted);
-            font-size: 14px; font-weight: 600; cursor: pointer; border-right: 1px solid var(--border-color);
-            transition: 0.2s;
-        }
+        /* Tabs */
+        .ads-tabs-wrapper { background: #0b0e11; border: 1px solid var(--border-color); border-radius: 8px; display: flex; margin-bottom: 20px; }
+        .ads-tab { flex: 1; text-align: center; padding: 12px; color: var(--text-muted); font-size: 14px; font-weight: 600; cursor: pointer; border-right: 1px solid var(--border-color); transition: 0.2s; }
         .ads-tab:last-child { border-right: none; }
         .ads-tab:hover { color: #fff; }
         .ads-tab.active { color: #fff; background: var(--card-bg); border-radius: 8px; }
 
-        .ads-sub-tabs {
-            display: flex; background: #0b0e11; border: 1px solid var(--border-color);
-            border-radius: 8px; margin-bottom: 20px;
-        }
-        .sub-tab {
-            flex: 1; text-align: center; padding: 10px; font-size: 13px; color: var(--text-muted);
-            cursor: pointer; transition: 0.2s;
-        }
+        .ads-sub-tabs { display: flex; background: #0b0e11; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 20px; }
+        .sub-tab { flex: 1; text-align: center; padding: 10px; font-size: 13px; color: var(--text-muted); cursor: pointer; transition: 0.2s; }
         .sub-tab:hover { color: #fff; }
         .sub-tab.active { color: #fff; border-bottom: 2px solid var(--accent-color); font-weight: 600; }
 
-        .empty-state {
-            background: var(--card-bg);
-            border-radius: 16px;
-            padding: 80px 20px;
-            text-align: center;
-            border: 1px solid var(--border-color);
-        }
+        .empty-state { background: var(--card-bg); border-radius: 16px; padding: 80px 20px; text-align: center; border: 1px solid var(--border-color); }
         .empty-state i { font-size: 40px; color: #2b313a; margin-bottom: 20px; }
         .empty-state h3 { margin: 0 0 10px 0; font-size: 16px; color: #fff; }
         .empty-state p { color: var(--text-muted); font-size: 13px; margin-bottom: 20px; }
 
         .form-container { max-width: 800px; margin: 0 auto; padding-bottom: 50px; }
-        
         .trade-type-toggle { display: flex; gap: 15px; margin-bottom: 30px; }
-        .toggle-btn {
-            flex: 1; background: transparent; border: 1px solid var(--border-color); color: var(--text-muted);
-            padding: 14px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;
-            display: flex; justify-content: center; align-items: center; gap: 8px; transition: all 0.2s;
-        }
+        .toggle-btn { flex: 1; background: transparent; border: 1px solid var(--border-color); color: var(--text-muted); padding: 14px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; transition: all 0.2s; }
         .toggle-btn:hover { border-color: #444; color: #fff; }
         .toggle-btn.btn-buy.active { border-color: var(--green-color); color: var(--green-color); background: rgba(14, 203, 129, 0.05); }
         .toggle-btn.btn-sell.active { border-color: var(--red-color); color: var(--red-color); background: rgba(246, 70, 93, 0.05); }
@@ -167,85 +63,39 @@
         
         .input-group { position: relative; margin-bottom: 15px; }
         .input-group label { display: block; font-size: 12px; color: #fff; font-weight: 600; margin-bottom: 8px; }
-        .input-group input, .input-group textarea {
-            width: 100%; background: var(--bg-color); border: 1px solid var(--border-color);
-            color: #fff; padding: 14px 15px; border-radius: 8px; box-sizing: border-box; font-size: 14px; outline: none; transition: border-color 0.2s;
-        }
+        .input-group input, .input-group textarea { width: 100%; background: var(--bg-color); border: 1px solid var(--border-color); color: #fff; padding: 14px 15px; border-radius: 8px; box-sizing: border-box; font-size: 14px; outline: none; transition: border-color 0.2s; }
         .input-group input:focus, .input-group textarea:focus { border-color: var(--accent-color); }
         .suffix { position: absolute; right: 15px; top: 38px; color: var(--text-muted); font-size: 13px; font-weight: 600; }
-
-        input[type="number"]::-webkit-inner-spin-button,
-        input[type="number"]::-webkit-outer-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-        input[type="number"] {
-            -moz-appearance: textfield; 
-        }
+        input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"] { -moz-appearance: textfield; }
 
         .market-avg-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-top: 8px; padding: 0 5px; }
-        
         .two-cols { display: flex; gap: 15px; }
         .two-cols > div { flex: 1; }
 
-        .pm-card {
-            background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px;
-            padding: 15px; margin-bottom: 10px; display: flex; align-items: flex-start; gap: 12px; cursor: pointer;
-        }
+        .pm-card { background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; margin-bottom: 10px; display: flex; align-items: flex-start; gap: 12px; cursor: pointer; }
         .pm-card input[type="radio"], .pm-card input[type="checkbox"] { margin-top: 3px; accent-color: var(--green-color); width: 14px; height: 14px; cursor: pointer; }
-        
-        .pm-add-btn {
-            background: transparent; border: 1px dashed var(--border-color); color: var(--text-muted);
-            padding: 15px; border-radius: 8px; text-align: center; font-size: 13px; font-weight: 600;
-            cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; transition: 0.2s; width: 100%; margin-bottom: 10px; box-sizing: border-box;
-        }
+        .pm-add-btn { background: transparent; border: 1px dashed var(--border-color); color: var(--text-muted); padding: 15px; border-radius: 8px; text-align: center; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; transition: 0.2s; width: 100%; margin-bottom: 10px; box-sizing: border-box; }
         .pm-add-btn:hover { border-color: var(--green-color); color: var(--green-color); background: rgba(14, 203, 129, 0.05); }
 
         .pill-group { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
-        .pill-option {
-            background: transparent; border: 1px solid var(--border-color); color: #fff;
-            padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; transition: 0.2s; gap: 6px;
-        }
+        .pill-option { background: transparent; border: 1px solid var(--border-color); color: #fff; padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; gap: 6px; }
         .pill-option.active { border-color: var(--green-color); color: var(--green-color); background: rgba(14, 203, 129, 0.05); }
 
-        .btn-review {
-            width: 100%; background-color: var(--green-color); color: #000; border: none;
-            padding: 16px; border-radius: 8px; font-weight: 700; font-size: 15px; cursor: pointer;
-            display: flex; justify-content: center; align-items: center; gap: 8px; transition: 0.2s;
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
+        .btn-review { width: 100%; background-color: var(--green-color); color: #000; border: none; padding: 16px; border-radius: 8px; font-weight: 700; font-size: 15px; cursor: not-allowed; display: flex; justify-content: center; align-items: center; gap: 8px; transition: 0.2s; opacity: 0.5; }
 
-        .review-modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--bg-color); z-index: 1000;
-            display: none; overflow-y: auto; padding-bottom: 50px;
-        }
-        .review-container {
-            max-width: 800px; margin: 40px auto 0; padding: 20px;
-        }
-        .review-header {
-            display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px;
-        }
+        .review-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); z-index: 1000; display: none; overflow-y: auto; padding-bottom: 50px; }
+        .review-container { max-width: 800px; margin: 40px auto 0; padding: 20px; }
+        .review-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; }
         .review-header h2 { margin: 0 0 5px 0; font-size: 24px; font-weight: 700; }
         .review-header p { color: var(--text-muted); font-size: 14px; margin: 0; }
         
-        .review-type-badge {
-            padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600;
-            display: flex; align-items: center; gap: 6px; border: 1px solid transparent;
-        }
+        .review-type-badge { padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px; border: 1px solid transparent; }
         .review-type-badge.buy { background: rgba(14, 203, 129, 0.1); color: var(--green-color); border-color: rgba(14, 203, 129, 0.2); }
         .review-type-badge.sell { background: rgba(246, 70, 93, 0.1); color: var(--red-color); border-color: rgba(246, 70, 93, 0.2); }
 
-        .review-details-box {
-            background: #111317; border: 1px solid var(--border-color); border-radius: 12px;
-            margin-bottom: 25px;
-        }
-        .review-row {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 16px 20px; border-bottom: 1px solid var(--border-color);
-        }
+        .review-details-box { background: #111317; border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: 25px; }
+        .review-row { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border-color); }
         .review-row:last-child { border-bottom: none; }
         .review-label { color: var(--text-muted); font-size: 14px; }
         .review-value { color: #fff; font-size: 15px; font-weight: 600; text-align: right; }
@@ -254,59 +104,37 @@
         .review-methods-container { margin-bottom: 30px; }
         .review-methods-container h4 { margin: 0 0 10px 0; font-size: 14px; font-weight: 600; color: var(--text-muted); }
         .review-pm-pills { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; }
-        .review-pm-pill {
-            background: transparent; border: 1px solid var(--border-color); color: #fff;
-            padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600;
-            display: flex; align-items: center; gap: 6px;
-        }
+        .review-pm-pill { background: transparent; border: 1px solid var(--border-color); color: #fff; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
         .review-pm-pill i { color: var(--green-color); }
         
         .review-ver-level { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #fff; }
         .review-ver-level i { color: var(--text-muted); }
 
         .review-action-btns { display: flex; gap: 15px; margin-top: 20px; }
-        .btn-review-cancel {
-            flex: 1; background: transparent; border: 1px solid var(--border-color); color: #fff;
-            padding: 16px; border-radius: 8px; font-weight: 600; font-size: 15px; cursor: pointer;
-            display: flex; justify-content: center; align-items: center; gap: 8px; transition: 0.2s;
-        }
+        .btn-review-cancel { flex: 1; background: transparent; border: 1px solid var(--border-color); color: #fff; padding: 16px; border-radius: 8px; font-weight: 600; font-size: 15px; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; transition: 0.2s; }
         .btn-review-cancel:hover { border-color: #444; background: #16181d; }
 
-        /* Custom Confirm Modal Styles */
-        .custom-confirm-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.85); z-index: 3000;
-            display: none; align-items: center; justify-content: center;
-            opacity: 0; transition: opacity 0.2s;
-        }
-        .custom-confirm-overlay.show {
-            display: flex; opacity: 1;
-        }
-        .custom-confirm-box {
-            background: #16181d; border: 1px solid var(--border-color);
-            border-radius: 12px; width: 340px; padding: 30px 24px; text-align: center;
-            transform: scale(0.9); transition: transform 0.2s;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-        .custom-confirm-overlay.show .custom-confirm-box {
-            transform: scale(1);
-        }
-        .confirm-icon {
-            font-size: 45px; color: var(--red-color); margin-bottom: 15px;
-        }
+        .custom-confirm-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 3000; display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; }
+        .custom-confirm-overlay.show { display: flex; opacity: 1; }
+        .custom-confirm-box { background: #16181d; border: 1px solid var(--border-color); border-radius: 12px; width: 340px; padding: 30px 24px; text-align: center; transform: scale(0.9); transition: transform 0.2s; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .custom-confirm-overlay.show .custom-confirm-box { transform: scale(1); }
+        .confirm-icon { font-size: 45px; color: var(--red-color); margin-bottom: 15px; }
         .confirm-title { color: #fff; font-size: 18px; font-weight: 700; margin-bottom: 8px; }
         .confirm-text { color: var(--text-muted); font-size: 13px; margin-bottom: 24px; line-height: 1.5; }
         .confirm-actions { display: flex; gap: 12px; }
-        .btn-confirm-no {
-            flex: 1; padding: 12px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer;
-            background: transparent; border: 1px solid var(--border-color); color: #fff; transition: 0.2s;
-        }
+        .btn-confirm-no { flex: 1; padding: 12px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; background: transparent; border: 1px solid var(--border-color); color: #fff; transition: 0.2s; }
         .btn-confirm-no:hover { background: #2b313a; }
-        .btn-confirm-yes {
-            flex: 1; padding: 12px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer;
-            background: var(--red-color); border: none; color: #fff; transition: 0.2s;
-        }
+        .btn-confirm-yes { flex: 1; padding: 12px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; background: var(--red-color); border: none; color: #fff; transition: 0.2s; }
         .btn-confirm-yes:hover { opacity: 0.9; }
+
+        /* Dynamic Table Classes */
+        .action-menu-item { padding: 10px 16px; font-size: 13px; cursor: pointer; color: #fff; display: flex; align-items: center; transition: 0.2s; }
+        .action-menu-item:hover { background: #2b313a; }
+        .action-menu-item.cancel { color: var(--red-color); }
+        .menu-btn { background: #1e2026; border: 1px solid var(--border-color); color: #fff; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; float: right; transition: 0.2s; }
+        .menu-btn:hover { background: #2b313a; }
+        .table-row { border-bottom: 1px solid #14151a; font-size: 13px; transition: background 0.2s; }
+        .table-row:hover { background: rgba(255,255,255,0.02); }
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
@@ -315,31 +143,31 @@
 
     <div class="container view-section active" id="view-main-ads">
         <div class="top-navigation-bar">
-            <button class="btn-outline" onclick="window.location.href='dashboard.html'">
+            <button class="btn-outline" id="btn-back-dash">
                 <i class="fa-solid fa-house"></i> Dashboard
             </button>
         </div>
 
         <div class="ads-header-section">
             <h1 id="main-header-title">Your Ads</h1>
-            <button class="btn-pill" id="header-action-btn" onclick="openPostOrderForm()">
+            <button class="btn-pill" id="header-action-btn">
                 <i class="fa-solid fa-plus"></i> New Ad
             </button>
         </div>
 
-        <!-- 🚀 Updated Main Tabs (Ads / Boosts) 🚀 -->
+        <!-- Main Tabs -->
         <div class="ads-tabs-wrapper">
-            <div class="ads-tab active" id="tab-my-ads" onclick="switchMainTab('ads')"><i class="fa-regular fa-file-lines"></i> Ads</div>
-            <div class="ads-tab" id="tab-boosts" onclick="switchMainTab('boosts')"><i class="fa-solid fa-bolt" style="margin-right: 5px;"></i> Boost History</div>
+            <div class="ads-tab active" id="tab-my-ads"><i class="fa-regular fa-file-lines"></i> Ads</div>
+            <div class="ads-tab" id="tab-boosts"><i class="fa-solid fa-bolt" style="margin-right: 5px;"></i> Boost History</div>
         </div>
 
-        <!-- This wrapper holds the content for the "Ads" tab -->
+        <!-- Ads Content -->
         <div id="content-my-ads">
             <div class="ads-sub-tabs">
-                <div class="sub-tab active" onclick="filterAds('all', this)">All</div>
-                <div class="sub-tab" onclick="filterAds('active', this)">Active</div>
-                <div class="sub-tab" onclick="filterAds('paused', this)">Paused</div>
-                <div class="sub-tab" onclick="filterAds('cancelled', this)">Cancelled</div>
+                <div class="sub-tab active filter-btn" data-filter="all">All</div>
+                <div class="sub-tab filter-btn" data-filter="active">Active</div>
+                <div class="sub-tab filter-btn" data-filter="paused">Paused</div>
+                <div class="sub-tab filter-btn" data-filter="cancelled">Cancelled</div>
             </div>
 
             <div id="ads-list-container">
@@ -351,7 +179,7 @@
             </div>
         </div>
 
-        <!-- 🚀 This wrapper holds the content for the "Boosts" tab 🚀 -->
+        <!-- Boosts Content -->
         <div id="content-boosts" style="display: none;">
             <div class="empty-state">
                 <i class="fa-solid fa-clock-rotate-left" style="font-size: 40px; color: #2b313a; margin-bottom: 20px;"></i>
@@ -359,13 +187,12 @@
                 <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">Boost an ad from the Ads tab to appear here.</p>
             </div>
         </div>
-
     </div>
 
     <!-- Unverified View -->
     <div class="container view-section" id="view-verification-required">
         <div class="top-navigation-bar">
-            <button class="btn-outline" onclick="switchView('view-main-ads')">
+            <button class="btn-outline btn-back-to-ads">
                 <i class="fa-solid fa-arrow-left"></i> Back to Ads
             </button>
         </div>
@@ -373,16 +200,16 @@
             <i class="fa-solid fa-shield-halved" style="color: var(--accent-color);"></i>
             <h3>Posting ads requires verification</h3>
             <p>Please verify your identity to start posting P2P trade offers.</p>
-            <button class="btn-pill" onclick="window.location.href='profile.html'">
+            <button class="btn-pill" id="btn-verify-account">
                 <i class="fa-solid fa-user-check"></i> Verify Account
             </button>
         </div>
     </div>
 
-    <!-- Pending/Under Review View -->
+    <!-- Under Review View -->
     <div class="container view-section" id="view-under-review">
         <div class="top-navigation-bar">
-            <button class="btn-outline" onclick="switchView('view-main-ads')">
+            <button class="btn-outline btn-back-to-ads">
                 <i class="fa-solid fa-arrow-left"></i> Back to Ads
             </button>
         </div>
@@ -390,15 +217,16 @@
             <i class="fa-solid fa-hourglass-half" style="color: var(--accent-color);"></i>
             <h3>You are under review</h3>
             <p>Please wait till we verify your account.</p>
-            <button class="btn-pill" onclick="window.location.href='dashboard.html'">
+            <button class="btn-pill" id="btn-go-dash-review">
                 <i class="fa-solid fa-house"></i> Go to Dashboard
             </button>
         </div>
     </div>
 
+    <!-- Post Order View -->
     <div class="container view-section" id="view-post-order">
         <div class="top-navigation-bar" style="margin-top: 15px;">
-            <button class="btn-outline" onclick="closePostOrderForm()">
+            <button class="btn-outline" id="btn-close-post-form">
                 <i class="fa-solid fa-arrow-left"></i> Back to Ads
             </button>
         </div>
@@ -408,10 +236,10 @@
             <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 25px;">Set your rate, limits, and payment methods</p>
 
             <div class="trade-type-toggle">
-                <button class="toggle-btn btn-buy active" onclick="setTradeType('buy', this)">
+                <button class="toggle-btn btn-buy active" data-type="buy">
                     <i class="fa-solid fa-arrow-up"></i> Buy USDT
                 </button>
-                <button class="toggle-btn btn-sell" onclick="setTradeType('sell', this)">
+                <button class="toggle-btn btn-sell" data-type="sell">
                     <i class="fa-solid fa-arrow-down"></i> Sell USDT
                 </button>
             </div>
@@ -422,7 +250,7 @@
                 
                 <div class="input-group">
                     <label>Price per USDT</label>
-                    <input type="number" id="price-input" placeholder="e.g. 185.54" value="" oninput="validatePrice(); checkOverallValidity();">
+                    <input type="number" id="price-input" placeholder="e.g. 185.54" value="">
                     <span class="suffix">ETB</span>
                 </div>
                 
@@ -440,7 +268,7 @@
                         <label style="margin-bottom: 0;">Total Amount</label>
                         <span id="available-balance-display" style="font-size: 11px; color: var(--green-color); display: none; font-weight: 600;">Available: 0.00 USDT</span>
                     </div>
-                    <input type="number" id="total-amount-input" placeholder="e.g. 500" oninput="validateAmount(); checkOverallValidity();">
+                    <input type="number" id="total-amount-input" placeholder="e.g. 500">
                     <span class="suffix">USDT</span>
                 </div>
 
@@ -456,7 +284,7 @@
                     <div>
                         <div class="input-group" style="margin-bottom: 5px;">
                             <label>Minimum (ETB)</label>
-                            <input type="number" id="min-etb-input" placeholder="Min. 500" oninput="validateLimits(); checkOverallValidity();">
+                            <input type="number" id="min-etb-input" placeholder="Min. 500">
                             <span class="suffix">ETB</span>
                         </div>
                         <div id="min-limit-error" style="color: var(--red-color); font-size: 11px; margin-bottom: 10px; display: none; font-weight: 600;">
@@ -468,9 +296,9 @@
                         <div class="input-group" style="margin-bottom: 5px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                                 <label style="margin-bottom: 0;">Maximum (ETB)</label>
-                                <span id="use-max-display" onclick="applyMaxEtb()" style="font-size: 11px; color: var(--accent-color); display: none; font-weight: 600; cursor: pointer; transition: 0.2s;">Use max: 0 ETB</span>
+                                <span id="use-max-display" style="font-size: 11px; color: var(--accent-color); display: none; font-weight: 600; cursor: pointer; transition: 0.2s;">Use max: 0 ETB</span>
                             </div>
-                            <input type="number" id="max-etb-input" placeholder="e.g. 50,000" oninput="validateLimits(); checkOverallValidity();">
+                            <input type="number" id="max-etb-input" placeholder="e.g. 50,000">
                             <span class="suffix">ETB</span>
                         </div>
                         <div id="max-limit-error" style="color: var(--red-color); font-size: 11px; margin-bottom: 10px; display: none; font-weight: 600;">
@@ -492,7 +320,7 @@
                 <div id="payment-methods-list"></div>
 
                 <div id="no-payment-methods" style="display: none;">
-                    <button class="pm-add-btn" onclick="window.location.href='settings.html'">
+                    <button class="pm-add-btn" id="btn-add-pm">
                         <i class="fa-solid fa-circle-plus"></i> Please add payment method
                     </button>
                 </div>
@@ -556,11 +384,11 @@
                 <h3>Terms & Conditions</h3>
                 <p class="section-sub">Optional — specific rules for this trade</p>
                 <div class="input-group">
-                    <textarea rows="3" placeholder="e.g. Send exact amount with reference. Minimum 500 ETB per transaction."></textarea>
+                    <textarea id="terms-input" rows="3" placeholder="e.g. Send exact amount with reference. Minimum 500 ETB per transaction."></textarea>
                 </div>
             </div>
 
-            <button id="review-order-btn" class="btn-review" disabled onclick="openReviewModal()">
+            <button id="review-order-btn" class="btn-review" disabled>
                 <i class="fa-regular fa-eye"></i> Review Order
             </button>
         </div>
@@ -613,7 +441,7 @@
             </div>
 
             <div class="review-action-btns">
-                <button class="btn-review-cancel" onclick="closeReviewModal()">
+                <button class="btn-review-cancel" id="btn-close-review">
                     <i class="fa-solid fa-arrow-left"></i> Edit
                 </button>
                 <button class="btn-review" id="final-confirm-btn" style="flex: 2; opacity: 1; cursor: pointer; pointer-events: auto;">
@@ -630,795 +458,12 @@
             <div class="confirm-title">Cancel Ad</div>
             <div class="confirm-text">Are you sure you want to cancel this ad? It will be removed from the market immediately.</div>
             <div class="confirm-actions">
-                <button class="btn-confirm-no" onclick="handleConfirmResult(false)">No, Keep it</button>
-                <button class="btn-confirm-yes" onclick="handleConfirmResult(true)">Yes, Cancel Ad</button>
+                <button class="btn-confirm-no" id="btn-confirm-no">No, Keep it</button>
+                <button class="btn-confirm-yes" id="btn-confirm-yes">Yes, Cancel Ad</button>
             </div>
         </div>
     </div>
 
-    <script>
-        const API_BASE_URL = ''; 
-        let userPaymentMethods = [];
-        let userAvailableBalance = 0;
-        let userKycStatus = localStorage.getItem('kycStatus') || 'unverified'; 
-        let currentTradeType = 'buy';
-        let calculatedMaxEtb = 0; 
-        
-        let confirmResolve = null;
-        
-        let allUserAds = [];
-        let currentStatusFilter = 'all';
-
-        function clearMarketAdsCacheNow(cancelledAdId) {
-            try {
-                sessionStorage.removeItem('tbr_market_ads_v1');
-                localStorage.removeItem('tbr_market_ads_v1');
-                if (cancelledAdId) {
-                    const raw = localStorage.getItem('tbr_market_light_ads_v5') || sessionStorage.getItem('tbr_market_light_ads_v5');
-                    if (raw) {
-                        const list = JSON.parse(raw).filter(a => String(a._id) !== String(cancelledAdId));
-                        localStorage.setItem('tbr_market_light_ads_v5', JSON.stringify(list));
-                        sessionStorage.setItem('tbr_market_light_ads_v5', JSON.stringify(list));
-                    }
-                }
-            } catch (e) {}
-        }
-
-        function switchMainTab(tab) {
-            document.getElementById('tab-my-ads').classList.remove('active');
-            document.getElementById('tab-boosts').classList.remove('active');
-            
-            document.getElementById('content-my-ads').style.display = 'none';
-            document.getElementById('content-boosts').style.display = 'none';
-            
-            if(tab === 'ads') {
-                document.getElementById('tab-my-ads').classList.add('active');
-                document.getElementById('content-my-ads').style.display = 'block';
-                document.getElementById('header-action-btn').style.display = 'inline-flex';
-            } else {
-                document.getElementById('tab-boosts').classList.add('active');
-                document.getElementById('content-boosts').style.display = 'block';
-                document.getElementById('header-action-btn').style.display = 'none';
-            }
-        }
-
-        function switchView(viewId) {
-            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-            document.getElementById(viewId).classList.add('active');
-            window.scrollTo(0, 0);
-        }
-
-        async function openPostOrderForm() {
-            let status = String(userKycStatus).toLowerCase();
-            if (status === 'pending' || status === 'under_review' || status === 'review') {
-                switchView('view-under-review');
-                return;
-            } else if (status !== 'verified' && status !== 'approved' && status !== 'true') {
-                switchView('view-verification-required');
-                return;
-            }
-            switchView('view-post-order');
-            history.pushState({view: 'post'}, '', '?action=create');
-            validatePrice(); 
-            checkOverallValidity();
-            updateBalanceDisplay();
-            await loadPaymentMethods();
-        }
-
-        function closePostOrderForm() {
-            switchView('view-main-ads');
-            history.pushState({view: 'main'}, '', window.location.pathname);
-            loadUserAds(); 
-        }
-
-        function setTradeType(type, element) {
-            document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
-            element.classList.add('active');
-            currentTradeType = type; 
-            updateBalanceDisplay();
-            validateAmount();
-            checkOverallValidity();
-        }
-
-        function updateBalanceDisplay() {
-            const balanceDisplay = document.getElementById('available-balance-display');
-            const errorBalanceAmount = document.getElementById('error-balance-amount');
-            if (currentTradeType === 'sell') {
-                balanceDisplay.style.display = 'block';
-                balanceDisplay.innerText = `Available: ${userAvailableBalance.toFixed(2)} USDT`;
-                errorBalanceAmount.innerText = userAvailableBalance.toFixed(2);
-            } else {
-                balanceDisplay.style.display = 'none';
-            }
-        }
-
-        document.querySelectorAll('.pill-option').forEach(pill => {
-            pill.addEventListener('click', function() {
-                const group = this.parentElement;
-                group.querySelectorAll('.pill-option').forEach(p => {
-                    p.classList.remove('active');
-                    if (p.querySelector('i')) p.querySelector('i').remove();
-                });
-                
-                this.classList.add('active');
-                this.insertAdjacentHTML('afterbegin', '<i class="fa-regular fa-circle-check"></i> ');
-            });
-        });
-
-        function updateCalculatedMax() {
-            const price = parseFloat(document.getElementById('price-input').value) || 0;
-            const amount = parseFloat(document.getElementById('total-amount-input').value) || 0;
-            calculatedMaxEtb = Math.floor(price * amount);
-
-            const useMaxDisplay = document.getElementById('use-max-display');
-            if (price > 0 && amount > 0) {
-                useMaxDisplay.style.display = 'block';
-                useMaxDisplay.innerText = `Use max: ${calculatedMaxEtb.toLocaleString('en-US')} ETB`;
-            } else {
-                useMaxDisplay.style.display = 'none';
-            }
-            validateLimits(); 
-        }
-
-        function applyMaxEtb() {
-            if (calculatedMaxEtb > 0) {
-                document.getElementById('max-etb-input').value = calculatedMaxEtb;
-                validateLimits();
-                checkOverallValidity();
-            }
-        }
-
-        function validatePrice() {
-            const inputField = document.getElementById('price-input');
-            const errorMsg = document.getElementById('price-error');
-            const enteredValue = parseFloat(inputField.value);
-
-            if (isNaN(enteredValue) || inputField.value === '') {
-                errorMsg.style.display = 'none';
-                inputField.style.borderColor = 'var(--border-color)';
-            } else if (enteredValue < 170 || enteredValue > 210) {
-                errorMsg.style.display = 'block';
-                inputField.style.borderColor = 'var(--red-color)';
-            } else {
-                errorMsg.style.display = 'none';
-                inputField.style.borderColor = 'var(--green-color)'; 
-            }
-            updateCalculatedMax();
-            checkOverallValidity();
-        }
-
-        function validateAmount() {
-            const inputField = document.getElementById('total-amount-input');
-            const errorMsg = document.getElementById('amount-error');
-            const enteredAmount = parseFloat(inputField.value);
-
-            if (currentTradeType === 'sell' && !isNaN(enteredAmount)) {
-                if (enteredAmount > userAvailableBalance) {
-                    errorMsg.style.display = 'block';
-                    inputField.style.borderColor = 'var(--red-color)';
-                } else {
-                    errorMsg.style.display = 'none';
-                    inputField.style.borderColor = 'var(--green-color)';
-                }
-            } else if (!isNaN(enteredAmount) && enteredAmount > 0) {
-                errorMsg.style.display = 'none';
-                inputField.style.borderColor = 'var(--green-color)';
-            } else {
-                errorMsg.style.display = 'none';
-                inputField.style.borderColor = 'var(--border-color)';
-            }
-            updateCalculatedMax();
-            checkOverallValidity();
-        }
-
-        function validateLimits() {
-            const minInput = document.getElementById('min-etb-input');
-            const maxInput = document.getElementById('max-etb-input');
-            const minError = document.getElementById('min-limit-error');
-            const maxError = document.getElementById('max-limit-error');
-
-            const minVal = parseFloat(minInput.value);
-            const maxVal = parseFloat(maxInput.value);
-            let isMinValid = false;
-            let isMaxValid = false;
-
-            if (!isNaN(minVal)) {
-                if (minVal < 500) {
-                    minError.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Lowest order is 500 ETB.';
-                    minError.style.display = 'block';
-                    minInput.style.borderColor = 'var(--red-color)';
-                } else if (calculatedMaxEtb > 0 && minVal > calculatedMaxEtb) {
-                    minError.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Minimum is over your total supply.';
-                    minError.style.display = 'block';
-                    minInput.style.borderColor = 'var(--red-color)';
-                } else {
-                    minError.style.display = 'none';
-                    minInput.style.borderColor = 'var(--green-color)';
-                    isMinValid = true;
-                }
-            } else {
-                minError.style.display = 'none';
-                minInput.style.borderColor = 'var(--border-color)';
-            }
-
-            if (!isNaN(maxVal)) {
-                if (calculatedMaxEtb > 0 && maxVal > calculatedMaxEtb) {
-                    maxError.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Your maximum ETB is over your balance.';
-                    maxError.style.display = 'block';
-                    maxInput.style.borderColor = 'var(--red-color)';
-                } else if (!isNaN(minVal) && maxVal < minVal) {
-                    maxError.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Max cannot be less than Min.';
-                    maxError.style.display = 'block';
-                    maxInput.style.borderColor = 'var(--red-color)';
-                } else {
-                    maxError.style.display = 'none';
-                    maxInput.style.borderColor = 'var(--green-color)';
-                    isMaxValid = true;
-                }
-            } else {
-                maxError.style.display = 'none';
-                maxInput.style.borderColor = 'var(--border-color)';
-            }
-            return isMinValid && isMaxValid;
-        }
-
-        function checkOverallValidity() {
-            const reviewBtn = document.getElementById('review-order-btn');
-            const price = parseFloat(document.getElementById('price-input').value);
-            const isPriceValid = !isNaN(price) && price >= 170 && price <= 210;
-            const amount = parseFloat(document.getElementById('total-amount-input').value);
-            let isAmountValid = !isNaN(amount) && amount > 0;
-            if (currentTradeType === 'sell' && isAmountValid) {
-                isAmountValid = amount <= userAvailableBalance;
-            }
-            const isLimitsValid = validateLimits();
-            const checkedPayments = document.querySelectorAll('input[name="payment_methods"]:checked');
-            const isPaymentValid = checkedPayments.length > 0;
-
-            if (isPriceValid && isAmountValid && isLimitsValid && isPaymentValid) {
-                reviewBtn.disabled = false;
-                reviewBtn.style.opacity = '1';
-                reviewBtn.style.cursor = 'pointer';
-                if (currentTradeType === 'sell') {
-                    reviewBtn.style.backgroundColor = 'var(--red-color)';
-                    reviewBtn.style.color = '#fff';
-                } else {
-                    reviewBtn.style.backgroundColor = 'var(--green-color)';
-                    reviewBtn.style.color = '#000';
-                }
-            } else {
-                reviewBtn.disabled = true;
-                reviewBtn.style.opacity = '0.5';
-                reviewBtn.style.cursor = 'not-allowed';
-                reviewBtn.style.backgroundColor = 'var(--green-color)';
-                reviewBtn.style.color = '#000';
-            }
-        }
-
-        function openReviewModal() {
-            const price = parseFloat(document.getElementById('price-input').value).toFixed(2);
-            const amount = parseFloat(document.getElementById('total-amount-input').value).toFixed(2);
-            const totalEtb = (price * amount).toLocaleString('en-US');
-            
-            const minLimit = parseFloat(document.getElementById('min-etb-input').value).toLocaleString('en-US');
-            const maxLimit = parseFloat(document.getElementById('max-etb-input').value).toLocaleString('en-US');
-            
-            const verLevelInput = document.querySelector('input[name="ver_level"]:checked');
-            const verLevel = verLevelInput ? verLevelInput.value : "Anyone (no restriction)";
-
-            document.getElementById('rv-rate').innerText = price;
-            document.getElementById('rv-supply').innerText = amount;
-            document.getElementById('rv-supply-etb').innerText = `≈ ${totalEtb} ETB`;
-            document.getElementById('rv-limit-min').innerText = minLimit;
-            document.getElementById('rv-limit-max').innerText = maxLimit;
-            document.getElementById('rv-verification').innerText = verLevel;
-
-            const badge = document.getElementById('rv-trade-badge');
-            const confirmBtn = document.getElementById('final-confirm-btn');
-            if(currentTradeType === 'buy') {
-                badge.className = 'review-type-badge buy';
-                badge.innerHTML = '<i class="fa-solid fa-arrow-down"></i> Buy USDT';
-                confirmBtn.style.backgroundColor = 'var(--green-color)';
-            } else {
-                badge.className = 'review-type-badge sell';
-                badge.innerHTML = '<i class="fa-solid fa-arrow-up"></i> Sell USDT';
-                confirmBtn.style.backgroundColor = 'var(--red-color)';
-            }
-
-            const pmListContainer = document.getElementById('rv-pm-list');
-            pmListContainer.innerHTML = '';
-            
-            document.querySelectorAll('input[name="payment_methods"]:checked').forEach(checkbox => {
-                const cardLabel = checkbox.closest('label');
-                const bankTitle = cardLabel.querySelector('div > div:first-child');
-                const pmName = bankTitle ? bankTitle.innerText.replace('Default', '').trim() : 'Bank Transfer';
-                pmListContainer.innerHTML += `<div class="review-pm-pill"><i class="fa-regular fa-circle-check"></i> ${pmName}</div>`;
-            });
-
-            document.getElementById('review-modal').style.display = 'block';
-            document.body.style.overflow = 'hidden'; 
-        }
-
-        function closeReviewModal() {
-            document.getElementById('review-modal').style.display = 'none';
-            document.body.style.overflow = 'auto';
-        }
-
-        document.getElementById('final-confirm-btn').addEventListener('click', async function() {
-            const btn = this;
-            const originalText = btn.innerHTML;
-            
-            const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
-            if (!token) {
-                alert("Please login first.");
-                return;
-            }
-
-            const price = parseFloat(document.getElementById('price-input').value);
-            const amount = parseFloat(document.getElementById('total-amount-input').value);
-            const minLimit = parseFloat(document.getElementById('min-etb-input').value);
-            const maxLimit = parseFloat(document.getElementById('max-etb-input').value);
-            const terms = document.querySelector('textarea').value;
-            const verLevel = document.querySelector('input[name="ver_level"]:checked') ? document.querySelector('input[name="ver_level"]:checked').value : "Anyone (no restriction)";
-            
-            const selectedPayments = Array.from(document.querySelectorAll('input[name="payment_methods"]:checked')).map(cb => {
-                const cardLabel = cb.closest('label');
-                const bankTitle = cardLabel.querySelector('div > div:first-child');
-                return bankTitle ? bankTitle.innerText.replace('Default', '').trim() : 'Bank Transfer';
-            });
-
-            const adData = {
-                tradeType: currentTradeType, 
-                price: price,
-                totalAmount: amount,
-                minLimit: minLimit,
-                maxLimit: maxLimit,
-                paymentMethods: selectedPayments,
-                verificationLevel: verLevel,
-                termsConditions: terms
-            };
-
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Posting...';
-            btn.disabled = true;
-
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/ads`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify(adData)
-                });
-
-                if (response.ok) {
-                    // ⚡ የማርኬት ካሽን ወዲያውኑ ማጽዳት (አዲሱ ፖስት በ 0.00s ማርኬት ላይ እንዲታይ!) ⚡
-                    clearMarketAdsCacheNow();
-                    closeReviewModal();
-                    if (currentTradeType === 'buy') {
-                        window.location.href = 'market.html?tab=sell';
-                    } else {
-                        window.location.href = 'market.html?tab=buy';
-                    }
-                } else {
-                    const errData = await response.json();
-                    alert("Error posting ad: " + (errData.message || "Please try again."));
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                }
-            } catch (error) {
-                console.error("Post Ad Error:", error);
-                alert("Network error. Please check your connection.");
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            }
-        });
-
-        function filterAds(status, element) {
-            document.querySelectorAll('#content-my-ads .sub-tab').forEach(tab => tab.classList.remove('active'));
-            element.classList.add('active');
-            
-            currentStatusFilter = status;
-            renderAdsTable();
-        }
-
-        async function loadUserAds() {
-            const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
-            if (!token) return;
-
-            const emptyStateDiv = document.getElementById('empty-state-div');
-            
-            if(emptyStateDiv && allUserAds.length === 0) {
-                emptyStateDiv.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin" style="font-size: 30px; margin-bottom: 15px; color: var(--accent-color);"></i><br><p style="color: var(--text-muted); font-size: 13px;">Loading your ads...</p>';
-                emptyStateDiv.style.display = 'block';
-            }
-
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/ads/my?t=${Date.now()}`, {
-                    headers: { 'Authorization': `Bearer ${token}` },
-                    cache: 'no-store'
-                });
-                const json = await res.json();
-                
-                if (json.success && json.ads) {
-                    allUserAds = json.ads.map(ad => {
-                        // 0 USDT የሆነ ማስታወቂያ 'active' ብሎ እንዳይቀር ወዲያውኑ 'cancelled' ማድረግ
-                        if (Number(ad.totalAmount || 0) <= 0.0001 && ad.status === 'active') {
-                            return { ...ad, status: 'cancelled', totalAmount: 0 };
-                        }
-                        return ad;
-                    });
-                } else {
-                    allUserAds = [];
-                }
-                renderAdsTable();
-            } catch (e) {
-                console.error("Load user ads error:", e);
-                if (emptyStateDiv) {
-                    emptyStateDiv.innerHTML = `<p style="color: var(--red-color);">Error loading ads. Please refresh.</p>`;
-                }
-            }
-        }
-
-        function renderAdsTable() {
-            const container = document.getElementById('ads-list-container');
-            const emptyStateDiv = document.getElementById('empty-state-div');
-
-            let adsToRender = allUserAds;
-            if (currentStatusFilter !== 'all') {
-                adsToRender = allUserAds.filter(ad => {
-                    let adStatus = ad.status || 'active';
-                    return adStatus.toLowerCase() === currentStatusFilter.toLowerCase();
-                });
-            }
-
-            if (adsToRender.length > 0) {
-                let tableHTML = `
-                <div class="p2p-table-card" style="margin-top: 20px; background: transparent; border: none;">
-                    <table style="width: 100%; border-collapse: collapse; text-align: left; color: #fff;">
-                        <thead>
-                            <tr style="border-bottom: 1px solid var(--border-color); font-size: 11px; color: var(--text-muted);">
-                                <th style="padding: 15px; font-weight: 600;">TYPE</th>
-                                <th style="padding: 15px; font-weight: 600;">PRICE</th>
-                                <th style="padding: 15px; font-weight: 600;">AVAILABLE / TOTAL</th>
-                                <th style="padding: 15px; font-weight: 600;">LIMITS</th>
-                                <th style="padding: 15px; font-weight: 600;">PAYMENT</th>
-                                <th style="padding: 15px; font-weight: 600;">STATUS</th>
-                                <th style="padding: 15px; font-weight: 600;">DATE</th>
-                                <th style="padding: 15px; text-align: right; font-weight: 600;"></th>
-                            </tr>
-                        </thead>
-                        <tbody>`;
-
-                adsToRender.forEach(ad => {
-                    const isBuy = ad.tradeType === 'buy';
-                    const typeColor = isBuy ? 'var(--green-color)' : 'var(--red-color)';
-                    const typeBg = isBuy ? 'rgba(14,203,129,0.1)' : 'rgba(246,70,93,0.1)';
-                    const typeText = isBuy ? 'BUY' : 'SELL';
-                    
-                    const dateStr = new Date(ad.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                    
-                    let payMethods = ad.paymentMethods || ['Telebirr'];
-                    if (typeof payMethods === 'string') {
-                        try { payMethods = JSON.parse(payMethods); } catch(e) { payMethods = [payMethods]; }
-                    }
-                    if (!Array.isArray(payMethods)) payMethods = [payMethods];
-                    const payList = payMethods.join('<br>');
-
-                    const isCancelled = ad.status === 'cancelled' || ad.status === 'completed' || Number(ad.totalAmount || 0) <= 0.0001;
-
-                    const statusBadge = isCancelled
-                        ? `<span style="background: rgba(255,255,255,0.1); color: var(--text-muted); padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">Cancelled</span>`
-                        : `<span style="background: rgba(14,203,129,0.1); color: var(--green-color); padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">Active</span>`;
-
-                    let actionMenu = '';
-                    if (!isCancelled) {
-                        actionMenu = `
-                            <div onclick="boostAd('${ad._id}')" style="padding: 10px 16px; font-size: 13px; cursor: pointer; color: #fff; display: flex; align-items: center; transition: 0.2s;" onmouseover="this.style.background='#2b313a'" onmouseout="this.style.background='transparent'">
-                                <i class="fa-solid fa-bolt" style="color: var(--accent-color); margin-right: 10px; width: 14px; text-align: center;"></i> Boost Ad
-                            </div>
-                            <div style="height: 1px; background: #2b313a; margin: 4px 0;"></div>
-                            <div onclick="pauseAd('${ad._id}')" style="padding: 10px 16px; font-size: 13px; cursor: pointer; color: #fff; display: flex; align-items: center; transition: 0.2s;" onmouseover="this.style.background='#2b313a'" onmouseout="this.style.background='transparent'">
-                                <i class="fa-solid fa-pause" style="margin-right: 10px; width: 14px; text-align: center; color: var(--text-muted);"></i> Pause Ad
-                            </div>
-                            <div onclick="cancelAd('${ad._id}')" style="padding: 10px 16px; font-size: 13px; cursor: pointer; color: var(--red-color); display: flex; align-items: center; transition: 0.2s;" onmouseover="this.style.background='#2b313a'" onmouseout="this.style.background='transparent'">
-                                <i class="fa-solid fa-xmark" style="margin-right: 10px; width: 14px; text-align: center;"></i> Cancel Ad
-                            </div>
-                        `;
-                    } else {
-                        actionMenu = `
-                            <div style="padding: 10px 16px; font-size: 13px; color: var(--text-muted); text-align: center;">
-                                No actions available
-                            </div>
-                        `;
-                    }
-
-                    tableHTML += `
-                            <tr style="border-bottom: 1px solid #14151a; font-size: 13px; transition: background 0.2s; ${isCancelled ? 'opacity: 0.5;' : ''}" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
-                                <td style="padding: 20px 15px;">
-                                    <span style="color: ${typeColor}; background: ${typeBg}; padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 11px;">${typeText}</span>
-                                </td>
-                                <td style="padding: 20px 15px; font-weight: 700; color: ${typeColor}; font-size: 15px;">
-                                    ${Number(ad.price || 0).toFixed(2)}<br>
-                                    <span style="font-size: 11px; color: var(--text-muted); font-weight: 400;">ETB / USDT</span>
-                                </td>
-                                <td style="padding: 20px 15px; font-weight: 600;">
-                                    ${Number(ad.totalAmount || 0).toLocaleString('en-US')} USDT<br>
-                                    <span style="font-size: 11px; color: var(--text-muted); font-weight: 400;">of ${Number(ad.totalAmount || 0).toLocaleString('en-US')} USDT</span>
-                                </td>
-                                <td style="padding: 20px 15px; font-weight: 500;">
-                                    ${Number(ad.minLimit || 0).toLocaleString('en-US')} - ${Number(ad.maxLimit || 0).toLocaleString('en-US')}<br>
-                                    <span style="font-size: 11px; color: var(--text-muted); font-weight: 400;">ETB</span>
-                                </td>
-                                <td style="padding: 20px 15px; font-size: 12px; line-height: 1.6; color: #ccc;">
-                                    ${payList}
-                                </td>
-                                <td style="padding: 20px 15px;">
-                                    ${statusBadge}
-                                </td>
-                                <td style="padding: 20px 15px; color: var(--text-muted); font-size: 12px;">
-                                    ${dateStr}
-                                </td>
-                                <td style="padding: 20px 15px; text-align: right; position: relative;">
-                                    <button onclick="toggleActionMenu('${ad._id}', event)" style="background: #1e2026; border: 1px solid var(--border-color); color: #fff; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; float: right; transition: 0.2s;" onmouseover="this.style.background='#2b313a'" onmouseout="this.style.background='#1e2026'">
-                                        <i class="fa-solid fa-ellipsis"></i>
-                                    </button>
-                                    
-                                    <div id="menu-${ad._id}" class="action-dropdown" style="display: none; position: absolute; right: 15px; top: 55px; background: #181a20; border: 1px solid #2b313a; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); z-index: 100; width: 160px; text-align: left; padding: 8px 0; overflow: hidden;">
-                                        ${actionMenu}
-                                    </div>
-                                </td>
-                            </tr>`;
-                });
-
-                tableHTML += `</tbody></table></div>`;
-                
-                const existingTable = container.querySelector('.p2p-table-card');
-                if (existingTable) existingTable.remove();
-                
-                if (emptyStateDiv) emptyStateDiv.style.display = 'none';
-                container.insertAdjacentHTML('beforeend', tableHTML);
-            } else {
-                const existingTable = container.querySelector('.p2p-table-card');
-                if (existingTable) existingTable.remove();
-
-                if (emptyStateDiv) {
-                    emptyStateDiv.style.display = 'block';
-                    if (allUserAds.length === 0) {
-                        emptyStateDiv.innerHTML = `
-                            <i class="fa-regular fa-clipboard" style="font-size: 40px; color: #2b313a; margin-bottom: 20px;"></i>
-                            <h3 style="margin: 0 0 10px 0; font-size: 16px; color: #fff;">No ads yet</h3>
-                            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">Post your first P2P trade offer</p>
-                            <button class="btn-small" onclick="openPostOrderForm()">
-                                <i class="fa-solid fa-plus" style="font-size: 10px;"></i> Post an Ad
-                            </button>`;
-                    } else {
-                        emptyStateDiv.innerHTML = `
-                            <i class="fa-regular fa-folder-open" style="font-size: 40px; color: #2b313a; margin-bottom: 20px;"></i>
-                            <h3 style="margin: 0 0 10px 0; font-size: 16px; color: #fff; text-transform: capitalize;">No ${currentStatusFilter} ads</h3>
-                            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">You don't have any ${currentStatusFilter} trade offers right now.</p>
-                        `;
-                    }
-                }
-            }
-        }
-
-        function toggleActionMenu(id, event) {
-            event.stopPropagation();
-            document.querySelectorAll('.action-dropdown').forEach(m => {
-                if (m.id !== `menu-${id}`) m.style.display = 'none';
-            });
-            const menu = document.getElementById(`menu-${id}`);
-            if (menu) {
-                menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
-            }
-        }
-
-        document.addEventListener('click', function() {
-            document.querySelectorAll('.action-dropdown').forEach(m => m.style.display = 'none');
-        });
-
-        function showCustomConfirm() {
-            document.getElementById('custom-confirm-modal').classList.add('show');
-            return new Promise((resolve) => {
-                confirmResolve = resolve;
-            });
-        }
-
-        function handleConfirmResult(result) {
-            document.getElementById('custom-confirm-modal').classList.remove('show');
-            if (confirmResolve) {
-                confirmResolve(result);
-                confirmResolve = null;
-            }
-        }
-
-        // ⚡ ማስታወቂያ Cancel ሲደረግ በ 0.00s በገጹ ላይም በማርኬት ላይም ወዲያውኑ እንዲጠፋ ማድረግ ⚡
-        async function cancelAd(id) {
-            const confirmed = await showCustomConfirm();
-            if (!confirmed) return;
-
-            // 1. ወዲያውኑ በ 0.00 ሰከንድ በስክሪኑ ላይ Cancelled ማድረግና የማርኬት ካሽ ማጽዳት
-            allUserAds = allUserAds.map(ad => {
-                if (String(ad._id) === String(id)) {
-                    return { ...ad, status: 'cancelled', totalAmount: 0 };
-                }
-                return ad;
-            });
-            renderAdsTable();
-            clearMarketAdsCacheNow();
-            
-            const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/ads/${id}/cancel`, {
-                    method: 'PUT',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                
-                if (response.ok) {
-                    clearMarketAdsCacheNow();
-                    await loadUserAds();
-                    // የተመለሰውን USDT ወዲያውኑ በ Available Balance ላይ ማዘመን
-                    fetch(`${API_BASE_URL}/api/user/profile?t=${Date.now()}`, {
-                        headers: { "Authorization": `Bearer ${token}` }
-                    }).then(r => r.json()).then(res => {
-                        if (res && res.success && res.user) {
-                            userAvailableBalance = res.user.balance || 0;
-                            updateBalanceDisplay();
-                        }
-                    }).catch(() => {});
-                } else {
-                    alert("Failed to cancel ad.");
-                    loadUserAds();
-                }
-            } catch(e) {
-                console.error("Cancel Error:", e);
-            }
-        }
-
-        function pauseAd(id) {
-            alert("Ad paused.");
-        }
-
-        function boostAd(id) {
-            alert("Ad boosted successfully!");
-        }
-
-        async function initPage() {
-            clearMarketAdsCacheNow();
-            loadUserAds(); 
-            
-            const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
-            if (token) {
-                fetch(`${API_BASE_URL}/api/user/profile?t=${new Date().getTime()}`, {
-                    headers: { "Authorization": `Bearer ${token}` }
-                }).then(res => res.json()).then(result => {
-                    if (result.success) {
-                        const userData = result.user || result;
-                        userAvailableBalance = userData.balance || 0;
-                        userKycStatus = userData.kycStatus || userKycStatus;
-                        localStorage.setItem('kycStatus', userKycStatus);
-                    }
-                }).catch(e => console.error(e));
-            }
-            
-            loadPaymentMethods();
-
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('action') === 'create') {
-                openPostOrderForm();
-            } else {
-                switchView('view-main-ads');
-            }
-        }
-
-        async function loadPaymentMethods() {
-            const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("access_token");
-            if (!token) {
-                renderEmptyPaymentState();
-                return;
-            }
-
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/user/payments?t=${new Date().getTime()}`, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                if (res.ok) {
-                    const data = await res.json();
-                    userPaymentMethods = data.payments || data || []; 
-                    localStorage.setItem("user_payment_methods", JSON.stringify(userPaymentMethods));
-
-                    if(userPaymentMethods.length === 0) {
-                        renderEmptyPaymentState();
-                    } else {
-                        renderPaymentMethods();
-                    }
-                } else {
-                    fallbackToLocalStorage();
-                }
-            } catch (error) {
-                console.error("Failed to fetch payment methods:", error);
-                fallbackToLocalStorage();
-            }
-        }
-
-        function fallbackToLocalStorage() {
-            const stored = localStorage.getItem("user_payment_methods");
-            if (stored) {
-                try {
-                    userPaymentMethods = JSON.parse(stored);
-                } catch(e) {
-                    userPaymentMethods = [];
-                }
-            } else {
-                userPaymentMethods = [];
-            }
-
-            if (userPaymentMethods.length === 0) {
-                renderEmptyPaymentState();
-            } else {
-                renderPaymentMethods();
-            }
-        }
-
-        function renderEmptyPaymentState() {
-            userPaymentMethods = [];
-            const listContainer = document.getElementById('payment-methods-list');
-            const noPaymentDiv = document.getElementById('no-payment-methods');
-            if(listContainer) {
-                listContainer.innerHTML = '';
-                listContainer.style.display = 'none';
-            }
-            if(noPaymentDiv) {
-                noPaymentDiv.style.display = 'block';
-            }
-            checkOverallValidity();
-        }
-
-        function renderPaymentMethods() {
-            const listContainer = document.getElementById('payment-methods-list');
-            const noPaymentDiv = document.getElementById('no-payment-methods');
-            if(!listContainer) return;
-            listContainer.innerHTML = '';
-
-            if (!userPaymentMethods || userPaymentMethods.length === 0) {
-                renderEmptyPaymentState();
-                return;
-            }
-
-            listContainer.style.display = 'block';
-            if(noPaymentDiv) noPaymentDiv.style.display = 'none';
-
-            userPaymentMethods.forEach((method, index) => {
-                const isChecked = 'checked'; 
-                const defaultBadge = method.isDefault ? `<span style="background: rgba(14, 203, 129, 0.15); color: var(--green-color); font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">Default</span>` : '';
-                const bankName = method.type || method.bankName || "Bank";
-                const accountName = method.name || method.fullName || "Account Name";
-                const accNumber = method.account || method.accountNumber || "00000";
-
-                const cardHTML = `
-                    <label class="pm-card" style="margin-bottom: 10px; display: flex; align-items: flex-start; gap: 12px; cursor: pointer; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px;">
-                        <input type="checkbox" name="payment_methods" value="${method._id || index}" ${isChecked} onchange="checkOverallValidity()" style="margin-top: 3px; accent-color: var(--green-color); width: 14px; height: 14px; cursor: pointer;">
-                        <div>
-                            <div style="font-size: 14px; font-weight: 700; margin-bottom: 4px; color: #fff; display: flex; align-items: center;">
-                                ${bankName} ${defaultBadge}
-                            </div>
-                            <div style="font-size: 12px; color: var(--text-muted);">${accountName}</div>
-                            <div style="font-size: 12px; color: var(--text-muted);">${accNumber}</div>
-                        </div>
-                    </label>
-                `;
-                listContainer.innerHTML += cardHTML;
-            });
-            checkOverallValidity();
-        }
-
-        window.addEventListener('DOMContentLoaded', initPage);
-    </script>
+    <script src="my-ads.js?v=1"></script>
 </body>
 </html>
