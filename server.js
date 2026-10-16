@@ -2127,16 +2127,16 @@ app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
         const statsPayload = {
             totalUsers,
             kycPending: kycPendingFromKyc,
-            onMarket: onMarketLockedUsdt,
+            onMarket: Number(onMarketLockedUsdt.toFixed(1)),
             livePosts,
             totalTrades,
-            activeEscrow: activeEscrowUsdt,
-            totalVolume: totalP2pUsdt,
-            todayVolume: todayP2pUsdt,
-            totalFeeEarned: totalFeeUsdt,
-            todayFeeEarned: todayFeeUsdt,
-            totalTradeFee: totalFeeUsdt,     // ለተለያየ የ Frontend ስያሜ 
-            todayTradeFee: todayFeeUsdt
+            activeEscrow: Number(activeEscrowUsdt.toFixed(1)),
+            totalVolume: Number(totalP2pUsdt.toFixed(1)),
+            todayVolume: Number(todayP2pUsdt.toFixed(1)),
+            totalFeeEarned: Number(totalFeeUsdt.toFixed(1)),
+            todayFeeEarned: Number(todayFeeUsdt.toFixed(1)),
+            totalTradeFee: Number(totalFeeUsdt.toFixed(1)),
+            todayTradeFee: Number(todayFeeUsdt.toFixed(1))
         };
 
         res.json({
