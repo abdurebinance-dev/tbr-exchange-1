@@ -1,3 +1,15 @@
+// 🚀 የድሮ ዩዘሮችን በሙሉ ጠራርጎ የሚያስወጣ እና የሚያጸዳ ኮድ (Force Logout All Users) 🚀
+const CURRENT_APP_VERSION = "2.0";
+if (localStorage.getItem("tbr_app_version") !== CURRENT_APP_VERSION) {
+    // የድሮ ቶከኖችን በሙሉ ጠራርጎ ያጠፋል!
+    localStorage.clear();
+    sessionStorage.clear();
+    // አዲሱን ቨርዥን ያስቀምጣል
+    localStorage.setItem("tbr_app_version", CURRENT_APP_VERSION);
+    // ወደ ሎጊን ፔጅ በግድ እንዲመለስ ፔጁን ሪፍሬሽ ያደርገዋል
+    window.location.reload(true);
+}
+
 const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
     ? 'http://localhost:5000'
     : 'https://tbr-exchange-backend.onrender.com';
