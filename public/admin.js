@@ -1,7 +1,9 @@
 const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
     ? 'http://localhost:5000'
     : 'https://tbr-exchange-backend.onrender.com';
-const getToken = () => localStorage.getItem('adminToken') || localStorage.getItem('token') || '';
+
+// 🛑 1. የተስተካከለ፡ localStorage ወደ sessionStorage ተቀይሯል! የዩዘር 'token' እንዳይሰራ ተደርጓል! 🛑
+const getToken = () => sessionStorage.getItem('adminToken') || '';
 
 const ESCROW_CACHE_KEY = 'tbr_admin_escrow_v2';
 const USERS_CACHE_KEY = 'tbr_admin_users_v2';
@@ -23,25 +25,25 @@ function resolveImgUrl(raw) {
 
 // 🚀 1. Event Listeners for Login & Navigation 🚀
 document.addEventListener('DOMContentLoaded', async () => {
+    // 🛑 2. የተስተካከለ፡ የድሮውን አደገኛ የ localStorage ቶከን ከብራውዘሩ ላይ ማጥፊያ 🛑
+    localStorage.removeItem('adminToken');
+
     const overlay = document.getElementById('loginOverlay');
     const dash = document.getElementById('mainDashboard');
     const currentToken = getToken();
 
-    // 🛑 አዲሱ ጥብቅ ሴኪዩሪቲ (Strict Admin Verification) 🛑
+    // 🛑 ጥብቅ ሴኪዩሪቲ (Strict Admin Verification) 🛑
     if (currentToken) {
         try {
-            // እውነተኛ አድሚን መሆኑን ባክኤንዱን ይጠይቃል
             const checkAdmin = await fetch(`${API_BASE}/api/admin/stats`, {
                 headers: { 'Authorization': 'Bearer ' + currentToken }
             });
             
             if (checkAdmin.ok) {
-                // አድሚን መሆኑ ከተረጋገጠ ብቻ ዳሽቦርዱ ይከፈታል
                 if(overlay) overlay.style.display = 'none';
                 if(dash) dash.style.display = 'block';
                 initAdminDataFast();
             } else {
-                // ተራ ዩዘር ከሆነ የሎጊን ፔጁ ላይ ያግደዋል!
                 if(overlay) overlay.style.display = 'flex'; 
                 if(dash) dash.style.display = 'none';
             }
@@ -54,7 +56,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         if(dash) dash.style.display = 'none';
     }
 
-    // Login Button Event Listener
     const loginBtn = document.getElementById('loginBtn');
     if (loginBtn) {
         loginBtn.addEventListener('click', (e) => {
@@ -63,7 +64,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Add enter key support for login
     const loginPassInput = document.getElementById('loginPassword');
     if (loginPassInput) {
         loginPassInput.addEventListener('keypress', function (e) {
@@ -79,8 +79,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         userSearch.addEventListener('focus', function() { this.removeAttribute('readonly'); });
         userSearch.addEventListener('keyup', filterUsersTable);
     }
-
-    // ... (ከዚህ በታች ያለው document.body.addEventListener እንዳለ ይቀጥላል)
 
     document.body.addEventListener('click', async (e) => {
         const target = e.target;
@@ -246,7 +244,9 @@ async function adminLogin() {
         const data = await res.json();
         
         if (res.ok && data.success) {
-            localStorage.setItem('adminToken', data.token);
+            // 🛑 3. የተስተካከለ፡ አዲሱ ቶከን የሚቀመጠው sessionStorage ላይ ብቻ ነው 🛑
+            sessionStorage.setItem('adminToken', data.token);
+            
             const overlay = document.getElementById('loginOverlay');
             const dash = document.getElementById('mainDashboard');
             if(overlay) overlay.style.display = 'none';
@@ -270,7 +270,8 @@ async function adminLogin() {
 }
 
 function logoutAdmin() {
-    localStorage.removeItem('adminToken');
+    // 🛑 4. የተስተካከለ፡ መውጫ ላይ sessionStorage ሙሉ በሙሉ ይጠፋል 🛑
+    sessionStorage.removeItem('adminToken');
     sessionStorage.clear();
     location.reload();
 }
@@ -690,7 +691,7 @@ function openDisputeEvidenceModal(idx) {
                 </div>
                 <div style="overflow-y:auto; max-height:400px; padding-right:4px;">
                     <h4 style="margin:0 0 8px 0; font-size:13px; color:#f0b90b;">Full Chat History</h4>
-                    ${chatHtml}
+                    <div style="padding-bottom:10px;">${chatHtml}</div>
                 </div>
             </div>
         </div>
@@ -1042,7 +1043,8 @@ async function fetchLivePostsForAdmin() {
     tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 30px; color: #f0b90b;">Loading active posts...</td></tr>';
     
     try {
-        const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
+        // 🛑 5. የተስተካከለ፡ አድሚን ቶከንን ብቻ እንዲጠቀም ተደርጓል 🛑
+        const token = getToken();
         const response = await fetch(`${API_BASE}/api/ads`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -1083,7 +1085,8 @@ async function adminDeleteAd(adId) {
     }
     
     try {
-        const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
+        // 🛑 6. የተስተካከለ፡ አድሚን ቶከንን ብቻ እንዲጠቀም ተደርጓል 🛑
+        const token = getToken();
         const response = await fetch(`${API_BASE}/api/ads/${adId}/cancel`, {
             method: 'PUT',
             headers: {
@@ -1118,7 +1121,8 @@ async function editAdminUserBalance(userId, currentBalance) {
     if (!confirm(`Are you sure you want to CHANGE this user's balance to ${numericBal} USDT?`)) return;
 
     try {
-        const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
+        // 🛑 7. የተስተካከለ፡ አድሚን ቶከንን ብቻ እንዲጠቀም ተደርጓል 🛑
+        const token = getToken();
         const response = await fetch(`${API_BASE}/api/admin/update-user-balance`, {
             method: 'POST',
             headers: {
@@ -1230,7 +1234,8 @@ async function rejectWithdrawal(txId, amount) {
 
 async function loadDeposits() {
     try {
-        const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
+        // 🛑 8. የተስተካከለ፡ አድሚን ቶከንን ብቻ እንዲጠቀም ተደርጓል 🛑
+        const token = getToken();
         const res = await fetch(`${API_BASE}/api/admin/deposits`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
