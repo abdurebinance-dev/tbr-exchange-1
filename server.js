@@ -2061,17 +2061,15 @@ app.post('/api/admin/assign-role', verifyAdmin, async (req, res) => {
     }
 });
 
-// --- 🔥 Admin Main Stats API (RESTORED HISTORICAL FEES) 🔥 ---
+// --- Admin Main Stats API ---
 app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
     try {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
 
-        const [totalUsers, kycPendingFromKyc, kycPendingFromUsers, activeAds, completedTrades, activeEscrowTrades] = await Promise.all([
+        const [totalUsers, kycPendingFromKyc, activeAds, completedTrades, activeEscrowTrades] = await Promise.all([
             User.countDocuments({}),
             KYC.countDocuments({ status: { $in: ['pending', 'under_review', 'submitted', 'Pending', ''] } }),
-            User.countDocuments({ kycStatus: { $in: ['pending', 'under_review', 'submitted'] } }),
             Ad.find({ status: 'active', totalAmount: { $gt: 0.0001 } }).select('tradeType totalAmount').lean(),
-            // 🔥 ማስተካከያ 1: የድሮ ትሬዶችን ፐርሰንት ለማስላት `feePercent` ከዳታቤዝ እንዲመጣ ተደርጓል
             Trade.find({ status: { $in: ['completed', 'Completed', 'released', 'Released', 'resolved'] } })
                 .select('usdtAmount amount netUsdt buyerFeeUsdt sellerFeeUsdt totalPlatformFeeUsdt feeUsdt feePercent createdAt updatedAt')
                 .lean(),
@@ -2079,8 +2077,6 @@ app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
                 .select('usdtAmount sellerTotalDeductedUsdt amount')
                 .lean()
         ]);
-
-        const kycPending = kycPendingFromKyc;
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -2100,12 +2096,7 @@ app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
             let exactSavedFee = 0;
             if (tr.totalPlatformFeeUsdt !== undefined && Number(tr.totalPlatformFeeUsdt) > 0) {
                 exactSavedFee = Number(tr.totalPlatformFeeUsdt);
-            } else if ((tr.buyerFeeUsdt !== undefined && Number(tr.buyerFeeUsdt) > 0) || (tr.sellerFeeUsdt !== undefined && Number(tr.sellerFeeUsdt) > 0)) {
-                exactSavedFee = Number(tr.buyerFeeUsdt || 0) + Number(tr.sellerFeeUsdt || 0);
-            } else if (tr.feeUsdt !== undefined && Number(tr.feeUsdt) > 0) {
-                exactSavedFee = Number(tr.feeUsdt);
             } else {
-                // 🔥 ማስተካከያ 2: ከዚህ በፊት የተሰሩ አሮጌ ትሬዶች ፊው (Fee) ዳታቤዝ ላይ ከሌለ ራሱ ያሰላዋል (የጠፋው 0.2641 ይመለሳል)
                 const feePct = tr.feePercent !== undefined ? Number(tr.feePercent) : 0.5;
                 const buyerF = Number((amt * (feePct / 100)).toFixed(6));
                 const sellerF = Number((amt * (feePct / 100)).toFixed(6));
@@ -2113,7 +2104,6 @@ app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
             }
 
             totalFeeUsdt += exactSavedFee;
-
             const tradeDate = tr.updatedAt ? new Date(tr.updatedAt) : new Date(tr.createdAt);
             if (tradeDate >= today) {
                 todayP2pUsdt += amt;
@@ -2122,8 +2112,7 @@ app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
         });
 
         activeEscrowTrades.forEach(tr => {
-            const lockedAmt = Number(tr.usdtAmount || tr.sellerTotalDeductedUsdt || tr.amount || 0);
-            activeEscrowUsdt += lockedAmt;
+            activeEscrowUsdt += Number(tr.usdtAmount || tr.sellerTotalDeductedUsdt || tr.amount || 0);
         });
 
         const livePosts = activeAds.length;
@@ -2134,28 +2123,29 @@ app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
             }
         });
 
+        // ንጹህ ቁጥሮች ብቻ ወደ Frontend ይላካሉ
         const statsPayload = {
             totalUsers,
-            kycPending,
-            onMarket: `${Number(onMarketLockedUsdt.toFixed(2)).toLocaleString('en-US')} USDT`,
+            kycPending: kycPendingFromKyc,
+            onMarket: onMarketLockedUsdt,
             livePosts,
             totalTrades,
-            activeEscrow: `${Number(activeEscrowUsdt.toFixed(2)).toLocaleString('en-US')} USDT`,
-            totalVolume: `${Number(totalP2pUsdt.toFixed(2)).toLocaleString('en-US')} USDT`,
-            todayVolume: `${Number(todayP2pUsdt.toFixed(2)).toLocaleString('en-US')} USDT`,
-            totalFeeEarned: `${Number(totalFeeUsdt.toFixed(4)).toLocaleString('en-US', { maximumFractionDigits: 4 })} USDT`,
-            todayFeeEarned: `${Number(todayFeeUsdt.toFixed(4)).toLocaleString('en-US', { maximumFractionDigits: 4 })} USDT`
+            activeEscrow: activeEscrowUsdt,
+            totalVolume: totalP2pUsdt,
+            todayVolume: todayP2pUsdt,
+            totalFeeEarned: totalFeeUsdt,
+            todayFeeEarned: todayFeeUsdt,
+            totalTradeFee: totalFeeUsdt,     // ለተለያየ የ Frontend ስያሜ 
+            todayTradeFee: todayFeeUsdt
         };
 
         res.json({
             success: true,
             data: statsPayload,
             stats: statsPayload,
-            activeSessions: activeSessionsList,
             ...statsPayload
         });
     } catch (error) {
-        console.error("Stats Error:", error);
         res.status(500).json({ success: false, message: 'Error fetching stats' });
     }
 });
