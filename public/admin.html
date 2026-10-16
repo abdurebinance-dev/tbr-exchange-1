@@ -154,13 +154,15 @@
                     <div class="stat-icon icon-gold"><i class="fa-solid fa-shield-halved"></i></div>
                 </div>
 
-                <div class="stat-card">
-                    <div>
-                        <div class="label">Live Posts</div>
-                        <div class="value" id="statLivePosts" style="color: var(--green);">0</div>
-                    </div>
-                    <div class="stat-icon icon-green"><i class="fa-solid fa-bullhorn"></i></div>
-                </div>
+                <div class="stat-card" onclick="openLivePostsModal()" style="cursor: pointer;" title="Click to view all live posts">
+    <div>
+        <div class="stat-title">LIVE POSTS</div>
+        <div class="stat-value" id="livePosts" style="color: #0ecb81;">0</div>
+    </div>
+    <div class="stat-icon" style="background: rgba(14, 203, 129, 0.1); color: #0ecb81;">
+        <i class="fa-solid fa-bullhorn"></i>
+    </div>
+</div>
 
                 <div class="stat-card" id="livePostsCard" style="cursor: pointer;">
                     <h3>LIVE POSTS</h3>

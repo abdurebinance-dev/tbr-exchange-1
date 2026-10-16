@@ -1445,3 +1445,74 @@ async function removeAdminSession(sessionId) {
         openDevicesModal();
     } catch (e) {}
 }
+
+// ፖፕአፑን ከፍቶ የላይቭ ፖስቶቹን ዝርዝር የሚያሳየው ፈንክሽን
+async function openLivePostsModal() {
+    let modal = document.getElementById('livePostsModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'livePostsModal';
+        modal.className = 'modal-overlay';
+        document.body.appendChild(modal);
+    }
+
+    modal.innerHTML = `
+        <div style="background:#151a21; border:1px solid #232d3f; border-radius:12px; max-width:650px; width:95%; padding:0; color:#fff; box-shadow: 0 20px 50px rgba(0,0,0,0.8); overflow: hidden;">
+            <div style="background:#18202a; padding:15px 20px; border-bottom:1px solid #232d3f; display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0; color:#0ecb81; font-size:16px;"><i class="fa-solid fa-bullhorn"></i> Active Live Posts (Market Ads)</h3>
+                <button id="closeLivePostsBtn" style="background:none; border:none; color:#848e9c; font-size:24px; cursor:pointer; line-height:1;">&times;</button>
+            </div>
+            <div id="livePostsListContainer" style="padding:20px; max-height:70vh; overflow-y:auto; text-align:left;">
+                <div style="text-align:center; color:#f0b90b; font-size:13px; padding: 20px 0;">
+                    <i class="fa-solid fa-circle-notch fa-spin"></i> Loading live market posts...
+                </div>
+            </div>
+        </div>
+    `;
+    modal.style.display = 'flex';
+
+    document.getElementById('closeLivePostsBtn').onclick = () => {
+        modal.style.display = 'none';
+    };
+
+    try {
+        const res = await fetch(`${API_BASE}/api/ads?t=${Date.now()}`, {
+            headers: { 'Authorization': 'Bearer ' + (typeof getToken === 'function' ? getToken() : '') }
+        });
+        const data = await res.json();
+        const ads = Array.isArray(data) ? data : (data.ads || data.data || []);
+        const activeAds = ads.filter(a => a.status === 'active' || a.totalAmount > 0);
+
+        const container = document.getElementById('livePostsListContainer');
+        if (activeAds.length === 0) {
+            container.innerHTML = '<p style="text-align:center; color:#848e9c;">No active live posts found.</p>';
+            return;
+        }
+
+        let html = '';
+        activeAds.forEach(ad => {
+            const isSell = ad.tradeType === 'sell';
+            const badgeColor = isSell ? '#f6465d' : '#0ecb81';
+            const typeLabel = isSell ? 'SELL' : 'BUY';
+
+            html += `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; border-bottom:1px solid #232d3f; background:#18202a; border-radius:8px; margin-bottom:8px;">
+                    <div>
+                        <span style="background:${badgeColor}; color:#fff; font-size:10px; font-weight:bold; padding:2px 6px; border-radius:4px; margin-right:6px;">${typeLabel}</span>
+                        <strong style="color:#e2e8f0; font-size:14px;">${ad.name || ad.email || 'Trader'}</strong>
+                        <div style="color:#848e9c; font-size:12px; margin-top:4px;">
+                            Price: <b style="color:#f0b90b;">${ad.price} ETB</b> • Limits: ${ad.minLimit} - ${ad.maxLimit} ETB
+                        </div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="color:#0ecb81; font-weight:bold; font-size:14px;">${Number(ad.totalAmount || 0).toFixed(1)} USDT</div>
+                        <div style="color:#848e9c; font-size:11px;">${(ad.paymentMethods || []).join(', ')}</div>
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    } catch (err) {
+        document.getElementById('livePostsListContainer').innerHTML = '<p style="color:#f6465d; text-align:center;">Failed to load live posts.</p>';
+    }
+}
