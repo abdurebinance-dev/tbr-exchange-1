@@ -21,7 +21,6 @@ function resolveImgUrl(raw) {
     return s;
 }
 
-// 🚀 1. All Initializations and Event Listeners bounded purely via JS 🚀
 document.addEventListener('DOMContentLoaded', () => {
     if (getToken()) {
         document.getElementById('loginOverlay').style.display = 'none';
@@ -29,7 +28,6 @@ document.addEventListener('DOMContentLoaded', () => {
         initAdminDataFast();
     }
 
-    // Bind Keyup Listeners
     document.getElementById('searchInput')?.addEventListener('keyup', filterTableData);
     const userSearch = document.getElementById('userSearchInput');
     if (userSearch) {
@@ -37,11 +35,9 @@ document.addEventListener('DOMContentLoaded', () => {
         userSearch.addEventListener('keyup', filterUsersTable);
     }
 
-    // 🚀 Global Click Event Delegation (This solves all CSP blocking issues) 🚀
     document.body.addEventListener('click', async (e) => {
         const target = e.target;
 
-        // --- AUTH & TABS ---
         if (target.closest('#loginBtn')) adminLogin();
         if (target.closest('#logoutBtn')) logoutAdmin();
         if (target.closest('#saveRatesBtn')) saveRates();
@@ -52,23 +48,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const kycBtn = target.closest('.kyc-tab-btn');
         if (kycBtn) loadKycData(kycBtn.dataset.targetStatus);
 
-        // --- STAT CARDS ---
         if (target.closest('#livePostsCard')) openLivePostsModal();
         if (target.closest('#completedTradesCard')) openCompletedTradesModal();
 
-        // --- DYNAMIC MODAL CLOSERS ---
         const closeBtn = target.closest('.close-modal-btn');
         if (closeBtn) {
             const modal = closeBtn.closest('.modal-overlay');
             if (modal) modal.style.display = 'none';
         }
 
-        // --- ZOOM IMAGES ---
         if (target.classList.contains('zoom-img')) {
             window.open(target.src);
         }
 
-        // --- KYC ACTIONS ---
         const viewDocBtn = target.closest('[data-action="view-doc"]');
         if (viewDocBtn) openKycModalByIndex(viewDocBtn.dataset.index);
 
@@ -78,7 +70,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const rejectKycBtn = target.closest('[data-action="reject-kyc"]');
         if (rejectKycBtn) performKycAction(rejectKycBtn.dataset.id, 'rejected');
 
-        // --- ESCROW ACTIONS ---
         const viewChatBtn = target.closest('[data-action="view-chat"]');
         if (viewChatBtn) openDisputeEvidenceModal(viewChatBtn.dataset.index);
 
@@ -88,7 +79,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const refundBtn = target.closest('[data-action="refund-escrow"]');
         if (refundBtn) resolveEscrow(refundBtn.dataset.id, 'refund', refundBtn.dataset.index);
 
-        // --- USERS ACTIONS ---
         const viewUserBtn = target.closest('[data-action="view-user"]');
         if (viewUserBtn) openUserDetailsModal(viewUserBtn.dataset.id);
 
@@ -101,14 +91,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const editBalBtn = target.closest('[data-action="edit-balance"]');
         if (editBalBtn) editAdminUserBalance(editBalBtn.dataset.id, editBalBtn.dataset.balance);
 
-        // --- WITHDRAWALS ACTIONS ---
         const appWithBtn = target.closest('[data-action="approve-with"]');
         if (appWithBtn) approveWithdrawal(appWithBtn.dataset.id, appWithBtn.dataset.amount);
 
         const rejWithBtn = target.closest('[data-action="reject-with"]');
         if (rejWithBtn) rejectWithdrawal(rejWithBtn.dataset.id, rejWithBtn.dataset.amount);
 
-        // --- LIVE POSTS ACTIONS ---
         const delAdBtn = target.closest('[data-action="delete-ad"]');
         if (delAdBtn) adminDeleteAd(delAdBtn.dataset.id);
     });
@@ -975,17 +963,13 @@ function openLivePostsModal() {
     fetchLivePostsForAdmin();
 }
 
-function closeLivePostsModal() {
-    document.getElementById('adminLivePostsModal').style.display = 'none';
-}
-
 async function fetchLivePostsForAdmin() {
     const tbody = document.getElementById('adminLivePostsTableBody');
     tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 30px; color: #f0b90b;">Loading active posts...</td></tr>';
     
     try {
         const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
-        const response = await fetch('/api/ads', {
+        const response = await fetch(`${API_BASE}/api/ads`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
@@ -1026,7 +1010,7 @@ async function adminDeleteAd(adId) {
     
     try {
         const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
-        const response = await fetch(`/api/ads/${adId}/cancel`, {
+        const response = await fetch(`${API_BASE}/api/ads/${adId}/cancel`, {
             method: 'PUT',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -1061,7 +1045,7 @@ async function editAdminUserBalance(userId, currentBalance) {
 
     try {
         const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
-        const response = await fetch('/api/admin/update-user-balance', {
+        const response = await fetch(`${API_BASE}/api/admin/update-user-balance`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -1173,7 +1157,7 @@ async function rejectWithdrawal(txId, amount) {
 async function loadDeposits() {
     try {
         const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
-        const res = await fetch('/api/admin/deposits', {
+        const res = await fetch(`${API_BASE}/api/admin/deposits`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
