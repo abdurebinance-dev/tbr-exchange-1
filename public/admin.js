@@ -84,12 +84,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         userSearch.addEventListener('keyup', filterUsersTable);
     }
 
-    // 🛑 ዋናው የተስተካከለው እዚህ ጋር ነው! (Event Listener) 🛑
+    // 🛑 Event Delegation for clicks 🛑
     document.body.addEventListener('click', async (e) => {
         const target = e.target;
         
         if (target.closest('#devicesBtn')) openDevicesModal();
-
         if (target.closest('#logoutBtn')) logoutAdmin();
         if (target.closest('#saveRatesBtn')) saveRates();
         
@@ -99,8 +98,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         const kycBtn = target.closest('.kyc-tab-btn');
         if (kycBtn) loadKycData(kycBtn.dataset.targetStatus);
 
-        if (target.closest('#livePostsCard')) openLivePostsModal();
-        if (target.closest('#completedTradesCard')) openCompletedTradesModal();
+        if (target.closest('#livePostsCard') || target.closest('.stat-card') && target.closest('.stat-card').querySelector('#statLivePosts')) {
+            openLivePostsModal();
+        }
+        if (target.closest('#completedTradesCard') || target.closest('.stat-card') && target.closest('.stat-card').querySelector('#statTotalTrades')) {
+            openCompletedTradesModal();
+        }
 
         const closeBtn = target.closest('.close-modal-btn');
         if (closeBtn) {
@@ -242,7 +245,6 @@ async function adminLogin() {
         loginBtn.disabled = true;
     }
 
-    // 🛑 አዲሱ Device የመለያ ኮድ 🛑
     const ua = navigator.userAgent;
     let deviceName = "Unknown Device";
     if (ua.includes("Windows")) deviceName = "Windows PC";
@@ -262,7 +264,7 @@ async function adminLogin() {
         const res = await fetch(`${API_BASE}/api/admin/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password, deviceInfo }) // መረጃው አብሮ ይላካል
+            body: JSON.stringify({ email, password, deviceInfo })
         });
         const data = await res.json();
         
@@ -314,28 +316,31 @@ function switchTab(tabId, tabElement) {
 }
 
 function formatUsdtOnly(val) {
-    if (!val) return '0 USDT';
-    return String(val).split('/')[0].trim();
+    if (!val) return '0';
+    return String(val).split('/')[0].replace('USDT', '').trim();
 }
 
 function applyStatsToDOM(data) {
     if (!data) return;
-    document.getElementById('statUserCount').innerText = data.totalUsers ?? 0;
-    document.getElementById('statKycCount').innerText = data.kycPending ?? 0;
-    document.getElementById('statOnMarket').innerText = formatUsdtOnly(data.onMarket);
-    document.getElementById('statLivePosts').innerText = data.livePosts ?? 0;
-    document.getElementById('livePostsCount').innerText = data.livePosts ?? 0;
-    document.getElementById('statTotalTrades').innerText = data.totalTrades ?? 0;
-    document.getElementById('statEscrow').innerText = formatUsdtOnly(data.activeEscrow);
-    document.getElementById('statTotalVolume').innerText = formatUsdtOnly(data.totalVolume);
-    document.getElementById('statVolume').innerText = formatUsdtOnly(data.todayVolume);
+    
+    const setSafeText = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = val;
+    };
 
-    if (document.getElementById('statTotalFee')) {
-        document.getElementById('statTotalFee').innerText = formatUsdtOnly(data.totalFeeEarned || '0 USDT');
-    }
-    if (document.getElementById('statTodayFee')) {
-        document.getElementById('statTodayFee').innerText = formatUsdtOnly(data.todayFeeEarned || '0 USDT');
-    }
+    setSafeText('statUserCount', data.totalUsers ?? 0);
+    setSafeText('statKycCount', data.kycPending ?? 0);
+    setSafeText('statOnMarket', Number(data.onMarket || 0).toFixed(1));
+    setSafeText('statLivePosts', data.livePosts ?? 0);
+    setSafeText('livePostsCount', data.livePosts ?? 0);
+    setSafeText('livePosts', data.livePosts ?? 0);
+    setSafeText('statTotalTrades', data.totalTrades ?? 0);
+    setSafeText('totalTrades', data.totalTrades ?? 0);
+    setSafeText('statEscrow', Number(data.activeEscrow || 0).toFixed(1));
+    setSafeText('statTotalVolume', Number(data.totalVolume || 0).toFixed(1));
+    setSafeText('statVolume', Number(data.todayVolume || 0).toFixed(1));
+    setSafeText('statTotalFee', Number(data.totalFeeEarned || data.totalTradeFee || 0).toFixed(1));
+    setSafeText('statTodayFee', Number(data.todayFeeEarned || data.todayTradeFee || 0).toFixed(1));
 }
 
 async function fetchStats() {
@@ -345,9 +350,10 @@ async function fetchStats() {
             cache: 'no-store'
         });
         const json = await statsRes.json();
-        if (statsRes.ok && json.success && json.data) {
-            applyStatsToDOM(json.data);
-            try { sessionStorage.setItem('tbr_admin_stats', JSON.stringify(json.data)); } catch (e) {}
+        if (statsRes.ok && json.success) {
+            const statsData = json.data || json.stats || json;
+            applyStatsToDOM(statsData);
+            try { sessionStorage.setItem('tbr_admin_stats', JSON.stringify(statsData)); } catch (e) {}
         }
     } catch (err) {}
 }
@@ -1054,14 +1060,46 @@ async function openCompletedTradesModal() {
     }
 }
 
-function openLivePostsModal() {
-    document.getElementById('adminLivePostsModal').style.display = 'flex';
+async function openLivePostsModal() {
+    let modal = document.getElementById('adminLivePostsModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'adminLivePostsModal';
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div style="background:#151a21; border:1px solid #232d3f; border-radius:12px; max-width:700px; width:95%; max-height:85vh; display:flex; flex-direction:column; padding:0; color:#fff; box-shadow: 0 20px 50px rgba(0,0,0,0.8); overflow: hidden;">
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #232d3f; padding:20px;">
+                    <h3 style="margin:0; color:#0ecb81; font-size:18px;"><i class="fa-solid fa-bullhorn"></i> Active Live Posts (Market Ads)</h3>
+                    <button class="close-modal-btn" style="background:none; border:none; color:#848e9c; font-size:24px; cursor:pointer; line-height:1;">&times;</button>
+                </div>
+                <div style="overflow-y:auto; flex:1; padding: 0;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
+                        <thead style="background: #18202a; position: sticky; top: 0;">
+                            <tr>
+                                <th style="padding: 12px 15px; color: #848e9c;">TRADER</th>
+                                <th style="padding: 12px 15px; color: #848e9c;">TYPE</th>
+                                <th style="padding: 12px 15px; color: #848e9c;">AMOUNT</th>
+                                <th style="padding: 12px 15px; color: #848e9c;">PRICE</th>
+                                <th style="padding: 12px 15px; color: #848e9c;">ACTION</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminLivePostsTableBody">
+                            <tr><td colspan="5" style="text-align: center; padding: 30px; color: #f0b90b;"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading active posts...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+    modal.style.display = 'flex';
     fetchLivePostsForAdmin();
 }
 
 async function fetchLivePostsForAdmin() {
     const tbody = document.getElementById('adminLivePostsTableBody');
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 30px; color: #f0b90b;">Loading active posts...</td></tr>';
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 30px; color: #f0b90b;"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading active posts...</td></tr>';
     
     try {
         const token = getToken();
@@ -1070,21 +1108,24 @@ async function fetchLivePostsForAdmin() {
         });
         const data = await response.json();
         
-        if (data.success && data.ads.length > 0) {
+        const adsList = Array.isArray(data) ? data : (data.ads || data.data || []);
+        const activeAds = adsList.filter(a => a.status === 'active' || a.totalAmount > 0);
+
+        if (activeAds.length > 0) {
             tbody.innerHTML = '';
-            data.ads.forEach(ad => {
+            activeAds.forEach(ad => {
                 const typeColor = ad.tradeType === 'buy' ? '#0ecb81' : '#f6465d';
-                const typeText = ad.tradeType.toUpperCase();
+                const typeText = String(ad.tradeType || 'sell').toUpperCase();
                 
                 const tr = document.createElement('tr');
                 tr.style.borderBottom = '1px solid #232d3f';
                 tr.innerHTML = `
-                    <td style="padding: 15px 10px; font-weight: bold;">${ad.name || ad.email}</td>
-                    <td style="padding: 15px 10px; color: ${typeColor}; font-weight: bold;">${typeText}</td>
-                    <td style="padding: 15px 10px; color: #f0b90b;">${ad.totalAmount} USDT</td>
-                    <td style="padding: 15px 10px;">${ad.price} ETB</td>
-                    <td style="padding: 15px 10px;">
-                        <button data-action="delete-ad" data-id="${ad._id}" style="background: rgba(246, 70, 93, 0.2); color: #f6465d; border: 1px solid #f6465d; padding: 6px 15px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; transition: 0.3s;">
+                    <td style="padding: 15px 15px; font-weight: bold;">${ad.name || ad.email || 'Trader'}</td>
+                    <td style="padding: 15px 15px; color: ${typeColor}; font-weight: bold;">${typeText}</td>
+                    <td style="padding: 15px 15px; color: #f0b90b;">${Number(ad.totalAmount || 0).toFixed(1)} USDT</td>
+                    <td style="padding: 15px 15px;">${ad.price} ETB</td>
+                    <td style="padding: 15px 15px;">
+                        <button data-action="delete-ad" data-id="${ad._id}" style="background: rgba(246, 70, 93, 0.2); color: #f6465d; border: 1px solid #f6465d; padding: 6px 15px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold;">
                             Delete Post
                         </button>
                     </td>
@@ -1285,14 +1326,13 @@ async function loadDeposits() {
     }
 }
 
-// የዲቫይሱን ትክክለኛ ስምና ሞዴል ከብራውዘሩ ውስጥ ፈልጎ የሚያወጣ ፈንክሽን
+// 🛠️ Device & Session Tracking Functions
 async function detectExactClientDevice() {
     const ua = navigator.userAgent || '';
     const isTouchDevice = (navigator.maxTouchPoints && navigator.maxTouchPoints > 1);
     let os = '';
     let isMobile = false;
 
-    // 1. ዘመናዊ Chrome Client Hints (የስልኩን ትክክለኛ ሞዴል ያመጣል)
     if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
         try {
             const hints = await navigator.userAgentData.getHighEntropyValues(['platform', 'model', 'mobile']);
@@ -1311,14 +1351,12 @@ async function detectExactClientDevice() {
             } else if (/mac/i.test(platform)) {
                 os = isTouchDevice ? 'iPad / iOS' : 'MacBook / Mac OS';
             } else if (/linux/i.test(platform) && isTouchDevice) {
-                // ስልክ ላይ Desktop Site ሲበራ Linux ይላል፣ ግን Touch ስላለው Android መሆኑ ይታወቃል!
                 isMobile = true;
                 os = (model && model !== 'K') ? `Android (${model})` : 'Android Phone';
             }
         } catch (e) {}
     }
 
-    // 2. Fallback (ለሌሎች ብራውዘሮች)
     if (!os) {
         if (/android/i.test(ua)) {
             isMobile = true;
@@ -1347,7 +1385,6 @@ async function detectExactClientDevice() {
     return { os, isMobile };
 }
 
-// ገጹ ሲከፈት በራሱ ጊዜ ዲቫይሱን እና የገባበትን ሰዓት ዳታቤዝ ላይ ያድሳል
 (async function autoSyncAdminSession() {
     try {
         const tk = typeof getToken === 'function' ? getToken() : localStorage.getItem('adminToken');
@@ -1401,7 +1438,6 @@ async function openDevicesModal() {
         if (data.success && data.sessions && data.sessions.length > 0) {
             let html = `<p style="font-size: 11px; color: #848e9c; font-weight: bold; border-bottom: 1px solid #232d3f; padding-bottom: 6px; margin-bottom: 10px;">CONNECTED DEVICES (${data.sessions.length})</p>`;
             
-            // በመጨረሻ የገባውን (Last Active) ከላይ ለማምጣት
             const sorted = [...data.sessions].sort((a, b) => new Date(b.lastActive) - new Date(a.lastActive));
 
             sorted.forEach((sess) => {
@@ -1444,75 +1480,4 @@ async function removeAdminSession(sessionId) {
         });
         openDevicesModal();
     } catch (e) {}
-}
-
-// ፖፕአፑን ከፍቶ የላይቭ ፖስቶቹን ዝርዝር የሚያሳየው ፈንክሽን
-async function openLivePostsModal() {
-    let modal = document.getElementById('livePostsModal');
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'livePostsModal';
-        modal.className = 'modal-overlay';
-        document.body.appendChild(modal);
-    }
-
-    modal.innerHTML = `
-        <div style="background:#151a21; border:1px solid #232d3f; border-radius:12px; max-width:650px; width:95%; padding:0; color:#fff; box-shadow: 0 20px 50px rgba(0,0,0,0.8); overflow: hidden;">
-            <div style="background:#18202a; padding:15px 20px; border-bottom:1px solid #232d3f; display:flex; justify-content:space-between; align-items:center;">
-                <h3 style="margin:0; color:#0ecb81; font-size:16px;"><i class="fa-solid fa-bullhorn"></i> Active Live Posts (Market Ads)</h3>
-                <button id="closeLivePostsBtn" style="background:none; border:none; color:#848e9c; font-size:24px; cursor:pointer; line-height:1;">&times;</button>
-            </div>
-            <div id="livePostsListContainer" style="padding:20px; max-height:70vh; overflow-y:auto; text-align:left;">
-                <div style="text-align:center; color:#f0b90b; font-size:13px; padding: 20px 0;">
-                    <i class="fa-solid fa-circle-notch fa-spin"></i> Loading live market posts...
-                </div>
-            </div>
-        </div>
-    `;
-    modal.style.display = 'flex';
-
-    document.getElementById('closeLivePostsBtn').onclick = () => {
-        modal.style.display = 'none';
-    };
-
-    try {
-        const res = await fetch(`${API_BASE}/api/ads?t=${Date.now()}`, {
-            headers: { 'Authorization': 'Bearer ' + (typeof getToken === 'function' ? getToken() : '') }
-        });
-        const data = await res.json();
-        const ads = Array.isArray(data) ? data : (data.ads || data.data || []);
-        const activeAds = ads.filter(a => a.status === 'active' || a.totalAmount > 0);
-
-        const container = document.getElementById('livePostsListContainer');
-        if (activeAds.length === 0) {
-            container.innerHTML = '<p style="text-align:center; color:#848e9c;">No active live posts found.</p>';
-            return;
-        }
-
-        let html = '';
-        activeAds.forEach(ad => {
-            const isSell = ad.tradeType === 'sell';
-            const badgeColor = isSell ? '#f6465d' : '#0ecb81';
-            const typeLabel = isSell ? 'SELL' : 'BUY';
-
-            html += `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; border-bottom:1px solid #232d3f; background:#18202a; border-radius:8px; margin-bottom:8px;">
-                    <div>
-                        <span style="background:${badgeColor}; color:#fff; font-size:10px; font-weight:bold; padding:2px 6px; border-radius:4px; margin-right:6px;">${typeLabel}</span>
-                        <strong style="color:#e2e8f0; font-size:14px;">${ad.name || ad.email || 'Trader'}</strong>
-                        <div style="color:#848e9c; font-size:12px; margin-top:4px;">
-                            Price: <b style="color:#f0b90b;">${ad.price} ETB</b> • Limits: ${ad.minLimit} - ${ad.maxLimit} ETB
-                        </div>
-                    </div>
-                    <div style="text-align:right;">
-                        <div style="color:#0ecb81; font-weight:bold; font-size:14px;">${Number(ad.totalAmount || 0).toFixed(1)} USDT</div>
-                        <div style="color:#848e9c; font-size:11px;">${(ad.paymentMethods || []).join(', ')}</div>
-                    </div>
-                </div>
-            `;
-        });
-        container.innerHTML = html;
-    } catch (err) {
-        document.getElementById('livePostsListContainer').innerHTML = '<p style="color:#f6465d; text-align:center;">Failed to load live posts.</p>';
-    }
 }
