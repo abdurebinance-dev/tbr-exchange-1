@@ -22,17 +22,34 @@ function resolveImgUrl(raw) {
 }
 
 // 🚀 1. Event Listeners for Login & Navigation 🚀
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     const overlay = document.getElementById('loginOverlay');
     const dash = document.getElementById('mainDashboard');
+    const currentToken = getToken();
 
-    // ቼክ አድርግ፣ ቶከን ካለ ያስገባዋል፣ ከሌለ በግድ ሎጊን ፔጅ ያመጣል
-    if (getToken()) {
-        if(overlay) overlay.style.display = 'none';
-        if(dash) dash.style.display = 'block';
-        initAdminDataFast();
+    // 🛑 አዲሱ ጥብቅ ሴኪዩሪቲ (Strict Admin Verification) 🛑
+    if (currentToken) {
+        try {
+            // እውነተኛ አድሚን መሆኑን ባክኤንዱን ይጠይቃል
+            const checkAdmin = await fetch(`${API_BASE}/api/admin/stats`, {
+                headers: { 'Authorization': 'Bearer ' + currentToken }
+            });
+            
+            if (checkAdmin.ok) {
+                // አድሚን መሆኑ ከተረጋገጠ ብቻ ዳሽቦርዱ ይከፈታል
+                if(overlay) overlay.style.display = 'none';
+                if(dash) dash.style.display = 'block';
+                initAdminDataFast();
+            } else {
+                // ተራ ዩዘር ከሆነ የሎጊን ፔጁ ላይ ያግደዋል!
+                if(overlay) overlay.style.display = 'flex'; 
+                if(dash) dash.style.display = 'none';
+            }
+        } catch (e) {
+            if(overlay) overlay.style.display = 'flex'; 
+            if(dash) dash.style.display = 'none';
+        }
     } else {
-        // 🛑 ሚስጥሩ እዚህ ጋር ነው! ቶከን ከሌለ (ማንም ሰው ቢከፍተው) ዳሽቦርዱን ደብቆ ሎጊን ይጠይቀዋል! 🛑
         if(overlay) overlay.style.display = 'flex'; 
         if(dash) dash.style.display = 'none';
     }
@@ -62,7 +79,8 @@ document.addEventListener('DOMContentLoaded', () => {
         userSearch.addEventListener('focus', function() { this.removeAttribute('readonly'); });
         userSearch.addEventListener('keyup', filterUsersTable);
     }
-// ... (የቀረውን የ document.body.addEventListener እንዳለ ተወው)
+
+    // ... (ከዚህ በታች ያለው document.body.addEventListener እንዳለ ይቀጥላል)
 
     document.body.addEventListener('click', async (e) => {
         const target = e.target;
