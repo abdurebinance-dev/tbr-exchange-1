@@ -418,6 +418,28 @@ document.addEventListener("DOMContentLoaded", async function() {
 
         const usernameDisplay = document.getElementById("username-display");
         if (usernameDisplay) usernameDisplay.innerText = user.traderHandle || 'Not set — tap to choose your handle';
+
+        // 🚀 አዲሱ የ KYC ማስተካከያ 🚀
+        const kycBadge = document.getElementById('kyc-badge');
+        if (kycBadge) {
+            const kycStatus = (user.kycStatus || localStorage.getItem('kycStatus') || 'unverified').toLowerCase();
+            if (kycStatus === 'verified' || kycStatus === 'approved') {
+                kycBadge.className = 'badge-verified';
+                kycBadge.innerHTML = '<i class="fa-solid fa-check"></i> Verified';
+            } else if (kycStatus === 'pending' || kycStatus === 'under_review' || kycStatus === 'submitted') {
+                kycBadge.className = 'badge-unverified';
+                kycBadge.innerHTML = '<i class="fa-solid fa-hourglass-half"></i> Pending';
+                kycBadge.style.color = 'var(--accent-color)';
+                kycBadge.style.borderColor = 'rgba(243, 186, 47, 0.2)';
+                kycBadge.style.background = 'rgba(243, 186, 47, 0.1)';
+            } else {
+                kycBadge.className = 'badge-unverified';
+                kycBadge.innerHTML = '<i class="fa-solid fa-clock"></i> Unverified';
+                kycBadge.style.color = 'var(--orange-color)';
+                kycBadge.style.borderColor = 'rgba(240, 185, 11, 0.2)';
+                kycBadge.style.background = 'rgba(240, 185, 11, 0.1)';
+            }
+        }
     }
 
     updateUI({ 
@@ -425,7 +447,8 @@ document.addEventListener("DOMContentLoaded", async function() {
         email: localStorage.getItem("userEmail") || "", 
         phone: localStorage.getItem("userPhone") || "", 
         traderHandle: localStorage.getItem("traderUsername") || "", 
-        avatar: localStorage.getItem("userAvatar") || "" 
+        avatar: localStorage.getItem("userAvatar") || "",
+        kycStatus: localStorage.getItem("kycStatus") || "unverified"
     });
 
     try {
@@ -452,8 +475,17 @@ document.addEventListener("DOMContentLoaded", async function() {
             if (uPhone) localStorage.setItem("userPhone", uPhone);
             if (uTraderHandle) localStorage.setItem("traderUsername", uTraderHandle);
             if (finalAvatar) localStorage.setItem("userAvatar", finalAvatar);
+            if (userData.kycStatus) localStorage.setItem("kycStatus", userData.kycStatus);
 
-            updateUI({ username: uName, email: uEmail, tbrId: newId, phone: uPhone, traderHandle: uTraderHandle, avatar: finalAvatar });
+            updateUI({ 
+                username: uName, 
+                email: uEmail, 
+                tbrId: newId, 
+                phone: uPhone, 
+                traderHandle: uTraderHandle, 
+                avatar: finalAvatar, 
+                kycStatus: userData.kycStatus 
+            });
         }
     } catch (error) { console.error("Profile sync error:", error); }
 });
