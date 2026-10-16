@@ -78,6 +78,7 @@
 
         #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); z-index: 99999; display: flex; justify-content: center; align-items: center; }
         .login-box { background: var(--card-bg); border: 1px solid var(--border-color); padding: 30px; border-radius: 14px; width: 100%; max-width: 400px; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 99999; justify-content: center; align-items: center; font-family: sans-serif; }
     </style>
 </head>
 <body>
@@ -88,7 +89,7 @@
             <h3 style="color: var(--accent-gold); margin-top: 0; margin-bottom: 20px;"><i class="fa-solid fa-lock"></i> Admin Authentication</h3>
             <div class="form-group"><label>Admin Email</label><input type="email" id="loginEmail" class="input-box" placeholder="admin@tbr.com"></div>
             <div class="form-group"><label>Password</label><input type="password" id="loginPassword" class="input-box" placeholder="********"></div>
-            <button class="action-btn" style="width:100%;" onclick="adminLogin()">Login to Dashboard</button>
+            <button id="loginBtn" class="action-btn" style="width:100%;">Login to Dashboard</button>
             <p id="loginError" style="color: var(--red); font-size: 12px; margin-top: 10px; text-align: center;"></p>
         </div>
     </div>
@@ -99,19 +100,19 @@
             <h2><i class="fa-solid fa-shield-halved"></i> TBR Exchange Master Admin Panel</h2>
             <div style="display: flex; gap: 15px; align-items: center;">
                 <div class="status-badge"><i class="fa-solid fa-circle" style="font-size: 7px;"></i> Secured Connection</div>
-                <button class="logout-btn" onclick="logoutAdmin()"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+                <button id="logoutBtn" class="logout-btn"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
             </div>
         </div>
 
         <!-- Navigation Tabs -->
         <div class="admin-nav">
-            <button class="nav-tab active" onclick="switchTab('overview', event)"><i class="fa-solid fa-chart-pie"></i> 1. Quick Overview</button>
-            <button class="nav-tab" onclick="switchTab('rates', event)"><i class="fa-solid fa-sliders"></i> 2. Rate & Fee Management</button>
-            <button class="nav-tab" onclick="switchTab('kyc', event)"><i class="fa-solid fa-id-card"></i> 3. KYC Panel</button>
-            <button class="nav-tab" onclick="switchTab('escrow', event)"><i class="fa-solid fa-scale-balanced"></i> 4. P2P Escrow & Disputes</button>
-            <button class="nav-tab" onclick="switchTab('users', event)"><i class="fa-solid fa-users"></i> 5. User Control & Ban</button>
-            <button class="nav-tab" onclick="switchTab('withdrawals', event)"><i class="fa-solid fa-money-bill-transfer"></i> 6. Withdrawals</button>
-            <button class="nav-tab" onclick="switchTab('deposits', event)"><i class="fa-solid fa-arrow-down"></i> 7. Deposits</button>
+            <button class="nav-tab active" data-target="overview"><i class="fa-solid fa-chart-pie"></i> 1. Quick Overview</button>
+            <button class="nav-tab" data-target="rates"><i class="fa-solid fa-sliders"></i> 2. Rate & Fee Management</button>
+            <button class="nav-tab" data-target="kyc"><i class="fa-solid fa-id-card"></i> 3. KYC Panel</button>
+            <button class="nav-tab" data-target="escrow"><i class="fa-solid fa-scale-balanced"></i> 4. P2P Escrow & Disputes</button>
+            <button class="nav-tab" data-target="users"><i class="fa-solid fa-users"></i> 5. User Control & Ban</button>
+            <button class="nav-tab" data-target="withdrawals"><i class="fa-solid fa-money-bill-transfer"></i> 6. Withdrawals</button>
+            <button class="nav-tab" data-target="deposits"><i class="fa-solid fa-arrow-down"></i> 7. Deposits</button>
         </div>
 
         <!-- TAB 1: OVERVIEW -->
@@ -157,12 +158,12 @@
                     <div class="stat-icon icon-green"><i class="fa-solid fa-bullhorn"></i></div>
                 </div>
 
-                <div class="stat-card" onclick="openLivePostsModal()" style="cursor: pointer;">
+                <div class="stat-card" id="livePostsCard" style="cursor: pointer;">
                     <h3>LIVE POSTS</h3>
                     <h2 id="livePostsCount">14</h2>
                 </div>
 
-                <div class="stat-card" onclick="openCompletedTradesModal()" style="cursor: pointer;" title="Click to view full history">
+                <div class="stat-card" id="completedTradesCard" style="cursor: pointer;" title="Click to view full history">
                     <div>
                         <div class="label">Total Trade</div>
                         <div class="value" id="statTotalTrades" style="color: var(--purple);">0</div>
@@ -223,7 +224,7 @@
                     <label>Platform Fee (%)</label>
                     <input type="text" inputmode="decimal" id="feeInput" class="input-box" value="0.5">
                 </div>
-                <button class="action-btn" onclick="saveRates()">Save Rate & Fees</button>
+                <button id="saveRatesBtn" class="action-btn">Save Rate & Fees</button>
             </div>
         </div>
 
@@ -232,10 +233,10 @@
             <div class="section-title"><i class="fa-solid fa-user-shield"></i> Manual KYC Verification Submissions</div>
             
             <div style="display: flex; gap: 10px; margin-bottom: 20px; align-items: center; flex-wrap: wrap;">
-                <button id="btn-pending-kyc" class="btn" onclick="loadKycData('pending')" style="background: rgba(240, 185, 11, 0.2); color: #f0b90b; border: 1px solid #f0b90b; font-weight: bold; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Pending KYC</button>
-                <button id="btn-approved-kyc" class="btn" onclick="loadKycData('approved')" style="background: rgba(14, 203, 129, 0.2); color: #0ecb81; border: 1px solid #0ecb81; font-weight: bold; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Approved KYC</button>
-                <button id="btn-rejected-kyc" class="btn" onclick="loadKycData('rejected')" style="background: rgba(246, 70, 93, 0.2); color: #f6465d; border: 1px solid #f6465d; font-weight: bold; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Rejected KYC</button>
-                <input type="text" id="searchInput" class="input-box" placeholder="Search by email or name..." onkeyup="filterTableData()" autocomplete="off" style="max-width: 350px; margin-left: auto;">
+                <button id="btn-pending-kyc" class="btn kyc-tab-btn" data-target-status="pending" style="background: rgba(240, 185, 11, 0.2); color: #f0b90b; border: 1px solid #f0b90b; font-weight: bold; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Pending KYC</button>
+                <button id="btn-approved-kyc" class="btn kyc-tab-btn" data-target-status="approved" style="background: rgba(14, 203, 129, 0.2); color: #0ecb81; border: 1px solid #0ecb81; font-weight: bold; padding: 8px 16px; border-radius: 6px; cursor: pointer; opacity: 0.5;">Approved KYC</button>
+                <button id="btn-rejected-kyc" class="btn kyc-tab-btn" data-target-status="rejected" style="background: rgba(246, 70, 93, 0.2); color: #f6465d; border: 1px solid #f6465d; font-weight: bold; padding: 8px 16px; border-radius: 6px; cursor: pointer; opacity: 0.5;">Rejected KYC</button>
+                <input type="text" id="searchInput" class="input-box" placeholder="Search by email or name..." autocomplete="off" style="max-width: 350px; margin-left: auto;">
             </div>
 
             <div class="table-container">
@@ -280,7 +281,7 @@
         <div id="tab-users" class="tab-content">
             <div class="section-title"><i class="fa-solid fa-users-gear"></i> User Directory & Account Suspension Control</div>
             <div style="display: flex; margin-bottom: 20px; justify-content: flex-end;">
-                <input type="text" id="userSearchInput" class="input-box" placeholder="Search by Email, TBR ID, or Username..." onkeyup="filterUsersTable()" autocomplete="off" readonly onfocus="this.removeAttribute('readonly');" style="max-width: 350px;">
+                <input type="text" id="userSearchInput" class="input-box" placeholder="Search by Email, TBR ID, or Username..." autocomplete="off" readonly style="max-width: 350px;">
             </div>
             <div class="table-container">
                 <table>
@@ -302,11 +303,11 @@
     </div>
 
     <!-- Live Posts Admin Modal -->
-    <div id="adminLivePostsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 99999; justify-content: center; align-items: center; font-family: sans-serif;">
+    <div id="adminLivePostsModal" class="modal-overlay" style="display: none;">
         <div style="background: #151a21; border: 1px solid #232d3f; border-radius: 12px; width: 90%; max-width: 900px; padding: 24px; max-height: 80vh; overflow-y: auto; color: white; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #232d3f; padding-bottom: 15px;">
                 <h2 style="color: #f0b90b; margin: 0; font-size: 20px;">📢 Active Market Posts (Live Ads)</h2>
-                <button onclick="closeLivePostsModal()" style="background: #f6465d; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold;">Close (X)</button>
+                <button class="close-modal-btn" style="background: #f6465d; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold;">Close (X)</button>
             </div>
             <table style="width: 100%; text-align: left; border-collapse: collapse; font-size: 14px;">
                 <thead>
@@ -367,7 +368,6 @@
         </div>
     </div>
 
-    <!-- 🔴 ከዚህ ፋይል የወጣው ጃቫስክሪፕት አዲሱ ፋይል ላይ ይነበባል -->
-    <script src="admin.js?v=1"></script>
+    <script src="admin.js?v=2"></script>
 </body>
 </html>

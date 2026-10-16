@@ -9,7 +9,6 @@ const USERS_CACHE_KEY = 'tbr_admin_users_v2';
 let activeKycStatus = 'pending';
 let currentKycList = [];
 const kycCache = { pending: null, approved: null, rejected: null };
-const kycDocsCache = {};
 let currentDisputesList = [];
 let currentUsersList = []; 
 
@@ -22,12 +21,97 @@ function resolveImgUrl(raw) {
     return s;
 }
 
-window.addEventListener('DOMContentLoaded', () => {
+// 🚀 1. All Initializations and Event Listeners bounded purely via JS 🚀
+document.addEventListener('DOMContentLoaded', () => {
     if (getToken()) {
         document.getElementById('loginOverlay').style.display = 'none';
         document.getElementById('mainDashboard').style.display = 'block';
         initAdminDataFast();
     }
+
+    // Bind Keyup Listeners
+    document.getElementById('searchInput')?.addEventListener('keyup', filterTableData);
+    const userSearch = document.getElementById('userSearchInput');
+    if (userSearch) {
+        userSearch.addEventListener('focus', function() { this.removeAttribute('readonly'); });
+        userSearch.addEventListener('keyup', filterUsersTable);
+    }
+
+    // 🚀 Global Click Event Delegation (This solves all CSP blocking issues) 🚀
+    document.body.addEventListener('click', async (e) => {
+        const target = e.target;
+
+        // --- AUTH & TABS ---
+        if (target.closest('#loginBtn')) adminLogin();
+        if (target.closest('#logoutBtn')) logoutAdmin();
+        if (target.closest('#saveRatesBtn')) saveRates();
+        
+        const navTab = target.closest('.nav-tab');
+        if (navTab) switchTab(navTab.dataset.target, navTab);
+
+        const kycBtn = target.closest('.kyc-tab-btn');
+        if (kycBtn) loadKycData(kycBtn.dataset.targetStatus);
+
+        // --- STAT CARDS ---
+        if (target.closest('#livePostsCard')) openLivePostsModal();
+        if (target.closest('#completedTradesCard')) openCompletedTradesModal();
+
+        // --- DYNAMIC MODAL CLOSERS ---
+        const closeBtn = target.closest('.close-modal-btn');
+        if (closeBtn) {
+            const modal = closeBtn.closest('.modal-overlay');
+            if (modal) modal.style.display = 'none';
+        }
+
+        // --- ZOOM IMAGES ---
+        if (target.classList.contains('zoom-img')) {
+            window.open(target.src);
+        }
+
+        // --- KYC ACTIONS ---
+        const viewDocBtn = target.closest('[data-action="view-doc"]');
+        if (viewDocBtn) openKycModalByIndex(viewDocBtn.dataset.index);
+
+        const approveKycBtn = target.closest('[data-action="approve-kyc"]');
+        if (approveKycBtn) performKycAction(approveKycBtn.dataset.id, 'approved');
+
+        const rejectKycBtn = target.closest('[data-action="reject-kyc"]');
+        if (rejectKycBtn) performKycAction(rejectKycBtn.dataset.id, 'rejected');
+
+        // --- ESCROW ACTIONS ---
+        const viewChatBtn = target.closest('[data-action="view-chat"]');
+        if (viewChatBtn) openDisputeEvidenceModal(viewChatBtn.dataset.index);
+
+        const releaseBtn = target.closest('[data-action="release-escrow"]');
+        if (releaseBtn) resolveEscrow(releaseBtn.dataset.id, 'release', releaseBtn.dataset.index);
+
+        const refundBtn = target.closest('[data-action="refund-escrow"]');
+        if (refundBtn) resolveEscrow(refundBtn.dataset.id, 'refund', refundBtn.dataset.index);
+
+        // --- USERS ACTIONS ---
+        const viewUserBtn = target.closest('[data-action="view-user"]');
+        if (viewUserBtn) openUserDetailsModal(viewUserBtn.dataset.id);
+
+        const banBtn = target.closest('[data-action="toggle-ban"]');
+        if (banBtn) toggleUserBan(banBtn.dataset.id, banBtn.dataset.banned === 'true');
+
+        const warnBtn = target.closest('[data-action="warn-user"]');
+        if (warnBtn) sendUserWarning(warnBtn.dataset.id, warnBtn.dataset.warned === 'true');
+
+        const editBalBtn = target.closest('[data-action="edit-balance"]');
+        if (editBalBtn) editAdminUserBalance(editBalBtn.dataset.id, editBalBtn.dataset.balance);
+
+        // --- WITHDRAWALS ACTIONS ---
+        const appWithBtn = target.closest('[data-action="approve-with"]');
+        if (appWithBtn) approveWithdrawal(appWithBtn.dataset.id, appWithBtn.dataset.amount);
+
+        const rejWithBtn = target.closest('[data-action="reject-with"]');
+        if (rejWithBtn) rejectWithdrawal(rejWithBtn.dataset.id, rejWithBtn.dataset.amount);
+
+        // --- LIVE POSTS ACTIONS ---
+        const delAdBtn = target.closest('[data-action="delete-ad"]');
+        if (delAdBtn) adminDeleteAd(delAdBtn.dataset.id);
+    });
 });
 
 function initAdminDataFast() {
@@ -81,7 +165,7 @@ function initAdminDataFast() {
 }
 
 setInterval(() => {
-    if (document.getElementById('tab-kyc').classList.contains('active')) {
+    if (document.getElementById('tab-kyc')?.classList.contains('active')) {
         fetch(`${API_BASE}/api/admin/kyc-requests?status=${activeKycStatus}&limit=50&t=${Date.now()}`, { 
             headers: { 'Authorization': 'Bearer ' + getToken() },
             cache: 'no-store'
@@ -129,13 +213,14 @@ function logoutAdmin() {
     location.reload();
 }
 
-function switchTab(tabId, event) {
+function switchTab(tabId, tabElement) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
-    document.getElementById('tab-' + tabId).classList.add('active');
-    if (event && event.currentTarget) {
-        event.currentTarget.classList.add('active');
-    }
+    
+    const targetContent = document.getElementById('tab-' + tabId);
+    if(targetContent) targetContent.classList.add('active');
+    
+    if (tabElement) tabElement.classList.add('active');
 
     if (tabId === 'escrow') fetchEscrowDisputes();
     else if (tabId === 'users') fetchUsersList();
@@ -155,6 +240,7 @@ function applyStatsToDOM(data) {
     document.getElementById('statKycCount').innerText = data.kycPending ?? 0;
     document.getElementById('statOnMarket').innerText = formatUsdtOnly(data.onMarket);
     document.getElementById('statLivePosts').innerText = data.livePosts ?? 0;
+    document.getElementById('livePostsCount').innerText = data.livePosts ?? 0;
     document.getElementById('statTotalTrades').innerText = data.totalTrades ?? 0;
     document.getElementById('statEscrow').innerText = formatUsdtOnly(data.activeEscrow);
     document.getElementById('statTotalVolume').innerText = formatUsdtOnly(data.totalVolume);
@@ -204,10 +290,10 @@ async function prefetchKycStatus(status) {
 async function loadKycData(targetStatus = 'pending') {
     activeKycStatus = targetStatus;
 
-    document.querySelectorAll('#tab-kyc button.btn').forEach(b => {
-        if (b.id) b.style.opacity = '0.5';
+    document.querySelectorAll('#tab-kyc button.kyc-tab-btn').forEach(b => {
+        b.style.opacity = '0.5';
     });
-    const activeBtn = document.getElementById(`btn-${targetStatus}-kyc`);
+    const activeBtn = document.querySelector(`[data-target-status="${targetStatus}"]`);
     if (activeBtn) activeBtn.style.opacity = '1';
 
     const tbody = document.getElementById('kycTableBody');
@@ -293,7 +379,7 @@ function renderKycs(tbody, list) {
                 ${userName ? `<br><small style="color: var(--text-muted); font-size: 11px;">${userName}</small>` : ''}
             </td>
             <td>
-                <button onclick="openKycModalByIndex(${idx})" class="btn btn-sm" style="color: #f3ba2f; background: #181a20; border: 1px solid #f3ba2f; padding: 5px 12px; border-radius: 4px; cursor: pointer;">
+                <button data-action="view-doc" data-index="${idx}" class="btn btn-sm" style="color: #f3ba2f; background: #181a20; border: 1px solid #f3ba2f; padding: 5px 12px; border-radius: 4px; cursor: pointer;">
                     <i class="fas fa-eye"></i> View Docs
                 </button>
             </td>
@@ -301,8 +387,8 @@ function renderKycs(tbody, list) {
             <td>
                 ${isResolved 
                     ? `<span style="color: var(--text-muted); font-weight: 600; font-size: 12px;">Completed</span>` 
-                    : `<button class="btn btn-approve" onclick="performKycAction('${kycId}', 'approved')">Approve</button>
-                       <button class="btn btn-reject" onclick="performKycAction('${kycId}', 'rejected')">Reject</button>`
+                    : `<button class="btn btn-approve" data-action="approve-kyc" data-id="${kycId}">Approve</button>
+                       <button class="btn btn-reject" data-action="reject-kyc" data-id="${kycId}">Reject</button>`
                 }
             </td>
         </tr>`;
@@ -321,26 +407,26 @@ async function openKycModal(kycItem) {
     if (!modal) {
         modal = document.createElement('div');
         modal.id = 'kycModal';
-        modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 9999;";
+        modal.className = "modal-overlay";
         modal.innerHTML = `
             <div style="background: #1e2329; padding: 20px; border-radius: 12px; max-width: 720px; width: 95%; color: #fff; text-align: center; position: relative; border: 1px solid #30363d; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
-                <span onclick="document.getElementById('kycModal').style.display='none'" style="position: absolute; top: 12px; right: 18px; font-size: 26px; color: #848e9c; cursor: pointer; font-weight: bold; line-height: 1;">&times;</span>
+                <span class="close-modal-btn" style="position: absolute; top: 12px; right: 18px; font-size: 26px; color: #848e9c; cursor: pointer; font-weight: bold; line-height: 1;">&times;</span>
                 <h3 id="modalUserEmail" style="margin-bottom: 15px; margin-right: 25px; color: #f3ba2f; font-size: 15px; word-break: break-all; text-align: left;"></h3>
                 <div id="modalImagesContainer" style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 18px;">
                     <div>
                         <p style="margin-bottom: 4px; font-size: 12px; color: #848e9c; font-weight: bold;">Front ID</p>
-                        <img id="modalFrontImg" src="" style="width: 210px; height: 135px; object-fit: contain; background: #0b0e11; border-radius: 6px; border: 1px solid #474d57; cursor: pointer;" onclick="window.open(this.src)" title="Click to zoom">
+                        <img id="modalFrontImg" src="" class="zoom-img" style="width: 210px; height: 135px; object-fit: contain; background: #0b0e11; border-radius: 6px; border: 1px solid #474d57; cursor: pointer;" title="Click to zoom">
                     </div>
                     <div>
                         <p style="margin-bottom: 4px; font-size: 12px; color: #848e9c; font-weight: bold;">Back ID</p>
-                        <img id="modalBackImg" src="" style="width: 210px; height: 135px; object-fit: contain; background: #0b0e11; border-radius: 6px; border: 1px solid #474d57; cursor: pointer;" onclick="window.open(this.src)" title="Click to zoom">
+                        <img id="modalBackImg" src="" class="zoom-img" style="width: 210px; height: 135px; object-fit: contain; background: #0b0e11; border-radius: 6px; border: 1px solid #474d57; cursor: pointer;" title="Click to zoom">
                     </div>
                     <div>
                         <p style="margin-bottom: 4px; font-size: 12px; color: #f3ba2f; font-weight: bold;">Selfie / User Photo</p>
-                        <img id="modalSelfieImg" src="" style="width: 210px; height: 135px; object-fit: contain; background: #0b0e11; border-radius: 6px; border: 2px solid #f3ba2f; cursor: pointer;" onclick="window.open(this.src)" title="Click to zoom">
+                        <img id="modalSelfieImg" src="" class="zoom-img" style="width: 210px; height: 135px; object-fit: contain; background: #0b0e11; border-radius: 6px; border: 2px solid #f3ba2f; cursor: pointer;" title="Click to zoom">
                     </div>
                 </div>
-                <button onclick="document.getElementById('kycModal').style.display='none'" style="background: #f3ba2f; color: #000; border: none; padding: 8px 24px; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 13px;">Close Panel</button>
+                <button class="close-modal-btn" style="background: #f3ba2f; color: #000; border: none; padding: 8px 24px; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 13px;">Close Panel</button>
             </div>
         `;
         document.body.appendChild(modal);
@@ -435,8 +521,8 @@ function renderEscrowDisputesTable(disputesArray) {
             const badgeCls = trade.status === 'disputed' ? 'badge-rejected' : 'badge-pending';
             statusBadgeHtml = `<span class="${badgeCls}">${stLabel}</span>`;
             actionsHtml = `
-                <button class="btn btn-approve" onclick="resolveEscrow('${trade._id}', 'release', ${idx})">Release to Buyer</button>
-                <button class="btn btn-reject" onclick="resolveEscrow('${trade._id}', 'refund', ${idx})">Refund Seller</button>
+                <button class="btn btn-approve" data-action="release-escrow" data-id="${trade._id}" data-index="${idx}">Release to Buyer</button>
+                <button class="btn btn-reject" data-action="refund-escrow" data-id="${trade._id}" data-index="${idx}">Refund Seller</button>
             `;
         }
 
@@ -449,7 +535,7 @@ function renderEscrowDisputesTable(disputesArray) {
             <td><strong>${Number(trade.usdtAmount || 0).toFixed(4)} USDT</strong></td>
             <td>
                 ${statusBadgeHtml}<br>
-                <button class="btn" style="margin-top:6px; background:#18202a; color:#f0b90b; border:1px solid #f0b90b;" onclick="openDisputeEvidenceModal(${idx})">
+                <button class="btn" data-action="view-chat" data-index="${idx}" style="margin-top:6px; background:#18202a; color:#f0b90b; border:1px solid #f0b90b;">
                     <i class="fa-solid fa-comments"></i> View Chat & Receipt
                 </button>
             </td>
@@ -491,7 +577,7 @@ function openDisputeEvidenceModal(idx) {
     if (!modal) {
         modal = document.createElement('div');
         modal.id = 'disputeEvidenceModal';
-        modal.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.85); display:flex; justify-content:center; align-items:center; z-index:99999; padding:16px;";
+        modal.className = "modal-overlay";
         document.body.appendChild(modal);
     }
 
@@ -521,7 +607,7 @@ function openDisputeEvidenceModal(idx) {
             <div style="padding:10px 12px; margin-bottom:8px; border-radius:8px; background:${m.isSystem ? 'rgba(240,185,11,0.1)' : '#151a21'}; border:1px solid ${m.isSystem ? 'rgba(240,185,11,0.3)' : '#232d3f'}; font-size:12.5px; line-height:1.45;">
                 <strong style="color:#f0b90b;">${m.senderName || (m.isSystem ? 'System' : 'User')}:</strong>
                 ${cleanText ? `<span> ${cleanText}</span>` : ''}
-                ${finalChatImgUrl ? `<img src="${finalChatImgUrl}" class="dispute-chat-msg-img" onclick="window.open(this.src)" title="Click to view full image" onerror="this.style.display='none'">` : ''}
+                ${finalChatImgUrl ? `<img src="${finalChatImgUrl}" class="dispute-chat-msg-img zoom-img" title="Click to view full image">` : ''}
             </div>
         `;
     }).join('') || '<p style="color:#848e9c;">No chat messages.</p>';
@@ -530,13 +616,13 @@ function openDisputeEvidenceModal(idx) {
         <div style="background:#151a21; border:1px solid #232d3f; border-radius:12px; max-width:720px; width:100%; max-height:88vh; display:flex; flex-direction:column; padding:20px; color:#fff; box-shadow: 0 20px 50px rgba(0,0,0,0.8);">
             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #232d3f; padding-bottom:12px; margin-bottom:14px;">
                 <h3 style="margin:0; color:#f0b90b; font-size:17px;">Dispute Evidence — Trade #${String(trade.tradeNumber || '00001').padStart(5, '0')}</h3>
-                <button onclick="document.getElementById('disputeEvidenceModal').style.display='none'" style="background:none; border:none; color:#fff; font-size:22px; cursor:pointer; line-height:1;">&times;</button>
+                <button class="close-modal-btn" style="background:none; border:none; color:#fff; font-size:22px; cursor:pointer; line-height:1;">&times;</button>
             </div>
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; overflow-y:auto; flex:1;">
                 <div>
                     <h4 style="margin:0 0 8px 0; font-size:13px; color:#0ecb81;">Uploaded Payment Receipt</h4>
                     <div style="background:#0b0e11; border:1px solid #f0b90b; border-radius:8px; padding:8px; text-align:center;">
-                        <img src="${mainReceiptUrl}" style="width:100%; max-height:320px; object-fit:contain; border-radius:6px; cursor:pointer;" onclick="window.open(this.src)" onerror="this.outerHTML='<p style=\\'color:#848e9c; font-size:12px; padding:20px;\\'>No receipt image uploaded.</p>'">
+                        <img src="${mainReceiptUrl}" class="zoom-img" style="width:100%; max-height:320px; object-fit:contain; border-radius:6px; cursor:pointer;" onerror="this.outerHTML='<p style=\\'color:#848e9c; font-size:12px; padding:20px;\\'>No receipt image uploaded.</p>'">
                     </div>
                     <p style="font-size:12px; color:#848e9c; margin-top:10px;"><strong>Dispute Reason:</strong> ${trade.disputeReason || 'Dispute submitted by trader'}</p>
                 </div>
@@ -612,16 +698,16 @@ function renderUsersTable(usersList) {
         html += `<tr>
             <td>
                 ${user.email}
-                <i class="fa-solid fa-eye" style="color:var(--blue); cursor:pointer; margin-left:10px; font-size:14px;" onclick="openUserDetailsModal('${user._id}')" title="View User Details"></i>
+                <i class="fa-solid fa-eye" data-action="view-user" data-id="${user._id}" style="color:var(--blue); cursor:pointer; margin-left:10px; font-size:14px;" title="View User Details"></i>
             </td>
             <td>${user.isAdmin ? '<span class="badge-approved">Admin</span>' : 'Standard'}</td>
             <td><span class="badge-${user.kycStatus === 'verified' || user.kycStatus === 'approved' ? 'approved' : 'pending'}">${user.kycStatus || 'pending'}</span></td>
             <td>${isBanned ? '<span class="badge-rejected">Banned</span>' : '<span class="badge-approved">Active</span>'}</td>
             <td>
-                <button class="btn ${isBanned ? 'btn-approve' : 'btn-ban'}" onclick="toggleUserBan('${user._id}', ${isBanned})">
+                <button class="btn ${isBanned ? 'btn-approve' : 'btn-ban'}" data-action="toggle-ban" data-id="${user._id}" data-banned="${isBanned}">
                     ${isBanned ? 'Unban User' : 'Ban User'}
                 </button>
-                <button class="btn" style="${warnBtnStyle} margin-left: 6px;" onclick="sendUserWarning('${user._id}', ${isWarned})">
+                <button class="btn" style="${warnBtnStyle} margin-left: 6px;" data-action="warn-user" data-id="${user._id}" data-warned="${isWarned}">
                     <i class="fa-solid fa-triangle-exclamation"></i> ${warnBtnText}
                 </button>
             </td>
@@ -635,7 +721,7 @@ async function openUserDetailsModal(userId) {
     if (!modal) {
         modal = document.createElement('div');
         modal.id = 'userDetailsModal';
-        modal.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.85); display:flex; justify-content:center; align-items:center; z-index:99999; padding:16px;";
+        modal.className = "modal-overlay";
         document.body.appendChild(modal);
     }
     
@@ -668,7 +754,7 @@ async function openUserDetailsModal(userId) {
                 <div style="background:#151a21; border:1px solid #232d3f; border-radius:12px; width:100%; max-width:400px; padding:0; color:#fff; box-shadow: 0 20px 50px rgba(0,0,0,0.8); overflow:hidden;">
                     <div style="background:#18202a; padding:15px 20px; border-bottom:1px solid #232d3f; display:flex; justify-content:space-between; align-items:center;">
                         <h3 style="margin:0; color:#3b82f6; font-size:16px;"><i class="fa-solid fa-address-card"></i> User Details</h3>
-                        <button onclick="document.getElementById('userDetailsModal').style.display='none'" style="background:none; border:none; color:#848e9c; font-size:24px; cursor:pointer; line-height:1;">&times;</button>
+                        <button class="close-modal-btn" style="background:none; border:none; color:#848e9c; font-size:24px; cursor:pointer; line-height:1;">&times;</button>
                     </div>
                     <div style="padding:20px; text-align:left; font-size:14px; line-height:1.8;">
                         <div style="display:flex; justify-content:space-between; border-bottom:1px solid #232d3f; padding-bottom:10px; margin-bottom:10px;">
@@ -694,7 +780,7 @@ async function openUserDetailsModal(userId) {
                             <span style="color:#848e9c;">Account Balance:</span>
                             <span style="color:#0ecb81; font-weight:bold; display:flex; align-items:center; gap:8px;">
                                 <span id="modalUserBalance">${u.balance || 0} USDT</span>
-                                <button onclick="editAdminUserBalance('${u._id}', ${u.balance || 0})" style="background:transparent; border:none; color:#f0b90b; cursor:pointer; padding:0; font-size:16px;" title="Edit Balance">✏️</button>
+                                <button data-action="edit-balance" data-id="${u._id}" data-balance="${u.balance || 0}" style="background:transparent; border:none; color:#f0b90b; cursor:pointer; padding:0; font-size:16px;" title="Edit Balance">✏️</button>
                             </span>
                         </div>
                     </div>
@@ -820,13 +906,13 @@ async function openCompletedTradesModal() {
     if (!modal) {
         modal = document.createElement('div');
         modal.id = 'completedTradesModal';
-        modal.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.85); display:flex; justify-content:center; align-items:center; z-index:99999; padding:16px;";
+        modal.className = "modal-overlay";
         
         modal.innerHTML = `
             <div style="background:#151a21; border:1px solid #232d3f; border-radius:12px; max-width:800px; width:100%; max-height:85vh; display:flex; flex-direction:column; padding:0; color:#fff; box-shadow: 0 20px 50px rgba(0,0,0,0.8); overflow: hidden;">
                 <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #232d3f; padding:20px;">
                     <h3 style="margin:0; color:#a855f7; font-size:18px;"><i class="fa-solid fa-handshake"></i> Completed Trades History</h3>
-                    <button onclick="document.getElementById('completedTradesModal').style.display='none'" style="background:none; border:none; color:#848e9c; font-size:24px; cursor:pointer; line-height:1;">&times;</button>
+                    <button class="close-modal-btn" style="background:none; border:none; color:#848e9c; font-size:24px; cursor:pointer; line-height:1;">&times;</button>
                 </div>
                 <div style="overflow-y:auto; flex:1; padding: 0;">
                     <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
@@ -918,7 +1004,7 @@ async function fetchLivePostsForAdmin() {
                     <td style="padding: 15px 10px; color: #f0b90b;">${ad.totalAmount} USDT</td>
                     <td style="padding: 15px 10px;">${ad.price} ETB</td>
                     <td style="padding: 15px 10px;">
-                        <button onclick="adminDeleteAd('${ad._id}')" style="background: rgba(246, 70, 93, 0.2); color: #f6465d; border: 1px solid #f6465d; padding: 6px 15px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; transition: 0.3s;">
+                        <button data-action="delete-ad" data-id="${ad._id}" style="background: rgba(246, 70, 93, 0.2); color: #f6465d; border: 1px solid #f6465d; padding: 6px 15px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; transition: 0.3s;">
                             Delete Post
                         </button>
                     </td>
@@ -952,9 +1038,7 @@ async function adminDeleteAd(adId) {
         if (data.success) {
             alert('✅ Post successfully deleted from the market!');
             fetchLivePostsForAdmin(); 
-            
-            if(typeof loadStats === 'function') loadStats();
-            if(typeof loadDashboardStats === 'function') loadDashboardStats();
+            fetchStats();
         } else {
             alert('Error: ' + data.message);
         }
@@ -992,6 +1076,7 @@ async function editAdminUserBalance(userId, currentBalance) {
             alert('✅ Success! User balance has been updated.');
             const balanceElement = document.getElementById('modalUserBalance');
             if(balanceElement) balanceElement.innerText = `${data.newBalance} USDT`;
+            fetchStats();
         } else {
             alert('❌ Error: ' + data.message);
         }
@@ -1026,8 +1111,8 @@ function renderWithdrawalsTable(list) {
         if(w.status === 'pending') {
             statusBadge = '<span class="badge-pending">PENDING</span>';
             actions = `
-                <button class="btn btn-approve" onclick="approveWithdrawal('${w._id}', '${w.amount}')" style="margin-right:5px; font-size:11px;">Approve & Send</button>
-                <button class="btn btn-reject" onclick="rejectWithdrawal('${w._id}', '${w.amount}')" style="font-size:11px;">Reject & Refund</button>
+                <button class="btn btn-approve" data-action="approve-with" data-id="${w._id}" data-amount="${w.amount}" style="margin-right:5px; font-size:11px;">Approve & Send</button>
+                <button class="btn btn-reject" data-action="reject-with" data-id="${w._id}" data-amount="${w.amount}" style="font-size:11px;">Reject & Refund</button>
             `;
         } else if (w.status === 'completed') {
             statusBadge = '<span class="badge-approved">COMPLETED</span>';
