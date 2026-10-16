@@ -128,13 +128,6 @@ const userSchema = new mongoose.Schema({
     lockUntil: { type: Date },
     lastActive: { type: Date, default: Date.now },
     activeSessions: { type: Array, default: [] }
-    activeSessions: [{
-        device: String,
-        browser: String,
-        ip: String,
-        token: String,
-        loginAt: { type: Date, default: Date.now }
-    }]
 }, { timestamps: true });
 
 const User = mongoose.models.User || mongoose.model('User', userSchema);
@@ -2116,8 +2109,7 @@ app.post('/api/admin/assign-role', verifyAdmin, async (req, res) => {
 // --- Admin Main Stats API ---
 app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
     try {
-        const rawToken = (req.headers['authorization'] || '').replace('Bearer ', '').trim();
-if (rawToken) await recordAdminSession(req.user._id || req.user.id, req, rawToken);
+        
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
 
         const [totalUsers, kycPendingFromKyc, activeAds, completedTrades, activeEscrowTrades] = await Promise.all([
