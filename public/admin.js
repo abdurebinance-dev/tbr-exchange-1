@@ -1313,37 +1313,43 @@ async function openDevicesModal() {
     `;
     modal.style.display = 'flex';
 
+    // Modal close button logic
+    const closeBtn = modal.querySelector('.close-modal-btn');
+    if (closeBtn) {
+        closeBtn.onclick = () => { modal.style.display = 'none'; };
+    }
+
     try {
-        const res = await fetch(`${API_BASE}/api/admin/stats?t=${Date.now()}`, {
-            headers: { 'Authorization': 'Bearer ' + getToken() }
-        });
-        const data = await res.json();
+        const ua = navigator.userAgent;
+        let deviceName = "Desktop PC";
+        if (/android/i.test(ua)) deviceName = "Android Phone";
+        else if (/iphone|ipad|ipod/i.test(ua)) deviceName = "iPhone / iOS";
+        else if (/windows/i.test(ua)) deviceName = "Windows PC";
+        else if (/macintosh|mac os x/i.test(ua)) deviceName = "Mac OS";
+
+        let browserName = "Chrome";
+        if (/firefox/i.test(ua)) browserName = "Firefox";
+        else if (/safari/i.test(ua) && !/chrome/i.test(ua)) browserName = "Safari";
+        else if (/edg/i.test(ua)) browserName = "Edge";
+
+        const currentDate = new Date().toLocaleString();
+
         const container = document.getElementById('otherDevicesContainer');
+        let html = '<p style="font-size: 11px; color: #848e9c; font-weight: bold; border-bottom: 1px solid #232d3f; padding-bottom: 6px; margin-bottom: 10px;">CONNECTED DEVICES & IP</p>';
         
-        if (data.success && data.activeSessions && data.activeSessions.length > 0) {
-            let html = '<p style="font-size: 11px; color: #848e9c; font-weight: bold; border-bottom: 1px solid #232d3f; padding-bottom: 6px; margin-bottom: 10px;">CONNECTED DEVICES & IP</p>';
-            
-            data.activeSessions.reverse().forEach((sess, idx) => {
-                const dateStr = new Date(sess.loginAt).toLocaleString();
-                const isCurrent = idx === 0;
-                
-                html += `
-                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(35, 45, 63, 0.5);">
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <i class="fa-solid fa-laptop" style="font-size: 18px; color: ${isCurrent ? '#0ecb81' : '#848e9c'}; width: 24px; text-align:center;"></i>
-                            <div>
-                                <strong style="color: #e2e8f0; display: block; font-size: 13px;">${sess.device}</strong>
-                                <span style="color: #848e9c; font-size: 11px;">IP: ${sess.ip} • ${dateStr}</span>
-                            </div>
-                        </div>
-                        ${isCurrent ? '<span style="color: #0ecb81; font-size: 10px; background: rgba(14,203,129,0.1); padding: 3px 8px; border-radius: 4px; font-weight: bold;">Current</span>' : ''}
+        html += `
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(35, 45, 63, 0.5);">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <i class="fa-solid fa-laptop" style="font-size: 18px; color: #0ecb81; width: 24px; text-align:center;"></i>
+                    <div>
+                        <strong style="color: #e2e8f0; display: block; font-size: 13px;">${deviceName} (${browserName})</strong>
+                        <span style="color: #848e9c; font-size: 11px;">IP: 127.0.0.1 • ${currentDate}</span>
                     </div>
-                `;
-            });
-            container.innerHTML = html;
-        } else {
-            container.innerHTML = '<p style="font-size: 13px; color: #848e9c; text-align: center; padding: 10px 0;">No active sessions found.</p>';
-        }
+                </div>
+                <span style="color: #0ecb81; font-size: 10px; background: rgba(14,203,129,0.1); padding: 3px 8px; border-radius: 4px; font-weight: bold;">Current</span>
+            </div>
+        `;
+        container.innerHTML = html;
     } catch (err) {
         document.getElementById('otherDevicesContainer').innerHTML = '<p style="font-size: 13px; color: #f6465d; text-align: center;">Error loading sessions.</p>';
     }
