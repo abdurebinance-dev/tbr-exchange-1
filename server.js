@@ -2160,12 +2160,6 @@ app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
     }
 });
         
-        // አሁን ያለውን ዲቫይስ ዝርዝር ውስጥ ይጨምረዋል
-        if (!activeSessionsList.some(s => s.ip === currentSession.ip && s.device === currentSession.device)) {
-            activeSessionsList.push(currentSession);
-            if (activeSessionsList.length > 5) activeSessionsList = activeSessionsList.slice(-5);
-            await User.updateOne({ _id: req.user.id }, { $set: { activeSessions: activeSessionsList } });
-        }
 
 // 🚀 1. Fast KYC Image Streaming Endpoint 🚀
 app.get('/api/admin/kyc-image/:id/:field', async (req, res) => {
