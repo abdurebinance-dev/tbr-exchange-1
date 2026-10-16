@@ -1791,13 +1791,56 @@ app.post('/api/admin/login', async (req, res) => {
     }
 });
 
-// 🚀 ADMIN SESSIONS API 🚀
+// 🚀 1. አድሚኑ ስታቲስቲክስ ወይም ሴሽን ሲጠይቅ ዲቫይሱን በራስሰር የሚመዘግብ እና የሚያመጣ API 🚀
 app.get('/api/admin/sessions', verifyAdminToken, async (req, res) => {
     try {
-        const user = await User.findById(req.user.id).select('activeSessions').lean();
-        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-        res.json({ success: true, sessions: user.activeSessions || [] });
+        const adminId = req.user.id;
+        const userAgent = req.headers['user-agent'] || 'Unknown Device';
+        const clientIp = req.ip || req.headers['x-forwarded-for'] || 'Unknown IP';
+        const authHeader = req.headers['authorization'] || '';
+
+        let deviceName = "Unknown Device";
+        if (userAgent.includes("Windows")) deviceName = "Windows PC";
+        else if (userAgent.includes("Mac")) deviceName = "Mac OS";
+        else if (userAgent.includes("Android")) deviceName = "Android Phone";
+        else if (userAgent.includes("iPhone") || userAgent.includes("iPad")) deviceName = "iOS Device";
+
+        let browserName = "Web Browser";
+        if (userAgent.includes("Chrome")) browserName = "Chrome";
+        if (userAgent.includes("Firefox")) browserName = "Firefox";
+        if (userAgent.includes("Safari") && !userAgent.includes("Chrome")) browserName = "Safari";
+        if (userAgent.includes("Edge")) browserName = "Edge";
+
+        const currentSession = {
+            device: deviceName,
+            browser: browserName,
+            ip: clientIp,
+            token: authHeader,
+            loginAt: new Date()
+        };
+
+        const adminUser = await User.findById(adminId).select('activeSessions').lean();
+        if (!adminUser) return res.status(404).json({ success: false, message: 'Admin not found' });
+
+        let sessions = adminUser.activeSessions || [];
+        
+        // ተመሳሳይ ቶከን ወይም IP ካለ አዳዲስ ሰዓት ይሰጠዋል፣ ካለፈ ግን ይጨምረዋል
+        const existingIdx = sessions.findIndex(s => s.ip === clientIp && s.device === deviceName);
+        if (existingIdx >= 0) {
+            sessions[existingIdx].loginAt = new Date();
+        } else {
+            sessions.push(currentSession);
+        }
+
+        if (sessions.length > 5) {
+            sessions = sessions.slice(-5);
+        }
+
+        await User.updateOne({ _id: adminId }, { $set: { activeSessions: sessions } });
+
+        res.json({ success: true, sessions: sessions });
     } catch (error) {
+        console.error("Sessions Error:", error);
         res.status(500).json({ success: false, message: 'Server error' });
     }
 });

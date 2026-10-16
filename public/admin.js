@@ -1285,7 +1285,6 @@ async function loadDeposits() {
     }
 }
 
-// Active Devices Modal (Fetch from Backend)
 async function openDevicesModal() {
     let modal = document.getElementById('devicesModal');
     if (!modal) {
@@ -1294,19 +1293,6 @@ async function openDevicesModal() {
         modal.className = "modal-overlay";
         document.body.appendChild(modal);
     }
-
-    const ua = navigator.userAgent;
-    let deviceName = "Unknown Device";
-    if (ua.includes("Windows")) deviceName = "Windows PC";
-    else if (ua.includes("Mac")) deviceName = "Mac OS";
-    else if (ua.includes("Android")) deviceName = "Android Phone";
-    else if (ua.includes("iPhone") || ua.includes("iPad")) deviceName = "iOS Device";
-
-    let browserName = "Web Browser";
-    if (ua.includes("Chrome")) browserName = "Chrome";
-    if (ua.includes("Firefox")) browserName = "Firefox";
-    if (ua.includes("Safari") && !ua.includes("Chrome")) browserName = "Safari";
-    if (ua.includes("Edge")) browserName = "Edge";
 
     modal.innerHTML = `
         <div style="background:#151a21; border:1px solid #232d3f; border-radius:12px; max-width:450px; width:100%; padding:0; color:#fff; box-shadow: 0 20px 50px rgba(0,0,0,0.8); overflow: hidden;">
@@ -1317,19 +1303,9 @@ async function openDevicesModal() {
             <div style="padding:20px; text-align:left;">
                 <p style="font-size:13px; color:#848e9c; margin-top:0;">Devices currently logged into your admin account.</p>
                 
-                <div style="background: rgba(14, 203, 129, 0.05); border: 1px solid rgba(14, 203, 129, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <i class="fa-solid fa-laptop-code" style="font-size: 24px; color: #0ecb81;"></i>
-                        <div>
-                            <strong style="color: #fff; display: block; font-size: 14px;">${deviceName} (${browserName})</strong>
-                            <span style="color: #0ecb81; font-size: 11px; font-weight: bold;">Current Device</span>
-                        </div>
-                    </div>
-                </div>
-                
                 <div id="otherDevicesContainer">
                     <div style="text-align:center; color:#f0b90b; font-size:13px; padding: 20px 0;">
-                        <i class="fa-solid fa-circle-notch fa-spin"></i> Fetching other devices...
+                        <i class="fa-solid fa-circle-notch fa-spin"></i> Loading active devices...
                     </div>
                 </div>
             </div>
@@ -1345,28 +1321,31 @@ async function openDevicesModal() {
         const container = document.getElementById('otherDevicesContainer');
         
         if (data.success && data.sessions && data.sessions.length > 0) {
-            let html = '<p style="font-size: 11px; color: #848e9c; font-weight: bold; border-bottom: 1px solid #232d3f; padding-bottom: 6px; margin-bottom: 10px;">RECENT LOGINS & IP ADDRESSES</p>';
+            let html = '<p style="font-size: 11px; color: #848e9c; font-weight: bold; border-bottom: 1px solid #232d3f; padding-bottom: 6px; margin-bottom: 10px;">CONNECTED DEVICES & IP</p>';
             
-            // የቅርብ ጊዜዎቹን ወደላይ አድርጎ ይደረድራል (Reverse)
-            data.sessions.reverse().forEach((sess) => {
+            data.sessions.reverse().forEach((sess, idx) => {
                 const dateStr = new Date(sess.loginAt).toLocaleString();
                 const icon = (sess.device.includes('Phone') || sess.device.includes('iOS')) ? 'fa-mobile-screen' : 'fa-computer';
+                const isCurrent = idx === 0; // የመጀመርያው አሁን የفتحነው ነው
                 
                 html += `
-                    <div style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(35, 45, 63, 0.5);">
-                        <i class="fa-solid ${icon}" style="font-size: 18px; color: #848e9c; width: 24px; text-align:center;"></i>
-                        <div>
-                            <strong style="color: #e2e8f0; display: block; font-size: 13px;">${sess.device} (${sess.browser})</strong>
-                            <span style="color: #848e9c; font-size: 11px;">IP: ${sess.ip} • ${dateStr}</span>
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(35, 45, 63, 0.5);">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <i class="fa-solid ${icon}" style="font-size: 18px; color: ${isCurrent ? '#0ecb81' : '#848e9c'}; width: 24px; text-align:center;"></i>
+                            <div>
+                                <strong style="color: #e2e8f0; display: block; font-size: 13px;">${sess.device} (${sess.browser})</strong>
+                                <span style="color: #848e9c; font-size: 11px;">IP: ${sess.ip} • ${dateStr}</span>
+                            </div>
                         </div>
+                        ${isCurrent ? '<span style="color: #0ecb81; font-size: 10px; background: rgba(14,203,129,0.1); padding: 3px 8px; border-radius: 4px; font-weight: bold;">Current</span>' : ''}
                     </div>
                 `;
             });
             container.innerHTML = html;
         } else {
-            container.innerHTML = '<p style="font-size: 13px; color: #848e9c; text-align: center; padding: 10px 0;">No other recent devices found.</p>';
+            container.innerHTML = '<p style="font-size: 13px; color: #848e9c; text-align: center; padding: 10px 0;">No active sessions found.</p>';
         }
     } catch (err) {
-        document.getElementById('otherDevicesContainer').innerHTML = '<p style="font-size: 13px; color: #f6465d; text-align: center;">Error loading devices.</p>';
+        document.getElementById('otherDevicesContainer').innerHTML = '<p style="font-size: 13px; color: #f6465d; text-align: center;">Error loading sessions.</p>';
     }
 }
