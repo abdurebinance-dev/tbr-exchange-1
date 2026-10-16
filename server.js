@@ -2161,22 +2161,35 @@ app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
 });
 
 // 🛑 አዲሱ የዲቫይስ ትራኪንግ (በ /api/admin/stats በኩል አብሮ የሚሄድ) 🛑
-        const userAgent = req.headers['user-agent'] || 'Unknown Device';
+        const userAgent = req.headers['user-agent'] || '';
         const clientIp = req.ip || req.headers['x-forwarded-for'] || '127.0.0.1';
-        let deviceName = "Windows PC";
-        if (userAgent.includes("Mac")) deviceName = "Mac OS";
-        else if (userAgent.includes("Android")) deviceName = "Android Phone";
-        else if (userAgent.includes("iPhone") || userAgent.includes("iPad")) deviceName = "iOS Device";
+        
+        let deviceName = "Desktop PC";
+        if (/android/i.test(userAgent)) {
+            deviceName = "Android Phone";
+            if (/samsung/i.test(userAgent)) deviceName = "Samsung Phone";
+        } else if (/iphone|ipad|ipod/i.test(userAgent)) {
+            deviceName = "iPhone / iOS";
+        } else if (/windows/i.test(userAgent)) {
+            deviceName = "Windows PC";
+        } else if (/macintosh|mac os x/i.test(userAgent)) {
+            deviceName = "Mac OS";
+        } else if (/linux/i.test(userAgent)) {
+            deviceName = "Linux PC";
+        }
 
-        let browserName = "Chrome";
-        if (userAgent.includes("Firefox")) browserName = "Firefox";
-        if (userAgent.includes("Safari") && !userAgent.includes("Chrome")) browserName = "Safari";
-        if (userAgent.includes("Edge")) browserName = "Edge";
+        let browserName = "Web Browser";
+        if (/chrome|chromium|crios/i.test(userAgent) && !/edg/i.test(userAgent)) browserName = "Chrome";
+        else if (/firefox|fxios/i.test(userAgent)) browserName = "Firefox";
+        else if (/safari/i.test(userAgent) && !/chrome/i.test(userAgent)) browserName = "Safari";
+        else if (/edg/i.test(userAgent)) browserName, browserName = "Edge";
+
+        const formattedIp = clientIp.includes('::1') || clientIp === '::' ? '127.0.0.1' : clientIp.replace(/^.*:/, '');
 
         const currentSession = {
             device: `${deviceName} (${browserName})`,
             browser: browserName,
-            ip: clientIp.includes('::1') ? '127.0.0.1' : clientIp,
+            ip: formattedIp,
             loginAt: new Date()
         };
 
