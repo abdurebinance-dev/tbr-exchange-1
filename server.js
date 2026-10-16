@@ -1785,86 +1785,129 @@ app.post('/api/admin/login', async (req, res) => {
     }
 });
 
-// 🛠️ Helper: የስልኩን ትክክለኛ ስም/ሞዴል፣ ብራውዘር እና ዋና IP በራሱ የሚለይ ፈንክሽን
-function parseDeviceAndIp(req) {
+// 🛠️ 1. ዘመናዊ የዲቫይስ፣ ሞዴል እና IP መለያ (Desktop site ቢበራም ስልክ መሆኑን አይሳሳትም)
+function parseDeviceAndIp(req, clientHintDevice) {
     const ua = req.headers['user-agent'] || '';
-    
-    // በ Render ላይ ትክክለኛውን የኢንተርኔት IP ለማምጣት (127.0.0.1 እንዳይሆን)
-    let ip = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : (req.socket?.remoteAddress || req.ip || 'Unknown IP');
+    const chPlatform = (req.headers['sec-ch-ua-platform'] || '').replace(/"/g, '');
+    const chModel = (req.headers['sec-ch-ua-model'] || '').replace(/"/g, '');
+    const chMobile = req.headers['sec-ch-ua-mobile'] === '?1';
+
+    // ትክክለኛውን የኢንተርኔት IP ማውጣት
+    let ip = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : (req.socket?.remoteAddress || req.ip || '127.0.0.1');
     if (ip === '::1' || ip === '::ffff:127.0.0.1') ip = '127.0.0.1';
     ip = ip.replace(/^::ffff:/, '');
 
-    let deviceName = "Desktop PC";
-    if (/android/i.test(ua)) {
-        // የአንድሮይድ ስልኩን ትክክለኛ ሞዴል ከ User-Agent ውስጥ ፈልጎ ያወጣል
-        const match = ua.match(/Android\s+[0-9.]+;\s*([^;)]+)/i);
-        if (match && match[1]) {
-            const model = match[1].replace(/Build\/.*$/i, '').trim();
-            deviceName = `Android (${model})`;
-        } else {
-            deviceName = "Android Phone";
+    let isMobile = chMobile || /android|iphone|ipad|ipod|mobile/i.test(ua);
+    let osName = "Windows PC";
+
+    // ከ Frontend ወይም ከ Client-Hints ትክክለኛውን መረጃ መውሰድ
+    if (clientHintDevice && clientHintDevice.os) {
+        osName = clientHintDevice.os;
+        isMobile = Boolean(clientHintDevice.isMobile);
+    } else if (/android/i.test(ua) || /android/i.test(chPlatform)) {
+        isMobile = true;
+        let model = chModel;
+        if (!model) {
+            const match = ua.match(/Android\s+[0-9.]+;\s*([^;)]+)/i);
+            if (match && match[1]) model = match[1].replace(/Build\/.*$/i, '').trim();
         }
-    } else if (/iphone/i.test(ua)) {
-        deviceName = "iPhone (iOS)";
+        // "K" የሚለው የ Chrome Privacy ምልክት ከሆነ አይጻፍም
+        if (model && model !== 'K' && model.length > 1) {
+            osName = `Android (${model})`;
+        } else {
+            osName = "Android Phone";
+        }
+    } else if (/iphone/i.test(ua) || /ios/i.test(chPlatform)) {
+        isMobile = true;
+        osName = "iPhone (iOS)";
     } else if (/ipad/i.test(ua)) {
-        deviceName = "iPad (iOS)";
-    } else if (/windows/i.test(ua)) {
-        deviceName = "Windows PC";
-    } else if (/macintosh|mac os x/i.test(ua)) {
-        deviceName = "MacBook / Mac OS";
+        isMobile = true;
+        osName = "iPad (iOS)";
+    } else if (/windows/i.test(ua) || /windows/i.test(chPlatform)) {
+        osName = "Windows PC";
+    } else if (/macintosh|mac os x/i.test(ua) || /macos/i.test(chPlatform)) {
+        osName = "MacBook / Mac OS";
+    } else if (chMobile) {
+        isMobile = true;
+        osName = "Mobile Phone";
     } else if (/linux/i.test(ua)) {
-        deviceName = "Linux PC";
+        osName = "Linux PC";
     }
 
-    let browserName = "Browser";
+    let browserName = "Chrome";
     if (/edg/i.test(ua)) browserName = "Edge";
     else if (/opr|opera/i.test(ua)) browserName = "Opera";
     else if (/chrome|chromium|crios/i.test(ua)) browserName = "Chrome";
     else if (/firefox|fxios/i.test(ua)) browserName = "Firefox";
-    else if (/safari/i.test(ua)) browserName = "Safari";
+    else if (/safari/i.test(ua) && !/chrome|chromium|crios/i.test(ua)) browserName = "Safari";
+
+    const fullDeviceName = `${osName} (${browserName})`;
+    // አንድ ዲቫይስ ሁለቴ እንዳይመዘገብ ልዩ መለያ (Device Key)
+    const deviceKey = `${osName}_${browserName}_${ip}`.toLowerCase().replace(/\s+/g, '');
 
     return {
-        device: `${deviceName} (${browserName})`,
-        isMobile: /android|iphone|ipad|ipod/i.test(ua),
-        ip: ip
+        deviceKey,
+        device: fullDeviceName,
+        isMobile,
+        ip
     };
 }
 
-// 🛠️ Helper: ሴሽኑን በዳታቤዝ ውስጥ የሚያዘምን
-async function recordAdminSession(adminId, req, token) {
+// 🛠️ 2. አንድን ዲቫይስ ሳይደጋግም ሰዓቱን ብቻ እያደሰ የሚያስቀምጥ ፈንክሽን
+async function recordAdminSession(adminId, req, token, clientHintDevice = null) {
     try {
         if (!adminId || !token) return [];
-        const info = parseDeviceAndIp(req);
-        const sessionId = crypto.createHash('md5').update(token).digest('hex').substring(0, 12);
+        const info = parseDeviceAndIp(req, clientHintDevice);
 
         const user = await User.findById(adminId).select('activeSessions').lean();
-        let sessions = (user && Array.isArray(user.activeSessions)) ? user.activeSessions : [];
+        let rawSessions = (user && Array.isArray(user.activeSessions)) ? user.activeSessions : [];
 
-        // ይህ ዲቫይስ ከዚህ በፊት ገብቶ ከሆነ ሰዓቱን ያድሳል፣ አዲስ ከሆነ ይጨምረዋል
-        const existingIdx = sessions.findIndex(s => s.sessionId === sessionId || (s.device === info.device && s.ip === info.ip));
+        // 1) ከዚህ በፊት የነበሩ የተበላሹ (Unknown Device / ::1) ዳታዎችን ማጽዳት
+        let cleanSessions = rawSessions.filter(s => 
+            s && s.device && 
+            !s.device.includes('Unknown') && 
+            s.ip !== '::1' && 
+            s.device.includes('(') // ብራውዘር ያልተጻፈባቸውን የድሮ ዳታዎች ያስወግዳል
+        );
 
+        // 2) አሁን የገባው ዲቫይስ ከዚህ በፊት ካለ መፈለግ (በ deviceKey ወይም በስምና IP)
+        // በተጨማሪም ስልክ በ Desktop Mode ገብቶ "Linux PC" ተብሎ ከነበረ በትክክለኛው የስልክ ስም ይተካዋል
+        const existingIdx = cleanSessions.findIndex(s => 
+            s.deviceKey === info.deviceKey || 
+            (s.device === info.device && s.ip === info.ip) ||
+            (info.isMobile && s.ip === info.ip && s.device.startsWith('Linux PC'))
+        );
+
+        const now = new Date();
         const sessionObj = {
-            sessionId: sessionId,
+            sessionId: info.deviceKey,
+            deviceKey: info.deviceKey,
             device: info.device,
             isMobile: info.isMobile,
             ip: info.ip,
-            lastActive: new Date(),
-            loginAt: existingIdx > -1 ? sessions[existingIdx].loginAt : new Date()
+            lastActive: now,
+            loginAt: existingIdx > -1 ? (cleanSessions[existingIdx].loginAt || now) : now
         };
 
+        // ካለ የድሮውን አውጥቶ በአዲሱ ሰዓት መተካት (አይደገምም!)
         if (existingIdx > -1) {
-            sessions.splice(existingIdx, 1);
+            cleanSessions.splice(existingIdx, 1);
         }
-        sessions.push(sessionObj);
+        cleanSessions.push(sessionObj);
 
-        // እስከ 10 የሚደርሱ የገቡ ዲቫይሶችን ይይዛል
-        if (sessions.length > 10) sessions = sessions.slice(-10);
+        // ተጨማሪ ጥራት፡ በተመሳሳይ deviceKey የተደገመ ካለ አንድ ብቻ ማስቀረት
+        const uniqueMap = new Map();
+        cleanSessions.forEach(item => {
+            const key = item.deviceKey || `${item.device}_${item.ip}`;
+            uniqueMap.set(key, item);
+        });
+        const finalSessions = Array.from(uniqueMap.values()).slice(-10);
 
-        await User.updateOne({ _id: adminId }, { $set: { activeSessions: sessions } });
-        return sessions;
+        await User.updateOne({ _id: adminId }, { $set: { activeSessions: finalSessions } });
+        return { sessions: finalSessions, currentSessionId: info.deviceKey };
     } catch (e) {
         console.error("Session track error:", e);
-        return [];
+        return { sessions: [], currentSessionId: '' };
     }
 }
 
@@ -1873,15 +1916,23 @@ app.get('/api/admin/sessions', verifyAdminToken, async (req, res) => {
     try {
         const authHeader = req.headers['authorization'] || req.headers['token'] || '';
         const token = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : authHeader;
-        const currentSessionId = crypto.createHash('md5').update(String(token).trim()).digest('hex').substring(0, 12);
+
+        // ከ Frontend የሚላከውን ትክክለኛ የዲቫይስ አይነት መቀበል
+        let clientHint = null;
+        if (req.query.os) {
+            clientHint = {
+                os: req.query.os,
+                isMobile: req.query.mobile === '1'
+            };
+        }
 
         const adminId = req.user._id || req.user.id;
-        const sessions = await recordAdminSession(adminId, req, String(token).trim());
+        const result = await recordAdminSession(adminId, req, String(token).trim(), clientHint);
 
         res.json({
             success: true,
-            currentSessionId: currentSessionId,
-            sessions: sessions
+            currentSessionId: result.currentSessionId,
+            sessions: result.sessions
         });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Server error' });
@@ -1902,6 +1953,7 @@ app.delete('/api/admin/sessions/:sessionId', verifyAdminToken, async (req, res) 
         res.status(500).json({ success: false, message: 'Error removing device' });
     }
 });
+
 // --- 🔥 Fast Admin Settings APIs (RAM Cached) 🔥 ---
 app.get('/api/settings', async (req, res) => {
     try {

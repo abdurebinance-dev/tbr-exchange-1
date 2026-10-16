@@ -1285,6 +1285,80 @@ async function loadDeposits() {
     }
 }
 
+// የዲቫይሱን ትክክለኛ ስምና ሞዴል ከብራውዘሩ ውስጥ ፈልጎ የሚያወጣ ፈንክሽን
+async function detectExactClientDevice() {
+    const ua = navigator.userAgent || '';
+    const isTouchDevice = (navigator.maxTouchPoints && navigator.maxTouchPoints > 1);
+    let os = '';
+    let isMobile = false;
+
+    // 1. ዘመናዊ Chrome Client Hints (የስልኩን ትክክለኛ ሞዴል ያመጣል)
+    if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
+        try {
+            const hints = await navigator.userAgentData.getHighEntropyValues(['platform', 'model', 'mobile']);
+            const platform = hints.platform || '';
+            const model = (hints.model || '').trim();
+            isMobile = Boolean(hints.mobile);
+
+            if (/android/i.test(platform)) {
+                isMobile = true;
+                os = (model && model !== 'K') ? `Android (${model})` : 'Android Phone';
+            } else if (/ios|iphone|ipad/i.test(platform)) {
+                isMobile = true;
+                os = model ? `iPhone (${model})` : 'iPhone (iOS)';
+            } else if (/windows/i.test(platform)) {
+                os = 'Windows PC';
+            } else if (/mac/i.test(platform)) {
+                os = isTouchDevice ? 'iPad / iOS' : 'MacBook / Mac OS';
+            } else if (/linux/i.test(platform) && isTouchDevice) {
+                // ስልክ ላይ Desktop Site ሲበራ Linux ይላል፣ ግን Touch ስላለው Android መሆኑ ይታወቃል!
+                isMobile = true;
+                os = (model && model !== 'K') ? `Android (${model})` : 'Android Phone';
+            }
+        } catch (e) {}
+    }
+
+    // 2. Fallback (ለሌሎች ብራውዘሮች)
+    if (!os) {
+        if (/android/i.test(ua)) {
+            isMobile = true;
+            const match = ua.match(/Android\s+[0-9.]+;\s*([^;)]+)/i);
+            const model = (match && match[1]) ? match[1].replace(/Build\/.*$/i, '').trim() : '';
+            os = (model && model !== 'K') ? `Android (${model})` : 'Android Phone';
+        } else if (/iphone/i.test(ua)) {
+            isMobile = true;
+            os = 'iPhone (iOS)';
+        } else if (/ipad/i.test(ua) || (/macintosh/i.test(ua) && isTouchDevice)) {
+            isMobile = true;
+            os = 'iPad (iOS)';
+        } else if (/linux/i.test(ua) && isTouchDevice) {
+            isMobile = true;
+            os = 'Android Phone';
+        } else if (/windows/i.test(ua)) {
+            os = 'Windows PC';
+        } else if (/macintosh/i.test(ua)) {
+            os = 'MacBook / Mac OS';
+        } else {
+            os = isTouchDevice ? 'Mobile Phone' : 'Desktop PC';
+            isMobile = isTouchDevice;
+        }
+    }
+
+    return { os, isMobile };
+}
+
+// ገጹ ሲከፈት በራሱ ጊዜ ዲቫይሱን እና የገባበትን ሰዓት ዳታቤዝ ላይ ያድሳል
+(async function autoSyncAdminSession() {
+    try {
+        const tk = typeof getToken === 'function' ? getToken() : localStorage.getItem('adminToken');
+        if (!tk) return;
+        const dev = await detectExactClientDevice();
+        await fetch(`${API_BASE}/api/admin/sessions?os=${encodeURIComponent(dev.os)}&mobile=${dev.isMobile ? '1' : '0'}&t=${Date.now()}`, {
+            headers: { 'Authorization': 'Bearer ' + tk }
+        });
+    } catch (e) {}
+})();
+
 async function openDevicesModal() {
     let modal = document.getElementById('devicesModal');
     if (!modal) {
@@ -1317,7 +1391,8 @@ async function openDevicesModal() {
     if (closeBtn) closeBtn.onclick = () => { modal.style.display = 'none'; };
 
     try {
-        const res = await fetch(`${API_BASE}/api/admin/sessions?t=${Date.now()}`, {
+        const dev = await detectExactClientDevice();
+        const res = await fetch(`${API_BASE}/api/admin/sessions?os=${encodeURIComponent(dev.os)}&mobile=${dev.isMobile ? '1' : '0'}&t=${Date.now()}`, {
             headers: { 'Authorization': 'Bearer ' + getToken() }
         });
         const data = await res.json();
@@ -1326,8 +1401,8 @@ async function openDevicesModal() {
         if (data.success && data.sessions && data.sessions.length > 0) {
             let html = `<p style="font-size: 11px; color: #848e9c; font-weight: bold; border-bottom: 1px solid #232d3f; padding-bottom: 6px; margin-bottom: 10px;">CONNECTED DEVICES (${data.sessions.length})</p>`;
             
-            // የአሁኑን ዲቫይስ መጀመሪያ ላይ ለማምጣት
-            const sorted = [...data.sessions].reverse();
+            // በመጨረሻ የገባውን (Last Active) ከላይ ለማምጣት
+            const sorted = [...data.sessions].sort((a, b) => new Date(b.lastActive) - new Date(a.lastActive));
 
             sorted.forEach((sess) => {
                 const dateStr = new Date(sess.lastActive || sess.loginAt).toLocaleString();
@@ -1340,7 +1415,7 @@ async function openDevicesModal() {
                             <i class="fa-solid ${icon}" style="font-size: 20px; color: ${isCurrent ? '#0ecb81' : '#3b82f6'}; width: 26px; text-align:center;"></i>
                             <div>
                                 <strong style="color: #e2e8f0; display: block; font-size: 13px;">${sess.device}</strong>
-                                <span style="color: #848e9c; font-size: 11px;">IP: ${sess.ip} • ${dateStr}</span>
+                                <span style="color: #848e9c; font-size: 11px;">IP: ${sess.ip} • Last active: ${dateStr}</span>
                             </div>
                         </div>
                         <div>
@@ -1363,10 +1438,10 @@ async function openDevicesModal() {
 
 async function removeAdminSession(sessionId) {
     try {
-        await fetch(`${API_BASE}/api/admin/sessions/${sessionId}`, {
+        await fetch(`${API_BASE}/api/admin/sessions/${encodeURIComponent(sessionId)}`, {
             method: 'DELETE',
             headers: { 'Authorization': 'Bearer ' + getToken() }
         });
-        openDevicesModal(); // ዝርዝሩን ወዲያውኑ ያድሳል
+        openDevicesModal();
     } catch (e) {}
 }
