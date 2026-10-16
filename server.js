@@ -1791,6 +1791,17 @@ app.post('/api/admin/login', async (req, res) => {
     }
 });
 
+// 🚀 ADMIN SESSIONS API 🚀
+app.get('/api/admin/sessions', verifyAdminToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select('activeSessions').lean();
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+        res.json({ success: true, sessions: user.activeSessions || [] });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
 // --- 🔥 Fast Admin Settings APIs (RAM Cached) 🔥 ---
 app.get('/api/settings', async (req, res) => {
     try {

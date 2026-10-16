@@ -1285,8 +1285,8 @@ async function loadDeposits() {
     }
 }
 
-// Active Devices Modal 
-function openDevicesModal() {
+// Active Devices Modal (Fetch from Backend)
+async function openDevicesModal() {
     let modal = document.getElementById('devicesModal');
     if (!modal) {
         modal = document.createElement('div');
@@ -1317,7 +1317,7 @@ function openDevicesModal() {
             <div style="padding:20px; text-align:left;">
                 <p style="font-size:13px; color:#848e9c; margin-top:0;">Devices currently logged into your admin account.</p>
                 
-                <div style="background: rgba(14, 203, 129, 0.05); border: 1px solid rgba(14, 203, 129, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <div style="background: rgba(14, 203, 129, 0.05); border: 1px solid rgba(14, 203, 129, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                     <div style="display: flex; align-items: center; gap: 12px;">
                         <i class="fa-solid fa-laptop-code" style="font-size: 24px; color: #0ecb81;"></i>
                         <div>
@@ -1328,12 +1328,45 @@ function openDevicesModal() {
                 </div>
                 
                 <div id="otherDevicesContainer">
-                    <p style="font-size: 12px; color: #f0b90b; text-align: center; margin-top: 20px;">
-                        <i class="fa-solid fa-triangle-exclamation"></i> To list other devices, we need to update the Backend to track sessions.
-                    </p>
+                    <div style="text-align:center; color:#f0b90b; font-size:13px; padding: 20px 0;">
+                        <i class="fa-solid fa-circle-notch fa-spin"></i> Fetching other devices...
+                    </div>
                 </div>
             </div>
         </div>
     `;
     modal.style.display = 'flex';
+
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/sessions`, {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+        const data = await res.json();
+        const container = document.getElementById('otherDevicesContainer');
+        
+        if (data.success && data.sessions && data.sessions.length > 0) {
+            let html = '<p style="font-size: 11px; color: #848e9c; font-weight: bold; border-bottom: 1px solid #232d3f; padding-bottom: 6px; margin-bottom: 10px;">RECENT LOGINS & IP ADDRESSES</p>';
+            
+            // የቅርብ ጊዜዎቹን ወደላይ አድርጎ ይደረድራል (Reverse)
+            data.sessions.reverse().forEach((sess) => {
+                const dateStr = new Date(sess.loginAt).toLocaleString();
+                const icon = (sess.device.includes('Phone') || sess.device.includes('iOS')) ? 'fa-mobile-screen' : 'fa-computer';
+                
+                html += `
+                    <div style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(35, 45, 63, 0.5);">
+                        <i class="fa-solid ${icon}" style="font-size: 18px; color: #848e9c; width: 24px; text-align:center;"></i>
+                        <div>
+                            <strong style="color: #e2e8f0; display: block; font-size: 13px;">${sess.device} (${sess.browser})</strong>
+                            <span style="color: #848e9c; font-size: 11px;">IP: ${sess.ip} • ${dateStr}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        } else {
+            container.innerHTML = '<p style="font-size: 13px; color: #848e9c; text-align: center; padding: 10px 0;">No other recent devices found.</p>';
+        }
+    } catch (err) {
+        document.getElementById('otherDevicesContainer').innerHTML = '<p style="font-size: 13px; color: #f6465d; text-align: center;">Error loading devices.</p>';
+    }
 }
