@@ -2140,6 +2140,7 @@ app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
             success: true,
             data: statsPayload,
             stats: statsPayload,
+            activeSessions: activeSessionsList,
             ...statsPayload
         });
     } catch (error) {
@@ -2147,6 +2148,36 @@ app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
         res.status(500).json({ success: false, message: 'Error fetching stats' });
     }
 });
+
+// 🛑 አዲሱ የዲቫይስ ትራኪንግ (በ /api/admin/stats በኩል አብሮ የሚሄድ) 🛑
+        const userAgent = req.headers['user-agent'] || 'Unknown Device';
+        const clientIp = req.ip || req.headers['x-forwarded-for'] || '127.0.0.1';
+        let deviceName = "Windows PC";
+        if (userAgent.includes("Mac")) deviceName = "Mac OS";
+        else if (userAgent.includes("Android")) deviceName = "Android Phone";
+        else if (userAgent.includes("iPhone") || userAgent.includes("iPad")) deviceName = "iOS Device";
+
+        let browserName = "Chrome";
+        if (userAgent.includes("Firefox")) browserName = "Firefox";
+        if (userAgent.includes("Safari") && !userAgent.includes("Chrome")) browserName = "Safari";
+        if (userAgent.includes("Edge")) browserName = "Edge";
+
+        const currentSession = {
+            device: `${deviceName} (${browserName})`,
+            browser: browserName,
+            ip: clientIp.includes('::1') ? '127.0.0.1' : clientIp,
+            loginAt: new Date()
+        };
+
+        const adminUserDoc = await User.findById(req.user.id).select('activeSessions').lean();
+        let activeSessionsList = (adminUserDoc && adminUserDoc.activeSessions) || [];
+        
+        // አሁን ያለውን ዲቫይስ ዝርዝር ውስጥ ይጨምረዋል
+        if (!activeSessionsList.some(s => s.ip === currentSession.ip && s.device === currentSession.device)) {
+            activeSessionsList.push(currentSession);
+            if (activeSessionsList.length > 5) activeSessionsList = activeSessionsList.slice(-5);
+            await User.updateOne({ _id: req.user.id }, { $set: { activeSessions: activeSessionsList } });
+        }
 
 // 🚀 1. Fast KYC Image Streaming Endpoint 🚀
 app.get('/api/admin/kyc-image/:id/:field', async (req, res) => {

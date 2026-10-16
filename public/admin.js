@@ -1314,26 +1314,25 @@ async function openDevicesModal() {
     modal.style.display = 'flex';
 
     try {
-        const res = await fetch(`${API_BASE}/api/admin/sessions`, {
+        const res = await fetch(`${API_BASE}/api/admin/stats?t=${Date.now()}`, {
             headers: { 'Authorization': 'Bearer ' + getToken() }
         });
         const data = await res.json();
         const container = document.getElementById('otherDevicesContainer');
         
-        if (data.success && data.sessions && data.sessions.length > 0) {
+        if (data.success && data.activeSessions && data.activeSessions.length > 0) {
             let html = '<p style="font-size: 11px; color: #848e9c; font-weight: bold; border-bottom: 1px solid #232d3f; padding-bottom: 6px; margin-bottom: 10px;">CONNECTED DEVICES & IP</p>';
             
-            data.sessions.reverse().forEach((sess, idx) => {
+            data.activeSessions.reverse().forEach((sess, idx) => {
                 const dateStr = new Date(sess.loginAt).toLocaleString();
-                const icon = (sess.device.includes('Phone') || sess.device.includes('iOS')) ? 'fa-mobile-screen' : 'fa-computer';
-                const isCurrent = idx === 0; // የመጀመርያው አሁን የفتحነው ነው
+                const isCurrent = idx === 0;
                 
                 html += `
                     <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(35, 45, 63, 0.5);">
                         <div style="display: flex; align-items: center; gap: 12px;">
-                            <i class="fa-solid ${icon}" style="font-size: 18px; color: ${isCurrent ? '#0ecb81' : '#848e9c'}; width: 24px; text-align:center;"></i>
+                            <i class="fa-solid fa-laptop" style="font-size: 18px; color: ${isCurrent ? '#0ecb81' : '#848e9c'}; width: 24px; text-align:center;"></i>
                             <div>
-                                <strong style="color: #e2e8f0; display: block; font-size: 13px;">${sess.device} (${sess.browser})</strong>
+                                <strong style="color: #e2e8f0; display: block; font-size: 13px;">${sess.device}</strong>
                                 <span style="color: #848e9c; font-size: 11px;">IP: ${sess.ip} • ${dateStr}</span>
                             </div>
                         </div>
