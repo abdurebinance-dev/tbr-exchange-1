@@ -23,13 +23,18 @@ function resolveImgUrl(raw) {
 
 // 🚀 1. Event Listeners for Login & Navigation 🚀
 document.addEventListener('DOMContentLoaded', () => {
-    // ቼክ አድርግ፣ ቶከን ካለ ቀጥታ ያስገባዋል
+    const overlay = document.getElementById('loginOverlay');
+    const dash = document.getElementById('mainDashboard');
+
+    // ቼክ አድርግ፣ ቶከን ካለ ያስገባዋል፣ ከሌለ በግድ ሎጊን ፔጅ ያመጣል
     if (getToken()) {
-        const overlay = document.getElementById('loginOverlay');
-        const dash = document.getElementById('mainDashboard');
         if(overlay) overlay.style.display = 'none';
         if(dash) dash.style.display = 'block';
         initAdminDataFast();
+    } else {
+        // 🛑 ሚስጥሩ እዚህ ጋር ነው! ቶከን ከሌለ (ማንም ሰው ቢከፍተው) ዳሽቦርዱን ደብቆ ሎጊን ይጠይቀዋል! 🛑
+        if(overlay) overlay.style.display = 'flex'; 
+        if(dash) dash.style.display = 'none';
     }
 
     // Login Button Event Listener
@@ -57,6 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
         userSearch.addEventListener('focus', function() { this.removeAttribute('readonly'); });
         userSearch.addEventListener('keyup', filterUsersTable);
     }
+// ... (የቀረውን የ document.body.addEventListener እንዳለ ተወው)
 
     document.body.addEventListener('click', async (e) => {
         const target = e.target;
