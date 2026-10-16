@@ -2171,9 +2171,14 @@ app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
             Trade.find({ status: { $in: ['completed', 'Completed', 'released', 'Released', 'resolved'] } })
                 .select('usdtAmount amount netUsdt buyerFeeUsdt sellerFeeUsdt totalPlatformFeeUsdt feeUsdt feePercent createdAt updatedAt')
                 .lean(),
-            Trade.find({ status: { $in: ['funds_locked', 'payment_sent', 'disputed'] } })
-                .select('usdtAmount sellerTotalDeductedUsdt amount')
-                .lean()
+            Trade.find({ 
+                status: { $in: ['funds_locked', 'payment_sent', 'disputed', 'Disputed', 'Funds_Locked'] },
+                $nor: [
+                    { status: { $in: ['completed', 'Completed', 'resolved', 'Resolved', 'refunded', 'Refunded', 'cancelled', 'Cancelled'] } }
+                ]
+            })
+            .select('usdtAmount sellerTotalDeductedUsdt amount status')
+            .lean()
         ]);
 
         const today = new Date();
