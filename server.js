@@ -127,6 +127,7 @@ const userSchema = new mongoose.Schema({
     loginAttempts: { type: Number, default: 0 },
     lockUntil: { type: Date },
     lastActive: { type: Date, default: Date.now },
+    activeSessions: { type: Array, default: [] }
     activeSessions: [{
         device: String,
         browser: String,
@@ -1791,70 +1792,121 @@ app.post('/api/admin/login', async (req, res) => {
     }
 });
 
-// 🚀 FIXED ADMIN SESSIONS API (No middleware crash) 🚀
-app.get('/api/admin/sessions', async (req, res) => {
-    try {
-        const authHeader = req.headers['authorization'] || '';
-        const token = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : authHeader;
+// 🛠️ Helper: የስልኩን ትክክለኛ ስም/ሞዴል፣ ብራውዘር እና ዋና IP በራሱ የሚለይ ፈንክሽን
+function parseDeviceAndIp(req) {
+    const ua = req.headers['user-agent'] || '';
+    
+    // በ Render ላይ ትክክለኛውን የኢንተርኔት IP ለማምጣት (127.0.0.1 እንዳይሆን)
+    let ip = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : (req.socket?.remoteAddress || req.ip || 'Unknown IP');
+    if (ip === '::1' || ip === '::ffff:127.0.0.1') ip = '127.0.0.1';
+    ip = ip.replace(/^::ffff:/, '');
 
-        if (!token) {
-            return res.status(401).json({ success: false, message: 'No token provided' });
-        }
-
-        const verified = jwt.verify(token, JWT_SECRET);
-        const adminId = verified.id || verified._id;
-        const user = await User.findById(adminId).select('activeSessions email').lean();
-
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'Admin not found' });
-        }
-
-        const userAgent = req.headers['user-agent'] || '';
-        const clientIp = req.ip || req.headers['x-forwarded-for'] || '127.0.0.1';
-        
-        let deviceName = "Desktop PC";
-        if (/android/i.test(userAgent)) {
+    let deviceName = "Desktop PC";
+    if (/android/i.test(ua)) {
+        // የአንድሮይድ ስልኩን ትክክለኛ ሞዴል ከ User-Agent ውስጥ ፈልጎ ያወጣል
+        const match = ua.match(/Android\s+[0-9.]+;\s*([^;)]+)/i);
+        if (match && match[1]) {
+            const model = match[1].replace(/Build\/.*$/i, '').trim();
+            deviceName = `Android (${model})`;
+        } else {
             deviceName = "Android Phone";
-            if (/samsung/i.test(userAgent)) deviceName = "Samsung Phone";
-        } else if (/iphone|ipad|ipod/i.test(userAgent)) {
-            deviceName = "iPhone / iOS";
-        } else if (/windows/i.test(userAgent)) {
-            deviceName = "Windows PC";
-        } else if (/macintosh|mac os x/i.test(userAgent)) {
-            deviceName = "Mac OS";
-        } else if (/linux/i.test(userAgent)) {
-            deviceName = "Linux PC";
         }
+    } else if (/iphone/i.test(ua)) {
+        deviceName = "iPhone (iOS)";
+    } else if (/ipad/i.test(ua)) {
+        deviceName = "iPad (iOS)";
+    } else if (/windows/i.test(ua)) {
+        deviceName = "Windows PC";
+    } else if (/macintosh|mac os x/i.test(ua)) {
+        deviceName = "MacBook / Mac OS";
+    } else if (/linux/i.test(ua)) {
+        deviceName = "Linux PC";
+    }
 
-        let browserName = "Web Browser";
-        if (/chrome|chromium|crios/i.test(userAgent) && !/edg/i.test(userAgent)) browserName = "Chrome";
-        else if (/firefox|fxios/i.test(userAgent)) browserName = "Firefox";
-        else if (/safari/i.test(userAgent) && !/chrome/i.test(userAgent)) browserName = "Safari";
-        else if (/edg/i.test(userAgent)) browserName = "Edge";
+    let browserName = "Browser";
+    if (/edg/i.test(ua)) browserName = "Edge";
+    else if (/opr|opera/i.test(ua)) browserName = "Opera";
+    else if (/chrome|chromium|crios/i.test(ua)) browserName = "Chrome";
+    else if (/firefox|fxios/i.test(ua)) browserName = "Firefox";
+    else if (/safari/i.test(ua)) browserName = "Safari";
 
-        const formattedIp = clientIp.includes('::1') || clientIp === '::' ? '127.0.0.1' : clientIp.replace(/^.*:/, '');
+    return {
+        device: `${deviceName} (${browserName})`,
+        isMobile: /android|iphone|ipad|ipod/i.test(ua),
+        ip: ip
+    };
+}
 
-        const currentSession = {
-            device: `${deviceName} (${browserName})`,
-            browser: browserName,
-            ip: formattedIp,
-            loginAt: new Date()
+// 🛠️ Helper: ሴሽኑን በዳታቤዝ ውስጥ የሚያዘምን
+async function recordAdminSession(adminId, req, token) {
+    try {
+        if (!adminId || !token) return [];
+        const info = parseDeviceAndIp(req);
+        const sessionId = crypto.createHash('md5').update(token).digest('hex').substring(0, 12);
+
+        const user = await User.findById(adminId).select('activeSessions').lean();
+        let sessions = (user && Array.isArray(user.activeSessions)) ? user.activeSessions : [];
+
+        // ይህ ዲቫይስ ከዚህ በፊት ገብቶ ከሆነ ሰዓቱን ያድሳል፣ አዲስ ከሆነ ይጨምረዋል
+        const existingIdx = sessions.findIndex(s => s.sessionId === sessionId || (s.device === info.device && s.ip === info.ip));
+
+        const sessionObj = {
+            sessionId: sessionId,
+            device: info.device,
+            isMobile: info.isMobile,
+            ip: info.ip,
+            lastActive: new Date(),
+            loginAt: existingIdx > -1 ? sessions[existingIdx].loginAt : new Date()
         };
 
-        let sessions = user.activeSessions || [];
-        
-        // አሁን የገባበትን ከሌለ ይጨምረዋል፣ ካለ ሰዓቱን ያዘምነዋል
-        const exists = sessions.some(s => s.token === token);
-        if (!exists) {
-            sessions.push(currentSession);
-            if (sessions.length > 5) sessions = sessions.slice(-5);
-            await User.updateOne({ _id: adminId }, { $set: { activeSessions: sessions } });
+        if (existingIdx > -1) {
+            sessions.splice(existingIdx, 1);
         }
+        sessions.push(sessionObj);
 
-        res.json({ success: true, sessions: sessions });
+        // እስከ 10 የሚደርሱ የገቡ ዲቫይሶችን ይይዛል
+        if (sessions.length > 10) sessions = sessions.slice(-10);
+
+        await User.updateOne({ _id: adminId }, { $set: { activeSessions: sessions } });
+        return sessions;
+    } catch (e) {
+        console.error("Session track error:", e);
+        return [];
+    }
+}
+
+// 🚀 1. ሁሉንም የገቡ ዲቫይሶች ማምጫ API 🚀
+app.get('/api/admin/sessions', verifyAdminToken, async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'] || req.headers['token'] || '';
+        const token = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : authHeader;
+        const currentSessionId = crypto.createHash('md5').update(String(token).trim()).digest('hex').substring(0, 12);
+
+        const adminId = req.user._id || req.user.id;
+        const sessions = await recordAdminSession(adminId, req, String(token).trim());
+
+        res.json({
+            success: true,
+            currentSessionId: currentSessionId,
+            sessions: sessions
+        });
     } catch (error) {
-        console.error("Sessions Error:", error);
         res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// 🚀 2. ያልተፈለገ ዲቫይስ ከሩቅ ማስወጫ (Remove Device) API 🚀
+app.delete('/api/admin/sessions/:sessionId', verifyAdminToken, async (req, res) => {
+    try {
+        const adminId = req.user._id || req.user.id;
+        const targetId = req.params.sessionId;
+        await User.updateOne(
+            { _id: adminId },
+            { $pull: { activeSessions: { sessionId: targetId } } }
+        );
+        res.json({ success: true, message: 'Device removed' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error removing device' });
     }
 });
 // --- 🔥 Fast Admin Settings APIs (RAM Cached) 🔥 ---
@@ -2064,6 +2116,8 @@ app.post('/api/admin/assign-role', verifyAdmin, async (req, res) => {
 // --- Admin Main Stats API ---
 app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
     try {
+        const rawToken = (req.headers['authorization'] || '').replace('Bearer ', '').trim();
+if (rawToken) await recordAdminSession(req.user._id || req.user.id, req, rawToken);
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
 
         const [totalUsers, kycPendingFromKyc, activeAds, completedTrades, activeEscrowTrades] = await Promise.all([

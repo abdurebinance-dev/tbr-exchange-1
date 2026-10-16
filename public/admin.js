@@ -1295,13 +1295,13 @@ async function openDevicesModal() {
     }
 
     modal.innerHTML = `
-        <div style="background:#151a21; border:1px solid #232d3f; border-radius:12px; max-width:450px; width:100%; padding:0; color:#fff; box-shadow: 0 20px 50px rgba(0,0,0,0.8); overflow: hidden;">
+        <div style="background:#151a21; border:1px solid #232d3f; border-radius:12px; max-width:480px; width:100%; padding:0; color:#fff; box-shadow: 0 20px 50px rgba(0,0,0,0.8); overflow: hidden;">
             <div style="background:#18202a; padding:15px 20px; border-bottom:1px solid #232d3f; display:flex; justify-content:space-between; align-items:center;">
-                <h3 style="margin:0; color:#3b82f6; font-size:16px;"><i class="fa-solid fa-laptop"></i> Active Login Sessions</h3>
+                <h3 style="margin:0; color:#3b82f6; font-size:16px;"><i class="fa-solid fa-shield-halved"></i> Active Login Sessions</h3>
                 <button class="close-modal-btn" style="background:none; border:none; color:#848e9c; font-size:24px; cursor:pointer; line-height:1;">&times;</button>
             </div>
-            <div style="padding:20px; text-align:left;">
-                <p style="font-size:13px; color:#848e9c; margin-top:0;">Devices currently logged into your admin account.</p>
+            <div style="padding:20px; text-align:left; max-height: 70vh; overflow-y: auto;">
+                <p style="font-size:13px; color:#848e9c; margin-top:0;">Devices currently logged into your master admin account.</p>
                 
                 <div id="otherDevicesContainer">
                     <div style="text-align:center; color:#f0b90b; font-size:13px; padding: 20px 0;">
@@ -1313,44 +1313,60 @@ async function openDevicesModal() {
     `;
     modal.style.display = 'flex';
 
-    // Modal close button logic
     const closeBtn = modal.querySelector('.close-modal-btn');
-    if (closeBtn) {
-        closeBtn.onclick = () => { modal.style.display = 'none'; };
-    }
+    if (closeBtn) closeBtn.onclick = () => { modal.style.display = 'none'; };
 
     try {
-        const ua = navigator.userAgent;
-        let deviceName = "Desktop PC";
-        if (/android/i.test(ua)) deviceName = "Android Phone";
-        else if (/iphone|ipad|ipod/i.test(ua)) deviceName = "iPhone / iOS";
-        else if (/windows/i.test(ua)) deviceName = "Windows PC";
-        else if (/macintosh|mac os x/i.test(ua)) deviceName = "Mac OS";
-
-        let browserName = "Chrome";
-        if (/firefox/i.test(ua)) browserName = "Firefox";
-        else if (/safari/i.test(ua) && !/chrome/i.test(ua)) browserName = "Safari";
-        else if (/edg/i.test(ua)) browserName = "Edge";
-
-        const currentDate = new Date().toLocaleString();
-
+        const res = await fetch(`${API_BASE}/api/admin/sessions?t=${Date.now()}`, {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+        const data = await res.json();
         const container = document.getElementById('otherDevicesContainer');
-        let html = '<p style="font-size: 11px; color: #848e9c; font-weight: bold; border-bottom: 1px solid #232d3f; padding-bottom: 6px; margin-bottom: 10px;">CONNECTED DEVICES & IP</p>';
         
-        html += `
-            <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(35, 45, 63, 0.5);">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <i class="fa-solid fa-laptop" style="font-size: 18px; color: #0ecb81; width: 24px; text-align:center;"></i>
-                    <div>
-                        <strong style="color: #e2e8f0; display: block; font-size: 13px;">${deviceName} (${browserName})</strong>
-                        <span style="color: #848e9c; font-size: 11px;">IP: 127.0.0.1 • ${currentDate}</span>
+        if (data.success && data.sessions && data.sessions.length > 0) {
+            let html = `<p style="font-size: 11px; color: #848e9c; font-weight: bold; border-bottom: 1px solid #232d3f; padding-bottom: 6px; margin-bottom: 10px;">CONNECTED DEVICES (${data.sessions.length})</p>`;
+            
+            // የአሁኑን ዲቫይስ መጀመሪያ ላይ ለማምጣት
+            const sorted = [...data.sessions].reverse();
+
+            sorted.forEach((sess) => {
+                const dateStr = new Date(sess.lastActive || sess.loginAt).toLocaleString();
+                const isCurrent = sess.sessionId === data.currentSessionId;
+                const icon = sess.isMobile ? 'fa-mobile-screen-button' : 'fa-laptop';
+                
+                html += `
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(35, 45, 63, 0.5);">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <i class="fa-solid ${icon}" style="font-size: 20px; color: ${isCurrent ? '#0ecb81' : '#3b82f6'}; width: 26px; text-align:center;"></i>
+                            <div>
+                                <strong style="color: #e2e8f0; display: block; font-size: 13px;">${sess.device}</strong>
+                                <span style="color: #848e9c; font-size: 11px;">IP: ${sess.ip} • ${dateStr}</span>
+                            </div>
+                        </div>
+                        <div>
+                            ${isCurrent 
+                                ? '<span style="color: #0ecb81; font-size: 10px; background: rgba(14,203,129,0.12); padding: 4px 8px; border-radius: 4px; font-weight: bold;">Current</span>' 
+                                : `<button onclick="removeAdminSession('${sess.sessionId}')" style="background: rgba(246,70,93,0.12); color: #f6465d; border: 1px solid rgba(246,70,93,0.3); padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">Remove</button>`
+                            }
+                        </div>
                     </div>
-                </div>
-                <span style="color: #0ecb81; font-size: 10px; background: rgba(14,203,129,0.1); padding: 3px 8px; border-radius: 4px; font-weight: bold;">Current</span>
-            </div>
-        `;
-        container.innerHTML = html;
+                `;
+            });
+            container.innerHTML = html;
+        } else {
+            container.innerHTML = '<p style="font-size: 13px; color: #848e9c; text-align: center; padding: 10px 0;">No active sessions found.</p>';
+        }
     } catch (err) {
         document.getElementById('otherDevicesContainer').innerHTML = '<p style="font-size: 13px; color: #f6465d; text-align: center;">Error loading sessions.</p>';
     }
+}
+
+async function removeAdminSession(sessionId) {
+    try {
+        await fetch(`${API_BASE}/api/admin/sessions/${sessionId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+        openDevicesModal(); // ዝርዝሩን ወዲያውኑ ያድሳል
+    } catch (e) {}
 }
