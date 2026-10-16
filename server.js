@@ -126,7 +126,7 @@ const userSchema = new mongoose.Schema({
     resetTokenExpire: Date,
     loginAttempts: { type: Number, default: 0 },
     lockUntil: { type: Date },
-    lastActive: { type: Date, default: Date.now }
+    lastActive: { type: Date, default: Date.now },
     activeSessions: [{
         device: String,
         browser: String,
