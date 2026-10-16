@@ -93,6 +93,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     document.body.addEventListener('click', async (e) => {
+        if (target.closest('#devicesBtn')) openDevicesModal();
         const target = e.target;
 
         if (target.closest('#logoutBtn')) logoutAdmin();
@@ -1278,4 +1279,58 @@ async function loadDeposits() {
     } catch (error) {
         document.getElementById('depositsTableBody').innerHTML = '<tr><td colspan="5" style="text-align:center; color:#f6465d;">Error loading deposits.</td></tr>';
     }
+}
+
+// Active Devices Modal 
+function openDevicesModal() {
+    let modal = document.getElementById('devicesModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'devicesModal';
+        modal.className = "modal-overlay";
+        document.body.appendChild(modal);
+    }
+
+    // አሁን እየተጠቀምክበት ያለውን ዲቫይስ (ስልክ/ኮምፒውተር) በጃቫስክሪፕት መለየት
+    const ua = navigator.userAgent;
+    let deviceName = "Unknown Device";
+    if (ua.includes("Windows")) deviceName = "Windows PC";
+    else if (ua.includes("Mac")) deviceName = "Mac OS";
+    else if (ua.includes("Android")) deviceName = "Android Phone";
+    else if (ua.includes("iPhone") || ua.includes("iPad")) deviceName = "iOS Device";
+
+    let browserName = "Web Browser";
+    if (ua.includes("Chrome")) browserName = "Chrome";
+    if (ua.includes("Firefox")) browserName = "Firefox";
+    if (ua.includes("Safari") && !ua.includes("Chrome")) browserName = "Safari";
+    if (ua.includes("Edge")) browserName = "Edge";
+
+    modal.innerHTML = `
+        <div style="background:#151a21; border:1px solid #232d3f; border-radius:12px; max-width:450px; width:100%; padding:0; color:#fff; box-shadow: 0 20px 50px rgba(0,0,0,0.8); overflow: hidden;">
+            <div style="background:#18202a; padding:15px 20px; border-bottom:1px solid #232d3f; display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0; color:#3b82f6; font-size:16px;"><i class="fa-solid fa-laptop"></i> Active Login Sessions</h3>
+                <button class="close-modal-btn" style="background:none; border:none; color:#848e9c; font-size:24px; cursor:pointer; line-height:1;">&times;</button>
+            </div>
+            <div style="padding:20px; text-align:left;">
+                <p style="font-size:13px; color:#848e9c; margin-top:0;">Devices currently logged into your admin account.</p>
+                
+                <div style="background: rgba(14, 203, 129, 0.05); border: 1px solid rgba(14, 203, 129, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <i class="fa-solid fa-laptop-code" style="font-size: 24px; color: #0ecb81;"></i>
+                        <div>
+                            <strong style="color: #fff; display: block; font-size: 14px;">${deviceName} (${browserName})</strong>
+                            <span style="color: #0ecb81; font-size: 11px; font-weight: bold;">Current Device</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="otherDevicesContainer">
+                    <p style="font-size: 12px; color: #f0b90b; text-align: center; margin-top: 20px;">
+                        <i class="fa-solid fa-triangle-exclamation"></i> To list other devices, we need to update the Backend to track sessions.
+                    </p>
+                </div>
+            </div>
+        </div>
+    `;
+    modal.style.display = 'flex';
 }
