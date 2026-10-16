@@ -2159,9 +2159,6 @@ app.get('/api/admin/stats', verifyAdminToken, async (req, res) => {
         res.status(500).json({ success: false, message: 'Error fetching stats' });
     }
 });
-
-        const adminUserDoc = await User.findById(req.user.id).select('activeSessions').lean();
-        let activeSessionsList = (adminUserDoc && adminUserDoc.activeSessions) || [];
         
         // አሁን ያለውን ዲቫይስ ዝርዝር ውስጥ ይጨምረዋል
         if (!activeSessionsList.some(s => s.ip === currentSession.ip && s.device === currentSession.device)) {
