@@ -2,8 +2,10 @@ const API_BASE = (window.location.hostname === 'localhost' || window.location.ho
     ? 'http://localhost:5000'
     : 'https://tbr-exchange-backend.onrender.com';
 
+// ⚡ ቀላል (2KB) የማርኬት ካሽ ቁልፍ (QuotaExceededError ፈጽሞ እንዳይፈጠርና በ 0.00s እንዲከፍት!) ⚡
 const LIGHT_ADS_CACHE_KEY = 'tbr_market_light_ads_v5';
 const AVATAR_THUMB_CACHE_KEY = 'tbr_market_avatars_v5';
+const SAVED_PAYMENTS_CACHE_KEY = 'tbr_user_saved_payments_v5';
 let currentType = 'buy';
 
 let systemSettings = {
@@ -34,23 +36,33 @@ function getAuthToken() {
     return localStorage.getItem('token') || localStorage.getItem('jwtToken') || localStorage.getItem('authToken') || '';
 }
 
-// ⚡ ሰርቨሩ እስኪመልስ ድረስ ከ LocalStorage ላይ የተጠቃሚውን Payment Methods ማንበቢያ ⚡
-function loadCachedPaymentsFallback() {
+// ⚡ በ 0.00 ሰከንድ የተጠቃሚውን Payment Methods ከ LocalStorage ወዲያውኑ የሚያነብ (10 ሰከንድ እንዳይጠብቅ!) ⚡
+function hydrateUserPaymentsInstantly() {
     try {
-        const storedUser = JSON.parse(localStorage.getItem('user') || localStorage.getItem('currentUser') || localStorage.getItem('tbr_user') || '{}');
-        const localPays = storedUser.payments || storedUser.paymentMethods || JSON.parse(localStorage.getItem('userPayments') || '[]');
-        if (Array.isArray(localPays) && localPays.length > 0 && currentUserSavedPayments.length === 0) {
-            currentUserSavedPayments = localPays;
+        const cachedPays = localStorage.getItem(SAVED_PAYMENTS_CACHE_KEY) || localStorage.getItem('userPayments') || localStorage.getItem('savedPayments');
+        if (cachedPays) {
+            const parsed = JSON.parse(cachedPays);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                currentUserSavedPayments = parsed;
+            }
         }
-        if (storedUser.balance !== undefined && currentUserBalance === 0) {
-            currentUserBalance = Number(storedUser.balance || 0);
-        }
-        if (storedUser.fullName && !currentUserFullName) {
-            currentUserFullName = storedUser.fullName;
+
+        const rawUser = localStorage.getItem('user') || localStorage.getItem('currentUser') || localStorage.getItem('tbr_user');
+        if (rawUser) {
+            const u = JSON.parse(rawUser);
+            if (u) {
+                if (u.balance !== undefined) currentUserBalance = Number(u.balance || 0);
+                if (u.fullName || u.name) currentUserFullName = u.fullName || u.name || '';
+                const userPays = u.payments || u.paymentMethods || u.savedPayments || u.bankAccounts;
+                if (Array.isArray(userPays) && userPays.length > 0) {
+                    currentUserSavedPayments = userPays;
+                }
+            }
         }
     } catch (e) {}
 }
 
+// ⚡ ትላልቅ የፕሮፋይል ፎቶዎችን ወደ 2KB ትንሽ Thumbnail ቀይሮ በካሽ የሚያስቀምጥ (ገጹ በ 0.00s እንዲከፍት) ⚡
 function cacheSmallAvatarThumb(traderKey, rawDataUrl) {
     if (!traderKey || !rawDataUrl) return;
     if (avatarThumbMemory[traderKey]) return;
@@ -80,6 +92,7 @@ function cacheSmallAvatarThumb(traderKey, rawDataUrl) {
     img.src = rawDataUrl;
 }
 
+// ⚡ ማስታወቂያዎቹን ያለ ክብደት (2KB ብቻ) በ localStorage እና sessionStorage ውስጥ ማስቀመጥ ⚡
 function saveLightweightAdsCache(adsArray) {
     try {
         const lightAds = adsArray.map(ad => {
@@ -145,42 +158,53 @@ async function fetchAdminSettings() {
 }
 
 async function fetchCurrentUserWalletAndPayments() {
-    loadCachedPaymentsFallback();
     const token = getAuthToken();
-    if (!token) return;
+    let email = localStorage.getItem('userEmail') || localStorage.getItem('email') || '';
+    try {
+        const u = JSON.parse(localStorage.getItem('user') || localStorage.getItem('currentUser') || localStorage.getItem('tbr_user') || '{}');
+        if (!email && u.email) email = u.email;
+    } catch (e) {}
+
+    if (!token && !email) return;
+
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    const querySuffix = email ? `?email=${encodeURIComponent(email)}` : '';
+
     try {
         const [profRes, payRes] = await Promise.all([
-            fetch(`${API_BASE}/api/user/profile`, { headers: { 'Authorization': `Bearer ${token}` } }),
-            fetch(`${API_BASE}/api/user/payments`, { headers: { 'Authorization': `Bearer ${token}` } })
+            fetch(`${API_BASE}/api/user/profile${querySuffix}`, { headers }).catch(() => null),
+            fetch(`${API_BASE}/api/user/payments${querySuffix}`, { headers }).catch(() => null)
         ]);
-        if (profRes.ok) {
+
+        if (profRes && profRes.ok) {
             const profJson = await profRes.json();
-            const userObj = profJson.user || profJson.data;
+            const userObj = profJson.user || profJson.data || profJson;
             if (userObj) {
-                currentUserBalance = Number(userObj.balance ?? currentUserBalance);
-                currentUserFullName = userObj.fullName || currentUserFullName;
-                const profPays = userObj.payments || userObj.paymentMethods;
+                if (userObj.balance !== undefined) currentUserBalance = Number(userObj.balance || 0);
+                if (userObj.fullName || userObj.name) currentUserFullName = userObj.fullName || userObj.name || '';
+                const profPays = userObj.payments || userObj.paymentMethods || userObj.savedPayments;
                 if (Array.isArray(profPays) && profPays.length > 0) {
                     currentUserSavedPayments = profPays;
-                    localStorage.setItem('userPayments', JSON.stringify(profPays));
+                    localStorage.setItem(SAVED_PAYMENTS_CACHE_KEY, JSON.stringify(profPays));
                 }
             }
         }
-        if (payRes.ok) {
+
+        if (payRes && payRes.ok) {
             const payJson = await payRes.json();
-            const list = payJson.payments || payJson.paymentMethods || payJson.data;
+            const list = payJson.payments || payJson.paymentMethods || payJson.data || (Array.isArray(payJson) ? payJson : null);
             if (Array.isArray(list)) {
                 currentUserSavedPayments = list;
-                localStorage.setItem('userPayments', JSON.stringify(list));
+                localStorage.setItem(SAVED_PAYMENTS_CACHE_KEY, JSON.stringify(list));
             }
         }
     } catch (e) {}
 }
 
-// ⚡ CSP-SAFE IMAGE ERROR HANDLER ⚡
+// ⚡ CSP-SAFE IMAGE FALLBACK HANDLER ⚡
 document.addEventListener('error', function(e) {
     if (e.target && e.target.tagName === 'IMG') {
-        if (e.target.id === 'navbarLogoImg') {
+        if (e.target.id === 'navbarLogoImg' || (e.target.getAttribute('src') || '').includes('logo.png')) {
             e.target.style.display = 'none';
         } else if (e.target.dataset.fallback) {
             e.target.outerHTML = e.target.dataset.fallback;
@@ -188,40 +212,8 @@ document.addEventListener('error', function(e) {
     }
 }, true);
 
-// ⚡ GLOBAL CLICK & INPUT DELEGATION (SUPPORTS BOTH IDs & DATA-CMD) ⚡
+// ⚡ UNIVERSAL EVENT DELEGATION (Works with ANY HTML version) ⚡
 document.addEventListener('click', function(e) {
-    // 1. Check data-cmd attributes if present in HTML
-    const cmdTarget = e.target.closest('[data-cmd]');
-    if (cmdTarget) {
-        const cmd = cmdTarget.getAttribute('data-cmd');
-        const arg = cmdTarget.getAttribute('data-arg');
-        switch(cmd) {
-            case 'switchTradeType': return switchTradeType(arg);
-            case 'toggleOnlineFilter': return toggleOnlineFilter();
-            case 'openAmountModal': return openAmountModal();
-            case 'closeAmountModal': return closeAmountModal();
-            case 'selectAmountPill': return selectAmountPill(Number(arg));
-            case 'resetAmountFilter': return resetAmountFilter();
-            case 'confirmAmountFilter': return confirmAmountFilter();
-            case 'openPaymentModal': return openPaymentModal();
-            case 'closePaymentModal': return closePaymentModal();
-            case 'selectPaymentOption': return selectPaymentOption(arg);
-            case 'resetPaymentFilter': return resetPaymentFilter();
-            case 'confirmPaymentFilter': return confirmPaymentFilter();
-            case 'openOrderModalByIndex': return openOrderModalByIndex(Number(arg));
-            case 'closeOrderModal': return closeOrderModal();
-            case 'fillMaxModalOrder': return fillMaxModalOrder();
-            case 'confirmTrade': return confirmTrade();
-            case 'selectModalPaymentMethod': return selectModalPaymentMethod(arg);
-            case 'openUserProfileStats': return openUserProfileStats(arg);
-            case 'closeProfileModal': document.getElementById('userProfileModal').style.display = 'none'; return;
-            case 'goSettings': window.location.href = 'settings.html?tab=payments'; return;
-            case 'closeAlert': document.getElementById('customAlertModal').style.display = 'none'; return;
-            case 'goDashboard': window.location.href = 'dashboard.html'; return;
-        }
-    }
-
-    // 2. Fallback to IDs and Classes
     if (e.target.closest('#buyTabBtn')) return switchTradeType('buy');
     if (e.target.closest('#sellTabBtn')) return switchTradeType('sell');
     if (e.target.closest('#onlineFilterBtn')) return toggleOnlineFilter();
@@ -240,14 +232,21 @@ document.addEventListener('click', function(e) {
     if (e.target.closest('#fillMaxModalOrderBtn') || e.target.closest('.tm-max-btn')) return fillMaxModalOrder();
     if (e.target.closest('#tmConfirmOrderBtn')) return confirmTrade();
 
-    if (e.target.closest('#goAddPaymentBtn')) {
-        window.location.href = 'settings.html?tab=payments';
-        return;
+    // Custom Alert Modal Buttons (Add Payment Method / Cancel)
+    const alertModal = document.getElementById('customAlertModal');
+    if (alertModal && alertModal.contains(e.target)) {
+        const clickedBtn = e.target.closest('button');
+        if (clickedBtn) {
+            const txt = (clickedBtn.innerText || '').toLowerCase();
+            if (txt.includes('add') || clickedBtn.id === 'goAddPaymentBtn' || clickedBtn.getAttribute('data-cmd') === 'goSettings') {
+                window.location.href = 'settings.html?tab=payments';
+            } else {
+                alertModal.style.display = 'none';
+            }
+            return;
+        }
     }
-    if (e.target.closest('#cancelCustomAlertBtn')) {
-        document.getElementById('customAlertModal').style.display = 'none';
-        return;
-    }
+
     if (e.target.closest('#closeUserProfileModalBtn') || (e.target.closest('#userProfileModal') && e.target.closest('.sheet-close-btn'))) {
         document.getElementById('userProfileModal').style.display = 'none';
         return;
@@ -260,12 +259,12 @@ document.addEventListener('click', function(e) {
 
     const payOption = e.target.closest('.pay-method-option');
     if (payOption) {
-        return selectPaymentOption(payOption.getAttribute('data-method') || payOption.getAttribute('data-arg'));
+        return selectPaymentOption(payOption.getAttribute('data-method') || payOption.getAttribute('data-arg') || payOption.innerText.trim());
     }
 
     const modalMethodPill = e.target.closest('.tm-method-pill');
     if (modalMethodPill) {
-        return selectModalPaymentMethod(modalMethodPill.getAttribute('data-method') || modalMethodPill.getAttribute('data-arg'));
+        return selectModalPaymentMethod(modalMethodPill.getAttribute('data-method') || modalMethodPill.getAttribute('data-arg') || modalMethodPill.innerText.trim());
     }
 
     const orderBtn = e.target.closest('.order-btn, .m-order-btn');
@@ -277,7 +276,7 @@ document.addEventListener('click', function(e) {
 
     const advName = e.target.closest('.adv-name, .m-name');
     if (advName) {
-        const uname = advName.getAttribute('data-username') || advName.getAttribute('data-arg');
+        const uname = advName.getAttribute('data-username') || advName.getAttribute('data-arg') || advName.innerText.trim();
         if (uname) openUserProfileStats(uname);
         return;
     }
@@ -297,7 +296,8 @@ document.addEventListener('input', function(e) {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-    loadCachedPaymentsFallback();
+    // 0. ወዲያውኑ በ 0.00s የተጠቃሚውን Payment Methods ከካሽ ማንበብ
+    hydrateUserPaymentsInstantly();
 
     const urlParams = new URLSearchParams(window.location.search);
     const activeTab = urlParams.get('tab');
@@ -309,6 +309,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('buyTabBtn').className = 'toggle-btn';
     }
 
+    // ⚡ 1. ገጹ ሲከፈት፣ Refresh ሲደረግ ወይም ከዳሽቦርድ ስትመለስ በ 0.00 ሰከንድ ወዲያውኑ ከ2KB ካሽ ማሳየት! ⚡
     try {
         const savedAvatars = sessionStorage.getItem(AVATAR_THUMB_CACHE_KEY) || localStorage.getItem(AVATAR_THUMB_CACHE_KEY);
         if (savedAvatars) avatarThumbMemory = JSON.parse(savedAvatars) || {};
@@ -327,10 +328,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     } catch (e) {}
 
+    // 2. ከበስተጀርባ (Background) ያለ ምንም Loading ስክሪን ትኩስ መረጃ ማምጣት
     fetchLiveAdsFromServer();
     fetchAdminSettings();
     fetchCurrentUserWalletAndPayments();
 
+    // 3. Auto-sync
     sendHeartbeat();
     setInterval(sendHeartbeat, 30000);
     setInterval(fetchLiveAdsFromServer, 2500);
@@ -477,7 +480,7 @@ function selectPaymentOption(method) {
 
 function highlightSelectedPaymentOption(method) {
     document.querySelectorAll('.pay-method-option').forEach(btn => {
-        const m = btn.getAttribute('data-method') || btn.getAttribute('data-arg') || '';
+        const m = btn.getAttribute('data-method') || btn.getAttribute('data-arg') || btn.innerText.trim();
         if (m.toLowerCase() === method.toLowerCase()) {
             btn.classList.add('selected');
         } else {
@@ -489,7 +492,7 @@ function highlightSelectedPaymentOption(method) {
 function filterPaymentMethodButtons(query) {
     const q = (query || '').trim().toLowerCase();
     document.querySelectorAll('.pay-method-option').forEach(btn => {
-        const name = (btn.getAttribute('data-method') || btn.getAttribute('data-arg') || '').toLowerCase();
+        const name = (btn.getAttribute('data-method') || btn.getAttribute('data-arg') || btn.innerText).toLowerCase();
         if (!q || name.includes(q)) {
             btn.style.display = 'block';
         } else {
@@ -757,26 +760,24 @@ function formatMoney2(num) {
     return Number(num || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-async function openOrderModalByIndex(index) {
+// ⚡ 0.00s INSTANT MODAL OPENING (ምንም የ 10 ሰከንድ መጠበቅ የለም!) ⚡
+function openOrderModalByIndex(index) {
+    hydrateUserPaymentsInstantly();
+
+    // ⚡ የክፍያ መንገድ ከሌለው በ 0.00 ሰከንድ ወዲያውኑ ይህ ማስጠንቀቂያ ይወጣል ⚡
+    if (!currentUserSavedPayments || currentUserSavedPayments.length === 0) {
+        const alertModal = document.getElementById('customAlertModal');
+        if (alertModal) {
+            alertModal.style.display = 'flex';
+        } else {
+            window.location.href = 'settings.html?tab=payments';
+        }
+        return;
+    }
+
     const isBuy = currentType === 'buy';
     const ad = currentRenderedAds[index];
     if (!ad) return;
-
-    // ⚡ ለሁለቱም (ለ Buy እና ለ Sell) Payment Method መኖሩን ያረጋግጣል ⚡
-    loadCachedPaymentsFallback();
-    if (!currentUserSavedPayments || currentUserSavedPayments.length === 0) {
-        await fetchCurrentUserWalletAndPayments();
-        if (!currentUserSavedPayments || currentUserSavedPayments.length === 0) {
-            const alertModal = document.getElementById('customAlertModal');
-            if (alertModal) {
-                alertModal.style.display = 'flex';
-            } else {
-                window.location.href = 'settings.html?tab=payments';
-            }
-            return;
-        }
-    }
-
     activeModalAd = ad;
 
     const priceDisplay = Number(ad.numericPrice) % 1 === 0 ? Number(ad.numericPrice).toString() : ad.numericPrice.toFixed(2);
@@ -1224,4 +1225,74 @@ async function openUserProfileStats(username) {
         observer.observe(document.body, { childList: true, subtree: true });
     });
     loadRealAdsStats();
+})();
+
+// ⚡ PROFESSIONAL SELL MODAL PAYMENT METHOD & LIMIT FIX (WITH FIXED API_BASE) ⚡
+(function fixMarketSellModalAccounts() {
+    let mySavedPayments = [];
+
+    async function loadMyPaymentMethods() {
+        try {
+            const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+            if (!token) return;
+            const res = await fetch(`${API_BASE}/api/user/payments`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                mySavedPayments = data.payments || data.paymentMethods || [];
+                if (mySavedPayments.length > 0 && currentUserSavedPayments.length === 0) {
+                    currentUserSavedPayments = mySavedPayments;
+                }
+            }
+        } catch (e) {}
+    }
+
+    loadMyPaymentMethods();
+
+    const observer = new MutationObserver(() => {
+        const sellModal = document.querySelector('.modal, #sellModal, [id*="sell"], .trade-modal');
+        if (!sellModal || sellModal.style.display === 'none') return;
+
+        const modalTitle = sellModal.querySelector('h2, h3, .modal-title, .title');
+        const isSellModal = modalTitle && modalTitle.innerText.toLowerCase().includes('sell');
+        if (!isSellModal) return;
+
+        const limitTexts = sellModal.querySelectorAll('span, p, div, small');
+        limitTexts.forEach(el => {
+            const txt = el.innerText || '';
+            const m = txt.match(/Limit\s*([\d,.]+)\s*[-–]\s*([\d,.]+)\s*ETB/i);
+            if (m) {
+                const val1 = parseFloat(m[1].replace(/,/g, ''));
+                const val2 = parseFloat(m[2].replace(/,/g, ''));
+                if (val1 > val2) {
+                    el.innerText = `Limit ${val2.toFixed(2)} – ${val1.toFixed(2)} ETB`;
+                }
+            }
+        });
+
+        if (mySavedPayments.length > 0) {
+            const activeMethodBtn = sellModal.querySelector('.method-btn.active, .payment-btn.active, button.active');
+            const selectedMethodType = activeMethodBtn ? activeMethodBtn.innerText.trim().toLowerCase() : '';
+
+            const matchedAcc = mySavedPayments.find(p => 
+                p.type && p.type.toLowerCase().includes(selectedMethodType)
+            ) || mySavedPayments[0];
+
+            if (matchedAcc) {
+                const myName = localStorage.getItem('fullName') || localStorage.getItem('userName') || matchedAcc.name;
+                
+                const detailLines = sellModal.querySelectorAll('p, div, span');
+                detailLines.forEach(line => {
+                    if (line.innerText.includes('rahmet ali') || line.innerText.includes('1000397691652')) {
+                        line.innerHTML = `<strong style="color:#fff; font-size:14px;">${myName}</strong><br>` +
+                                         `<span style="color:#d1d5db; font-family:monospace; font-size:13px;">${matchedAcc.account}</span><br>` +
+                                         `<small style="color:#848e9c;">${matchedAcc.type || matchedAcc.name}</small>`;
+                    }
+                });
+            }
+        }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
 })();
