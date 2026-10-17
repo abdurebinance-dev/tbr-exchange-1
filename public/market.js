@@ -1,94 +1,7 @@
-// --- 🚀 GLOBAL EVENT DELEGATION (CSP FIX) 🚀 ---
-document.addEventListener('click', function(e) {
-    // 1. Handle all data-action buttons
-    const btn = e.target.closest('button[data-action], div[data-action], span[data-action], a[data-action]');
-    if (btn) {
-        const action = btn.dataset.action;
-        
-        if (action === 'switch-buy') switchTradeType('buy');
-        if (action === 'switch-sell') switchTradeType('sell');
-        if (action === 'toggle-online') toggleOnlineFilter();
-        if (action === 'open-amount') openAmountModal();
-        if (action === 'close-amount') closeAmountModal();
-        if (action === 'reset-amount') resetAmountFilter();
-        if (action === 'confirm-amount') confirmAmountFilter();
-        if (action === 'open-payment') openPaymentModal();
-        if (action === 'close-payment') closePaymentModal();
-        if (action === 'reset-payment') resetPaymentFilter();
-        if (action === 'confirm-payment') confirmPaymentFilter();
-        if (action === 'close-order') closeOrderModal();
-        if (action === 'confirm-trade') confirmTrade();
-        if (action === 'fill-max') fillMaxModalOrder();
-        if (action === 'go-settings') window.location.href = 'settings.html?tab=payments';
-        if (action === 'go-dashboard') window.location.href = 'dashboard.html';
-        if (action === 'close-alert') document.getElementById('customAlertModal').style.display = 'none';
-        if (action === 'close-profile') document.getElementById('userProfileModal').style.display = 'none';
-        
-        if (action === 'open-order-modal') {
-            const idx = btn.dataset.index;
-            if (idx) openOrderModalByIndex(idx);
-        }
-        if (action === 'open-profile') {
-            const uname = btn.dataset.username;
-            if (uname) openUserProfileStats(uname);
-        }
-        return;
-    }
-
-    // 2. Handle dynamically rendered pills & options
-    const amountPill = e.target.closest('.amount-pill');
-    if (amountPill) {
-        selectAmountPill(amountPill.dataset.val);
-        return;
-    }
-
-    const payOption = e.target.closest('.pay-method-option');
-    if (payOption) {
-        selectPaymentOption(payOption.dataset.method);
-        return;
-    }
-
-    const modalPayPill = e.target.closest('.tm-method-pill');
-    if (modalPayPill) {
-        selectModalPaymentMethod(modalPayPill.dataset.method);
-        return;
-    }
-
-    // 3. Handle clicking on the overlay background to close
-    const overlay = e.target.closest('.modal-overlay, .sheet-overlay');
-    if (overlay && e.target === overlay) {
-        const modalId = overlay.dataset.modal;
-        if (modalId === 'amount-sheet') closeAmountModal();
-        if (modalId === 'payment-sheet') closePaymentModal();
-        if (modalId === 'order-modal') closeOrderModal();
-        if (modalId === 'user-profile') overlay.style.display = 'none';
-    }
-});
-
-// 🚀 EVENT DELEGATION FOR ALL INPUTS (CSP COMPLIANT) 🚀
-document.addEventListener('input', (e) => {
-    if (e.target.id === 'amountFilterInput') syncAmountPills(e.target.value);
-    if (e.target.id === 'paymentSearchInput') filterPaymentMethodButtons(e.target.value);
-    if (e.target.id === 'tmEtbInput') onModalEtbInput(e.target.value);
-    if (e.target.id === 'tmUsdtInput') onModalUsdtInput(e.target.value);
-});
-
-
-// Handle image fallback for CSP (replaces inline onerror)
-document.addEventListener('error', function(e) {
-    if (e.target && e.target.tagName === 'IMG' && e.target.hasAttribute('data-fallback')) {
-        e.target.outerHTML = e.target.getAttribute('data-fallback');
-    }
-}, true);
-
-
-// --- 🚀 ORIGINAL USER CODE START 🚀 ---
-
 const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
     ? 'http://localhost:5000'
     : 'https://tbr-exchange-backend.onrender.com';
 
-// ⚡ ቀላል (2KB) የማርኬት ካሽ ቁልፍ (QuotaExceededError ፈጽሞ እንዳይፈጠርና በ 0.00s እንዲከፍት!) ⚡
 const LIGHT_ADS_CACHE_KEY = 'tbr_market_light_ads_v5';
 const AVATAR_THUMB_CACHE_KEY = 'tbr_market_avatars_v5';
 let currentType = 'buy';
@@ -121,7 +34,23 @@ function getAuthToken() {
     return localStorage.getItem('token') || localStorage.getItem('jwtToken') || localStorage.getItem('authToken') || '';
 }
 
-// ⚡ ትላልቅ የፕሮፋይል ፎቶዎችን ወደ 2KB ትንሽ Thumbnail ቀይሮ በካሽ የሚያስቀምጥ (ገጹ በ 0.00s እንዲከፍት) ⚡
+// ⚡ ሰርቨሩ እስኪመልስ ድረስ ከ LocalStorage ላይ የተጠቃሚውን Payment Methods ማንበቢያ ⚡
+function loadCachedPaymentsFallback() {
+    try {
+        const storedUser = JSON.parse(localStorage.getItem('user') || localStorage.getItem('currentUser') || localStorage.getItem('tbr_user') || '{}');
+        const localPays = storedUser.payments || storedUser.paymentMethods || JSON.parse(localStorage.getItem('userPayments') || '[]');
+        if (Array.isArray(localPays) && localPays.length > 0 && currentUserSavedPayments.length === 0) {
+            currentUserSavedPayments = localPays;
+        }
+        if (storedUser.balance !== undefined && currentUserBalance === 0) {
+            currentUserBalance = Number(storedUser.balance || 0);
+        }
+        if (storedUser.fullName && !currentUserFullName) {
+            currentUserFullName = storedUser.fullName;
+        }
+    } catch (e) {}
+}
+
 function cacheSmallAvatarThumb(traderKey, rawDataUrl) {
     if (!traderKey || !rawDataUrl) return;
     if (avatarThumbMemory[traderKey]) return;
@@ -151,7 +80,6 @@ function cacheSmallAvatarThumb(traderKey, rawDataUrl) {
     img.src = rawDataUrl;
 }
 
-// ⚡ ማስታወቂያዎቹን ያለ ክብደት (2KB ብቻ) በ localStorage እና sessionStorage ውስጥ ማስቀመጥ ⚡
 function saveLightweightAdsCache(adsArray) {
     try {
         const lightAds = adsArray.map(ad => {
@@ -217,6 +145,7 @@ async function fetchAdminSettings() {
 }
 
 async function fetchCurrentUserWalletAndPayments() {
+    loadCachedPaymentsFallback();
     const token = getAuthToken();
     if (!token) return;
     try {
@@ -226,21 +155,150 @@ async function fetchCurrentUserWalletAndPayments() {
         ]);
         if (profRes.ok) {
             const profJson = await profRes.json();
-            if (profJson.success && profJson.user) {
-                currentUserBalance = Number(profJson.user.balance || 0);
-                currentUserFullName = profJson.user.fullName || '';
+            const userObj = profJson.user || profJson.data;
+            if (userObj) {
+                currentUserBalance = Number(userObj.balance ?? currentUserBalance);
+                currentUserFullName = userObj.fullName || currentUserFullName;
+                const profPays = userObj.payments || userObj.paymentMethods;
+                if (Array.isArray(profPays) && profPays.length > 0) {
+                    currentUserSavedPayments = profPays;
+                    localStorage.setItem('userPayments', JSON.stringify(profPays));
+                }
             }
         }
         if (payRes.ok) {
             const payJson = await payRes.json();
-            if (payJson.success && Array.isArray(payJson.payments)) {
-                currentUserSavedPayments = payJson.payments;
+            const list = payJson.payments || payJson.paymentMethods || payJson.data;
+            if (Array.isArray(list)) {
+                currentUserSavedPayments = list;
+                localStorage.setItem('userPayments', JSON.stringify(list));
             }
         }
     } catch (e) {}
 }
 
+// ⚡ CSP-SAFE IMAGE ERROR HANDLER ⚡
+document.addEventListener('error', function(e) {
+    if (e.target && e.target.tagName === 'IMG') {
+        if (e.target.id === 'navbarLogoImg') {
+            e.target.style.display = 'none';
+        } else if (e.target.dataset.fallback) {
+            e.target.outerHTML = e.target.dataset.fallback;
+        }
+    }
+}, true);
+
+// ⚡ GLOBAL CLICK & INPUT DELEGATION (SUPPORTS BOTH IDs & DATA-CMD) ⚡
+document.addEventListener('click', function(e) {
+    // 1. Check data-cmd attributes if present in HTML
+    const cmdTarget = e.target.closest('[data-cmd]');
+    if (cmdTarget) {
+        const cmd = cmdTarget.getAttribute('data-cmd');
+        const arg = cmdTarget.getAttribute('data-arg');
+        switch(cmd) {
+            case 'switchTradeType': return switchTradeType(arg);
+            case 'toggleOnlineFilter': return toggleOnlineFilter();
+            case 'openAmountModal': return openAmountModal();
+            case 'closeAmountModal': return closeAmountModal();
+            case 'selectAmountPill': return selectAmountPill(Number(arg));
+            case 'resetAmountFilter': return resetAmountFilter();
+            case 'confirmAmountFilter': return confirmAmountFilter();
+            case 'openPaymentModal': return openPaymentModal();
+            case 'closePaymentModal': return closePaymentModal();
+            case 'selectPaymentOption': return selectPaymentOption(arg);
+            case 'resetPaymentFilter': return resetPaymentFilter();
+            case 'confirmPaymentFilter': return confirmPaymentFilter();
+            case 'openOrderModalByIndex': return openOrderModalByIndex(Number(arg));
+            case 'closeOrderModal': return closeOrderModal();
+            case 'fillMaxModalOrder': return fillMaxModalOrder();
+            case 'confirmTrade': return confirmTrade();
+            case 'selectModalPaymentMethod': return selectModalPaymentMethod(arg);
+            case 'openUserProfileStats': return openUserProfileStats(arg);
+            case 'closeProfileModal': document.getElementById('userProfileModal').style.display = 'none'; return;
+            case 'goSettings': window.location.href = 'settings.html?tab=payments'; return;
+            case 'closeAlert': document.getElementById('customAlertModal').style.display = 'none'; return;
+            case 'goDashboard': window.location.href = 'dashboard.html'; return;
+        }
+    }
+
+    // 2. Fallback to IDs and Classes
+    if (e.target.closest('#buyTabBtn')) return switchTradeType('buy');
+    if (e.target.closest('#sellTabBtn')) return switchTradeType('sell');
+    if (e.target.closest('#onlineFilterBtn')) return toggleOnlineFilter();
+    if (e.target.closest('#amountFilterBtn')) return openAmountModal();
+    if (e.target.closest('#paymentFilterBtn')) return openPaymentModal();
+
+    if (e.target.closest('#closeAmountModalBtn') || (e.target.closest('#amountSheetModal') && e.target.closest('.sheet-close-btn'))) return closeAmountModal();
+    if (e.target.closest('#resetAmountFilterBtn') || (e.target.closest('#amountSheetModal') && e.target.closest('.sheet-reset-btn'))) return resetAmountFilter();
+    if (e.target.closest('#confirmAmountFilterBtn') || (e.target.closest('#amountSheetModal') && e.target.closest('.sheet-confirm-btn'))) return confirmAmountFilter();
+
+    if (e.target.closest('#closePaymentModalBtn') || (e.target.closest('#paymentSheetModal') && e.target.closest('.sheet-close-btn'))) return closePaymentModal();
+    if (e.target.closest('#resetPaymentFilterBtn') || (e.target.closest('#paymentSheetModal') && e.target.closest('.sheet-reset-btn'))) return resetPaymentFilter();
+    if (e.target.closest('#confirmPaymentFilterBtn') || (e.target.closest('#paymentSheetModal') && e.target.closest('.sheet-confirm-btn'))) return confirmPaymentFilter();
+
+    if (e.target.closest('#closeOrderModalBtn') || e.target.closest('.tm-close-x')) return closeOrderModal();
+    if (e.target.closest('#fillMaxModalOrderBtn') || e.target.closest('.tm-max-btn')) return fillMaxModalOrder();
+    if (e.target.closest('#tmConfirmOrderBtn')) return confirmTrade();
+
+    if (e.target.closest('#goAddPaymentBtn')) {
+        window.location.href = 'settings.html?tab=payments';
+        return;
+    }
+    if (e.target.closest('#cancelCustomAlertBtn')) {
+        document.getElementById('customAlertModal').style.display = 'none';
+        return;
+    }
+    if (e.target.closest('#closeUserProfileModalBtn') || (e.target.closest('#userProfileModal') && e.target.closest('.sheet-close-btn'))) {
+        document.getElementById('userProfileModal').style.display = 'none';
+        return;
+    }
+
+    const amountPill = e.target.closest('.amount-pill');
+    if (amountPill) {
+        return selectAmountPill(Number(amountPill.getAttribute('data-val') || amountPill.getAttribute('data-arg')));
+    }
+
+    const payOption = e.target.closest('.pay-method-option');
+    if (payOption) {
+        return selectPaymentOption(payOption.getAttribute('data-method') || payOption.getAttribute('data-arg'));
+    }
+
+    const modalMethodPill = e.target.closest('.tm-method-pill');
+    if (modalMethodPill) {
+        return selectModalPaymentMethod(modalMethodPill.getAttribute('data-method') || modalMethodPill.getAttribute('data-arg'));
+    }
+
+    const orderBtn = e.target.closest('.order-btn, .m-order-btn');
+    if (orderBtn) {
+        const idx = orderBtn.getAttribute('data-index') ?? orderBtn.getAttribute('data-arg');
+        if (idx !== null) openOrderModalByIndex(Number(idx));
+        return;
+    }
+
+    const advName = e.target.closest('.adv-name, .m-name');
+    if (advName) {
+        const uname = advName.getAttribute('data-username') || advName.getAttribute('data-arg');
+        if (uname) openUserProfileStats(uname);
+        return;
+    }
+
+    if (e.target.id === 'amountSheetModal') closeAmountModal();
+    if (e.target.id === 'paymentSheetModal') closePaymentModal();
+    if (e.target.id === 'orderModal') closeOrderModal();
+    if (e.target.id === 'userProfileModal') e.target.style.display = 'none';
+    if (e.target.id === 'customAlertModal') e.target.style.display = 'none';
+});
+
+document.addEventListener('input', function(e) {
+    if (e.target.id === 'amountFilterInput') syncAmountPills(e.target.value);
+    if (e.target.id === 'paymentSearchInput') filterPaymentMethodButtons(e.target.value);
+    if (e.target.id === 'tmEtbInput') onModalEtbInput(e.target.value);
+    if (e.target.id === 'tmUsdtInput') onModalUsdtInput(e.target.value);
+});
+
 document.addEventListener('DOMContentLoaded', () => {
+    loadCachedPaymentsFallback();
+
     const urlParams = new URLSearchParams(window.location.search);
     const activeTab = urlParams.get('tab');
     const initialType = urlParams.get('type');
@@ -251,7 +309,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('buyTabBtn').className = 'toggle-btn';
     }
 
-    // ⚡ 1. ገጹ ሲከፈት፣ Refresh ሲደረግ ወይም ከዳሽቦርድ ስትመለስ በ 0.00 ሰከንድ ወዲያውኑ ከ2KB ካሽ ማሳየት! ⚡
     try {
         const savedAvatars = sessionStorage.getItem(AVATAR_THUMB_CACHE_KEY) || localStorage.getItem(AVATAR_THUMB_CACHE_KEY);
         if (savedAvatars) avatarThumbMemory = JSON.parse(savedAvatars) || {};
@@ -270,12 +327,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     } catch (e) {}
 
-    // 2. ከበስተጀርባ (Background) ያለ ምንም Loading ስክሪን ትኩስ መረጃ ማምጣት
     fetchLiveAdsFromServer();
     fetchAdminSettings();
     fetchCurrentUserWalletAndPayments();
 
-    // 3. Auto-sync
     sendHeartbeat();
     setInterval(sendHeartbeat, 30000);
     setInterval(fetchLiveAdsFromServer, 2500);
@@ -373,7 +428,8 @@ function selectAmountPill(val) {
 function syncAmountPills(val) {
     const numVal = Number(val);
     document.querySelectorAll('.amount-pill').forEach(btn => {
-        if (Number(btn.getAttribute('data-val')) === numVal) {
+        const pillVal = Number(btn.getAttribute('data-val') || btn.getAttribute('data-arg'));
+        if (pillVal === numVal) {
             btn.classList.add('selected');
         } else {
             btn.classList.remove('selected');
@@ -421,7 +477,8 @@ function selectPaymentOption(method) {
 
 function highlightSelectedPaymentOption(method) {
     document.querySelectorAll('.pay-method-option').forEach(btn => {
-        if (btn.getAttribute('data-method').toLowerCase() === method.toLowerCase()) {
+        const m = btn.getAttribute('data-method') || btn.getAttribute('data-arg') || '';
+        if (m.toLowerCase() === method.toLowerCase()) {
             btn.classList.add('selected');
         } else {
             btn.classList.remove('selected');
@@ -432,7 +489,7 @@ function highlightSelectedPaymentOption(method) {
 function filterPaymentMethodButtons(query) {
     const q = (query || '').trim().toLowerCase();
     document.querySelectorAll('.pay-method-option').forEach(btn => {
-        const name = btn.getAttribute('data-method').toLowerCase();
+        const name = (btn.getAttribute('data-method') || btn.getAttribute('data-arg') || '').toLowerCase();
         if (!q || name.includes(q)) {
             btn.style.display = 'block';
         } else {
@@ -566,7 +623,6 @@ function renderOrderBook() {
 
         const createdTime = getAdCreatedTimestamp(ad);
 
-        // ⚡ ትክክለኛው የትሬድ ብዛትና ፐርሰንት እንዲያነብ ተደርጓል ⚡
         return {
             adId: ad._id || '',
             name: traderInfo.displayName,
@@ -621,9 +677,6 @@ function renderOrderBook() {
         const statusClass = t.isOnline ? 'online' : 'offline';
         const statusTitle = t.isOnline ? 'Online' : 'Offline';
 
-        // ⚡ ስሙን ሲጫኑ ሞዳሉ በትክክል እንዲከፈት ተስተካክሏል ⚡
-        const safeName = String(t.name).replace(/'/g, "\\'");
-
         html += `
         <tr class="pc-table-row">
             <td>
@@ -633,7 +686,7 @@ function renderOrderBook() {
                         <span class="status-dot ${statusClass}"></span>
                     </div>
                     <div>
-                        <div class="adv-name" data-action="open-profile" data-username="${safeName}">${t.name} ${t.verified ? '<i class="fa-solid fa-circle-check"></i>' : ''}</div>
+                        <div class="adv-name" data-username="${t.name}" style="cursor: pointer;">${t.name} ${t.verified ? '<i class="fa-solid fa-circle-check"></i>' : ''}</div>
                         <div class="adv-stats">${t.orders} trades &bull; ${t.comp}</div>
                     </div>
                 </div>
@@ -653,7 +706,7 @@ function renderOrderBook() {
                 </div>
             </td>
             <td class="action-cell">
-                <button class="${btnClass} action-order-btn" data-action="open-order-modal" data-index="${index}">${actionLabel}</button>
+                <button class="${btnClass}" data-index="${index}">${actionLabel}</button>
             </td>
         </tr>
 
@@ -667,7 +720,7 @@ function renderOrderBook() {
                                 <span class="status-dot ${statusClass}"></span>
                             </div>
                             <div>
-                                <div class="m-name" data-action="open-profile" data-username="${safeName}">${t.name} ${t.verified ? '<i class="fa-solid fa-circle-check" style="font-size:11px; color:var(--accent-gold);"></i>' : ''}</div>
+                                <div class="m-name" data-username="${t.name}" style="cursor: pointer;">${t.name} ${t.verified ? '<i class="fa-solid fa-circle-check" style="font-size:11px; color:var(--accent-gold);"></i>' : ''}</div>
                                 <div class="m-stats">${t.orders} trades &bull; ${t.comp}</div>
                             </div>
                         </div>
@@ -686,7 +739,7 @@ function renderOrderBook() {
                         <div class="m-payment-tags">
                             ${mobileTagsRendered}
                         </div>
-                        <button class="${mobileBtnClass} action-order-btn" data-action="open-order-modal" data-index="${index}">${actionLabel}</button>
+                        <button class="${mobileBtnClass}" data-index="${index}">${actionLabel}</button>
                     </div>
                 </div>
             </td>
@@ -704,21 +757,26 @@ function formatMoney2(num) {
     return Number(num || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function openOrderModalByIndex(index) {
-    // ⚡ የክፍያ መንገድ ከሌለው ቀጥታ ይህ ማስጠንቀቂያ ይወጣል ⚡
-    if (!currentUserSavedPayments || currentUserSavedPayments.length === 0) {
-        const alertModal = document.getElementById('customAlertModal');
-        if (alertModal) {
-            alertModal.style.display = 'flex';
-        } else {
-            window.location.href = 'settings.html?tab=payments';
-        }
-        return;
-    }
-
+async function openOrderModalByIndex(index) {
     const isBuy = currentType === 'buy';
     const ad = currentRenderedAds[index];
     if (!ad) return;
+
+    // ⚡ ለሁለቱም (ለ Buy እና ለ Sell) Payment Method መኖሩን ያረጋግጣል ⚡
+    loadCachedPaymentsFallback();
+    if (!currentUserSavedPayments || currentUserSavedPayments.length === 0) {
+        await fetchCurrentUserWalletAndPayments();
+        if (!currentUserSavedPayments || currentUserSavedPayments.length === 0) {
+            const alertModal = document.getElementById('customAlertModal');
+            if (alertModal) {
+                alertModal.style.display = 'flex';
+            } else {
+                window.location.href = 'settings.html?tab=payments';
+            }
+            return;
+        }
+    }
+
     activeModalAd = ad;
 
     const priceDisplay = Number(ad.numericPrice) % 1 === 0 ? Number(ad.numericPrice).toString() : ad.numericPrice.toFixed(2);
@@ -821,9 +879,8 @@ function renderModalPaymentPills() {
     container.innerHTML = methods.map(m => {
         const isSelected = m === activeModalSelectedMethod;
         const selClass = isSelected ? (isBuy ? 'selected-buy' : 'selected-sell') : '';
-        const safeMethod = String(m).replace(/'/g, "\\'");
         return `
-            <button type="button" class="tm-method-pill ${selClass}" data-method="${safeMethod}">
+            <button type="button" class="tm-method-pill ${selClass}" data-method="${m}">
                 <span class="pill-dot"></span>
                 <span>${m}</span>
             </button>
@@ -849,13 +906,13 @@ function updateSellerAccountPreviewBox() {
     const target = (activeModalSelectedMethod || '').toLowerCase().trim();
 
     const matched = currentUserSavedPayments.find(pm => 
-        String(pm.type || '').toLowerCase().trim() === target
+        String(pm.type || pm.bankName || pm.method || '').toLowerCase().trim() === target
     ) || currentUserSavedPayments[0];
 
     if (matched) {
-        document.getElementById('tmAccountHolderName').innerText = matched.name || currentUserFullName || 'Account Holder';
-        document.getElementById('tmAccountNumber').innerText = matched.account || '-';
-        document.getElementById('tmAccountBankName').innerText = matched.type || activeModalSelectedMethod;
+        document.getElementById('tmAccountHolderName').innerText = matched.name || matched.accountName || currentUserFullName || 'Account Holder';
+        document.getElementById('tmAccountNumber').innerText = matched.account || matched.accountNumber || '-';
+        document.getElementById('tmAccountBankName').innerText = matched.type || matched.bankName || activeModalSelectedMethod;
     } else {
         let localUser = null;
         try {
@@ -1129,7 +1186,6 @@ async function openUserProfileStats(username) {
                 textElements.forEach(el => {
                     if (el.children.length === 0) {
                         const txt = (el.innerText || '').trim();
-                        // የ 0 trades 100% ጽሁፍን በትክክለኛው ዳታ ይተካዋል
                         if (/^\d+\s*(trades|orders)\s*[·•|-]\s*\d+(\.\d+)?%$/i.test(txt)) {
                             const targetText = `${st.totalTrades} trades · ${st.completionRate}`;
                             if (el.innerText !== targetText) {
@@ -1168,76 +1224,4 @@ async function openUserProfileStats(username) {
         observer.observe(document.body, { childList: true, subtree: true });
     });
     loadRealAdsStats();
-})();
-
-// ⚡ PROFESSIONAL SELL MODAL PAYMENT METHOD & LIMIT FIX ⚡
-(function fixMarketSellModalAccounts() {
-    let mySavedPayments = [];
-
-    // የገባውን ዩዘር የባንክ አካውንቶች ከሰርቨር ማምጣት
-    async function loadMyPaymentMethods() {
-        try {
-            const token = localStorage.getItem('token') || localStorage.getItem('authToken');
-            if (!token) return;
-            const res = await fetch('/api/user/payments', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                mySavedPayments = data.payments || [];
-            }
-        } catch (e) {}
-    }
-
-    loadMyPaymentMethods();
-
-    // ፎርሙ (Modal) ሲከፈት ወዲያውኑ ማስተካከል
-    const observer = new MutationObserver(() => {
-        const sellModal = document.querySelector('.modal, #sellModal, [id*="sell"], .trade-modal');
-        if (!sellModal || sellModal.style.display === 'none') return;
-
-        const modalTitle = sellModal.querySelector('h2, h3, .modal-title, .title');
-        const isSellModal = modalTitle && modalTitle.innerText.toLowerCase().includes('sell');
-        if (!isSellModal) return;
-
-        // 1. Min / Max limit የተገለበጠውን ማስተካከል (ለምሳሌ 500 - 131.56 ወደ 131.56 - 500)
-        const limitTexts = sellModal.querySelectorAll('span, p, div, small');
-        limitTexts.forEach(el => {
-            const txt = el.innerText || '';
-            const m = txt.match(/Limit\s*([\d,.]+)\s*[-–]\s*([\d,.]+)\s*ETB/i);
-            if (m) {
-                const val1 = parseFloat(m[1].replace(/,/g, ''));
-                const val2 = parseFloat(m[2].replace(/,/g, ''));
-                if (val1 > val2) {
-                    el.innerText = `Limit ${val2.toFixed(2)} – ${val1.toFixed(2)} ETB`;
-                }
-            }
-        });
-
-        // 2. Sell ፎርም ላይ የሌላ ሰውን አካውንት አጥፍቶ የራስህን (የሻጩን) ማስገባት
-        if (mySavedPayments.length > 0) {
-            const activeMethodBtn = sellModal.querySelector('.method-btn.active, .payment-btn.active, button.active');
-            const selectedMethodType = activeMethodBtn ? activeMethodBtn.innerText.trim().toLowerCase() : '';
-
-            const matchedAcc = mySavedPayments.find(p => 
-                p.type && p.type.toLowerCase().includes(selectedMethodType)
-            ) || mySavedPayments[0];
-
-            if (matchedAcc) {
-                const myName = localStorage.getItem('fullName') || localStorage.getItem('userName') || matchedAcc.name;
-                
-                // Screenshot ላይ ያለውን 'Buyer will send to' ቦክስ በራስህ አካውንት መተካት
-                const detailLines = sellModal.querySelectorAll('p, div, span');
-                detailLines.forEach(line => {
-                    if (line.innerText.includes('rahmet ali') || line.innerText.includes('1000397691652')) {
-                        line.innerHTML = `<strong style="color:#fff; font-size:14px;">${myName}</strong><br>` +
-                                         `<span style="color:#d1d5db; font-family:monospace; font-size:13px;">${matchedAcc.account}</span><br>` +
-                                         `<small style="color:#848e9c;">${matchedAcc.type || matchedAcc.name}</small>`;
-                    }
-                });
-            }
-        }
-    });
-
-    observer.observe(document.body, { childList: true, subtree: true });
 })();

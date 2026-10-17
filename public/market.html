@@ -241,8 +241,12 @@
             z-index: 2;
             box-sizing: content-box;
         }
-        .status-dot.online { background-color: #0ecb81; }
-        .status-dot.offline { background-color: #23272f; }
+        .status-dot.online {
+            background-color: #0ecb81;
+        }
+        .status-dot.offline {
+            background-color: #23272f;
+        }
 
         .adv-name {
             font-weight: 700;
@@ -255,21 +259,70 @@
             cursor: pointer;
         }
         .adv-name:hover { color: var(--accent-gold); }
-        .adv-name i { color: var(--accent-gold); font-size: 11px; }
-        .adv-stats { font-size: 11px; color: #848e9c; }
+        .adv-name i {
+            color: var(--accent-gold);
+            font-size: 11px;
+        }
+        .adv-stats {
+            font-size: 11px;
+            color: #848e9c;
+        }
 
-        .price-cell { font-size: 16px; font-weight: 700; color: var(--green); }
+        .price-cell {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--green);
+        }
 
-        .limit-cell .available { font-weight: 700; font-size: 13px; color: #fff; margin-bottom: 18px; }
-        .limit-cell .range { font-size: 11px; color: #848e9c; }
+        .limit-cell .available {
+            font-weight: 700;
+            font-size: 13px;
+            color: #fff;
+            margin-bottom: 18px;
+        }
+        .limit-cell .range {
+            font-size: 11px;
+            color: #848e9c;
+        }
 
-        .payment-tags { display: flex; gap: 6px; flex-wrap: wrap; }
-        .pay-tag { background: #181a20; color: #848e9c; padding: 4px 9px; border-radius: 12px; font-size: 10px; font-weight: 600; border: 1px solid #2b313a; white-space: nowrap; }
+        .payment-tags {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .pay-tag {
+            background: #181a20;
+            color: #848e9c;
+            padding: 4px 9px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+            border: 1px solid #2b313a;
+            white-space: nowrap;
+        }
 
-        .action-cell { text-align: right; }
-        .order-btn { background: var(--green-btn); color: #000000; padding: 7px 20px; border-radius: 5px; font-weight: 700; font-size: 12px; border: none; cursor: pointer; transition: background 0.2s; display: inline-block; }
-        .order-btn.sell { background: var(--red); color: #fff; }
-        .order-btn:hover { opacity: 0.9; }
+        .action-cell {
+            text-align: right;
+        }
+        .order-btn {
+            background: var(--green-btn);
+            color: #000000;
+            padding: 7px 20px;
+            border-radius: 5px;
+            font-weight: 700;
+            font-size: 12px;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: inline-block;
+        }
+        .order-btn.sell {
+            background: var(--red);
+            color: #fff;
+        }
+        .order-btn:hover {
+            opacity: 0.9;
+        }
 
         /* PC / Mobile Toggle */
         .mobile-card-row { display: none; }
@@ -277,153 +330,759 @@
 
         /* Bottom Sheet Filter Modals */
         .sheet-overlay {
-            position: fixed; inset: 0; background: rgba(0, 0, 0, 0.78); display: none; align-items: flex-end; justify-content: center; z-index: 2500;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.78);
+            display: none;
+            align-items: flex-end;
+            justify-content: center;
+            z-index: 2500;
         }
-        .sheet-box { background: #0b0d10; border-top: 1px solid #1e2229; border-radius: 20px 20px 0 0; width: 100%; max-width: 100%; padding: 14px 24px 28px 24px; box-sizing: border-box; animation: slideUpSheet 0.16s ease-out; }
-        @keyframes slideUpSheet { from { transform: translateY(100%); } to { transform: translateY(0); } }
-        .sheet-handle { width: 42px; height: 4px; background: #2b3139; border-radius: 4px; margin: 0 auto 14px auto; }
-        .sheet-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
-        .sheet-header h2 { margin: 0; font-size: 20px; font-weight: 800; color: #ffffff; }
-        .sheet-close-btn { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--green); background: transparent; color: var(--green); display: flex; align-items: center; justify-content: center; font-size: 13px; cursor: pointer; }
-        .sheet-input-wrap { position: relative; display: flex; align-items: center; background: #0d1015; border: 1px solid #22262f; border-radius: 10px; padding: 0 16px; margin-bottom: 18px; }
-        .sheet-input-wrap:focus-within { border-color: var(--green); }
-        .sheet-input-wrap i.search-icon { color: #6c7583; font-size: 14px; margin-right: 10px; }
-        .sheet-input { width: 100%; background: transparent; border: none; color: #ffffff; padding: 14px 0; font-size: 14px; outline: none; }
-        .sheet-input::placeholder { color: #6c7583; }
-        .sheet-suffix { color: #848e9c; font-size: 13px; font-weight: 700; margin-left: 10px; }
+        .sheet-box {
+            background: #0b0d10;
+            border-top: 1px solid #1e2229;
+            border-radius: 20px 20px 0 0;
+            width: 100%;
+            max-width: 100%;
+            padding: 14px 24px 28px 24px;
+            box-sizing: border-box;
+            animation: slideUpSheet 0.16s ease-out;
+        }
+        @keyframes slideUpSheet {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        .sheet-handle {
+            width: 42px;
+            height: 4px;
+            background: #2b3139;
+            border-radius: 4px;
+            margin: 0 auto 14px auto;
+        }
+        .sheet-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+        .sheet-header h2 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 800;
+            color: #ffffff;
+        }
+        .sheet-close-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 1px solid var(--green);
+            background: transparent;
+            color: var(--green);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .sheet-input-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+            background: #0d1015;
+            border: 1px solid #22262f;
+            border-radius: 10px;
+            padding: 0 16px;
+            margin-bottom: 18px;
+        }
+        .sheet-input-wrap:focus-within {
+            border-color: var(--green);
+        }
+        .sheet-input-wrap i.search-icon {
+            color: #6c7583;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        .sheet-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            padding: 14px 0;
+            font-size: 14px;
+            outline: none;
+        }
+        .sheet-input::placeholder {
+            color: #6c7583;
+        }
+        .sheet-suffix {
+            color: #848e9c;
+            font-size: 13px;
+            font-weight: 700;
+            margin-left: 10px;
+        }
 
         /* Quick Amount Pills Grid */
-        .amount-pills-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 22px; }
-        .amount-pill { background: #1a1e24; border: 1px solid #252a32; color: #ffffff; padding: 14px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; text-align: center; transition: 0.15s; }
-        .amount-pill:hover, .amount-pill.selected { background: rgba(14, 203, 129, 0.12); border-color: var(--green); color: var(--green); }
+        .amount-pills-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 22px;
+        }
+        .amount-pill {
+            background: #1a1e24;
+            border: 1px solid #252a32;
+            color: #ffffff;
+            padding: 14px 10px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            text-align: center;
+            transition: 0.15s;
+        }
+        .amount-pill:hover, .amount-pill.selected {
+            background: rgba(14, 203, 129, 0.12);
+            border-color: var(--green);
+            color: var(--green);
+        }
 
         /* Payment Methods 2-Column Grid */
-        .payment-methods-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 22px; max-height: 320px; overflow-y: auto; }
-        .pay-method-option { background: #1a1e24; border: 1px solid #252a32; color: #ffffff; padding: 15px 12px; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; text-align: center; transition: 0.15s; }
-        .pay-method-option:hover { border-color: #3a414d; }
-        .pay-method-option.selected { background: rgba(14, 203, 129, 0.12); border-color: var(--green); color: var(--green); }
+        .payment-methods-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 22px;
+            max-height: 320px;
+            overflow-y: auto;
+        }
+        .pay-method-option {
+            background: #1a1e24;
+            border: 1px solid #252a32;
+            color: #ffffff;
+            padding: 15px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            text-align: center;
+            transition: 0.15s;
+        }
+        .pay-method-option:hover {
+            border-color: #3a414d;
+        }
+        .pay-method-option.selected {
+            background: rgba(14, 203, 129, 0.12);
+            border-color: var(--green);
+            color: var(--green);
+        }
 
         /* Sheet Action Buttons */
-        .sheet-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-        .sheet-reset-btn { background: #090b0d; border: 1px solid #22262f; color: #ffffff; padding: 14px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; transition: 0.2s; }
-        .sheet-reset-btn:hover { background: #14171c; }
-        .sheet-confirm-btn { background: var(--green); border: none; color: #000000; padding: 14px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; transition: 0.2s; }
-        .sheet-confirm-btn:hover { opacity: 0.92; }
+        .sheet-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+        .sheet-reset-btn {
+            background: #090b0d;
+            border: 1px solid #22262f;
+            color: #ffffff;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .sheet-reset-btn:hover {
+            background: #14171c;
+        }
+        .sheet-confirm-btn {
+            background: var(--green);
+            border: none;
+            color: #000000;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .sheet-confirm-btn:hover {
+            opacity: 0.92;
+        }
 
         /* P2P Buy/Sell Order Modal */
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.82); backdrop-filter: blur(3px); display: none; align-items: center; justify-content: center; z-index: 2600; padding: 16px; box-sizing: border-box; }
-        .trade-modal-card { background: #11141a; border: 1px solid #222731; border-radius: 18px; width: 100%; max-width: 440px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75); }
-        .tm-top-section { padding: 20px 22px 16px 22px; border-bottom: 1px solid #1c2029; position: relative; }
-        .tm-close-x { position: absolute; top: 16px; right: 18px; background: transparent; border: none; color: #848e9c; font-size: 16px; cursor: pointer; padding: 4px; line-height: 1; }
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.82);
+            backdrop-filter: blur(3px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2600;
+            padding: 16px;
+            box-sizing: border-box;
+        }
+        .trade-modal-card {
+            background: #11141a;
+            border: 1px solid #222731;
+            border-radius: 18px;
+            width: 100%;
+            max-width: 440px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75);
+        }
+        .tm-top-section {
+            padding: 20px 22px 16px 22px;
+            border-bottom: 1px solid #1c2029;
+            position: relative;
+        }
+        .tm-close-x {
+            position: absolute;
+            top: 16px;
+            right: 18px;
+            background: transparent;
+            border: none;
+            color: #848e9c;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 4px;
+            line-height: 1;
+        }
         .tm-close-x:hover { color: #fff; }
-        .tm-title { font-size: 15px; font-weight: 700; color: #ffffff; margin: 0 0 12px 0; }
-        .tm-price-row { display: flex; align-items: baseline; gap: 6px; margin-bottom: 8px; }
-        .tm-price-big { font-size: 26px; font-weight: 800; line-height: 1; }
+        .tm-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #ffffff;
+            margin: 0 0 12px 0;
+        }
+        .tm-price-row {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+        .tm-price-big {
+            font-size: 26px;
+            font-weight: 800;
+            line-height: 1;
+        }
         .tm-price-big.buy-color { color: #0ecb81; }
         .tm-price-big.sell-color { color: #f6465d; }
-        .tm-price-unit { font-size: 12px; color: #848e9c; font-weight: 600; }
-        .tm-sub-limits { font-size: 12px; color: #848e9c; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-        .tm-sub-limits strong { color: #ffffff; font-weight: 700; }
+        .tm-price-unit {
+            font-size: 12px;
+            color: #848e9c;
+            font-weight: 600;
+        }
+        .tm-sub-limits {
+            font-size: 12px;
+            color: #848e9c;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .tm-sub-limits strong {
+            color: #ffffff;
+            font-weight: 700;
+        }
 
-        .tm-scroll-body { padding: 18px 22px; overflow-y: auto; flex: 1; }
+        .tm-scroll-body {
+            padding: 18px 22px;
+            overflow-y: auto;
+            flex: 1;
+        }
         .tm-scroll-body::-webkit-scrollbar { width: 5px; }
         .tm-scroll-body::-webkit-scrollbar-thumb { background: #262b36; border-radius: 4px; }
 
-        .tm-trader-row { display: flex; align-items: center; gap: 11px; margin-bottom: 18px; }
-        .tm-trader-name { font-size: 14px; font-weight: 700; color: #ffffff; display: flex; align-items: center; gap: 5px; margin-bottom: 3px; }
-        .tm-trader-stats { font-size: 12px; color: #848e9c; display: flex; align-items: center; gap: 8px; }
-        .tm-trader-stats i.fa-star { color: #f0b90b; font-size: 11px; }
+        .tm-trader-row {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            margin-bottom: 18px;
+        }
+        .tm-trader-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 3px;
+        }
+        .tm-trader-stats {
+            font-size: 12px;
+            color: #848e9c;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .tm-trader-stats i.fa-star {
+            color: #f0b90b;
+            font-size: 11px;
+        }
 
-        .tm-section-label { font-size: 12px; color: #848e9c; margin-bottom: 10px; font-weight: 500; }
-        .tm-methods-wrap { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
-        .tm-method-pill { background: #151921; border: 1px solid #262c36; color: #cfd6e0; padding: 9px 14px; border-radius: 10px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; transition: all 0.15s ease; }
-        .tm-method-pill:hover { border-color: #384152; }
-        .tm-method-pill .pill-dot { width: 6px; height: 6px; border-radius: 50%; display: none; }
-        .tm-method-pill.selected-buy { background: rgba(14, 203, 129, 0.12); border-color: #0ecb81; color: #0ecb81; }
-        .tm-method-pill.selected-buy .pill-dot { display: inline-block; background: #0ecb81; }
-        .tm-method-pill.selected-sell { background: rgba(246, 70, 93, 0.12); border-color: #f6465d; color: #f6465d; }
-        .tm-method-pill.selected-sell .pill-dot { display: inline-block; background: #f6465d; }
+        .tm-section-label {
+            font-size: 12px;
+            color: #848e9c;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+        .tm-methods-wrap {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .tm-method-pill {
+            background: #151921;
+            border: 1px solid #262c36;
+            color: #cfd6e0;
+            padding: 9px 14px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            transition: all 0.15s ease;
+        }
+        .tm-method-pill:hover {
+            border-color: #384152;
+        }
+        .tm-method-pill .pill-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            display: none;
+        }
+        .tm-method-pill.selected-buy {
+            background: rgba(14, 203, 129, 0.12);
+            border-color: #0ecb81;
+            color: #0ecb81;
+        }
+        .tm-method-pill.selected-buy .pill-dot {
+            display: inline-block;
+            background: #0ecb81;
+        }
+        .tm-method-pill.selected-sell {
+            background: rgba(246, 70, 93, 0.12);
+            border-color: #f6465d;
+            color: #f6465d;
+        }
+        .tm-method-pill.selected-sell .pill-dot {
+            display: inline-block;
+            background: #f6465d;
+        }
 
         /* Seller Receive Account Details Box */
-        .tm-receive-account-box { background: #141820; border: 1px solid #222733; border-radius: 12px; padding: 13px 15px; margin-bottom: 16px; display: none; }
-        .tm-receive-caption { font-size: 11px; color: #848e9c; margin-bottom: 8px; }
-        .tm-receive-holder { font-size: 13px; font-weight: 700; color: #ffffff; margin-bottom: 4px; }
-        .tm-receive-number { font-size: 12px; color: #848e9c; margin-bottom: 3px; font-family: monospace; letter-spacing: 0.3px; }
-        .tm-receive-bank { font-size: 11px; color: #6c7583; }
+        .tm-receive-account-box {
+            background: #141820;
+            border: 1px solid #222733;
+            border-radius: 12px;
+            padding: 13px 15px;
+            margin-bottom: 16px;
+            display: none;
+        }
+        .tm-receive-caption {
+            font-size: 11px;
+            color: #848e9c;
+            margin-bottom: 8px;
+        }
+        .tm-receive-holder {
+            font-size: 13px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 4px;
+        }
+        .tm-receive-number {
+            font-size: 12px;
+            color: #848e9c;
+            margin-bottom: 3px;
+            font-family: monospace;
+            letter-spacing: 0.3px;
+        }
+        .tm-receive-bank {
+            font-size: 11px;
+            color: #6c7583;
+        }
 
         /* Input Groups */
-        .tm-field-group { margin-bottom: 14px; }
-        .tm-field-group:last-child { margin-bottom: 4px; }
-        .tm-field-header { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #848e9c; margin-bottom: 7px; }
-        .tm-field-header .right-hint { font-size: 11px; color: #6c7583; font-family: monospace; }
-        .tm-input-row { display: flex; gap: 8px; align-items: stretch; }
-        .tm-input-box { flex: 1; display: flex; align-items: center; background: #090b0e; border: 1px solid #222731; border-radius: 10px; padding: 0 13px; transition: border-color 0.15s; }
-        .tm-input-box.buy-focus:focus-within { border-color: #0ecb81; }
-        .tm-input-box.sell-focus:focus-within { border-color: #f6465d; }
-        .tm-input-box.input-error { border-color: #f6465d !important; background: rgba(246, 70, 93, 0.04); }
-        .tm-input-box input { width: 100%; background: transparent; border: none; color: #ffffff; font-size: 14px; padding: 12px 0; outline: none; }
-        .tm-input-box input::placeholder { color: #6c7583; }
-        .tm-input-unit { font-size: 11px; font-weight: 700; color: #848e9c; margin-left: 8px; user-select: none; }
-        .tm-max-btn { background: #161a22; border: 1px solid #262c36; color: #ffffff; border-radius: 10px; padding: 0 15px; font-size: 12px; font-weight: 700; cursor: pointer; transition: 0.15s; }
-        .tm-max-btn:hover { border-color: #3b4252; background: #1d222c; }
-        .tm-error-msg { color: #f6465d; font-size: 12px; font-weight: 600; margin-top: 8px; display: none; align-items: center; gap: 6px; }
+        .tm-field-group {
+            margin-bottom: 14px;
+        }
+        .tm-field-group:last-child {
+            margin-bottom: 4px;
+        }
+        .tm-field-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: #848e9c;
+            margin-bottom: 7px;
+        }
+        .tm-field-header .right-hint {
+            font-size: 11px;
+            color: #6c7583;
+            font-family: monospace;
+        }
+        .tm-input-row {
+            display: flex;
+            gap: 8px;
+            align-items: stretch;
+        }
+        .tm-input-box {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            background: #090b0e;
+            border: 1px solid #222731;
+            border-radius: 10px;
+            padding: 0 13px;
+            transition: border-color 0.15s;
+        }
+        .tm-input-box.buy-focus:focus-within {
+            border-color: #0ecb81;
+        }
+        .tm-input-box.sell-focus:focus-within {
+            border-color: #f6465d;
+        }
+        .tm-input-box.input-error {
+            border-color: #f6465d !important;
+            background: rgba(246, 70, 93, 0.04);
+        }
+        .tm-input-box input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            font-size: 14px;
+            padding: 12px 0;
+            outline: none;
+        }
+        .tm-input-box input::placeholder {
+            color: #6c7583;
+        }
+        .tm-input-unit {
+            font-size: 11px;
+            font-weight: 700;
+            color: #848e9c;
+            margin-left: 8px;
+            user-select: none;
+        }
+        .tm-max-btn {
+            background: #161a22;
+            border: 1px solid #262c36;
+            color: #ffffff;
+            border-radius: 10px;
+            padding: 0 15px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+        .tm-max-btn:hover {
+            border-color: #3b4252;
+            background: #1d222c;
+        }
+        .tm-error-msg {
+            color: #f6465d;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 8px;
+            display: none;
+            align-items: center;
+            gap: 6px;
+        }
 
         /* Fee Breakdown Summary Box */
-        .tm-fee-summary-box { margin-top: 14px; padding-top: 14px; border-top: 1px solid #1c2029; display: none; justify-content: space-between; align-items: flex-start; }
-        .tm-fee-left .fee-caption, .tm-fee-right .fee-caption { font-size: 11px; color: #6c7583; margin-bottom: 5px; }
-        .tm-fee-right { text-align: right; }
-        .tm-fee-main-val { font-size: 14px; font-weight: 800; color: #ffffff; font-family: monospace; line-height: 1.2; }
-        .tm-fee-main-val span { font-size: 11px; color: #848e9c; font-weight: 600; }
-        .tm-fee-arrow { color: #6c7583; font-size: 13px; padding-top: 16px; }
-        .tm-fee-subline { font-size: 10.5px; font-weight: 300; color: rgba(132, 142, 156, 0.42); margin-top: 12px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; letter-spacing: 0.25px; }
+        .tm-fee-summary-box {
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid #1c2029;
+            display: none;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .tm-fee-left .fee-caption,
+        .tm-fee-right .fee-caption {
+            font-size: 11px;
+            color: #6c7583;
+            margin-bottom: 5px;
+        }
+        .tm-fee-right {
+            text-align: right;
+        }
+        .tm-fee-main-val {
+            font-size: 14px;
+            font-weight: 800;
+            color: #ffffff;
+            font-family: monospace;
+            line-height: 1.2;
+        }
+        .tm-fee-main-val span {
+            font-size: 11px;
+            color: #848e9c;
+            font-weight: 600;
+        }
+        .tm-fee-arrow {
+            color: #6c7583;
+            font-size: 13px;
+            padding-top: 16px;
+        }
+        .tm-fee-subline {
+            font-size: 10.5px;
+            font-weight: 300;
+            color: rgba(132, 142, 156, 0.42);
+            margin-top: 12px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            letter-spacing: 0.25px;
+        }
 
-        .tm-footer { padding: 14px 22px 18px 22px; border-top: 1px solid #1c2029; background: #0e1116; }
-        .tm-submit-btn { width: 100%; padding: 13px; border-radius: 10px; border: none; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s ease; }
-        .tm-submit-btn.buy-btn { background: #0ecb81; color: #000000; }
-        .tm-submit-btn.buy-btn:hover:not(:disabled) { opacity: 0.92; }
-        .tm-submit-btn.sell-btn { background: #f6465d; color: #ffffff; }
-        .tm-submit-btn.sell-btn:hover:not(:disabled) { opacity: 0.92; }
-        .tm-submit-btn:disabled { opacity: 0.35 !important; cursor: not-allowed !important; pointer-events: none; }
+        .tm-footer {
+            padding: 14px 22px 18px 22px;
+            border-top: 1px solid #1c2029;
+            background: #0e1116;
+        }
+        .tm-submit-btn {
+            width: 100%;
+            padding: 13px;
+            border-radius: 10px;
+            border: none;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .tm-submit-btn.buy-btn {
+            background: #0ecb81;
+            color: #000000;
+        }
+        .tm-submit-btn.buy-btn:hover:not(:disabled) {
+            opacity: 0.92;
+        }
+        .tm-submit-btn.sell-btn {
+            background: #f6465d;
+            color: #ffffff;
+        }
+        .tm-submit-btn.sell-btn:hover:not(:disabled) {
+            opacity: 0.92;
+        }
+        .tm-submit-btn:disabled {
+            opacity: 0.35 !important;
+            cursor: not-allowed !important;
+            pointer-events: none;
+        }
+        .tm-submit-btn.buy-btn:disabled {
+            background: #09794c;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        .tm-submit-btn.sell-btn:disabled {
+            background: #7a1227;
+            color: rgba(255, 255, 255, 0.7);
+        }
 
         /* Mobile Edge-to-Edge Zero-Gap Card Layout */
         @media(max-width: 768px) {
-            body { padding-top: 56px; padding-bottom: 30px; }
-            .navbar { padding: 8px 12px; }
-            .market-container { padding: 8px 4px !important; margin: 0 !important; width: 100% !important; box-sizing: border-box; }
-            .trade-toggle-wrap { gap: 8px; margin-bottom: 8px !important; padding: 0 2px; }
-            .toggle-btn { padding: 7px 26px; font-size: 14px; }
-            .filter-row { gap: 6px; margin-bottom: 8px !important; padding: 0 2px; }
-            .filter-btn { padding: 6px 12px; font-size: 12px; }
-            .p2p-table-card { background: transparent !important; border: none !important; border-radius: 0 !important; margin: 0 !important; padding: 0 !important; }
-            table, tbody { display: block !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
-            thead, .pc-table-row { display: none !important; }
-            tr.mobile-card-row { display: block !important; width: 100% !important; margin: 0 0 6px 0 !important; padding: 0 !important; border: none !important; }
-            tr.mobile-card-row > td { display: block !important; width: 100% !important; padding: 0 !important; margin: 0 !important; border: none !important; box-sizing: border-box; }
+            body {
+                padding-top: 56px;
+                padding-bottom: 30px;
+            }
+            .navbar {
+                padding: 8px 12px;
+            }
+            .market-container {
+                padding: 8px 4px !important;
+                margin: 0 !important;
+                width: 100% !important;
+                box-sizing: border-box;
+            }
+            .trade-toggle-wrap {
+                gap: 8px;
+                margin-bottom: 8px !important;
+                padding: 0 2px;
+            }
+            .toggle-btn {
+                padding: 7px 26px;
+                font-size: 14px;
+            }
+            .filter-row {
+                gap: 6px;
+                margin-bottom: 8px !important;
+                padding: 0 2px;
+            }
+            .filter-btn {
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+            .p2p-table-card {
+                background: transparent !important;
+                border: none !important;
+                border-radius: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            table, tbody {
+                display: block !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            thead, .pc-table-row {
+                display: none !important;
+            }
+            tr.mobile-card-row {
+                display: block !important;
+                width: 100% !important;
+                margin: 0 0 6px 0 !important;
+                padding: 0 !important;
+                border: none !important;
+            }
+            tr.mobile-card-row > td {
+                display: block !important;
+                width: 100% !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                border: none !important;
+                box-sizing: border-box;
+            }
 
-            .m-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px 12px; width: 100%; box-sizing: border-box; }
-            .m-top-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
-            .m-user-info { display: flex; align-items: center; gap: 8px; }
-            .m-avatar-wrap { position: relative; width: 32px; height: 32px; flex-shrink: 0; }
-            .m-avatar { width: 100%; height: 100%; border-radius: 50%; background: #1c2027; display: flex; align-items: center; justify-content: center; color: var(--accent-gold); font-weight: bold; font-size: 13px; border: 1px solid #2b313a; overflow: hidden; box-sizing: border-box; }
-            .m-name { font-weight: 700; font-size: 14px; color: #fff; display: flex; align-items: center; gap: 4px; cursor: pointer; }
+            .m-card {
+                background: var(--card-bg);
+                border: 1px solid var(--border-color);
+                border-radius: 10px;
+                padding: 12px 12px;
+                width: 100%;
+                box-sizing: border-box;
+            }
+            .m-top-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                margin-bottom: 4px;
+            }
+            .m-user-info {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .m-avatar-wrap {
+                position: relative;
+                width: 32px;
+                height: 32px;
+                flex-shrink: 0;
+            }
+            .m-avatar {
+                width: 100%;
+                height: 100%;
+                border-radius: 50%;
+                background: #1c2027;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: var(--accent-gold);
+                font-weight: bold;
+                font-size: 13px;
+                border: 1px solid #2b313a;
+                overflow: hidden;
+                box-sizing: border-box;
+            }
+            .m-name {
+                font-weight: 700;
+                font-size: 14px;
+                color: #fff;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                cursor: pointer;
+            }
             .m-name:hover { color: var(--accent-gold); }
-            .m-stats { font-size: 11px; color: #848e9c; margin-top: 1px; }
-            .m-right-side { text-align: right; }
-            .m-price { font-size: 20px; font-weight: 800; line-height: 1; }
-            .m-currency { font-size: 9px; color: #848e9c; text-transform: uppercase; margin-top: 3px; }
-            .m-middle-row { font-size: 11px; color: #848e9c; margin: 4px 0 6px 0; line-height: 1.4; }
-            .m-middle-row .avail { color: #fff; font-weight: 700; margin-top: 2px; }
-            .m-bottom-row { display: flex; justify-content: space-between; align-items: center; padding-top: 8px; border-top: 1px solid #14151a; gap: 8px; }
-            .m-payment-tags { display: flex; gap: 4px; flex-wrap: wrap; flex: 1; }
-            .m-pay-tag { background: #14171d; color: #848e9c; padding: 3px 7px; border-radius: 6px; font-size: 10px; border: 1px solid #2b313a; white-space: nowrap; }
-            .m-order-btn { padding: 7px 22px; font-size: 12px; border-radius: 6px; font-weight: 700; border: none; cursor: pointer; flex-shrink: 0; }
+            .m-stats {
+                font-size: 11px;
+                color: #848e9c;
+                margin-top: 1px;
+            }
+            .m-right-side {
+                text-align: right;
+            }
+            .m-price {
+                font-size: 20px;
+                font-weight: 800;
+                line-height: 1;
+            }
+            .m-currency {
+                font-size: 9px;
+                color: #848e9c;
+                text-transform: uppercase;
+                margin-top: 3px;
+            }
+            .m-middle-row {
+                font-size: 11px;
+                color: #848e9c;
+                margin: 4px 0 6px 0;
+                line-height: 1.4;
+            }
+            .m-middle-row .avail {
+                color: #fff;
+                font-weight: 700;
+                margin-top: 2px;
+            }
+            .m-bottom-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding-top: 8px;
+                border-top: 1px solid #14151a;
+                gap: 8px;
+            }
+            .m-payment-tags {
+                display: flex;
+                gap: 4px;
+                flex-wrap: wrap;
+                flex: 1;
+            }
+            .m-pay-tag {
+                background: #14171d;
+                color: #848e9c;
+                padding: 3px 7px;
+                border-radius: 6px;
+                font-size: 10px;
+                border: 1px solid #2b313a;
+                white-space: nowrap;
+            }
+            .m-order-btn {
+                padding: 7px 22px;
+                font-size: 12px;
+                border-radius: 6px;
+                font-weight: 700;
+                border: none;
+                cursor: pointer;
+                flex-shrink: 0;
+            }
             .m-order-btn.buy { background: var(--green-btn); color: #000; }
             .m-order-btn.sell { background: var(--red); color: #fff; }
 
-            .sheet-box { padding: 12px 14px 22px 14px; }
-            .amount-pills-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
-            .payment-methods-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
-            .pay-method-option { padding: 12px 8px; font-size: 12px; }
+            .sheet-box {
+                padding: 12px 14px 22px 14px;
+            }
+            .amount-pills-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+            }
+            .payment-methods-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+            .pay-method-option {
+                padding: 12px 8px;
+                font-size: 12px;
+            }
         }
         
         /* Isolated Custom Alert CSS */
@@ -439,7 +1098,7 @@
     <div class="navbar">
         <div class="nav-left">
             <div class="logo-container">
-                <img src="logo.png" alt="TBR Exchange Logo" style="display:none">
+                <img src="logo.png" alt="TBR Exchange Logo" id="navbarLogoImg">
             </div>
             <div class="nav-links">
                 <a href="dashboard.html"><i class="fa-solid fa-house"></i> Dashboard</a>
@@ -505,7 +1164,7 @@
             <div class="sheet-handle"></div>
             <div class="sheet-header">
                 <h2 id="amountSheetTitle">I Want to Buy</h2>
-                <button class="sheet-close-btn"><i class="fa-solid fa-xmark"></i></button>
+                <button class="sheet-close-btn" id="closeAmountModalBtn"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="sheet-input-wrap">
                 <input type="number" id="amountFilterInput" class="sheet-input" placeholder="Enter total amount">
@@ -519,8 +1178,8 @@
                 <button type="button" class="amount-pill" data-val="50000">50K</button>
             </div>
             <div class="sheet-actions">
-                <button type="button" class="sheet-reset-btn">Reset</button>
-                <button type="button" class="sheet-confirm-btn">Confirm</button>
+                <button type="button" class="sheet-reset-btn" id="resetAmountFilterBtn">Reset</button>
+                <button type="button" class="sheet-confirm-btn" id="confirmAmountFilterBtn">Confirm</button>
             </div>
         </div>
     </div>
@@ -531,7 +1190,7 @@
             <div class="sheet-handle"></div>
             <div class="sheet-header">
                 <h2 id="paymentSheetTitle">Pay With</h2>
-                <button class="sheet-close-btn"><i class="fa-solid fa-xmark"></i></button>
+                <button class="sheet-close-btn" id="closePaymentModalBtn"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="sheet-input-wrap">
                 <i class="fa-solid fa-magnifying-glass search-icon"></i>
@@ -548,8 +1207,8 @@
                 <button type="button" class="pay-method-option" data-method="Awash Bank">Awash Bank</button>
             </div>
             <div class="sheet-actions">
-                <button type="button" class="sheet-reset-btn">Reset</button>
-                <button type="button" class="sheet-confirm-btn">Confirm</button>
+                <button type="button" class="sheet-reset-btn" id="resetPaymentFilterBtn">Reset</button>
+                <button type="button" class="sheet-confirm-btn" id="confirmPaymentFilterBtn">Confirm</button>
             </div>
         </div>
     </div>
@@ -559,7 +1218,7 @@
         <div class="trade-modal-card">
             <!-- Top Header Section -->
             <div class="tm-top-section">
-                <button type="button" class="tm-close-x"><i class="fa-solid fa-xmark"></i></button>
+                <button type="button" class="tm-close-x" id="closeOrderModalBtn"><i class="fa-solid fa-xmark"></i></button>
                 <h3 class="tm-title" id="tmHeaderTitle">Buy USDT</h3>
                 <div class="tm-price-row">
                     <span class="tm-price-big buy-color" id="tmUnitPrice">200</span>
@@ -615,7 +1274,7 @@
                             <input type="number" step="any" id="tmEtbInput" placeholder="500.00 – 100,000.00">
                             <span class="tm-input-unit">ETB</span>
                         </div>
-                        <button type="button" class="tm-max-btn">Max</button>
+                        <button type="button" class="tm-max-btn" id="fillMaxModalOrderBtn">Max</button>
                     </div>
                 </div>
 
@@ -668,8 +1327,8 @@
             <p style="color: #848e9c; font-size: 13px; line-height: 1.5; margin-bottom: 22px;">
                 You need to add a payment method before you can start trading.
             </p>
-            <button style="width: 100%; background: var(--accent-gold); border: none; color: #000; padding: 13px; border-radius: 10px; font-weight: 700; font-size: 13px; cursor: pointer; margin-bottom: 10px; transition: 0.2s;">Add Payment Method</button>
-            <button style="width: 100%; background: transparent; border: 1px solid #222731; color: #848e9c; padding: 10px; border-radius: 10px; font-weight: 600; font-size: 13px; cursor: pointer; transition: 0.2s;">Cancel</button>
+            <button id="goAddPaymentBtn" style="width: 100%; background: var(--accent-gold); border: none; color: #000; padding: 13px; border-radius: 10px; font-weight: 700; font-size: 13px; cursor: pointer; margin-bottom: 10px; transition: 0.2s;">Add Payment Method</button>
+            <button id="cancelCustomAlertBtn" style="width: 100%; background: transparent; border: 1px solid #222731; color: #848e9c; padding: 10px; border-radius: 10px; font-weight: 600; font-size: 13px; cursor: pointer; transition: 0.2s;">Cancel</button>
         </div>
     </div>
 
@@ -681,7 +1340,7 @@
                 <h2 id="modalProfileUsername" style="font-size: 18px; font-weight: 700; margin: 0; display:flex; align-items:center; gap:6px;">
                     Username <i class="fa-solid fa-circle-check" style="color: var(--accent-gold); font-size:14px;"></i>
                 </h2>
-                <button class="sheet-close-btn" style="background:transparent; border:1px solid #2b313a; color:#fff; border-radius:50%; width:28px; height:28px; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+                <button class="sheet-close-btn" id="closeUserProfileModalBtn" style="background:transparent; border:1px solid #2b313a; color:#fff; border-radius:50%; width:28px; height:28px; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
             </div>
             
             <div style="display: flex; justify-content: space-around; margin-bottom: 20px; text-align: center; border-bottom: 1px solid #1e2229; padding-bottom: 15px;">
@@ -714,7 +1373,6 @@
         </div>
     </div>
 
-    <!-- እዚህ ጋር JS ፋይሉ ተገናኝቷል -->
-    <script src="market.js"></script>
+    <script src="market.js?v=10"></script>
 </body>
 </html>
