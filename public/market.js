@@ -1,18 +1,13 @@
-// ⚡ 100% ኦሪጅናል API_BASE (ልክ ከዚህ በፊት ይሰራ እንደነበረው!) ⚡
-const API_BASE = '';
+// --- 🚀 MARKET.JS PAYMENT SYNC FIX 🚀 ---
+const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? 'http://localhost:5000'
+    : 'https://tbr-exchange-backend.onrender.com';
 
-// ⚡ ቀላል (2KB) የማርኬት ካሽ ቁልፍ (QuotaExceededError ፈጽሞ እንዳይፈጠርና በ 0.00s እንዲከፍት!) ⚡
 const LIGHT_ADS_CACHE_KEY = 'tbr_market_light_ads_v5';
 const AVATAR_THUMB_CACHE_KEY = 'tbr_market_avatars_v5';
-const USER_PAYMENTS_CACHE_KEY = 'tbr_user_payments_cache_v1';
 let currentType = 'buy';
 
-let systemSettings = {
-    buyRate: 195,
-    sellRate: 192,
-    platformFee: 0.5
-};
-
+let systemSettings = { buyRate: 195, sellRate: 192, platformFee: 0.5 };
 let allServerAds = [];
 let avatarThumbMemory = {};
 let currentRenderedAds = [];
@@ -22,7 +17,6 @@ let isFetchingAds = false;
 let currentUserBalance = 0;
 let currentUserFullName = '';
 let currentUserSavedPayments = [];
-let paymentsFetchPromise = null;
 
 let activeModalAd = null;
 let activeModalSelectedMethod = '';
@@ -33,30 +27,29 @@ let filterPaymentMethod = 'All Methods';
 let tempSelectedPayment = 'All Methods';
 
 function getAuthToken() {
-    return localStorage.getItem('token') || localStorage.getItem('jwtToken') || localStorage.getItem('authToken') || '';
+    return localStorage.getItem('token') || localStorage.getItem('authToken') || '';
 }
 
-// ⚡ ገጹ ሲከፈት ወዲያውኑ የተጠቃሚውን Payment Methods ከካሽ ማንበብ (ምንም መዘግየት እንዳይኖር) ⚡
-try {
-    const cachedPays = sessionStorage.getItem(USER_PAYMENTS_CACHE_KEY) || localStorage.getItem(USER_PAYMENTS_CACHE_KEY);
-    if (cachedPays) {
-        const parsedPays = JSON.parse(cachedPays);
-        if (Array.isArray(parsedPays) && parsedPays.length > 0) {
-            currentUserSavedPayments = parsedPays;
+// ⚡ ከ settings.js ጋር በሚመሳሰል መልኩ የባንክ አካውንቶችን ከ localStorage እና ከ API የሚያነብ ⚡
+function loadCachedPaymentsFallback() {
+    try {
+        const storedUser = JSON.parse(localStorage.getItem('user') || localStorage.getItem('currentUser') || localStorage.getItem('tbr_user') || '{}');
+        const localPays = storedUser.payments || storedUser.paymentMethods || JSON.parse(localStorage.getItem('userPayments') || localStorage.getItem('savedPayments') || '[]');
+        if (Array.isArray(localPays) && localPays.length > 0) {
+            currentUserSavedPayments = localPays;
         }
-    }
-} catch (e) {}
+        if (storedUser.balance !== undefined) currentUserBalance = Number(storedUser.balance || 0);
+        if (storedUser.fullName || storedUser.name) currentUserFullName = storedUser.fullName || storedUser.name || '';
+    } catch (e) {}
+}
 
-// ⚡ ትላልቅ የፕሮፋይል ፎቶዎችን ወደ 2KB ትንሽ Thumbnail ቀይሮ በካሽ የሚያስቀምጥ (ገጹ በ 0.00s እንዲከፍት) ⚡
 function cacheSmallAvatarThumb(traderKey, rawDataUrl) {
     if (!traderKey || !rawDataUrl) return;
     if (avatarThumbMemory[traderKey]) return;
 
     if (rawDataUrl.length < 15000) {
         avatarThumbMemory[traderKey] = rawDataUrl;
-        try {
-            sessionStorage.setItem(AVATAR_THUMB_CACHE_KEY, JSON.stringify(avatarThumbMemory));
-        } catch (e) {}
+        try { sessionStorage.setItem(AVATAR_THUMB_CACHE_KEY, JSON.stringify(avatarThumbMemory)); } catch (e) {}
         return;
     }
 
@@ -64,8 +57,7 @@ function cacheSmallAvatarThumb(traderKey, rawDataUrl) {
     img.onload = () => {
         try {
             const canvas = document.createElement('canvas');
-            canvas.width = 64;
-            canvas.height = 64;
+            canvas.width = 64; canvas.height = 64;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, 64, 64);
             const smallB64 = canvas.toDataURL('image/jpeg', 0.7);
@@ -77,32 +69,18 @@ function cacheSmallAvatarThumb(traderKey, rawDataUrl) {
     img.src = rawDataUrl;
 }
 
-// ⚡ ማስታወቂያዎቹን ያለ ክብደት (2KB ብቻ) በ localStorage እና sessionStorage ውስጥ ማስቀመጥ ⚡
 function saveLightweightAdsCache(adsArray) {
     try {
         const lightAds = adsArray.map(ad => {
             const tKey = String(ad.userId || ad.name || ad._id || '');
             const rawAv = ad.avatar || ad.profilePic || '';
-            if (rawAv && tKey) {
-                cacheSmallAvatarThumb(tKey, rawAv);
-            }
+            if (rawAv && tKey) cacheSmallAvatarThumb(tKey, rawAv);
             return {
-                _id: ad._id,
-                userId: ad.userId,
-                name: ad.name,
-                traderUsername: ad.traderUsername,
-                tbrId: ad.tbrId,
-                tradeType: ad.tradeType,
-                price: ad.price,
-                totalAmount: ad.totalAmount,
-                minLimit: ad.minLimit,
-                maxLimit: ad.maxLimit,
-                paymentMethods: ad.paymentMethods,
-                status: ad.status || 'active',
-                isOnline: ad.isOnline,
-                ordersCount: ad.ordersCount || 1,
-                completionRate: ad.completionRate || '100%',
-                createdAt: ad.createdAt
+                _id: ad._id, userId: ad.userId, name: ad.name, traderUsername: ad.traderUsername,
+                tbrId: ad.tbrId, tradeType: ad.tradeType, price: ad.price, totalAmount: ad.totalAmount,
+                minLimit: ad.minLimit, maxLimit: ad.maxLimit, paymentMethods: ad.paymentMethods,
+                status: ad.status || 'active', isOnline: ad.isOnline, ordersCount: ad.ordersCount || 1,
+                completionRate: ad.completionRate || '100%', createdAt: ad.createdAt
             };
         });
         const payload = JSON.stringify(lightAds);
@@ -115,8 +93,7 @@ function sendHeartbeat() {
     const token = getAuthToken();
     if (!token) return;
     fetch(`${API_BASE}/api/user/heartbeat`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+        method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
     }).catch(() => {});
 }
 
@@ -133,49 +110,41 @@ async function fetchAdminSettings() {
                 systemSettings.buyRate = parseNum(json.data.buyRate, 195);
                 systemSettings.sellRate = parseNum(json.data.sellRate, 192);
                 systemSettings.platformFee = parseNum(json.data.platformFee, 0.5);
-
-                if (document.getElementById('orderModal').style.display === 'flex') {
-                    updateFeeSummaryDisplay();
-                }
+                if (document.getElementById('orderModal').style.display === 'flex') updateFeeSummaryDisplay();
             }
         }
     } catch (e) {}
 }
 
+// ⚡ ከ settings.js ጋር በሚመሳሰል መልኩ ወደ /api/payment-methods በመጥራት አካውንቶችን ማምጣት ⚡
 async function fetchCurrentUserWalletAndPayments() {
+    loadCachedPaymentsFallback();
     const token = getAuthToken();
     if (!token) return;
-
-    paymentsFetchPromise = (async () => {
-        try {
-            const [profRes, payRes] = await Promise.all([
-                fetch(`${API_BASE}/api/user/profile`, { headers: { 'Authorization': `Bearer ${token}` } }),
-                fetch(`${API_BASE}/api/user/payments`, { headers: { 'Authorization': `Bearer ${token}` } })
-            ]);
-            if (profRes.ok) {
-                const profJson = await profRes.json();
-                if (profJson.success && profJson.user) {
-                    currentUserBalance = Number(profJson.user.balance || 0);
-                    currentUserFullName = profJson.user.fullName || '';
-                }
+    try {
+        const [profRes, payRes] = await Promise.all([
+            fetch(`${API_BASE}/api/user/profile`, { headers: { 'Authorization': `Bearer ${token}` } }),
+            fetch(`${API_BASE}/api/payment-methods`, { headers: { 'Authorization': `Bearer ${token}` } })
+        ]);
+        if (profRes.ok) {
+            const profJson = await profRes.json();
+            const userObj = profJson.user || profJson.data;
+            if (userObj) {
+                currentUserBalance = Number(userObj.balance || 0);
+                currentUserFullName = userObj.fullName || userObj.username || '';
             }
-            if (payRes.ok) {
-                const payJson = await payRes.json();
-                if (payJson.success && Array.isArray(payJson.payments)) {
-                    currentUserSavedPayments = payJson.payments;
-                    try {
-                        sessionStorage.setItem(USER_PAYMENTS_CACHE_KEY, JSON.stringify(payJson.payments));
-                        localStorage.setItem(USER_PAYMENTS_CACHE_KEY, JSON.stringify(payJson.payments));
-                    } catch (e) {}
-                }
+        }
+        if (payRes.ok) {
+            const payJson = await payRes.json();
+            const methods = payJson.paymentMethods || payJson.data || payJson.payments || payJson;
+            if (Array.isArray(methods) && methods.length > 0) {
+                currentUserSavedPayments = methods;
+                localStorage.setItem('userPayments', JSON.stringify(methods));
             }
-        } catch (e) {}
-    })();
-
-    return paymentsFetchPromise;
+        }
+    } catch (e) {}
 }
 
-// ⚡ CSP-SAFE IMAGE ERROR HANDLER ⚡
 document.addEventListener('error', function(e) {
     if (e.target && e.target.tagName === 'IMG') {
         if (e.target.id === 'navbarLogoImg' || (e.target.getAttribute('src') || '').includes('logo.png')) {
@@ -186,7 +155,6 @@ document.addEventListener('error', function(e) {
     }
 }, true);
 
-// ⚡ GLOBAL EVENT DELEGATION FOR ALL CLICKS (100% CSP COMPLIANT) ⚡
 document.addEventListener('click', function(e) {
     if (e.target.closest('#buyTabBtn')) return switchTradeType('buy');
     if (e.target.closest('#sellTabBtn')) return switchTradeType('sell');
@@ -206,7 +174,6 @@ document.addEventListener('click', function(e) {
     if (e.target.closest('#fillMaxModalOrderBtn') || e.target.closest('.tm-max-btn')) return fillMaxModalOrder();
     if (e.target.closest('#tmConfirmOrderBtn')) return confirmTrade();
 
-    // ⚡ Payment Method Required Alert Modal Buttons ⚡
     const alertModal = document.getElementById('customAlertModal');
     if (alertModal && alertModal.contains(e.target)) {
         const btn = e.target.closest('button');
@@ -227,19 +194,13 @@ document.addEventListener('click', function(e) {
     }
 
     const amountPill = e.target.closest('.amount-pill');
-    if (amountPill) {
-        return selectAmountPill(Number(amountPill.getAttribute('data-val') || amountPill.getAttribute('data-arg')));
-    }
+    if (amountPill) return selectAmountPill(Number(amountPill.getAttribute('data-val') || amountPill.getAttribute('data-arg')));
 
     const payOption = e.target.closest('.pay-method-option');
-    if (payOption) {
-        return selectPaymentOption(payOption.getAttribute('data-method') || payOption.getAttribute('data-arg') || payOption.innerText.trim());
-    }
+    if (payOption) return selectPaymentOption(payOption.getAttribute('data-method') || payOption.getAttribute('data-arg') || payOption.innerText.trim());
 
     const modalMethodPill = e.target.closest('.tm-method-pill');
-    if (modalMethodPill) {
-        return selectModalPaymentMethod(modalMethodPill.getAttribute('data-method') || modalMethodPill.getAttribute('data-arg') || modalMethodPill.innerText.trim());
-    }
+    if (modalMethodPill) return selectModalPaymentMethod(modalMethodPill.getAttribute('data-method') || modalMethodPill.getAttribute('data-arg') || modalMethodPill.innerText.trim());
 
     const orderBtn = e.target.closest('.order-btn, .m-order-btn');
     if (orderBtn) {
@@ -270,6 +231,8 @@ document.addEventListener('input', function(e) {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+    loadCachedPaymentsFallback();
+
     const urlParams = new URLSearchParams(window.location.search);
     const activeTab = urlParams.get('tab');
     const initialType = urlParams.get('type');
@@ -280,7 +243,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('buyTabBtn').className = 'toggle-btn';
     }
 
-    // ⚡ 1. ገጹ ሲከፈት፣ Refresh ሲደረግ ወይም ከዳሽቦርድ ስትመለስ በ 0.00 ሰከንድ ወዲያውኑ ከ2KB ካሽ ማሳየት! ⚡
     try {
         const savedAvatars = sessionStorage.getItem(AVATAR_THUMB_CACHE_KEY) || localStorage.getItem(AVATAR_THUMB_CACHE_KEY);
         if (savedAvatars) avatarThumbMemory = JSON.parse(savedAvatars) || {};
@@ -299,12 +261,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     } catch (e) {}
 
-    // 2. ከበስተጀርባ (Background) ያለ ምንም Loading ስክሪን ትኩስ መረጃ ማምጣት
     fetchLiveAdsFromServer();
     fetchAdminSettings();
     fetchCurrentUserWalletAndPayments();
 
-    // 3. Auto-sync
     sendHeartbeat();
     setInterval(sendHeartbeat, 30000);
     setInterval(fetchLiveAdsFromServer, 2500);
@@ -597,7 +557,6 @@ function renderOrderBook() {
 
         const createdTime = getAdCreatedTimestamp(ad);
 
-        // ⚡ ትክክለኛው የትሬድ ብዛትና ፐርሰንት እንዲያነብ ተደርጓል ⚡
         return {
             adId: ad._id || '',
             name: traderInfo.displayName,
@@ -732,24 +691,31 @@ function formatMoney2(num) {
     return Number(num || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// ⚡ ልክ ከዚህ በፊት እንደነበረው፦ Payment Method ካለው በቀጥታ ይከፍታል፣ ከሌለው ደግሞ ይከለክላል! ⚡
-async function openOrderModalByIndex(index) {
-    // 1. ገጹ ገና ተከፍቶ ከሰርቨር አካውንቶቹን አምጥቶ ካልጨረሰ ትንሽ ጠብቆ ያረጋግጣል (አካውንት ያላቸውን በስህተት እንዳይከለክል)
-    if ((!currentUserSavedPayments || currentUserSavedPayments.length === 0) && paymentsFetchPromise) {
-        await paymentsFetchPromise;
-    }
+// ⚡ PAYMENT METHOD CHECK FIX (የባንክ አካውንት ካለው በቀጥታ ይከፍታል፣ ከሌለው ብቻ ይከለክላል) ⚡
+function openOrderModalByIndex(index) {
+    loadCachedPaymentsFallback();
 
-    // 2. የክፍያ መንገድ ከሌለው ቀጥታ ይህ ማስጠንቀቂያ ይወጣል
     if (!currentUserSavedPayments || currentUserSavedPayments.length === 0) {
-        const alertModal = document.getElementById('customAlertModal');
-        if (alertModal) {
-            alertModal.style.display = 'flex';
-        } else {
-            window.location.href = 'settings.html?tab=payments';
-        }
+        fetchCurrentUserWalletAndPayments().then(() => {
+            if (!currentUserSavedPayments || currentUserSavedPayments.length === 0) {
+                const alertModal = document.getElementById('customAlertModal');
+                if (alertModal) {
+                    alertModal.style.display = 'flex';
+                } else {
+                    window.location.href = 'settings.html?tab=payments';
+                }
+                return;
+            } else {
+                proceedOpenModal(index);
+            }
+        });
         return;
     }
 
+    proceedOpenModal(index);
+}
+
+function proceedOpenModal(index) {
     const isBuy = currentType === 'buy';
     const ad = currentRenderedAds[index];
     if (!ad) return;
@@ -838,12 +804,10 @@ async function openOrderModalByIndex(index) {
     document.getElementById('orderModal').style.display = 'flex';
 
     fetchAdminSettings();
-    fetchCurrentUserWalletAndPayments().then(() => {
-        if (!isBuy && document.getElementById('orderModal').style.display === 'flex') {
-            updateSellerAccountPreviewBox();
-            validateModalOrderInputs();
-        }
-    });
+    if (!isBuy) {
+        updateSellerAccountPreviewBox();
+        validateModalOrderInputs();
+    }
 }
 
 function renderModalPaymentPills() {
@@ -882,13 +846,13 @@ function updateSellerAccountPreviewBox() {
     const target = (activeModalSelectedMethod || '').toLowerCase().trim();
 
     const matched = currentUserSavedPayments.find(pm => 
-        String(pm.type || '').toLowerCase().trim() === target
+        String(pm.type || pm.bankName || pm.method || '').toLowerCase().trim() === target
     ) || currentUserSavedPayments[0];
 
     if (matched) {
-        document.getElementById('tmAccountHolderName').innerText = matched.name || currentUserFullName || 'Account Holder';
-        document.getElementById('tmAccountNumber').innerText = matched.account || '-';
-        document.getElementById('tmAccountBankName').innerText = matched.type || activeModalSelectedMethod;
+        document.getElementById('tmAccountHolderName').innerText = matched.name || matched.accountName || currentUserFullName || 'Account Holder';
+        document.getElementById('tmAccountNumber').innerText = matched.account || matched.accountNumber || '-';
+        document.getElementById('tmAccountBankName').innerText = matched.type || matched.bankName || activeModalSelectedMethod;
     } else {
         let localUser = null;
         try {
@@ -1129,7 +1093,6 @@ async function openUserProfileStats(username) {
     }
 }
 
-// ⚡ ትክክለኛውን የትሬድ ብዛትና ፐርሰንት ከሰርቨር በማምጣት ማርኬቱ ላይ በየጊዜው (Sync) ያደርጋል ⚡
 (function syncRealMarketTraderStats() {
     let traderStatsMap = {};
 
@@ -1201,74 +1164,4 @@ async function openUserProfileStats(username) {
         observer.observe(document.body, { childList: true, subtree: true });
     });
     loadRealAdsStats();
-})();
-
-// ⚡ PROFESSIONAL SELL MODAL PAYMENT METHOD & LIMIT FIX ⚡
-(function fixMarketSellModalAccounts() {
-    let mySavedPayments = [];
-
-    async function loadMyPaymentMethods() {
-        try {
-            const token = localStorage.getItem('token') || localStorage.getItem('authToken');
-            if (!token) return;
-            const res = await fetch('/api/user/payments', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                mySavedPayments = data.payments || [];
-                if (mySavedPayments.length > 0 && currentUserSavedPayments.length === 0) {
-                    currentUserSavedPayments = mySavedPayments;
-                }
-            }
-        } catch (e) {}
-    }
-
-    loadMyPaymentMethods();
-
-    const observer = new MutationObserver(() => {
-        const sellModal = document.querySelector('.modal, #sellModal, [id*="sell"], .trade-modal');
-        if (!sellModal || sellModal.style.display === 'none') return;
-
-        const modalTitle = sellModal.querySelector('h2, h3, .modal-title, .title');
-        const isSellModal = modalTitle && modalTitle.innerText.toLowerCase().includes('sell');
-        if (!isSellModal) return;
-
-        const limitTexts = sellModal.querySelectorAll('span, p, div, small');
-        limitTexts.forEach(el => {
-            const txt = el.innerText || '';
-            const m = txt.match(/Limit\s*([\d,.]+)\s*[-–]\s*([\d,.]+)\s*ETB/i);
-            if (m) {
-                const val1 = parseFloat(m[1].replace(/,/g, ''));
-                const val2 = parseFloat(m[2].replace(/,/g, ''));
-                if (val1 > val2) {
-                    el.innerText = `Limit ${val2.toFixed(2)} – ${val1.toFixed(2)} ETB`;
-                }
-            }
-        });
-
-        if (mySavedPayments.length > 0) {
-            const activeMethodBtn = sellModal.querySelector('.method-btn.active, .payment-btn.active, button.active');
-            const selectedMethodType = activeMethodBtn ? activeMethodBtn.innerText.trim().toLowerCase() : '';
-
-            const matchedAcc = mySavedPayments.find(p => 
-                p.type && p.type.toLowerCase().includes(selectedMethodType)
-            ) || mySavedPayments[0];
-
-            if (matchedAcc) {
-                const myName = localStorage.getItem('fullName') || localStorage.getItem('userName') || matchedAcc.name;
-                
-                const detailLines = sellModal.querySelectorAll('p, div, span');
-                detailLines.forEach(line => {
-                    if (line.innerText.includes('rahmet ali') || line.innerText.includes('1000397691652')) {
-                        line.innerHTML = `<strong style="color:#fff; font-size:14px;">${myName}</strong><br>` +
-                                         `<span style="color:#d1d5db; font-family:monospace; font-size:13px;">${matchedAcc.account}</span><br>` +
-                                         `<small style="color:#848e9c;">${matchedAcc.type || matchedAcc.name}</small>`;
-                    }
-                });
-            }
-        }
-    });
-
-    observer.observe(document.body, { childList: true, subtree: true });
 })();
