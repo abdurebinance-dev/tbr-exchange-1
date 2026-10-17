@@ -108,6 +108,16 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
+// 🚀 Handle broken images globally (CSP friendly) 🚀
+document.addEventListener('error', (e) => {
+    if (e.target && e.target.tagName === 'IMG') {
+        const initials = e.target.getAttribute('data-initials');
+        if (initials) {
+            e.target.outerHTML = initials;
+        }
+    }
+}, true); // `true` በመሆኑ ፎቶ ሎድ ሲያደርግ የሚፈጠርን ኤረር ይይዘዋል
+
 function switchMobileTradeView(tabName) {
     const outer = document.getElementById('singleTradeRoomView');
     const infoBtn = document.getElementById('btnToggleInfo');
@@ -460,8 +470,8 @@ function renderMyTradesTable(trades) {
         const partnerAvatar = resolveAvatarUrl(isBuyer ? tr.sellerAvatar : tr.buyerAvatar);
         const initials = String(partnerName).slice(0, 2).toUpperCase();
         const avatarHtml = partnerAvatar
-            ? `<img src="${partnerAvatar}" alt="${partnerName}" loading="lazy" onerror="this.outerHTML='${initials}'">`
-            : initials;
+    ? `<img src="${partnerAvatar}" alt="${partnerName}" loading="lazy" data-initials="${initials}">`
+    : initials;
 
         const tradeIdShort = tr.tradeNumber
             ? `#${String(tr.tradeNumber).padStart(5, '0')}`
@@ -690,8 +700,8 @@ function renderTradeRoomUI() {
     const partnerAvatar = resolveAvatarUrl(isBuyer ? activeTrade.sellerAvatar : activeTrade.buyerAvatar);
     const initials = String(partnerName).slice(0, 2).toUpperCase();
     const avatarInnerHtml = partnerAvatar
-        ? `<img src="${partnerAvatar}" alt="${partnerName}" onerror="this.outerHTML='${initials}'">`
-        : initials;
+    ? `<img src="${partnerAvatar}" alt="${partnerName}" data-initials="${initials}">`
+    : initials;
 
     document.getElementById('uiTopPartnerName').innerText = partnerName;
     document.getElementById('uiTopUsdtSummary').innerText = usdtFormatted;
@@ -1318,7 +1328,7 @@ function renderChatMessages(partnerAvatar, partnerInitials) {
                 </div>
             `;
         } else {
-            const avHtml = partnerAvatar ? `<img src="${partnerAvatar}" onerror="this.outerHTML='${partnerInitials || 'TR'}'">` : (partnerInitials || 'TR');
+            const avHtml = partnerAvatar ? `<img src="${partnerAvatar}" data-initials="${partnerInitials || 'TR'}">` : (partnerInitials || 'TR');
             return `
                 <div class="msg-row-theirs">
                     <div class="msg-theirs-avatar">${avHtml}</div>
