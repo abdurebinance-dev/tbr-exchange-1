@@ -17,19 +17,31 @@ let myTradesMemoryMap = {};
 let isFetchingList = false;
 let isFetchingRoom = false;
 
-// 🚀 Event Delegation for Strict CSP Compliance 🚀
+// 🚀 Event Delegation for Strict CSP Compliance & Instant Navigation 🚀
 document.addEventListener('click', (e) => {
     
-    // 🚀 FIX: ማናቸውንም የጠረጴዛውን ክፍል (ጽሁፍም ሆነ ባዶ ቦታ) ሲነካ ቶሎ እንዲከፍት 🚀
+    // 1. Degdeg u fur Trade Room-ka (Instant SPA Switch)
     const tradeRowOrCard = e.target.closest('[data-trade-id]');
     if (tradeRowOrCard) {
+        e.preventDefault();
         openSingleTradeInstant(tradeRowOrCard.dataset.tradeId);
         return;
     }
 
-    const targetClosest = e.target.closest('button, .tap-chat-banner-card, .tr-toggle-pill, .cpd-header, .download-receipt-card, .cm-close, i, .copy-icon-btn, .spt-copy-box, .inline-copy-btn, .modal-overlay, span, img, a, .dashboard-shortcut-btn');
+    const targetClosest = e.target.closest('button, .tap-chat-banner-card, .tr-toggle-pill, .cpd-header, .download-receipt-card, .cm-close, i, .copy-icon-btn, .spt-copy-box, .inline-copy-btn, .modal-overlay, span, img, a, .dashboard-shortcut-btn, .tr-back-btn');
 
     if (!targetClosest) return;
+
+    // 2. Degdeg ugu noqo liiska Trades-ka (Back button)
+    if (targetClosest.classList.contains('tr-back-btn')) {
+        e.preventDefault();
+        window.history.pushState({}, '', 'trades.html');
+        document.getElementById('singleTradeRoomView').style.display = 'none';
+        document.getElementById('myTradesListView').style.display = 'block';
+        activeTrade = null;
+        if (countdownInterval) clearInterval(countdownInterval);
+        return;
+    }
 
     // Modals overlay click
     if (targetClosest.id === 'confirmPaymentModal' && e.target === targetClosest) closeConfirmPaymentModal();
@@ -111,7 +123,7 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// 🚀 100% Secure Image Fallback Handler 🚀
+// 🚀 Secure Image Fallback Handler 🚀
 function attachImageFallbacks() {
     document.querySelectorAll('img[data-initials]').forEach(img => {
         if (img.dataset.fallbackAttached) return;
@@ -323,13 +335,29 @@ function formatEtb(val) {
     return Number(val || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ETB';
 }
 
+// 🚀 Gabi ahaanba dib looma soo rogo bogga (SPA Instant Load) 🚀
 function openSingleTradeInstant(tradeId) {
-    if (myTradesMemoryMap[tradeId]) {
+    const trade = myTradesMemoryMap[tradeId];
+    if (trade) {
+        activeTrade = trade;
         try {
-            localStorage.setItem('tbr_active_p2p_order', JSON.stringify(myTradesMemoryMap[tradeId]));
+            localStorage.setItem('tbr_active_p2p_order', JSON.stringify(trade));
         } catch (e) {}
+
+        const url = new URL(window.location);
+        url.searchParams.set('tradeId', tradeId);
+        window.history.pushState({}, '', url);
+
+        document.getElementById('myTradesListView').style.display = 'none';
+        document.getElementById('singleTradeRoomView').style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        renderTradeRoomUI();
+        fetchTradeFromServer(tradeId);
+        startCountdownTimer();
+    } else {
+        window.location.href = `trades.html?tradeId=${tradeId}`;
     }
-    window.location.href = `trades.html?tradeId=${tradeId}`;
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -479,7 +507,6 @@ function renderMyTradesTable(trades) {
         const partnerAvatar = resolveAvatarUrl(isBuyer ? tr.sellerAvatar : tr.buyerAvatar);
         const initials = String(partnerName).slice(0, 2).toUpperCase();
         
-        // 🚀 CSP Friendly Avatar Creation 🚀
         const avatarHtml = partnerAvatar
             ? `<img src="${partnerAvatar}" alt="${partnerName}" loading="lazy" data-initials="${initials}">`
             : initials;
@@ -546,7 +573,7 @@ function renderMyTradesTable(trades) {
             ? `<span class="mt-msg-badge"><i class="fa-regular fa-comment"></i> ${userMsgsCount}</span>`
             : '';
 
-        // 1. PC Table Row (Cursor pointer)
+        // 1. PC Table Row (Cursor pointer, data-trade-id)
         html += `
             <tr class="${rowHighlight}" data-trade-id="${targetId}" style="cursor:pointer;">
                 <td class="mt-id-col">${tradeIdShort}</td>
@@ -616,7 +643,6 @@ function renderMyTradesTable(trades) {
         mobileCardsContainer.innerHTML = mobileHtml;
     }
     
-    // 🚀 Trigger Fallback Script 🚀
     attachImageFallbacks();
 
     const mbnBadge = document.getElementById('mbnActiveTradesBadge');
@@ -714,7 +740,6 @@ function renderTradeRoomUI() {
     const partnerAvatar = resolveAvatarUrl(isBuyer ? activeTrade.sellerAvatar : activeTrade.buyerAvatar);
     const initials = String(partnerName).slice(0, 2).toUpperCase();
     
-    // 🚀 CSP Friendly Avatar Creation 🚀
     const avatarInnerHtml = partnerAvatar
         ? `<img src="${partnerAvatar}" alt="${partnerName}" data-initials="${initials}">`
         : initials;
@@ -824,7 +849,7 @@ function renderTradeRoomUI() {
         document.getElementById('uiChatClosedBanner').style.display = 'none';
         document.getElementById('uiChatInputBar').style.display = 'flex';
         renderChatMessages(partnerAvatar, initials);
-        attachImageFallbacks(); // 🚀 Fallback check 
+        attachImageFallbacks(); 
         return;
     }
 
@@ -875,7 +900,7 @@ function renderTradeRoomUI() {
             : 'Trade cancelled — chat is closed';
         document.getElementById('uiChatInputBar').style.display = 'none';
         renderChatMessages(partnerAvatar, initials);
-        attachImageFallbacks(); // 🚀 Fallback check 
+        attachImageFallbacks(); 
         return;
     }
 
@@ -1037,7 +1062,7 @@ function renderTradeRoomUI() {
     }
 
     renderChatMessages(partnerAvatar, initials);
-    attachImageFallbacks(); // 🚀 Fallback check 
+    attachImageFallbacks();
 }
 
 function startCountdownTimer() {
@@ -1347,7 +1372,6 @@ function renderChatMessages(partnerAvatar, partnerInitials) {
                 </div>
             `;
         } else {
-            // 🚀 CSP Friendly Avatar Creation 🚀
             const avHtml = partnerAvatar 
                 ? `<img src="${partnerAvatar}" data-initials="${partnerInitials || 'TR'}">` 
                 : (partnerInitials || 'TR');
@@ -1364,7 +1388,7 @@ function renderChatMessages(partnerAvatar, partnerInitials) {
     }).join('');
 
     area.scrollTop = area.scrollHeight;
-    attachImageFallbacks(); // 🚀 Fallback check 
+    attachImageFallbacks(); 
 }
 
 async function sendChatMessage() {
