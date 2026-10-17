@@ -283,14 +283,55 @@ function filterHistory(type, btnElement) {
 }
 
 function createTxHTML(tx) {
-    const isWithdrawal = (tx.type || '').toLowerCase().includes('withdraw');
-    const isDeposit = !isWithdrawal && ((tx.type || '').toLowerCase().includes('deposit') || (tx.type || '').toLowerCase().includes('trade') || (tx.type || '').toLowerCase().includes('credit'));
+    const typeStr = (tx.type || '').toLowerCase();
     
-    const title = tx.type || (isWithdrawal ? 'Withdrawal' : 'Deposit');
-    const color = isWithdrawal ? 'var(--red-color)' : 'var(--green-color)';
-    const sign = isWithdrawal ? '-' : '+';
-    const icon = isWithdrawal ? 'fa-arrow-up' : 'fa-arrow-down';
-    const desc = isWithdrawal ? `Withdrawal to ${formatAddress(tx.destinationAddress)} on BSC` : `Received on BSC`;
+    const isWithdrawal = typeStr.includes('withdraw');
+    const isP2pTrade = typeStr.includes('trade') || typeStr.includes('p2p');
+    const isTransfer = typeStr.includes('transfer');
+    const isDeposit = !isWithdrawal && !isP2pTrade && !isTransfer && (typeStr.includes('deposit') || typeStr.includes('credit'));
+    
+    let title = tx.type || 'Transaction';
+    let color = 'var(--green-color)'; // Default deposit color
+    let sign = '+';
+    let icon = 'fa-arrow-down';
+    let desc = 'Received on BSC';
+
+    // Withdrawal Styling
+    if (isWithdrawal) {
+        title = 'Withdrawal';
+        color = 'var(--red-color)';
+        sign = '-';
+        icon = 'fa-arrow-up';
+        desc = `Withdrawal to ${formatAddress(tx.destinationAddress)} on BSC`;
+    } 
+    // P2P Trade Styling (Gold/Yellow)
+    else if (isP2pTrade) {
+        title = 'P2P Trade';
+        color = 'var(--accent-color)'; // Gold color
+        sign = '+';
+        icon = 'fa-right-left';
+        desc = 'P2P Escrow Release';
+    } 
+    // Transfer Styling (Purple/Teji)
+    else if (isTransfer) {
+        title = 'Transfer';
+        color = '#a855f7'; // Purple/Weine Teji
+        // If it's an outgoing transfer, make it minus. If incoming, make it plus.
+        // Assuming your backend saves transfers with 'recipient' field.
+        if (tx.recipient) {
+            sign = '-';
+            icon = 'fa-paper-plane';
+            desc = `Transferred to User ID/Email`;
+        } else {
+            sign = '+';
+            icon = 'fa-envelope-open-text';
+            desc = `Received via Transfer`;
+        }
+    } 
+    // Deposit Styling (Green)
+    else {
+        title = 'Deposit';
+    }
 
     return `
     <div class="tx-item">
