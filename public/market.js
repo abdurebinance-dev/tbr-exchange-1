@@ -1,5 +1,7 @@
-// --- 🚀 MARKET.JS PAYMENT SYNC & FIX 🚀 ---
-const API_BASE = '';
+// --- 🚀 MARKET.JS PAYMENT SYNC FIX 🚀 ---
+const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? 'http://localhost:5000'
+    : 'https://tbr-exchange-backend.onrender.com';
 
 const LIGHT_ADS_CACHE_KEY = 'tbr_market_light_ads_v5';
 const AVATAR_THUMB_CACHE_KEY = 'tbr_market_avatars_v5';
@@ -28,7 +30,7 @@ function getAuthToken() {
     return localStorage.getItem('token') || localStorage.getItem('authToken') || '';
 }
 
-// ⚡ ከ settings.js ጋር በሚመሳሰል መልኩ ሎካል ስቶሬጅ ላይ ያሉትን አካውንቶች ወዲያውኑ ማንበብ ⚡
+// ⚡ ከ settings.js ጋር በሚመሳሰል መልኩ የባንክ አካውንቶችን ከ localStorage እና ከ API የሚያነብ ⚡
 function loadCachedPaymentsFallback() {
     try {
         const storedUser = JSON.parse(localStorage.getItem('user') || localStorage.getItem('currentUser') || localStorage.getItem('tbr_user') || '{}');
@@ -114,7 +116,7 @@ async function fetchAdminSettings() {
     } catch (e) {}
 }
 
-// ⚡ ከ settings.js ጋር በሚመሳሰል መልኩ ወደ /api/payment-methods በመጥራት አካውንቶችን በትክክል ማምጣት ⚡
+// ⚡ ከ settings.js ጋር በሚመሳሰል መልኩ ወደ /api/payment-methods በመጥራት አካውንቶችን ማምጣት ⚡
 async function fetchCurrentUserWalletAndPayments() {
     loadCachedPaymentsFallback();
     const token = getAuthToken();
@@ -135,7 +137,7 @@ async function fetchCurrentUserWalletAndPayments() {
         if (payRes.ok) {
             const payJson = await payRes.json();
             const methods = payJson.paymentMethods || payJson.data || payJson.payments || payJson;
-            if (Array.isArray(methods)) {
+            if (Array.isArray(methods) && methods.length > 0) {
                 currentUserSavedPayments = methods;
                 localStorage.setItem('userPayments', JSON.stringify(methods));
             }
@@ -689,24 +691,31 @@ function formatMoney2(num) {
     return Number(num || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// ⚡ 100% INSTANT & ACCURATE PAYMENT METHOD CHECK (ስርወ-ችግሩ ተፈትቷል) ⚡
-async function openOrderModalByIndex(index) {
+// ⚡ PAYMENT METHOD CHECK FIX (የባንክ አካውንት ካለው በቀጥታ ይከፍታል፣ ከሌለው ብቻ ይከለክላል) ⚡
+function openOrderModalByIndex(index) {
     loadCachedPaymentsFallback();
 
     if (!currentUserSavedPayments || currentUserSavedPayments.length === 0) {
-        await fetchCurrentUserWalletAndPayments();
-    }
-
-    if (!currentUserSavedPayments || currentUserSavedPayments.length === 0) {
-        const alertModal = document.getElementById('customAlertModal');
-        if (alertModal) {
-            alertModal.style.display = 'flex';
-        } else {
-            window.location.href = 'settings.html?tab=payments';
-        }
+        fetchCurrentUserWalletAndPayments().then(() => {
+            if (!currentUserSavedPayments || currentUserSavedPayments.length === 0) {
+                const alertModal = document.getElementById('customAlertModal');
+                if (alertModal) {
+                    alertModal.style.display = 'flex';
+                } else {
+                    window.location.href = 'settings.html?tab=payments';
+                }
+                return;
+            } else {
+                proceedOpenModal(index);
+            }
+        });
         return;
     }
 
+    proceedOpenModal(index);
+}
+
+function proceedOpenModal(index) {
     const isBuy = currentType === 'buy';
     const ad = currentRenderedAds[index];
     if (!ad) return;
