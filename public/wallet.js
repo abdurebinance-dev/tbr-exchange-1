@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", () => {
         window.location.replace("signin.html");
     }
 });
-const API_BASE_URL = ''; 
+const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:5000' : 'https://tbr-exchange-backend.onrender.com'; 
 
 // 🚀 የደህንነት ማረጋገጫዎች የትኛውን ስራ እንደሚሰሩ የምንለይበት መያዣዎች 🚀
 let pendingActionType = ""; 
@@ -167,11 +167,16 @@ async function fetchTransactions() {
     const token = localStorage.getItem("token") || localStorage.getItem("authToken");
     if (!token) return;
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+
     try {
         const res = await fetch(`${API_BASE_URL}/api/transactions`, { 
             method: 'GET',
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: { 'Authorization': `Bearer ${token}` },
+            signal: controller.signal
         });
+        clearTimeout(timeoutId);
         const data = await res.json();
 
         if (data.success && data.transactions) {
@@ -182,6 +187,7 @@ async function fetchTransactions() {
             filterHistory('All');
         }
     } catch (err) {
+        clearTimeout(timeoutId);
         console.error("Error fetching tx:", err);
     }
 }
