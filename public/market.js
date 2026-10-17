@@ -1,4 +1,3 @@
-// Initialization
 const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
     ? 'http://localhost:5000'
     : 'https://tbr-exchange-backend.onrender.com';
@@ -28,7 +27,7 @@ let tempSelectedPayment = 'All Methods';
 
 // 🚀 EVENT DELEGATION FOR ALL CLICKS (CSP COMPLIANT) 🚀
 document.addEventListener('click', (e) => {
-    const btn = e.target.closest('button[data-action], div[data-action], span[data-action]');
+    const btn = e.target.closest('button[data-action], div[data-action], span[data-action], a[data-action]');
     if (btn) {
         const action = btn.dataset.action;
         
@@ -47,6 +46,7 @@ document.addEventListener('click', (e) => {
         if (action === 'confirm-trade') confirmTrade();
         if (action === 'fill-max') fillMaxModalOrder();
         if (action === 'go-settings') window.location.href = 'settings.html?tab=payments';
+        if (action === 'go-dashboard') window.location.href = 'dashboard.html';
         if (action === 'close-custom-alert') document.getElementById('customAlertModal').style.display = 'none';
         if (action === 'close-profile-modal') document.getElementById('userProfileModal').style.display = 'none';
         
@@ -79,7 +79,7 @@ document.addEventListener('click', (e) => {
         return;
     }
 
-    // Modal Overlays
+    // Modal Overlays Click to Close
     const overlay = e.target.closest('.modal-overlay, .sheet-overlay');
     if (overlay && e.target === overlay) {
         if (overlay.dataset.modal === 'amount-sheet') closeAmountModal();
