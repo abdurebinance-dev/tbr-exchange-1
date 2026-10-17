@@ -20,7 +20,7 @@ let isFetchingRoom = false;
 // 🚀 Event Delegation for Strict CSP Compliance & Instant Navigation 🚀
 document.addEventListener('click', (e) => {
     
-    // 1. Degdeg u fur Trade Room-ka (Instant SPA Switch)
+    // 1. 🚀 FIX: የትኛውንም የጠረጴዛውን ክፍል (ጽሁፍ፣ ፒል፣ ወይም ባዶ ቦታ) ሲነካ ቶሎ እንዲከፍት 🚀
     const tradeRowOrCard = e.target.closest('[data-trade-id]');
     if (tradeRowOrCard) {
         e.preventDefault();
@@ -32,10 +32,10 @@ document.addEventListener('click', (e) => {
 
     if (!targetClosest) return;
 
-    // 2. Degdeg ugu noqo liiska Trades-ka (Back button)
-    if (targetClosest.classList.contains('tr-back-btn')) {
+    // 2. 🚀 Back button - ያለምንም ሪፍሬሽ ወደ ኋላ በፍጥነት እንዲመልስ 🚀
+    if (targetClosest.classList.contains('tr-back-btn') || targetClosest.closest('.tr-back-btn')) {
         e.preventDefault();
-        window.history.pushState({}, '', 'trades.html');
+        window.history.pushState({}, '', window.location.pathname);
         document.getElementById('singleTradeRoomView').style.display = 'none';
         document.getElementById('myTradesListView').style.display = 'block';
         activeTrade = null;
@@ -103,7 +103,7 @@ document.addEventListener('click', (e) => {
     }
     
     // Top Right Dashboard shortcut
-    if(targetClosest.closest('.dashboard-shortcut-btn')) {
+    if(targetClosest.classList.contains('dashboard-shortcut-btn') || targetClosest.closest('.dashboard-shortcut-btn')) {
          window.location.href = 'dashboard.html';
     }
 });
@@ -573,7 +573,7 @@ function renderMyTradesTable(trades) {
             ? `<span class="mt-msg-badge"><i class="fa-regular fa-comment"></i> ${userMsgsCount}</span>`
             : '';
 
-        // 1. PC Table Row (Cursor pointer, data-trade-id)
+        // 1. PC Table Row
         html += `
             <tr class="${rowHighlight}" data-trade-id="${targetId}" style="cursor:pointer;">
                 <td class="mt-id-col">${tradeIdShort}</td>
@@ -1057,6 +1057,7 @@ function renderTradeRoomUI() {
 
             cancelBtn.innerText = alreadyRequested ? 'Cancellation Requested ✓' : 'Request for Cancel';
             cancelBtn.disabled = alreadyRequested;
+            cancelBtn.onclick = requestTradeCancellation;
             cancelBtn.style.display = 'block';
         }
     }
@@ -1372,6 +1373,7 @@ function renderChatMessages(partnerAvatar, partnerInitials) {
                 </div>
             `;
         } else {
+            // 🚀 CSP Friendly Avatar Creation 🚀
             const avHtml = partnerAvatar 
                 ? `<img src="${partnerAvatar}" data-initials="${partnerInitials || 'TR'}">` 
                 : (partnerInitials || 'TR');
@@ -1388,7 +1390,7 @@ function renderChatMessages(partnerAvatar, partnerInitials) {
     }).join('');
 
     area.scrollTop = area.scrollHeight;
-    attachImageFallbacks(); 
+    attachImageFallbacks(); // 🚀 Fallback check 
 }
 
 async function sendChatMessage() {
