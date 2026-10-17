@@ -152,14 +152,14 @@ function invalidateAllMarketAndBalanceCaches() {
 function resolveAvatarUrl(rawUrl) {
     if (!rawUrl) return '';
     const str = String(rawUrl).trim();
-    if (!str) return '';
+    if (!str || str === 'undefined' || str === 'null') return '';
     if (str.startsWith('data:image') || str.startsWith('http://') || str.startsWith('https://')) {
         return str;
     }
     if (str.startsWith('/')) {
         return `${API_BASE}${str}`;
     }
-    return str;
+    return `${API_BASE}/${str}`;
 }
 
 function detectTradeResolutionState(tr) {
