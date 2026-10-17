@@ -960,3 +960,55 @@ function showToast(message, isError = false) {
         toast.classList.remove("show");
     }, 3000);
 }
+
+// 🚀 Event Delegation for CSP Compliance (Replaces all inline onclick/oninput) 🚀
+document.addEventListener('click', (e) => {
+    const target = e.target.closest('button, .network-card, i, span, div.network-item');
+    if (!target) return;
+    
+    // Top Card Actions
+    if (target.id === 'toggleBalanceIcon') toggleBalanceVisibility();
+    if (target.classList.contains('deposit-btn')) handleAction('Deposit', target);
+    if (target.classList.contains('withdraw-btn')) handleAction('Withdraw', target);
+    if (target.classList.contains('transfer-btn')) handleAction('Transfer', target);
+    
+    // Modals
+    if (target.classList.contains('network-card')) openNetworkModal();
+    if (target.classList.contains('fa-xmark') || target.innerText.includes('Cancel')) {
+        if (target.closest('#networkModal')) closeNetworkModal();
+        if (target.closest('#securityModal') || target.innerText.includes('Cancel')) closeSecurityModal();
+        if (target.closest('#otpModal')) closeOtpModal();
+        if (target.closest('#historyModal')) closeHistoryModal();
+    }
+    
+    // Network Options
+    if (target.id === 'bsc-option') selectNetwork('BSC', 'BNB Smart Chain (BEP-20)', 'bsc-option');
+    if (target.id === 'trx-option') showToast('TRON (TRC-20) Network is Coming Soon!');
+    
+    // Utility
+    if (target.classList.contains('copy-btn')) copyAddress();
+    if (target.innerText === 'MAX') setMaxWithdrawAmount();
+    
+    // History
+    if (target.innerText === 'View all >') openHistoryModal();
+    if (target.classList.contains('history-tab')) filterHistory(target.innerText, target);
+    
+    // Submits & Verifications
+    if (target.id === 'withdraw-submit-btn') initiateWithdrawal();
+    if (target.id === 'transfer-submit-btn') initiateTransfer();
+    if (target.id === 'sendEmailCodeBtn') triggerEmailOTP();
+    
+    if (target.innerText.includes('Email Code')) switchToEmailOTP();
+    if (target.innerText.includes('Verify with Passkey')) verifyWithdrawalPasskey();
+    if (target.innerText.includes('Verify & Confirm')) verifyAndCompleteWithdrawal();
+});
+
+document.addEventListener('input', (e) => {
+    if (e.target.id === 'withdraw-address' || e.target.id === 'withdraw-amount') {
+        validateWithdrawForm();
+    }
+    if (e.target.id === 'transfer-recipient' || e.target.id === 'transfer-amount') {
+        checkTransferForm();
+        if (e.target.id === 'transfer-recipient') debouncedCheckRecipient();
+    }
+});
