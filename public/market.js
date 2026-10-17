@@ -1,11 +1,103 @@
+// --- 🚀 GLOBAL EVENT DELEGATION (CSP FIX) 🚀 ---
+document.addEventListener('click', function(e) {
+    // 1. Handle all data-action buttons
+    const btn = e.target.closest('button[data-action], div[data-action], span[data-action], a[data-action]');
+    if (btn) {
+        const action = btn.dataset.action;
+        
+        if (action === 'switch-buy') switchTradeType('buy');
+        if (action === 'switch-sell') switchTradeType('sell');
+        if (action === 'toggle-online') toggleOnlineFilter();
+        if (action === 'open-amount') openAmountModal();
+        if (action === 'close-amount') closeAmountModal();
+        if (action === 'reset-amount') resetAmountFilter();
+        if (action === 'confirm-amount') confirmAmountFilter();
+        if (action === 'open-payment') openPaymentModal();
+        if (action === 'close-payment') closePaymentModal();
+        if (action === 'reset-payment') resetPaymentFilter();
+        if (action === 'confirm-payment') confirmPaymentFilter();
+        if (action === 'close-order') closeOrderModal();
+        if (action === 'confirm-trade') confirmTrade();
+        if (action === 'fill-max') fillMaxModalOrder();
+        if (action === 'go-settings') window.location.href = 'settings.html?tab=payments';
+        if (action === 'go-dashboard') window.location.href = 'dashboard.html';
+        if (action === 'close-alert') document.getElementById('customAlertModal').style.display = 'none';
+        if (action === 'close-profile') document.getElementById('userProfileModal').style.display = 'none';
+        
+        if (action === 'open-order-modal') {
+            const idx = btn.dataset.index;
+            if (idx) openOrderModalByIndex(idx);
+        }
+        if (action === 'open-profile') {
+            const uname = btn.dataset.username;
+            if (uname) openUserProfileStats(uname);
+        }
+        return;
+    }
+
+    // 2. Handle dynamically rendered pills & options
+    const amountPill = e.target.closest('.amount-pill');
+    if (amountPill) {
+        selectAmountPill(amountPill.dataset.val);
+        return;
+    }
+
+    const payOption = e.target.closest('.pay-method-option');
+    if (payOption) {
+        selectPaymentOption(payOption.dataset.method);
+        return;
+    }
+
+    const modalPayPill = e.target.closest('.tm-method-pill');
+    if (modalPayPill) {
+        selectModalPaymentMethod(modalPayPill.dataset.method);
+        return;
+    }
+
+    // 3. Handle clicking on the overlay background to close
+    const overlay = e.target.closest('.modal-overlay, .sheet-overlay');
+    if (overlay && e.target === overlay) {
+        const modalId = overlay.dataset.modal;
+        if (modalId === 'amount-sheet') closeAmountModal();
+        if (modalId === 'payment-sheet') closePaymentModal();
+        if (modalId === 'order-modal') closeOrderModal();
+        if (modalId === 'user-profile') overlay.style.display = 'none';
+    }
+});
+
+// 🚀 EVENT DELEGATION FOR ALL INPUTS (CSP COMPLIANT) 🚀
+document.addEventListener('input', (e) => {
+    if (e.target.id === 'amountFilterInput') syncAmountPills(e.target.value);
+    if (e.target.id === 'paymentSearchInput') filterPaymentMethodButtons(e.target.value);
+    if (e.target.id === 'tmEtbInput') onModalEtbInput(e.target.value);
+    if (e.target.id === 'tmUsdtInput') onModalUsdtInput(e.target.value);
+});
+
+
+// Handle image fallback for CSP (replaces inline onerror)
+document.addEventListener('error', function(e) {
+    if (e.target && e.target.tagName === 'IMG' && e.target.hasAttribute('data-fallback')) {
+        e.target.outerHTML = e.target.getAttribute('data-fallback');
+    }
+}, true);
+
+
+// --- 🚀 ORIGINAL USER CODE START 🚀 ---
+
 const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
     ? 'http://localhost:5000'
     : 'https://tbr-exchange-backend.onrender.com';
+
+// ⚡ ቀላል (2KB) የማርኬት ካሽ ቁልፍ (QuotaExceededError ፈጽሞ እንዳይፈጠርና በ 0.00s እንዲከፍት!) ⚡
 const LIGHT_ADS_CACHE_KEY = 'tbr_market_light_ads_v5';
 const AVATAR_THUMB_CACHE_KEY = 'tbr_market_avatars_v5';
 let currentType = 'buy';
 
-let systemSettings = { buyRate: 195, sellRate: 192, platformFee: 0.5 };
+let systemSettings = {
+    buyRate: 195,
+    sellRate: 192,
+    platformFee: 0.5
+};
 
 let allServerAds = [];
 let avatarThumbMemory = {};
@@ -25,99 +117,11 @@ let filterAmountETB = null;
 let filterPaymentMethod = 'All Methods';
 let tempSelectedPayment = 'All Methods';
 
-// 🚀 EVENT DELEGATION FOR ALL CLICKS (CSP COMPLIANT) 🚀
-document.addEventListener('click', (e) => {
-    const btn = e.target.closest('button[data-action], div[data-action], span[data-action], a[data-action]');
-    if (btn) {
-        const action = btn.dataset.action;
-        
-        if (action === 'switch-buy') switchTradeType('buy');
-        if (action === 'switch-sell') switchTradeType('sell');
-        if (action === 'toggle-online') toggleOnlineFilter();
-        if (action === 'open-amount-modal') openAmountModal();
-        if (action === 'close-amount-modal') closeAmountModal();
-        if (action === 'reset-amount') resetAmountFilter();
-        if (action === 'confirm-amount') confirmAmountFilter();
-        if (action === 'open-payment-modal') openPaymentModal();
-        if (action === 'close-payment-modal') closePaymentModal();
-        if (action === 'reset-payment') resetPaymentFilter();
-        if (action === 'confirm-payment') confirmPaymentFilter();
-        if (action === 'close-order-modal') closeOrderModal();
-        if (action === 'confirm-trade') confirmTrade();
-        if (action === 'fill-max') fillMaxModalOrder();
-        if (action === 'go-settings') window.location.href = 'settings.html?tab=payments';
-        if (action === 'go-dashboard') window.location.href = 'dashboard.html';
-        if (action === 'close-custom-alert') document.getElementById('customAlertModal').style.display = 'none';
-        if (action === 'close-profile-modal') document.getElementById('userProfileModal').style.display = 'none';
-        
-        if (action === 'open-order-modal') {
-            const index = btn.dataset.index;
-            openOrderModalByIndex(index);
-        }
-        if (action === 'open-profile') {
-            const username = btn.dataset.username;
-            openUserProfileStats(username);
-        }
-        return;
-    }
-
-    const pill = e.target.closest('.amount-pill');
-    if (pill) {
-        selectAmountPill(pill.dataset.val);
-        return;
-    }
-
-    const payOption = e.target.closest('.pay-method-option');
-    if (payOption) {
-        selectPaymentOption(payOption.dataset.method);
-        return;
-    }
-
-    const modalPayPill = e.target.closest('.tm-method-pill');
-    if (modalPayPill) {
-        selectModalPaymentMethod(modalPayPill.dataset.method);
-        return;
-    }
-
-    // Modal Overlays Click to Close
-    const overlay = e.target.closest('.modal-overlay, .sheet-overlay');
-    if (overlay && e.target === overlay) {
-        if (overlay.dataset.modal === 'amount-sheet') closeAmountModal();
-        if (overlay.dataset.modal === 'payment-sheet') closePaymentModal();
-        if (overlay.dataset.modal === 'order-modal') closeOrderModal();
-        if (overlay.dataset.modal === 'user-profile') overlay.style.display = 'none';
-    }
-});
-
-// 🚀 EVENT DELEGATION FOR ALL INPUTS (CSP COMPLIANT) 🚀
-document.addEventListener('input', (e) => {
-    if (e.target.id === 'amountFilterInput') syncAmountPills(e.target.value);
-    if (e.target.id === 'paymentSearchInput') filterPaymentMethodButtons(e.target.value);
-    if (e.target.id === 'tmEtbInput') onModalEtbInput(e.target.value);
-    if (e.target.id === 'tmUsdtInput') onModalUsdtInput(e.target.value);
-});
-
-
-// Core Functions
 function getAuthToken() {
     return localStorage.getItem('token') || localStorage.getItem('jwtToken') || localStorage.getItem('authToken') || '';
 }
 
-function attachImageFallbacks() {
-    document.querySelectorAll('img[data-initials]').forEach(img => {
-        if (img.dataset.fallbackAttached) return;
-        img.dataset.fallbackAttached = 'true';
-
-        if (img.complete) {
-            if (img.naturalHeight === 0) img.outerHTML = img.getAttribute('data-initials');
-        } else {
-            img.addEventListener('error', function() {
-                this.outerHTML = this.getAttribute('data-initials');
-            });
-        }
-    });
-}
-
+// ⚡ ትላልቅ የፕሮፋይል ፎቶዎችን ወደ 2KB ትንሽ Thumbnail ቀይሮ በካሽ የሚያስቀምጥ (ገጹ በ 0.00s እንዲከፍት) ⚡
 function cacheSmallAvatarThumb(traderKey, rawDataUrl) {
     if (!traderKey || !rawDataUrl) return;
     if (avatarThumbMemory[traderKey]) return;
@@ -147,6 +151,7 @@ function cacheSmallAvatarThumb(traderKey, rawDataUrl) {
     img.src = rawDataUrl;
 }
 
+// ⚡ ማስታወቂያዎቹን ያለ ክብደት (2KB ብቻ) በ localStorage እና sessionStorage ውስጥ ማስቀመጥ ⚡
 function saveLightweightAdsCache(adsArray) {
     try {
         const lightAds = adsArray.map(ad => {
@@ -246,6 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('buyTabBtn').className = 'toggle-btn';
     }
 
+    // ⚡ 1. ገጹ ሲከፈት፣ Refresh ሲደረግ ወይም ከዳሽቦርድ ስትመለስ በ 0.00 ሰከንድ ወዲያውኑ ከ2KB ካሽ ማሳየት! ⚡
     try {
         const savedAvatars = sessionStorage.getItem(AVATAR_THUMB_CACHE_KEY) || localStorage.getItem(AVATAR_THUMB_CACHE_KEY);
         if (savedAvatars) avatarThumbMemory = JSON.parse(savedAvatars) || {};
@@ -264,10 +270,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     } catch (e) {}
 
+    // 2. ከበስተጀርባ (Background) ያለ ምንም Loading ስክሪን ትኩስ መረጃ ማምጣት
     fetchLiveAdsFromServer();
     fetchAdminSettings();
     fetchCurrentUserWalletAndPayments();
 
+    // 3. Auto-sync
     sendHeartbeat();
     setInterval(sendHeartbeat, 30000);
     setInterval(fetchLiveAdsFromServer, 2500);
@@ -558,6 +566,7 @@ function renderOrderBook() {
 
         const createdTime = getAdCreatedTimestamp(ad);
 
+        // ⚡ ትክክለኛው የትሬድ ብዛትና ፐርሰንት እንዲያነብ ተደርጓል ⚡
         return {
             adId: ad._id || '',
             name: traderInfo.displayName,
@@ -606,11 +615,13 @@ function renderOrderBook() {
         const firstLetter = (t.name || 'T').replace(/^@/, '').charAt(0).toUpperCase();
 
         const avatarContent = t.avatarUrl
-            ? `<img src="${t.avatarUrl}" alt="${t.name}" loading="lazy" data-initials="${firstLetter}">`
+            ? `<img src="${t.avatarUrl}" alt="${t.name}" loading="lazy" data-fallback="${firstLetter}">`
             : firstLetter;
 
         const statusClass = t.isOnline ? 'online' : 'offline';
         const statusTitle = t.isOnline ? 'Online' : 'Offline';
+
+        // ⚡ ስሙን ሲጫኑ ሞዳሉ በትክክል እንዲከፈት ተስተካክሏል ⚡
         const safeName = String(t.name).replace(/'/g, "\\'");
 
         html += `
@@ -642,7 +653,7 @@ function renderOrderBook() {
                 </div>
             </td>
             <td class="action-cell">
-                <button class="${btnClass}" data-action="open-order-modal" data-index="${index}">${actionLabel}</button>
+                <button class="${btnClass} action-order-btn" data-action="open-order-modal" data-index="${index}">${actionLabel}</button>
             </td>
         </tr>
 
@@ -675,7 +686,7 @@ function renderOrderBook() {
                         <div class="m-payment-tags">
                             ${mobileTagsRendered}
                         </div>
-                        <button class="${mobileBtnClass}" data-action="open-order-modal" data-index="${index}">${actionLabel}</button>
+                        <button class="${mobileBtnClass} action-order-btn" data-action="open-order-modal" data-index="${index}">${actionLabel}</button>
                     </div>
                 </div>
             </td>
@@ -687,7 +698,6 @@ function renderOrderBook() {
     }
 
     tbody.innerHTML = html;
-    attachImageFallbacks();
 }
 
 function formatMoney2(num) {
@@ -695,6 +705,7 @@ function formatMoney2(num) {
 }
 
 function openOrderModalByIndex(index) {
+    // ⚡ የክፍያ መንገድ ከሌለው ቀጥታ ይህ ማስጠንቀቂያ ይወጣል ⚡
     if (!currentUserSavedPayments || currentUserSavedPayments.length === 0) {
         const alertModal = document.getElementById('customAlertModal');
         if (alertModal) {
@@ -739,9 +750,8 @@ function openOrderModalByIndex(index) {
 
     const firstLetter = (ad.name || 'T').replace(/^@/, '').charAt(0).toUpperCase();
     document.getElementById('tmTraderAvatar').innerHTML = ad.avatarUrl
-        ? `<img src="${ad.avatarUrl}" alt="${ad.name}" data-initials="${firstLetter}">`
+        ? `<img src="${ad.avatarUrl}" alt="${ad.name}" data-fallback="${firstLetter}">`
         : firstLetter;
-    
     document.getElementById('tmTraderStatusDot').className = `status-dot ${ad.isOnline ? 'online' : 'offline'}`;
     document.getElementById('tmTraderName').innerText = ad.name;
     document.getElementById('tmTraderComp').innerText = ad.comp || '100%';
@@ -792,7 +802,6 @@ function openOrderModalByIndex(index) {
     confirmBtn.disabled = true;
 
     document.getElementById('orderModal').style.display = 'flex';
-    attachImageFallbacks();
 
     fetchAdminSettings();
     fetchCurrentUserWalletAndPayments().then(() => {
@@ -1093,7 +1102,7 @@ async function openUserProfileStats(username) {
     function applyRealStatsToMarketDOM() {
         if (Object.keys(traderStatsMap).length === 0) return;
 
-        document.querySelectorAll('tr, .m-card').forEach(row => {
+        document.querySelectorAll('tr, .ad-card, .market-card, .offer-row, .mobile-card-row').forEach(row => {
             const textElements = row.querySelectorAll('div, span, small, p, strong, b');
             let traderName = '';
 
@@ -1120,6 +1129,7 @@ async function openUserProfileStats(username) {
                 textElements.forEach(el => {
                     if (el.children.length === 0) {
                         const txt = (el.innerText || '').trim();
+                        // የ 0 trades 100% ጽሁፍን በትክክለኛው ዳታ ይተካዋል
                         if (/^\d+\s*(trades|orders)\s*[·•|-]\s*\d+(\.\d+)?%$/i.test(txt)) {
                             const targetText = `${st.totalTrades} trades · ${st.completionRate}`;
                             if (el.innerText !== targetText) {
@@ -1160,9 +1170,11 @@ async function openUserProfileStats(username) {
     loadRealAdsStats();
 })();
 
+// ⚡ PROFESSIONAL SELL MODAL PAYMENT METHOD & LIMIT FIX ⚡
 (function fixMarketSellModalAccounts() {
     let mySavedPayments = [];
 
+    // የገባውን ዩዘር የባንክ አካውንቶች ከሰርቨር ማምጣት
     async function loadMyPaymentMethods() {
         try {
             const token = localStorage.getItem('token') || localStorage.getItem('authToken');
@@ -1179,6 +1191,7 @@ async function openUserProfileStats(username) {
 
     loadMyPaymentMethods();
 
+    // ፎርሙ (Modal) ሲከፈት ወዲያውኑ ማስተካከል
     const observer = new MutationObserver(() => {
         const sellModal = document.querySelector('.modal, #sellModal, [id*="sell"], .trade-modal');
         if (!sellModal || sellModal.style.display === 'none') return;
@@ -1187,6 +1200,7 @@ async function openUserProfileStats(username) {
         const isSellModal = modalTitle && modalTitle.innerText.toLowerCase().includes('sell');
         if (!isSellModal) return;
 
+        // 1. Min / Max limit የተገለበጠውን ማስተካከል (ለምሳሌ 500 - 131.56 ወደ 131.56 - 500)
         const limitTexts = sellModal.querySelectorAll('span, p, div, small');
         limitTexts.forEach(el => {
             const txt = el.innerText || '';
@@ -1200,6 +1214,7 @@ async function openUserProfileStats(username) {
             }
         });
 
+        // 2. Sell ፎርም ላይ የሌላ ሰውን አካውንት አጥፍቶ የራስህን (የሻጩን) ማስገባት
         if (mySavedPayments.length > 0) {
             const activeMethodBtn = sellModal.querySelector('.method-btn.active, .payment-btn.active, button.active');
             const selectedMethodType = activeMethodBtn ? activeMethodBtn.innerText.trim().toLowerCase() : '';
@@ -1211,6 +1226,7 @@ async function openUserProfileStats(username) {
             if (matchedAcc) {
                 const myName = localStorage.getItem('fullName') || localStorage.getItem('userName') || matchedAcc.name;
                 
+                // Screenshot ላይ ያለውን 'Buyer will send to' ቦክስ በራስህ አካውንት መተካት
                 const detailLines = sellModal.querySelectorAll('p, div, span');
                 detailLines.forEach(line => {
                     if (line.innerText.includes('rahmet ali') || line.innerText.includes('1000397691652')) {

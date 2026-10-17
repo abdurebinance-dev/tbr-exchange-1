@@ -188,6 +188,7 @@
             border-bottom: none;
         }
 
+        /* PC Column Widths */
         .pc-table-row td:nth-child(1), thead th:nth-child(1) { width: 38%; }
         .pc-table-row td:nth-child(2), thead th:nth-child(2) { width: 14%; }
         .pc-table-row td:nth-child(3), thead th:nth-child(3) { width: 17%; }
@@ -200,6 +201,7 @@
             gap: 10px;
         }
 
+        /* Avatar Wrapper & Smaller Online/Offline Status Dot */
         .avatar-wrap {
             position: relative;
             width: 34px;
@@ -262,107 +264,55 @@
         .limit-cell .range { font-size: 11px; color: #848e9c; }
 
         .payment-tags { display: flex; gap: 6px; flex-wrap: wrap; }
-        .pay-tag {
-            background: #181a20;
-            color: #848e9c;
-            padding: 4px 9px;
-            border-radius: 12px;
-            font-size: 10px;
-            font-weight: 600;
-            border: 1px solid #2b313a;
-            white-space: nowrap;
-        }
+        .pay-tag { background: #181a20; color: #848e9c; padding: 4px 9px; border-radius: 12px; font-size: 10px; font-weight: 600; border: 1px solid #2b313a; white-space: nowrap; }
 
         .action-cell { text-align: right; }
-        .order-btn {
-            background: var(--green-btn);
-            color: #000000;
-            padding: 7px 20px;
-            border-radius: 5px;
-            font-weight: 700;
-            font-size: 12px;
-            border: none;
-            cursor: pointer;
-            transition: background 0.2s;
-            display: inline-block;
-        }
+        .order-btn { background: var(--green-btn); color: #000000; padding: 7px 20px; border-radius: 5px; font-weight: 700; font-size: 12px; border: none; cursor: pointer; transition: background 0.2s; display: inline-block; }
         .order-btn.sell { background: var(--red); color: #fff; }
         .order-btn:hover { opacity: 0.9; }
 
+        /* PC / Mobile Toggle */
         .mobile-card-row { display: none; }
         .pc-table-row { display: table-row; }
 
-        /* 🚀 MISSING MODAL OVERLAY CSS RESTORED 🚀 */
-        .modal-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.82);
-            backdrop-filter: blur(3px);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 2600;
-            padding: 16px;
-            box-sizing: border-box;
-        }
+        /* Bottom Sheet Filter Modals */
         .sheet-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.78);
-            display: none;
-            align-items: flex-end;
-            justify-content: center;
-            z-index: 2500;
+            position: fixed; inset: 0; background: rgba(0, 0, 0, 0.78); display: none; align-items: flex-end; justify-content: center; z-index: 2500;
         }
-
-        .sheet-box {
-            background: #0b0d10;
-            border-top: 1px solid #1e2229;
-            border-radius: 20px 20px 0 0;
-            width: 100%;
-            max-width: 100%;
-            padding: 14px 24px 28px 24px;
-            box-sizing: border-box;
-            animation: slideUpSheet 0.16s ease-out;
-        }
-        @keyframes slideUpSheet {
-            from { transform: translateY(100%); }
-            to { transform: translateY(0); }
-        }
+        .sheet-box { background: #0b0d10; border-top: 1px solid #1e2229; border-radius: 20px 20px 0 0; width: 100%; max-width: 100%; padding: 14px 24px 28px 24px; box-sizing: border-box; animation: slideUpSheet 0.16s ease-out; }
+        @keyframes slideUpSheet { from { transform: translateY(100%); } to { transform: translateY(0); } }
         .sheet-handle { width: 42px; height: 4px; background: #2b3139; border-radius: 4px; margin: 0 auto 14px auto; }
         .sheet-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
         .sheet-header h2 { margin: 0; font-size: 20px; font-weight: 800; color: #ffffff; }
-        .sheet-close-btn {
-            width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--green);
-            background: transparent; color: var(--green); display: flex; align-items: center; justify-content: center; font-size: 13px; cursor: pointer;
-        }
-        .sheet-input-wrap {
-            position: relative; display: flex; align-items: center; background: #0d1015; border: 1px solid #22262f; border-radius: 10px; padding: 0 16px; margin-bottom: 18px;
-        }
+        .sheet-close-btn { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--green); background: transparent; color: var(--green); display: flex; align-items: center; justify-content: center; font-size: 13px; cursor: pointer; }
+        .sheet-input-wrap { position: relative; display: flex; align-items: center; background: #0d1015; border: 1px solid #22262f; border-radius: 10px; padding: 0 16px; margin-bottom: 18px; }
         .sheet-input-wrap:focus-within { border-color: var(--green); }
         .sheet-input-wrap i.search-icon { color: #6c7583; font-size: 14px; margin-right: 10px; }
         .sheet-input { width: 100%; background: transparent; border: none; color: #ffffff; padding: 14px 0; font-size: 14px; outline: none; }
         .sheet-input::placeholder { color: #6c7583; }
         .sheet-suffix { color: #848e9c; font-size: 13px; font-weight: 700; margin-left: 10px; }
 
+        /* Quick Amount Pills Grid */
         .amount-pills-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 22px; }
         .amount-pill { background: #1a1e24; border: 1px solid #252a32; color: #ffffff; padding: 14px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; text-align: center; transition: 0.15s; }
         .amount-pill:hover, .amount-pill.selected { background: rgba(14, 203, 129, 0.12); border-color: var(--green); color: var(--green); }
 
+        /* Payment Methods 2-Column Grid */
         .payment-methods-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 22px; max-height: 320px; overflow-y: auto; }
         .pay-method-option { background: #1a1e24; border: 1px solid #252a32; color: #ffffff; padding: 15px 12px; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; text-align: center; transition: 0.15s; }
         .pay-method-option:hover { border-color: #3a414d; }
         .pay-method-option.selected { background: rgba(14, 203, 129, 0.12); border-color: var(--green); color: var(--green); }
 
+        /* Sheet Action Buttons */
         .sheet-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
         .sheet-reset-btn { background: #090b0d; border: 1px solid #22262f; color: #ffffff; padding: 14px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; transition: 0.2s; }
         .sheet-reset-btn:hover { background: #14171c; }
         .sheet-confirm-btn { background: var(--green); border: none; color: #000000; padding: 14px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; transition: 0.2s; }
         .sheet-confirm-btn:hover { opacity: 0.92; }
 
-        .trade-modal-card {
-            background: #11141a; border: 1px solid #222731; border-radius: 18px; width: 100%; max-width: 440px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75);
-        }
+        /* P2P Buy/Sell Order Modal */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.82); backdrop-filter: blur(3px); display: none; align-items: center; justify-content: center; z-index: 2600; padding: 16px; box-sizing: border-box; }
+        .trade-modal-card { background: #11141a; border: 1px solid #222731; border-radius: 18px; width: 100%; max-width: 440px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75); }
         .tm-top-section { padding: 20px 22px 16px 22px; border-bottom: 1px solid #1c2029; position: relative; }
         .tm-close-x { position: absolute; top: 16px; right: 18px; background: transparent; border: none; color: #848e9c; font-size: 16px; cursor: pointer; padding: 4px; line-height: 1; }
         .tm-close-x:hover { color: #fff; }
@@ -394,12 +344,14 @@
         .tm-method-pill.selected-sell { background: rgba(246, 70, 93, 0.12); border-color: #f6465d; color: #f6465d; }
         .tm-method-pill.selected-sell .pill-dot { display: inline-block; background: #f6465d; }
 
+        /* Seller Receive Account Details Box */
         .tm-receive-account-box { background: #141820; border: 1px solid #222733; border-radius: 12px; padding: 13px 15px; margin-bottom: 16px; display: none; }
         .tm-receive-caption { font-size: 11px; color: #848e9c; margin-bottom: 8px; }
         .tm-receive-holder { font-size: 13px; font-weight: 700; color: #ffffff; margin-bottom: 4px; }
         .tm-receive-number { font-size: 12px; color: #848e9c; margin-bottom: 3px; font-family: monospace; letter-spacing: 0.3px; }
         .tm-receive-bank { font-size: 11px; color: #6c7583; }
 
+        /* Input Groups */
         .tm-field-group { margin-bottom: 14px; }
         .tm-field-group:last-child { margin-bottom: 4px; }
         .tm-field-header { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #848e9c; margin-bottom: 7px; }
@@ -416,13 +368,14 @@
         .tm-max-btn:hover { border-color: #3b4252; background: #1d222c; }
         .tm-error-msg { color: #f6465d; font-size: 12px; font-weight: 600; margin-top: 8px; display: none; align-items: center; gap: 6px; }
 
+        /* Fee Breakdown Summary Box */
         .tm-fee-summary-box { margin-top: 14px; padding-top: 14px; border-top: 1px solid #1c2029; display: none; justify-content: space-between; align-items: flex-start; }
         .tm-fee-left .fee-caption, .tm-fee-right .fee-caption { font-size: 11px; color: #6c7583; margin-bottom: 5px; }
         .tm-fee-right { text-align: right; }
         .tm-fee-main-val { font-size: 14px; font-weight: 800; color: #ffffff; font-family: monospace; line-height: 1.2; }
         .tm-fee-main-val span { font-size: 11px; color: #848e9c; font-weight: 600; }
         .tm-fee-arrow { color: #6c7583; font-size: 13px; padding-top: 16px; }
-        .tm-fee-subline { font-size: 10.5px; font-weight: 300; color: rgba(132, 142, 156, 0.42); margin-top: 12px; letter-spacing: 0.25px; }
+        .tm-fee-subline { font-size: 10.5px; font-weight: 300; color: rgba(132, 142, 156, 0.42); margin-top: 12px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; letter-spacing: 0.25px; }
 
         .tm-footer { padding: 14px 22px 18px 22px; border-top: 1px solid #1c2029; background: #0e1116; }
         .tm-submit-btn { width: 100%; padding: 13px; border-radius: 10px; border: none; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s ease; }
@@ -473,6 +426,7 @@
             .pay-method-option { padding: 12px 8px; font-size: 12px; }
         }
         
+        /* Isolated Custom Alert CSS */
         @keyframes alertPopIn {
             0% { transform: scale(0.9); opacity: 0; }
             100% { transform: scale(1); opacity: 1; }
@@ -485,7 +439,7 @@
     <div class="navbar">
         <div class="nav-left">
             <div class="logo-container">
-                <img src="logo.png" alt="TBR Exchange Logo" data-initials="TB">
+                <img src="logo.png" alt="TBR Exchange Logo" style="display:none">
             </div>
             <div class="nav-links">
                 <a href="dashboard.html"><i class="fa-solid fa-house"></i> Dashboard</a>
@@ -496,9 +450,9 @@
             </div>
         </div>
         <div class="nav-right">
-            <button class="dashboard-shortcut-btn" data-action="go-dashboard" title="Go to Dashboard">
+            <a href="dashboard.html" class="dashboard-shortcut-btn" title="Go to Dashboard">
                 <i class="fa-solid fa-house"></i>
-            </button>
+            </a>
         </div>
     </div>
 
@@ -506,18 +460,18 @@
     <div class="market-container">
 
         <div class="trade-toggle-wrap">
-            <button id="buyTabBtn" class="toggle-btn active buy-active" data-action="switch-buy">Buy</button>
-            <button id="sellTabBtn" class="toggle-btn" data-action="switch-sell">Sell</button>
+            <button id="buyTabBtn" class="toggle-btn active buy-active">Buy</button>
+            <button id="sellTabBtn" class="toggle-btn">Sell</button>
         </div>
 
         <div class="filter-row">
-            <button id="onlineFilterBtn" class="filter-btn" data-action="toggle-online">
+            <button id="onlineFilterBtn" class="filter-btn">
                 <i class="fa-solid fa-circle" style="font-size: 6px; color: var(--green);"></i> Online
             </button>
-            <button id="amountFilterBtn" class="filter-btn" data-action="open-amount-modal">
+            <button id="amountFilterBtn" class="filter-btn">
                 <span id="amountFilterLabel">Amount</span> <i class="fa-solid fa-chevron-down" style="font-size: 9px; margin-left:3px;"></i>
             </button>
-            <button id="paymentFilterBtn" class="filter-btn" data-action="open-payment-modal">
+            <button id="paymentFilterBtn" class="filter-btn">
                 <span id="paymentFilterLabel">Payment Method</span> <i class="fa-solid fa-chevron-down" style="font-size: 9px; margin-left:3px;"></i>
             </button>
         </div>
@@ -546,12 +500,12 @@
     </div>
 
     <!-- Amount Filter Bottom Sheet Modal -->
-    <div class="sheet-overlay" id="amountSheetModal" data-modal="amount-sheet">
+    <div class="sheet-overlay" id="amountSheetModal">
         <div class="sheet-box">
             <div class="sheet-handle"></div>
             <div class="sheet-header">
                 <h2 id="amountSheetTitle">I Want to Buy</h2>
-                <button class="sheet-close-btn" data-action="close-amount-modal"><i class="fa-solid fa-xmark"></i></button>
+                <button class="sheet-close-btn"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="sheet-input-wrap">
                 <input type="number" id="amountFilterInput" class="sheet-input" placeholder="Enter total amount">
@@ -565,19 +519,19 @@
                 <button type="button" class="amount-pill" data-val="50000">50K</button>
             </div>
             <div class="sheet-actions">
-                <button type="button" class="sheet-reset-btn" data-action="reset-amount">Reset</button>
-                <button type="button" class="sheet-confirm-btn" data-action="confirm-amount">Confirm</button>
+                <button type="button" class="sheet-reset-btn">Reset</button>
+                <button type="button" class="sheet-confirm-btn">Confirm</button>
             </div>
         </div>
     </div>
 
     <!-- Payment Method Filter Bottom Sheet Modal -->
-    <div class="sheet-overlay" id="paymentSheetModal" data-modal="payment-sheet">
+    <div class="sheet-overlay" id="paymentSheetModal">
         <div class="sheet-box">
             <div class="sheet-handle"></div>
             <div class="sheet-header">
                 <h2 id="paymentSheetTitle">Pay With</h2>
-                <button class="sheet-close-btn" data-action="close-payment-modal"><i class="fa-solid fa-xmark"></i></button>
+                <button class="sheet-close-btn"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="sheet-input-wrap">
                 <i class="fa-solid fa-magnifying-glass search-icon"></i>
@@ -594,18 +548,18 @@
                 <button type="button" class="pay-method-option" data-method="Awash Bank">Awash Bank</button>
             </div>
             <div class="sheet-actions">
-                <button type="button" class="sheet-reset-btn" data-action="reset-payment">Reset</button>
-                <button type="button" class="sheet-confirm-btn" data-action="confirm-payment">Confirm</button>
+                <button type="button" class="sheet-reset-btn">Reset</button>
+                <button type="button" class="sheet-confirm-btn">Confirm</button>
             </div>
         </div>
     </div>
 
     <!-- P2P Buy / Sell Order Action Modal -->
-    <div class="modal-overlay" id="orderModal" data-modal="order-modal">
+    <div class="modal-overlay" id="orderModal">
         <div class="trade-modal-card">
             <!-- Top Header Section -->
             <div class="tm-top-section">
-                <button type="button" class="tm-close-x" data-action="close-order-modal"><i class="fa-solid fa-xmark"></i></button>
+                <button type="button" class="tm-close-x"><i class="fa-solid fa-xmark"></i></button>
                 <h3 class="tm-title" id="tmHeaderTitle">Buy USDT</h3>
                 <div class="tm-price-row">
                     <span class="tm-price-big buy-color" id="tmUnitPrice">200</span>
@@ -661,7 +615,7 @@
                             <input type="number" step="any" id="tmEtbInput" placeholder="500.00 – 100,000.00">
                             <span class="tm-input-unit">ETB</span>
                         </div>
-                        <button type="button" class="tm-max-btn" data-action="fill-max">Max</button>
+                        <button type="button" class="tm-max-btn">Max</button>
                     </div>
                 </div>
 
@@ -679,7 +633,7 @@
                     </div>
                 </div>
 
-                <!-- Error Message -->
+                <!-- Error Message (Visible on both Buy and Sell) -->
                 <div class="tm-error-msg" id="tmOrderErrorMsg"></div>
 
                 <!-- Dynamic Fee Breakdown Summary -->
@@ -699,7 +653,7 @@
 
             <!-- Bottom Confirm Button -->
             <div class="tm-footer">
-                <button type="button" id="tmConfirmOrderBtn" class="tm-submit-btn buy-btn" disabled data-action="confirm-trade">Confirm Buy</button>
+                <button type="button" id="tmConfirmOrderBtn" class="tm-submit-btn buy-btn" disabled>Confirm Buy</button>
             </div>
         </div>
     </div>
@@ -714,20 +668,20 @@
             <p style="color: #848e9c; font-size: 13px; line-height: 1.5; margin-bottom: 22px;">
                 You need to add a payment method before you can start trading.
             </p>
-            <button data-action="go-settings" style="width: 100%; background: var(--accent-gold); border: none; color: #000; padding: 13px; border-radius: 10px; font-weight: 700; font-size: 13px; cursor: pointer; margin-bottom: 10px; transition: 0.2s;">Add Payment Method</button>
-            <button data-action="close-custom-alert" style="width: 100%; background: transparent; border: 1px solid #222731; color: #848e9c; padding: 10px; border-radius: 10px; font-weight: 600; font-size: 13px; cursor: pointer; transition: 0.2s;">Cancel</button>
+            <button style="width: 100%; background: var(--accent-gold); border: none; color: #000; padding: 13px; border-radius: 10px; font-weight: 700; font-size: 13px; cursor: pointer; margin-bottom: 10px; transition: 0.2s;">Add Payment Method</button>
+            <button style="width: 100%; background: transparent; border: 1px solid #222731; color: #848e9c; padding: 10px; border-radius: 10px; font-weight: 600; font-size: 13px; cursor: pointer; transition: 0.2s;">Cancel</button>
         </div>
     </div>
 
     <!-- User Profile Stats Modal -->
-    <div class="sheet-overlay" id="userProfileModal" data-modal="user-profile" style="display: none; z-index: 3000; align-items: flex-end; justify-content: center;">
+    <div class="sheet-overlay" id="userProfileModal" style="display: none; z-index: 3000; align-items: flex-end; justify-content: center;">
         <div class="sheet-box" style="background: #0b0d10; border-top: 1px solid #1e2229; border-radius: 20px 20px 0 0; width: 100%; max-width: 440px; padding: 20px; color: white;">
             <div class="sheet-handle"></div>
             <div class="sheet-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                 <h2 id="modalProfileUsername" style="font-size: 18px; font-weight: 700; margin: 0; display:flex; align-items:center; gap:6px;">
                     Username <i class="fa-solid fa-circle-check" style="color: var(--accent-gold); font-size:14px;"></i>
                 </h2>
-                <button class="sheet-close-btn" data-action="close-profile-modal" style="background:transparent; border:1px solid #2b313a; color:#fff; border-radius:50%; width:28px; height:28px; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+                <button class="sheet-close-btn" style="background:transparent; border:1px solid #2b313a; color:#fff; border-radius:50%; width:28px; height:28px; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
             </div>
             
             <div style="display: flex; justify-content: space-around; margin-bottom: 20px; text-align: center; border-bottom: 1px solid #1e2229; padding-bottom: 15px;">
@@ -760,31 +714,7 @@
         </div>
     </div>
 
-    <!-- 📱 Mobile Bottom Navigation Bar -->
-    <div class="mobile-bottom-nav">
-        <a href="dashboard.html" class="mbn-item">
-            <i class="fa-solid fa-house"></i>
-            <span>Home</span>
-        </a>
-        <a href="wallet.html" class="mbn-item">
-            <i class="fa-solid fa-wallet"></i>
-            <span>Wallet</span>
-        </a>
-        <a href="market.html" class="mbn-item active">
-            <i class="fa-solid fa-store"></i>
-            <span>Market</span>
-        </a>
-        <a href="trades.html" class="mbn-item">
-            <i class="fa-solid fa-comments"></i>
-            <span>Chat</span>
-        </a>
-        <a href="profile.html" class="mbn-item">
-            <i class="fa-solid fa-user"></i>
-            <span>Profile</span>
-        </a>
-    </div>
-
-    <!-- Link the external JS file -->
+    <!-- እዚህ ጋር JS ፋይሉ ተገናኝቷል -->
     <script src="market.js"></script>
 </body>
 </html>
