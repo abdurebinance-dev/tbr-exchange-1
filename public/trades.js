@@ -19,7 +19,15 @@ let isFetchingRoom = false;
 
 // 🚀 Event Delegation for Strict CSP Compliance 🚀
 document.addEventListener('click', (e) => {
-    const targetClosest = e.target.closest('button, .mt-m-card, tr, .tap-chat-banner-card, .tr-toggle-pill, .cpd-header, .download-receipt-card, .cm-close, i, .copy-icon-btn, .spt-copy-box, .inline-copy-btn, .modal-overlay, span, img, a');
+    
+    // 🚀 FIX: ማናቸውንም የጠረጴዛውን ክፍል (ጽሁፍም ሆነ ባዶ ቦታ) ሲነካ ቶሎ እንዲከፍት 🚀
+    const tradeRowOrCard = e.target.closest('[data-trade-id]');
+    if (tradeRowOrCard) {
+        openSingleTradeInstant(tradeRowOrCard.dataset.tradeId);
+        return;
+    }
+
+    const targetClosest = e.target.closest('button, .tap-chat-banner-card, .tr-toggle-pill, .cpd-header, .download-receipt-card, .cm-close, i, .copy-icon-btn, .spt-copy-box, .inline-copy-btn, .modal-overlay, span, img, a, .dashboard-shortcut-btn');
 
     if (!targetClosest) return;
 
@@ -62,11 +70,6 @@ document.addEventListener('click', (e) => {
     if (targetClosest.classList.contains('skip-rating-btn')) {
         targetClosest.closest('.rate-card').style.display = 'none';
     }
-
-    // Dynamic Elements
-    if (targetClosest.dataset && targetClosest.dataset.tradeId) {
-        openSingleTradeInstant(targetClosest.dataset.tradeId);
-    }
     
     // Copy Buttons
     if (targetClosest.classList.contains('copy-raw-etb-btn')) {
@@ -108,7 +111,7 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// 🚀 100% Secure Image Fallback Handler (Replaces inline onerror) 🚀
+// 🚀 100% Secure Image Fallback Handler 🚀
 function attachImageFallbacks() {
     document.querySelectorAll('img[data-initials]').forEach(img => {
         if (img.dataset.fallbackAttached) return;
@@ -543,7 +546,7 @@ function renderMyTradesTable(trades) {
             ? `<span class="mt-msg-badge"><i class="fa-regular fa-comment"></i> ${userMsgsCount}</span>`
             : '';
 
-        // 1. PC Table Row
+        // 1. PC Table Row (Cursor pointer)
         html += `
             <tr class="${rowHighlight}" data-trade-id="${targetId}" style="cursor:pointer;">
                 <td class="mt-id-col">${tradeIdShort}</td>
@@ -572,7 +575,7 @@ function renderMyTradesTable(trades) {
             </tr>
         `;
 
-        // 2. Mobile Card Item
+        // 2. Mobile Card Item 
         mobileHtml += `
             <div class="mt-m-card ${mobileCardActiveCls}" data-trade-id="${targetId}">
                 <div class="mt-m-top">
