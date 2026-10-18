@@ -1,10 +1,11 @@
-// --- 🚀 MARKET.JS PAYMENT SYNC FIX 🚀 ---
+// --- 🚀 MARKET.JS UNIVERSAL MOBILE & PAYMENT SYNC FIX (v99) 🚀 ---
 const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
     ? 'http://localhost:5000'
     : 'https://tbr-exchange-backend.onrender.com';
 
 const LIGHT_ADS_CACHE_KEY = 'tbr_market_light_ads_v5';
 const AVATAR_THUMB_CACHE_KEY = 'tbr_market_avatars_v5';
+const VERIFIED_PAYMENTS_KEY = 'tbr_verified_payments_v99';
 let currentType = 'buy';
 
 let systemSettings = { buyRate: 195, sellRate: 192, platformFee: 0.5 };
@@ -17,6 +18,7 @@ let isFetchingAds = false;
 let currentUserBalance = 0;
 let currentUserFullName = '';
 let currentUserSavedPayments = [];
+let isFetchingPaymentsNow = null;
 
 let activeModalAd = null;
 let activeModalSelectedMethod = '';
@@ -26,20 +28,69 @@ let filterAmountETB = null;
 let filterPaymentMethod = 'All Methods';
 let tempSelectedPayment = 'All Methods';
 
-function getAuthToken() {
-    return localStorage.getItem('token') || localStorage.getItem('authToken') || '';
+// ⚡ በስልኮች ላይ የተያዘ አሮጌ Service Worker Cache ካለ ወዲያውኑ ማዘመን ⚡
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(regs => {
+        for (let reg of regs) reg.update();
+    }).catch(() => {});
 }
 
-// ⚡ ከ settings.js ጋር በሚመሳሰል መልኩ የባንክ አካውንቶችን ከ localStorage እና ከ API የሚያነብ ⚡
+function getAuthToken() {
+    return localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('jwtToken') || '';
+}
+
+function extractValidPaymentsArray(obj) {
+    if (!obj) return [];
+    if (Array.isArray(obj)) return obj.filter(Boolean);
+    const candidates = [
+        obj.paymentMethods,
+        obj.payments,
+        obj.savedPayments,
+        obj.bankAccounts,
+        obj.data,
+        obj.user && obj.user.paymentMethods,
+        obj.user && obj.user.payments,
+        obj.user && obj.user.savedPayments
+    ];
+    for (const c of candidates) {
+        if (Array.isArray(c) && c.length > 0) return c.filter(Boolean);
+    }
+    return [];
+}
+
+// ⚡ ከሁሉም የ LocalStorage ቦታዎች የባንክ አካውንቶችን በጥንቃቄ ማንበብ ⚡
 function loadCachedPaymentsFallback() {
     try {
-        const storedUser = JSON.parse(localStorage.getItem('user') || localStorage.getItem('currentUser') || localStorage.getItem('tbr_user') || '{}');
-        const localPays = storedUser.payments || storedUser.paymentMethods || JSON.parse(localStorage.getItem('userPayments') || localStorage.getItem('savedPayments') || '[]');
-        if (Array.isArray(localPays) && localPays.length > 0) {
-            currentUserSavedPayments = localPays;
+        const storageKeys = [VERIFIED_PAYMENTS_KEY, 'userPayments', 'savedPayments', 'paymentMethods', 'tbr_payments'];
+        for (const k of storageKeys) {
+            const raw = localStorage.getItem(k) || sessionStorage.getItem(k);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                const valid = extractValidPaymentsArray(parsed);
+                if (valid.length > 0) {
+                    currentUserSavedPayments = valid;
+                    break;
+                }
+            }
         }
-        if (storedUser.balance !== undefined) currentUserBalance = Number(storedUser.balance || 0);
-        if (storedUser.fullName || storedUser.name) currentUserFullName = storedUser.fullName || storedUser.name || '';
+
+        const userKeys = ['user', 'currentUser', 'tbr_user'];
+        for (const uk of userKeys) {
+            const rawU = localStorage.getItem(uk);
+            if (rawU) {
+                const u = JSON.parse(rawU);
+                if (u) {
+                    if (u.balance !== undefined && currentUserBalance === 0) currentUserBalance = Number(u.balance || 0);
+                    if ((u.fullName || u.name || u.username) && !currentUserFullName) {
+                        currentUserFullName = u.fullName || u.name || u.username || '';
+                    }
+                    if (currentUserSavedPayments.length === 0) {
+                        const fromU = extractValidPaymentsArray(u);
+                        if (fromU.length > 0) currentUserSavedPayments = fromU;
+                    }
+                }
+            }
+        }
     } catch (e) {}
 }
 
@@ -116,33 +167,77 @@ async function fetchAdminSettings() {
     } catch (e) {}
 }
 
-// ⚡ ከ settings.js ጋር በሚመሳሰል መልኩ ወደ /api/payment-methods በመጥራት አካውንቶችን ማምጣት ⚡
+// ⚡ በሁሉም ስልኮች ላይ 100% እንዲሰራ 3ቱንም የባክኢንድ መንገዶች በተናጠል የሚፈትሽ ⚡
 async function fetchCurrentUserWalletAndPayments() {
     loadCachedPaymentsFallback();
     const token = getAuthToken();
     if (!token) return;
-    try {
-        const [profRes, payRes] = await Promise.all([
-            fetch(`${API_BASE}/api/user/profile`, { headers: { 'Authorization': `Bearer ${token}` } }),
-            fetch(`${API_BASE}/api/payment-methods`, { headers: { 'Authorization': `Bearer ${token}` } })
-        ]);
-        if (profRes.ok) {
-            const profJson = await profRes.json();
-            const userObj = profJson.user || profJson.data;
-            if (userObj) {
-                currentUserBalance = Number(userObj.balance || 0);
-                currentUserFullName = userObj.fullName || userObj.username || '';
+
+    if (isFetchingPaymentsNow) return isFetchingPaymentsNow;
+
+    isFetchingPaymentsNow = (async () => {
+        const headers = { 'Authorization': `Bearer ${token}`, 'Cache-Control': 'no-cache' };
+        const ts = Date.now();
+
+        try {
+            const results = await Promise.allSettled([
+                fetch(`${API_BASE}/api/payment-methods?t=${ts}`, { headers, cache: 'no-store' }),
+                fetch(`${API_BASE}/api/user/payments?t=${ts}`, { headers, cache: 'no-store' }),
+                fetch(`${API_BASE}/api/user/profile?t=${ts}`, { headers, cache: 'no-store' })
+            ]);
+
+            let foundMethods = [];
+
+            // 1. Check /api/payment-methods (used by settings.js)
+            if (results[0].status === 'fulfilled' && results[0].value.ok) {
+                try {
+                    const j1 = await results[0].value.json();
+                    const m1 = extractValidPaymentsArray(j1);
+                    if (m1.length > 0) foundMethods = m1;
+                } catch (e) {}
             }
-        }
-        if (payRes.ok) {
-            const payJson = await payRes.json();
-            const methods = payJson.paymentMethods || payJson.data || payJson.payments || payJson;
-            if (Array.isArray(methods) && methods.length > 0) {
-                currentUserSavedPayments = methods;
-                localStorage.setItem('userPayments', JSON.stringify(methods));
+
+            // 2. Check /api/user/payments (used by legacy market)
+            if (foundMethods.length === 0 && results[1].status === 'fulfilled' && results[1].value.ok) {
+                try {
+                    const j2 = await results[1].value.json();
+                    const m2 = extractValidPaymentsArray(j2);
+                    if (m2.length > 0) foundMethods = m2;
+                } catch (e) {}
             }
+
+            // 3. Check /api/user/profile (for balance, name, and embedded payments)
+            if (results[2].status === 'fulfilled' && results[2].value.ok) {
+                try {
+                    const j3 = await results[2].value.json();
+                    const userObj = j3.user || j3.data || j3;
+                    if (userObj) {
+                        if (userObj.balance !== undefined) currentUserBalance = Number(userObj.balance || 0);
+                        if (userObj.fullName || userObj.username || userObj.name) {
+                            currentUserFullName = userObj.fullName || userObj.username || userObj.name || '';
+                        }
+                        if (foundMethods.length === 0) {
+                            const m3 = extractValidPaymentsArray(userObj);
+                            if (m3.length > 0) foundMethods = m3;
+                        }
+                    }
+                } catch (e) {}
+            }
+
+            if (foundMethods.length > 0) {
+                currentUserSavedPayments = foundMethods;
+                try {
+                    localStorage.setItem(VERIFIED_PAYMENTS_KEY, JSON.stringify(foundMethods));
+                    localStorage.setItem('userPayments', JSON.stringify(foundMethods));
+                    sessionStorage.setItem(VERIFIED_PAYMENTS_KEY, JSON.stringify(foundMethods));
+                } catch (e) {}
+            }
+        } catch (e) {} finally {
+            isFetchingPaymentsNow = null;
         }
-    } catch (e) {}
+    })();
+
+    return isFetchingPaymentsNow;
 }
 
 document.addEventListener('error', function(e) {
@@ -270,9 +365,15 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(fetchLiveAdsFromServer, 2500);
     setInterval(fetchAdminSettings, 15000);
 
-    window.addEventListener('focus', fetchLiveAdsFromServer);
+    window.addEventListener('focus', () => {
+        fetchLiveAdsFromServer();
+        fetchCurrentUserWalletAndPayments();
+    });
     document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) fetchLiveAdsFromServer();
+        if (!document.hidden) {
+            fetchLiveAdsFromServer();
+            fetchCurrentUserWalletAndPayments();
+        }
     });
 });
 
@@ -691,24 +792,24 @@ function formatMoney2(num) {
     return Number(num || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// ⚡ PAYMENT METHOD CHECK FIX (የባንክ አካውንት ካለው በቀጥታ ይከፍታል፣ ከሌለው ብቻ ይከለክላል) ⚡
-function openOrderModalByIndex(index) {
+// ⚡ PAYMENT METHOD CHECK FIX (በሁሉም ስልኮች ላይ የባንክ አካውንት ካለው በቀጥታ ይከፍታል፣ ከሌለው ብቻ ይከለክላል) ⚡
+async function openOrderModalByIndex(index) {
     loadCachedPaymentsFallback();
 
+    if (currentUserSavedPayments && currentUserSavedPayments.length > 0) {
+        proceedOpenModal(index);
+        return;
+    }
+
+    await fetchCurrentUserWalletAndPayments();
+
     if (!currentUserSavedPayments || currentUserSavedPayments.length === 0) {
-        fetchCurrentUserWalletAndPayments().then(() => {
-            if (!currentUserSavedPayments || currentUserSavedPayments.length === 0) {
-                const alertModal = document.getElementById('customAlertModal');
-                if (alertModal) {
-                    alertModal.style.display = 'flex';
-                } else {
-                    window.location.href = 'settings.html?tab=payments';
-                }
-                return;
-            } else {
-                proceedOpenModal(index);
-            }
-        });
+        const alertModal = document.getElementById('customAlertModal');
+        if (alertModal) {
+            alertModal.style.display = 'flex';
+        } else {
+            window.location.href = 'settings.html?tab=payments';
+        }
         return;
     }
 

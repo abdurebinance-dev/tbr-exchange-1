@@ -241,6 +241,11 @@ async function loadPaymentMethods() {
             const data = await response.json();
             const methods = data.paymentMethods || data.data || data;
 
+if (Array.isArray(methods) && methods.length > 0) {
+    localStorage.setItem('userPayments', JSON.stringify(methods));
+    localStorage.setItem('tbr_verified_payments_v99', JSON.stringify(methods));
+}
+
             if (!methods || methods.length === 0) {
                 emptyState.style.display = "block";
                 pmList.innerHTML = "";
