@@ -2,37 +2,34 @@ const API_BASE = (window.location.hostname === 'localhost' || window.location.ho
     ? 'http://localhost:5000'
     : 'https://tbr-exchange-backend.onrender.com';
 
-const token = localStorage.getItem('token') || localStorage.getItem('adminToken') || localStorage.getItem('authToken');
-
-// ⚡ EVENT DELEGATION FOR ALL CLICKS ⚡
-document.addEventListener('click', function(e) {
-    if (e.target.closest('#logoutBtn') || e.target.closest('.btn-logout')) {
-        logout();
-        return;
-    }
-
-    const sweepBtn = e.target.closest('.btn-sweep');
-    if (sweepBtn) {
-        const userId = sweepBtn.getAttribute('data-userid');
-        if (userId) {
-            manualSweep(userId);
-        }
-        return;
-    }
-});
+// Token pa kpa-kpa-h-u (adminToken, token, authToken)
+const token = localStorage.getItem('adminToken') || localStorage.getItem('token') || localStorage.getItem('authToken');
 
 async function fetchStats() {
+    if (!token) {
+        console.error("No admin token found in localStorage!");
+        alert("Please login as Admin first.");
+        window.location.replace("signin.html");
+        return;
+    }
+
     try {
         const res = await fetch(`${API_BASE}/api/admin/finance/stats`, {
-            headers: { 'Authorization': 'Bearer ' + token }
+            method: 'GET',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token 
+            }
         });
-        const data = await res.json();
         
-        if (data.success) {
-            document.getElementById('totalVolume').innerHTML = `${data.stats.totalVolume} <span>USDT</span>`;
-            document.getElementById('todayVolume').innerHTML = `${data.stats.todayVolume} <span>USDT</span>`;
-            document.getElementById('totalProfit').innerHTML = `${data.stats.totalProfit} <span>USDT</span>`;
-            document.getElementById('todayProfit').innerHTML = `${data.stats.todayProfit} <span>USDT</span>`;
+        const data = await res.json();
+        console.log("Finance Stats Response:", data); // Kpa console log pa check ma-konta-h-u
+        
+        if (res.ok && data.success) {
+            document.getElementById('totalVolume').innerHTML = `${data.stats.totalVolume || 0.00} <span>USDT</span>`;
+            document.getElementById('todayVolume').innerHTML = `${data.stats.todayVolume || 0.00} <span>USDT</span>`;
+            document.getElementById('totalProfit').innerHTML = `${data.stats.totalProfit || 0.00} <span>USDT</span>`;
+            document.getElementById('todayProfit').innerHTML = `${data.stats.todayProfit || 0.00} <span>USDT</span>`;
 
             const tbody = document.getElementById('pendingTable');
             tbody.innerHTML = '';
@@ -52,9 +49,13 @@ async function fetchStats() {
                 });
                 tbody.innerHTML = rowsHtml;
             }
+        } else {
+            console.error("Server error message:", data.message || res.statusText);
+            document.getElementById('pendingTable').innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--danger-color);">Error: ${data.message || 'Unauthorized or failed to load data.'}</td></tr>`;
         }
     } catch (error) {
         console.error("Fetch Error:", error);
+        document.getElementById('pendingTable').innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--danger-color);">Network connection error.</td></tr>';
     }
 }
 
@@ -83,5 +84,21 @@ function logout() {
     localStorage.removeItem('authToken');
     window.location.replace("signin.html");
 }
+
+document.addEventListener('click', function(e) {
+    if (e.target.closest('#logoutBtn') || e.target.closest('.btn-logout')) {
+        logout();
+        return;
+    }
+
+    const sweepBtn = e.target.closest('.btn-sweep');
+    if (sweepBtn) {
+        const userId = sweepBtn.getAttribute('data-userid');
+        if (userId) {
+            manualSweep(userId);
+        }
+        return;
+    }
+});
 
 document.addEventListener('DOMContentLoaded', fetchStats);
