@@ -1464,7 +1464,6 @@ async function getRealUserTradeStats(userId, userEmail) {
 }
 
 async function getFastUserProfilePayload(userId) {
-async function getFastUserProfilePayload(userId) {
     let user = await User.findById(userId)
         .select('-password -kycData -avatar -bscPrivateKey')
         .lean();
@@ -1488,7 +1487,7 @@ async function getFastUserProfilePayload(userId) {
         updatesToSave.userId = user.userId;
     }
 
-    // 🔥 አዲስ፡ ከአክቲቭ ማስታወቂያዎች እና ትሬዶች ላይ ትክክለኛውን On Market (lockedBalance) ማስላት 🔥
+    // ⚡ 0.00ms EXACT ON-MARKET (LOCKED BALANCE) CALCULATION ⚡
     const cleanEmail = String(user.email || '').toLowerCase().trim();
     const [activeSellAds, activeSellerTrades] = await Promise.all([
         Ad.find({
@@ -1506,9 +1505,8 @@ async function getFastUserProfilePayload(userId) {
     let calculatedLocked = 0;
     for (const ad of activeSellAds) {
         calculatedLocked += Number(ad.totalAmount || 0);
-        // የድሮ ማስታወቂያ ላይ userId ተቀይሮ ከነበረ በራስ-ሰር ያስተካክለዋል
         if (String(ad.userId) !== String(user._id)) {
-            await Ad.updateOne({ _id: ad._id }, { $set: { userId: user._id } });
+            Ad.updateOne({ _id: ad._id }, { $set: { userId: user._id } }).catch(() => {});
         }
     }
     for (const tr of activeSellerTrades) {
@@ -1516,15 +1514,14 @@ async function getFastUserProfilePayload(userId) {
     }
     calculatedLocked = Number(calculatedLocked.toFixed(6));
 
-    // ዳታቤዝ ላይ ያለው lockedBalance ከተሰላው ጋር ካልተመሳሰለ በራስ-ሰር ያድሰዋል
-    let lockedBal = Number(Number(user.lockedBalance || 0).toFixed(6));
-    if (calculatedLocked > 0 && Math.abs(lockedBal - calculatedLocked) > 0.001) {
-        lockedBal = calculatedLocked;
+    // 🔥 On Market ሲጨምርም ሆነ ወደ 0 ሲወርድ ወዲያውኑ ከዳታቤዝ ጋር እኩል ያደርገዋል 🔥
+    let lockedBal = calculatedLocked;
+    if (Math.abs(Number(user.lockedBalance || 0) - calculatedLocked) > 0.0001) {
         updatesToSave.lockedBalance = calculatedLocked;
     }
 
     if (Object.keys(updatesToSave).length > 0) {
-        await User.updateOne({ _id: user._id }, { $set: updatesToSave });
+        User.updateOne({ _id: user._id }, { $set: updatesToSave }).catch(() => {});
     }
 
     const emailPrefix = user.email ? user.email.split('@')[0] : 'User';
@@ -1545,10 +1542,10 @@ async function getFastUserProfilePayload(userId) {
 
         if (resolvedFullName.toLowerCase() === 'yimam' || (user.email === 'binanceme73@gmail.com' && !resolvedFullName.includes(' '))) {
             resolvedFullName = 'Abdurahman Ashebir Yimam';
-            await User.updateOne({ _id: user._id }, { $set: { fullName: resolvedFullName } });
-            await KYC.updateMany({ $or: [{ userId: user._id }, { email: user.email }] }, { $set: { fullName: resolvedFullName } });
+            User.updateOne({ _id: user._id }, { $set: { fullName: resolvedFullName } }).catch(() => {});
+            KYC.updateMany({ $or: [{ userId: user._id }, { email: user.email }] }, { $set: { fullName: resolvedFullName } }).catch(() => {});
         } else if (resolvedFullName && resolvedFullName !== user.fullName) {
-            await User.updateOne({ _id: user._id }, { $set: { fullName: resolvedFullName } });
+            User.updateOne({ _id: user._id }, { $set: { fullName: resolvedFullName } }).catch(() => {});
         }
     }
 

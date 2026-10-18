@@ -256,3 +256,132 @@ document.addEventListener("DOMContentLoaded", () => {
     loadLiveMarketRates();
     checkActiveTradesForUser();
 });
+
+(function initZeroSecondBalanceEngine() {
+    let isSyncing = false;
+
+    function paintBalancesInstantly(availBal, lockedBal) {
+        const numAvail = Number(availBal || 0);
+        const numLocked = Number(lockedBal || 0);
+
+        localStorage.setItem('balance', numAvail.toFixed(2));
+        localStorage.setItem('lockedBalance', numLocked.toFixed(2));
+        localStorage.setItem('tbr_live_bal_sync', JSON.stringify({
+            balance: numAvail,
+            lockedBalance: numLocked,
+            ts: Date.now()
+        }));
+
+        try {
+            const u = JSON.parse(localStorage.getItem('user') || '{}');
+            u.balance = numAvail;
+            u.availableBalance = numAvail;
+            u.lockedBalance = numLocked;
+            u.onMarket = numLocked;
+            localStorage.setItem('user', JSON.stringify(u));
+        } catch (e) {}
+
+        if (localStorage.getItem('hideBalance') === 'true') return;
+
+        const fmtAvail = numAvail.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const fmtLocked = numLocked.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        const balIds = ['totalBalance', 'userBalance', 'availableBalance', 'balanceAmount', 'mainBalance', 'walletBalance'];
+        balIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                if (el.innerHTML.includes('<span') && el.innerHTML.includes('USDT')) {
+                    const spanHtml = el.querySelector('span') ? el.querySelector('span').outerHTML : '<span style="font-size:0.55em; color:#f0b90b;">USDT</span>';
+                    el.innerHTML = `${fmtAvail} ${spanHtml}`;
+                } else {
+                    el.textContent = fmtAvail;
+                }
+            }
+        });
+
+        const lockIds = ['onMarketBalance', 'lockedBalance', 'marketBalance', 'onMarket', 'lockedAmount'];
+        lockIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.textContent = el.textContent.includes('USDT') ? `${fmtLocked} USDT` : fmtLocked;
+            }
+        });
+    }
+
+    try {
+        const cachedUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const initAvail = cachedUser.balance !== undefined ? cachedUser.balance : localStorage.getItem('balance');
+        const initLocked = cachedUser.lockedBalance !== undefined ? cachedUser.lockedBalance : localStorage.getItem('lockedBalance');
+        if (initAvail !== null && initAvail !== undefined) {
+            paintBalancesInstantly(initAvail, initLocked || 0);
+        }
+    } catch (e) {}
+
+    async function fetchAndSyncNow() {
+        if (isSyncing) return;
+        const token = localStorage.getItem('token') || localStorage.getItem('authToken') || sessionStorage.getItem('token');
+        if (!token) return;
+
+        isSyncing = true;
+        try {
+            const res = await fetch(`/api/user/profile?t=${Date.now()}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'token': token,
+                    'Cache-Control': 'no-cache, no-store, must-revalidate'
+                }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.success) {
+                    const u = data.user || data;
+                    paintBalancesInstantly(u.balance, u.lockedBalance !== undefined ? u.lockedBalance : u.onMarket);
+                }
+            }
+        } catch (e) {
+        } finally {
+            isSyncing = false;
+        }
+    }
+
+    const originalFetch = window.fetch;
+    window.fetch = async function(...args) {
+        const response = await originalFetch.apply(this, args);
+        try {
+            const url = typeof args[0] === 'string' ? args[0] : (args[0] && args[0].url ? args[0].url : '');
+            if (/\/api\/(ads|trades|transfer|withdraw|check-deposits|user)/.test(url)) {
+                const clone = response.clone();
+                clone.json().then(data => {
+                    if (data && data.success) {
+                        if (data.balance !== undefined) {
+                            const currentLocked = localStorage.getItem('lockedBalance') || 0;
+                            paintBalancesInstantly(data.balance, data.lockedBalance !== undefined ? data.lockedBalance : currentLocked);
+                        }
+                        fetchAndSyncNow();
+                    }
+                }).catch(() => {});
+            }
+        } catch (e) {}
+        return response;
+    };
+
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'tbr_live_bal_sync' && e.newValue) {
+            try {
+                const parsed = JSON.parse(e.newValue);
+                paintBalancesInstantly(parsed.balance, parsed.lockedBalance);
+            } catch (err) {}
+        }
+    });
+
+    fetchAndSyncNow();
+    setInterval(() => {
+        if (!document.hidden) fetchAndSyncNow();
+    }, 1000);
+
+    window.addEventListener('focus', fetchAndSyncNow);
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) fetchAndSyncNow();
+    });
+})();
