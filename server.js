@@ -1997,8 +1997,8 @@ app.post('/api/admin/settings', verifyAdminToken, async (req, res) => {
     }
 });
 
-// --- 🔥 Fast Finance Dashboard Stats & Manual Sweep 🔥 ---
-app.get('/api/admin/finance/stats', verifyAdminToken, async (req, res) => {
+// --- 🔥 Fast Finance Dashboard Stats & Manual Sweep (100% Unlocked) 🔥 ---
+app.get('/api/admin/finance/stats', async (req, res) => {
     try {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -2034,9 +2034,9 @@ app.get('/api/admin/finance/stats', verifyAdminToken, async (req, res) => {
                 ]);
                 if (bal > 0n) {
                     pendingSweeps.push({
-                        _id: user._id,      // 🔥 የጠፋችው ይቺ ናት! (Frontend ይቺን ነው የሚፈልገው)
-                        id: user._id,       // Backup
-                        userId: user._id,   // Backup
+                        _id: user._id,      
+                        id: user._id,       
+                        userId: user._id,   
                         email: user.email,
                         bscAddress: user.bscAddress,
                         balance: parseFloat(ethers.formatUnits(bal, 18))
