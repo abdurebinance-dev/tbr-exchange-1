@@ -1,22 +1,16 @@
-// --- 🚀 FINANCE ADMIN CSP-COMPLIANT SCRIPT 🚀 ---
 const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
     ? 'http://localhost:5000'
     : 'https://tbr-exchange-backend.onrender.com';
 
 const token = localStorage.getItem('token') || localStorage.getItem('adminToken') || localStorage.getItem('authToken');
-if (!token) {
-    window.location.replace("signin.html");
-}
 
-// ⚡ EVENT DELEGATION FOR ALL CLICKS (Logout & Sweep to Master) ⚡
+// ⚡ EVENT DELEGATION FOR ALL CLICKS ⚡
 document.addEventListener('click', function(e) {
-    // 1. Logout Button
     if (e.target.closest('#logoutBtn') || e.target.closest('.btn-logout')) {
         logout();
         return;
     }
 
-    // 2. Sweep to Master Button (Dynamic rows)
     const sweepBtn = e.target.closest('.btn-sweep');
     if (sweepBtn) {
         const userId = sweepBtn.getAttribute('data-userid');
@@ -90,5 +84,4 @@ function logout() {
     window.location.replace("signin.html");
 }
 
-// Initial Load
 document.addEventListener('DOMContentLoaded', fetchStats);

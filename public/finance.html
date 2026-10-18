@@ -4,20 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Finance Dashboard - TBR Exchange</title>
-    <!-- 🔒 Central Auth Guard -->
-    <script src="auth-guard.js"></script>
     <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png?v=3">
     <link rel="shortcut icon" type="image/png" href="/icon-192.png?v=3">
     <link rel="apple-touch-icon" href="/icon-192.png?v=3">
     <link rel="manifest" href="/manifest.json?v=3">
     <style>
-        /* Modern Crypto Exchange Theme */
         :root {
             --bg-main: #0b0e11;
             --bg-card: #181a20;
             --text-primary: #eaecef;
             --text-secondary: #848e9c;
-            --accent-color: #fcd535; /* Binance Yellow */
+            --accent-color: #fcd535;
             --accent-hover: #f0c808;
             --danger-color: #f6465d;
             --danger-hover: #ff5e73;
@@ -35,7 +32,6 @@
         
         .container { max-width: 1200px; margin: auto; }
         
-        /* Header Section */
         .header-container {
             display: flex;
             justify-content: space-between;
@@ -47,7 +43,6 @@
         h1 { font-size: 22px; margin: 0; color: var(--text-primary); font-weight: 600; }
         h2 { font-size: 14px; margin: 0 0 15px 0; color: var(--text-secondary); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
 
-        /* Cards */
         .card { 
             background-color: var(--bg-card); 
             border: 1px solid var(--border-color); 
@@ -57,7 +52,6 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
         
-        /* Stats Grid */
         .stats-grid { display: flex; gap: 16px; flex-wrap: wrap; }
         .stat-box { 
             background-color: var(--bg-main); 
@@ -74,7 +68,6 @@
         .stat-value { font-size: 22px; color: var(--text-primary); font-weight: 600; }
         .stat-value span { font-size: 14px; color: var(--text-secondary); font-weight: 400; margin-left: 4px; }
 
-        /* Table */
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
         th, td { padding: 14px 16px; text-align: left; border-bottom: 1px solid var(--border-color); }
         th { color: var(--text-secondary); font-weight: 500; text-transform: uppercase; font-size: 12px; border-bottom: 1px solid var(--border-color); }
@@ -84,7 +77,6 @@
         .wallet-addr { color: var(--text-secondary); font-family: monospace; font-size: 13px; }
         .balance-val { color: var(--accent-color); font-weight: 600; }
 
-        /* Buttons */
         button { 
             background-color: var(--accent-color); 
             color: #000; 
@@ -107,13 +99,11 @@
 <body>
     <div class="container">
         
-        <!-- Header -->
         <div class="header-container">
             <h1>Finance Dashboard</h1>
             <button class="btn-logout" id="logoutBtn">Logout</button>
         </div>
         
-        <!-- Analytics Card -->
         <div class="card">
             <h2>System Analytics (ትርፍ እና እንቅስቃሴ)</h2>
             <div class="stats-grid">
@@ -136,7 +126,6 @@
             </div>
         </div>
 
-        <!-- Pending Sweeps Card -->
         <div class="card">
             <h2>Pending Sweeps (ያልተጠረጉ ዶላሮች)</h2>
             <table>
@@ -156,7 +145,6 @@
 
     </div>
 
-    <!-- External CSP-Compliant JS File -->
-    <script src="finance-admin.js?v=1"></script>
+    <script src="finance.js?v=2"></script>
 </body>
 </html>
