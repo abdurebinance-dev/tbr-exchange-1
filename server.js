@@ -1560,6 +1560,18 @@ async function getFastUserProfilePayload(userId) {
     const availBal = Number(Number(user.balance || 0).toFixed(6));
     const totalCombinedBal = Number((availBal + lockedBal).toFixed(6));
 
+    // 🔥 የተጠቃሚውን የክፍያ አማራጮች በአዲሱም በድሮውም ፎርማት ማዘጋጀት 🔥
+    const formattedPayments = (user.paymentMethods || []).map(pm => ({
+        _id: pm._id,
+        id: pm._id,
+        type: pm.type || 'Bank',
+        name: pm.accountName || pm.name || user.fullName || 'User',
+        account: pm.accountNumber || pm.account || '',
+        accountName: pm.accountName || pm.name || user.fullName || 'User',
+        accountNumber: pm.accountNumber || pm.account || '',
+        isDefault: Boolean(pm.isDefault)
+    }));
+
     return {
         id: user._id,
         _id: user._id,
@@ -1585,6 +1597,8 @@ async function getFastUserProfilePayload(userId) {
         onMarket: lockedBal,
         totalBalance: totalCombinedBal,
         bscAddress: user.bscAddress,
+        paymentMethods: formattedPayments, // 🔥 የጠፋችው ይቺ ናት! አሁን ወዲያውኑ ለ Frontend ትደርሳለች
+        payments: formattedPayments,       // ተጨማሪ Backup
         totalTrades: tradeStats.totalTrades,
         volume: tradeStats.volume,
         volumeUsdt: tradeStats.volumeUsdt,
@@ -1695,22 +1709,35 @@ app.post('/api/user/update', verifyToken, async (req, res) => {
 app.get('/api/payment-methods', verifyToken, async (req, res) => {
     try {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-        const user = await User.findById(req.user.id).select('paymentMethods').lean();
-        if (!user) return res.status(404).json({ success: false, message: "User not found" });
+        
+        // በ ID ወይም በ Email ተጠቃሚውን መፈለግ
+        let user = await User.findById(req.user.id).select('paymentMethods fullName email').lean();
+        if (!user && req.user.email) {
+            user = await User.findOne({ email: req.user.email.toLowerCase().trim() }).select('paymentMethods fullName email').lean();
+        }
+        if (!user) return res.status(404).json({ success: false, message: "User not found", paymentMethods: [], data: [] });
 
-        // የድሮዎቹ እና አዲሶቹ ክፍያዎች በትክክል እንዲመጡ ማስተካከል
+        // የድሮዎቹም አዲሶቹም ክፍያዎች በሁሉም ስም እንዲመጡ ማድረግ
         const formattedMethods = (user.paymentMethods || []).map(pm => ({
             _id: pm._id,
-            type: pm.type,
-            accountName: pm.accountName || pm.name || 'Unknown',
+            id: pm._id,
+            type: pm.type || 'Bank',
+            name: pm.accountName || pm.name || user.fullName || 'Unknown',
+            account: pm.accountNumber || pm.account || 'Unknown',
+            accountName: pm.accountName || pm.name || user.fullName || 'Unknown',
             accountNumber: pm.accountNumber || pm.account || 'Unknown',
-            isDefault: pm.isDefault || false
+            isDefault: Boolean(pm.isDefault)
         }));
 
-        res.json({ success: true, paymentMethods: formattedMethods });
+        res.json({ 
+            success: true, 
+            paymentMethods: formattedMethods, 
+            data: formattedMethods,
+            methods: formattedMethods 
+        });
     } catch (error) {
         console.error("Fetch payments error:", error);
-        res.status(500).json({ success: false, message: "Server error fetching payments" });
+        res.status(500).json({ success: false, message: "Server error fetching payments", paymentMethods: [], data: [] });
     }
 });
 
