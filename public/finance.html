@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Finance Dashboard - TBR Exchange</title>
+    <!-- 🔒 Central Auth Guard -->
+    <script src="auth-guard.js"></script>
     <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png?v=3">
     <link rel="shortcut icon" type="image/png" href="/icon-192.png?v=3">
     <link rel="apple-touch-icon" href="/icon-192.png?v=3">
@@ -108,7 +110,7 @@
         <!-- Header -->
         <div class="header-container">
             <h1>Finance Dashboard</h1>
-            <button class="btn-logout" onclick="logout()">Logout</button>
+            <button class="btn-logout" id="logoutBtn">Logout</button>
         </div>
         
         <!-- Analytics Card -->
@@ -154,70 +156,7 @@
 
     </div>
 
-    <script>
-        const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
-        if (!token) {
-            window.location.href = "/";
-        }
-
-        async function fetchStats() {
-            try {
-                const res = await fetch('/api/admin/finance/stats', {
-                    headers: { 'Authorization': 'Bearer ' + token }
-                });
-                const data = await res.json();
-                
-                if (data.success) {
-                    document.getElementById('totalVolume').innerHTML = `${data.stats.totalVolume} <span>USDT</span>`;
-                    document.getElementById('todayVolume').innerHTML = `${data.stats.todayVolume} <span>USDT</span>`;
-                    document.getElementById('totalProfit').innerHTML = `${data.stats.totalProfit} <span>USDT</span>`;
-                    document.getElementById('todayProfit').innerHTML = `${data.stats.todayProfit} <span>USDT</span>`;
-
-                    const tbody = document.getElementById('pendingTable');
-                    tbody.innerHTML = '';
-                    if (data.pendingSweeps.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-secondary);">No pending sweeps at the moment.</td></tr>';
-                    } else {
-                        data.pendingSweeps.forEach(user => {
-                            tbody.innerHTML += `
-                                <tr>
-                                    <td>${user.email}</td>
-                                    <td class="wallet-addr">${user.bscAddress}</td>
-                                    <td class="balance-val">${user.balance} USDT</td>
-                                    <td><button class="btn-sweep" onclick="manualSweep('${user._id}')">Sweep to Master</button></td>
-                                </tr>
-                            `;
-                        });
-                    }
-                }
-            } catch (error) {
-                console.error("Fetch Error:", error);
-            }
-        }
-
-        async function manualSweep(userId) {
-            if(!confirm("Are you sure you want to sweep this balance to the Master Wallet?")) return;
-            try {
-                const res = await fetch('/api/admin/manual-sweep', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                    body: JSON.stringify({ userId })
-                });
-                const data = await res.json();
-                alert(data.message);
-                if(data.success) fetchStats(); 
-            } catch (error) {
-                alert('Sweep request failed.');
-            }
-        }
-
-        function logout() {
-            localStorage.removeItem('token');
-            localStorage.removeItem('adminToken');
-            window.location.href = "/";
-        }
-
-        fetchStats();
-    </script>
+    <!-- External CSP-Compliant JS File -->
+    <script src="finance-admin.js?v=1"></script>
 </body>
 </html>
