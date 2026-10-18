@@ -560,7 +560,7 @@ async function loadPaymentMethods() {
     }
 
     try {
-        const res = await fetch(`${API_BASE_URL}/api/user/payments?t=${new Date().getTime()}`, {
+        const res = await fetch(`${API_BASE_URL}/api/payment-methods?t=${Date.now()}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -570,10 +570,11 @@ async function loadPaymentMethods() {
 
         if (res.ok) {
             const data = await res.json();
-            userPaymentMethods = data.payments || data || []; 
+            const list = data.paymentMethods || data.payments || data.data || (Array.isArray(data) ? data : []);
+            userPaymentMethods = Array.isArray(list) ? list : [];
             localStorage.setItem("user_payment_methods", JSON.stringify(userPaymentMethods));
 
-            if(userPaymentMethods.length === 0) {
+            if (userPaymentMethods.length === 0) {
                 renderEmptyPaymentState();
             } else {
                 renderPaymentMethods();
@@ -638,8 +639,8 @@ function renderPaymentMethods() {
         const isChecked = 'checked'; 
         const defaultBadge = method.isDefault ? `<span style="background: rgba(14, 203, 129, 0.15); color: var(--green-color); font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">Default</span>` : '';
         const bankName = method.type || method.bankName || "Bank";
-        const accountName = method.name || method.fullName || "Account Name";
-        const accNumber = method.account || method.accountNumber || "00000";
+        const accountName = method.accountName || method.name || method.fullName || "Account Name";
+        const accNumber = method.accountNumber || method.account || "00000";
 
         const cardHTML = `
             <label class="pm-card" style="margin-bottom: 10px; display: flex; align-items: flex-start; gap: 12px; cursor: pointer; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px;">

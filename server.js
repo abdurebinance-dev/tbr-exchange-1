@@ -1706,22 +1706,22 @@ app.post('/api/user/update', verifyToken, async (req, res) => {
 // ==========================================
 // 🚀 USER PAYMENT METHODS APIs 🚀
 // ==========================================
-app.get('/api/payment-methods', verifyToken, async (req, res) => {
+// 🚀 ሁሉንም የ Frontend Payment Method ጥያቄዎች የሚቀበል Route 🚀
+// 🚀 USER PAYMENT METHODS APIs (Supports both /api/payment-methods and /api/user/payments) 🚀
+app.get(['/api/payment-methods', '/api/user/payments', '/api/user/payment-methods'], verifyToken, async (req, res) => {
     try {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-        
-        // በ ID ወይም በ Email ተጠቃሚውን መፈለግ
         let user = await User.findById(req.user.id).select('paymentMethods fullName email').lean();
         if (!user && req.user.email) {
             user = await User.findOne({ email: req.user.email.toLowerCase().trim() }).select('paymentMethods fullName email').lean();
         }
-        if (!user) return res.status(404).json({ success: false, message: "User not found", paymentMethods: [], data: [] });
+        if (!user) return res.status(404).json({ success: false, message: "User not found", payments: [], paymentMethods: [] });
 
-        // የድሮዎቹም አዲሶቹም ክፍያዎች በሁሉም ስም እንዲመጡ ማድረግ
         const formattedMethods = (user.paymentMethods || []).map(pm => ({
             _id: pm._id,
             id: pm._id,
             type: pm.type || 'Bank',
+            bankName: pm.type || 'Bank',
             name: pm.accountName || pm.name || user.fullName || 'Unknown',
             account: pm.accountNumber || pm.account || 'Unknown',
             accountName: pm.accountName || pm.name || user.fullName || 'Unknown',
@@ -1731,13 +1731,13 @@ app.get('/api/payment-methods', verifyToken, async (req, res) => {
 
         res.json({ 
             success: true, 
-            paymentMethods: formattedMethods, 
-            data: formattedMethods,
-            methods: formattedMethods 
+            payments: formattedMethods,        // 🔥 my-ads.js ይህንን ነው የሚፈልገው!
+            paymentMethods: formattedMethods,  // 🔥 settings.js ይህንን ነው የሚፈልገው!
+            data: formattedMethods 
         });
     } catch (error) {
         console.error("Fetch payments error:", error);
-        res.status(500).json({ success: false, message: "Server error fetching payments", paymentMethods: [], data: [] });
+        res.status(500).json({ success: false, message: "Server error fetching payments", payments: [], paymentMethods: [] });
     }
 });
 
