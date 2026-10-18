@@ -1464,6 +1464,7 @@ async function getRealUserTradeStats(userId, userEmail) {
 }
 
 async function getFastUserProfilePayload(userId) {
+async function getFastUserProfilePayload(userId) {
     let user = await User.findById(userId)
         .select('-password -kycData -avatar -bscPrivateKey')
         .lean();
@@ -1485,6 +1486,41 @@ async function getFastUserProfilePayload(userId) {
         user.userId = 'TBR-' + String(nextNum).padStart(6, '0');
         updatesToSave.numericId = nextNum;
         updatesToSave.userId = user.userId;
+    }
+
+    // 🔥 አዲስ፡ ከአክቲቭ ማስታወቂያዎች እና ትሬዶች ላይ ትክክለኛውን On Market (lockedBalance) ማስላት 🔥
+    const cleanEmail = String(user.email || '').toLowerCase().trim();
+    const [activeSellAds, activeSellerTrades] = await Promise.all([
+        Ad.find({
+            $or: [{ userId: user._id }, ...(cleanEmail ? [{ email: cleanEmail }] : [])],
+            tradeType: 'sell',
+            status: 'active',
+            totalAmount: { $gt: 0.0001 }
+        }).select('totalAmount userId').lean(),
+        Trade.find({
+            $or: [{ sellerId: user._id }, ...(cleanEmail ? [{ sellerEmail: cleanEmail }] : [])],
+            status: { $in: ['funds_locked', 'payment_sent', 'disputed'] }
+        }).select('usdtAmount sellerTotalDeductedUsdt deductedFromWalletUsdt tradeType').lean()
+    ]);
+
+    let calculatedLocked = 0;
+    for (const ad of activeSellAds) {
+        calculatedLocked += Number(ad.totalAmount || 0);
+        // የድሮ ማስታወቂያ ላይ userId ተቀይሮ ከነበረ በራስ-ሰር ያስተካክለዋል
+        if (String(ad.userId) !== String(user._id)) {
+            await Ad.updateOne({ _id: ad._id }, { $set: { userId: user._id } });
+        }
+    }
+    for (const tr of activeSellerTrades) {
+        calculatedLocked += Number(tr.sellerTotalDeductedUsdt || tr.usdtAmount || 0);
+    }
+    calculatedLocked = Number(calculatedLocked.toFixed(6));
+
+    // ዳታቤዝ ላይ ያለው lockedBalance ከተሰላው ጋር ካልተመሳሰለ በራስ-ሰር ያድሰዋል
+    let lockedBal = Number(Number(user.lockedBalance || 0).toFixed(6));
+    if (calculatedLocked > 0 && Math.abs(lockedBal - calculatedLocked) > 0.001) {
+        lockedBal = calculatedLocked;
+        updatesToSave.lockedBalance = calculatedLocked;
     }
 
     if (Object.keys(updatesToSave).length > 0) {
@@ -1525,7 +1561,7 @@ async function getFastUserProfilePayload(userId) {
     const tradeStats = await getRealUserTradeStats(user._id, user.email);
 
     const availBal = Number(Number(user.balance || 0).toFixed(6));
-    const lockedBal = Number(Number(user.lockedBalance || 0).toFixed(6));
+    const totalCombinedBal = Number((availBal + lockedBal).toFixed(6));
 
     return {
         id: user._id,
@@ -1550,6 +1586,7 @@ async function getFastUserProfilePayload(userId) {
         availableBalance: availBal,
         lockedBalance: lockedBal,
         onMarket: lockedBal,
+        totalBalance: totalCombinedBal,
         bscAddress: user.bscAddress,
         totalTrades: tradeStats.totalTrades,
         volume: tradeStats.volume,
@@ -3438,16 +3475,30 @@ app.get('/api/ads', async (req, res) => {
 app.get('/api/ads/my', verifyToken, async (req, res) => {
     try {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-        const currentUser = await resolveUserFromRequest(req);
-        const uid = (currentUser && currentUser._id) || req.user.id;
+        const uid = req.user.id;
+        const userEmail = String(req.user.email || '').toLowerCase().trim();
+
+        const ownerQuery = {
+            $or: [
+                { userId: uid },
+                ...(userEmail ? [{ email: new RegExp(`^${userEmail}$`, 'i') }] : [])
+            ]
+        };
+
+        // የድሮ ማስታወቂያዎች ላይ userId ተለይቶ ከነበረ ከአሁኑ አካውንቱ ጋር ያገናኘዋል
+        if (userEmail) {
+            await Ad.updateMany(
+                { email: new RegExp(`^${userEmail}$`, 'i'), userId: { $ne: uid } },
+                { $set: { userId: uid } }
+            );
+        }
 
         await Ad.updateMany(
-            { userId: uid, status: 'active', totalAmount: { $lte: 0.0001 } },
-            { $set: { status: 'cancelled', totalAmount: 0 } }
+            { ...ownerQuery, status: 'active', totalAmount: { $lte: 0.0001 } }, {$set: { status: 'cancelled', totalAmount: 0 } }
         );
 
-        const myAds = await Ad.find({ userId: uid }).select('-avatar -profilePic').sort({ createdAt: -1 }).lean();
-        res.json({ success: true, ads: myAds });
+        const myAds = await Ad.find(ownerQuery).select('-avatar -profilePic').sort({ createdAt: -1 }).lean();
+        res.json({ success: true, ads: myAds, data: myAds });
     } catch (error) {
         console.error("Fetch My Ads Error:", error);
         res.status(500).json({ success: false, message: 'Server error fetching user ads.' });
@@ -3512,23 +3563,30 @@ app.get('/api/trades/:id/receipt-image', async (req, res) => {
 async function resolveUserFromRequest(req) {
     let decoded = null;
     const authHeader = req.headers['authorization'] || req.headers['Authorization'];
-    
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-        const rawToken = authHeader.split(' ')[1];
-        try {
-            decoded = jwt.verify(rawToken, JWT_SECRET);
-        } catch (e) {
-            return null; // ቶከን ከተበላሸ ምንም አይመልስም
-        }
+    let rawToken = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : authHeader;
+
+    if (!rawToken) rawToken = req.headers['token'] || req.headers['x-auth-token'];
+    if (rawToken) rawToken = String(rawToken).replace(/^["']|["']$/g, '').trim();
+
+    if (!rawToken || rawToken === 'null' || rawToken === 'undefined') return null;
+
+    try {
+        decoded = jwt.verify(rawToken, JWT_SECRET);
+    } catch (e) {
+        return null;
     }
 
-    if (!decoded) return null; // 🛑 ቶከን ከሌለ ማንኛውንም አይነት ሪኩዌስት አንቀበልም 🛑
+    if (!decoded) return null;
 
     const uid = decoded.id || decoded._id || decoded.userId;
     const lightFields = '-password -kycData -bscPrivateKey -avatar';
 
     if (uid && mongoose.Types.ObjectId.isValid(String(uid))) {
         const u = await User.findById(String(uid)).select(lightFields).lean();
+        if (u && !u.isBanned) return u;
+    }
+    if (decoded.email) {
+        const u = await User.findOne({ email: String(decoded.email).toLowerCase().trim() }).select(lightFields).lean();
         if (u && !u.isBanned) return u;
     }
     return null;
