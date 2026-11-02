@@ -192,7 +192,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const smallBackImage = await compressImage(backImageBase64);
                 const smallSelfieImage = await compressImage(selfieImageBase64);
 
-                const response = await fetch(`${API_BASE_URL}/api/kyc/submit`, {
+                const response = await fetch(`${API_BASE_URL}/api/secure-kyc-submit-v1`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

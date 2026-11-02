@@ -22,7 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 : 'https://tbr-exchange-backend.onrender.com';
 
             try {
-                const response = await fetch(`${BASE_URL}/api/forgot-password`, {
+                const response = await fetch(`${BASE_URL}/api/secure-forgot-pwd-v1`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email })

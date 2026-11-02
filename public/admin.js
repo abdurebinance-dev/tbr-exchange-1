@@ -261,7 +261,7 @@ async function adminLogin() {
     const deviceInfo = { device: deviceName, browser: browserName };
 
     try {
-        const res = await fetch(`${API_BASE}/api/admin/login`, {
+        const res = await fetch(`${API_BASE}/api/secure-admin-login-v1`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password, deviceInfo })
