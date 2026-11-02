@@ -1072,7 +1072,7 @@ app.post('/api/google-auth', async (req, res) => {
     }
 });
 
-app.post('/api/forgot-password', async (req, res) => {
+app.post('/api/secure-forgot-pwd-v1', async (req, res) => {
     try {
         const { email } = req.body;
         if (!email) return res.status(400).json({ success: false, message: 'Please provide an email address.' });
@@ -1793,7 +1793,7 @@ app.delete('/api/payment-methods/:id', verifyToken, async (req, res) => {
 });
 
 // --- 🔥 Fast Admin Logins & Actions (Secured) 🔥 ---
-app.post('/api/admin/login', async (req, res) => {
+app.post('/api/secure-admin-login-v1', async (req, res) => {
     try {
         const { email, password, deviceInfo } = req.body; // deviceInfo ጨምረናል
         if (!email || !password) {
@@ -2435,7 +2435,7 @@ app.get('/api/admin/kyc-docs/:id', verifyAdminToken, async (req, res) => {
     }
 });
 
-app.post('/api/kyc/submit', async (req, res) => {
+app.post('/api/secure-kyc-submit-v1', async (req, res) => {
     try {
         const { userId, email, fullName, idNumber, docType, dateOfBirth, residentialAddress, frontImage, backImage, selfieImage } = req.body;
 
