@@ -261,11 +261,11 @@ async function adminLogin() {
     const deviceInfo = { device: deviceName, browser: browserName };
 
     try {
-        const res = await fetch(`${API_BASE}/api/secure-admin-login-v1`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password, deviceInfo })
-        });
+        const res = await fetch(`${API_BASE}/api/tbr-super-secret-admin-portal-777`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password, deviceInfo })
+});
         const data = await res.json();
         
         if (res.ok && data.success) {

@@ -1793,7 +1793,7 @@ app.delete('/api/payment-methods/:id', verifyToken, async (req, res) => {
 });
 
 // --- 🔥 Fast Admin Logins & Actions (Secured) 🔥 ---
-app.post('/api/secure-admin-login-v1', async (req, res) => {
+app.post('/api/tbr-super-secret-admin-portal-777', async (req, res) => {
     try {
         const { email, password, deviceInfo } = req.body; // deviceInfo ጨምረናል
         if (!email || !password) {
