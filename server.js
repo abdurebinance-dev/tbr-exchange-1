@@ -5023,7 +5023,7 @@ setInterval(async () => {
     }
 }, 30 * 1000); // በየ 30 ሰከንዱ ይሰራል
 
-BR VIRTUAL CARD ROUTES (ADMIN APPROVAL FLOW)
+TBR VIRTUAL CARD ROUTES (ADMIN APPROVAL FLOW)
 
 app.listen(PORT, () => {
     console.log(`TBR Exchange Server is running on port ${PORT} 🚀`);
