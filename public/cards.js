@@ -26,11 +26,15 @@ let isUserVerified = false;
 
 function showAlert(msg, type = 'success') {
   const box = document.getElementById('alertBox');
-  if (!box) return;
+  if (!box) {
+    alert(msg);
+    return;
+  }
   box.textContent = msg;
   box.className = `alert ${type === 'success' ? 'alert-success' : 'alert-error'}`;
   box.style.display = 'block';
-  setTimeout(() => { box.style.display = 'none'; }, 6000);
+  box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  setTimeout(() => { box.style.display = 'none'; }, 7000);
 }
 
 // Strict Real-Time Validation (< $12 or > Available USDT Balance disables button & shows red error)
@@ -42,12 +46,14 @@ function validateCardForm() {
 
   if (!amtInput || !btn) return false;
 
-  btn.textContent = 'Request TBR Card';
+  if (btn.dataset.submitting !== 'true') {
+    btn.textContent = 'Request TBR Card';
+  }
+
   const rawVal = amtInput.value.trim();
   const amt = Number(rawVal);
   const nameVal = nameInput ? nameInput.value.trim() : '';
 
-  // 1. Check empty or less than $12
   if (!rawVal || isNaN(amt) || amt < 12) {
     amtInput.style.borderColor = '#F6465D';
     if (errorEl) {
@@ -57,11 +63,9 @@ function validateCardForm() {
     btn.disabled = true;
     btn.style.opacity = '0.35';
     btn.style.cursor = 'not-allowed';
-    btn.style.pointerEvents = 'none';
     return false;
   }
 
-  // 2. Check ONLY if entered amount exceeds Available TBR USDT Balance (Fee is deducted from entered amount)
   if (amt > userWalletBalance) {
     amtInput.style.borderColor = '#F6465D';
     if (errorEl) {
@@ -71,28 +75,26 @@ function validateCardForm() {
     btn.disabled = true;
     btn.style.opacity = '0.35';
     btn.style.cursor = 'not-allowed';
-    btn.style.pointerEvents = 'none';
     return false;
   }
 
-  // 3. Check if verified legal name exists
   if (nameVal.length < 2) {
     amtInput.style.borderColor = '#2B3139';
     if (errorEl) errorEl.style.display = 'none';
     btn.disabled = true;
     btn.style.opacity = '0.35';
     btn.style.cursor = 'not-allowed';
-    btn.style.pointerEvents = 'none';
     return false;
   }
 
-  // All valid -> Enable gold button
+  // Valid -> Enable gold button
   amtInput.style.borderColor = '#0ECB81';
   if (errorEl) errorEl.style.display = 'none';
-  btn.disabled = false;
-  btn.style.opacity = '1';
-  btn.style.cursor = 'pointer';
-  btn.style.pointerEvents = 'auto';
+  if (btn.dataset.submitting !== 'true') {
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.style.cursor = 'pointer';
+  }
   return true;
 }
 
@@ -186,7 +188,7 @@ async function loadUserCards() {
       }
     }
 
-    const cardsRes = await fetch(`${API_BASE}/api/cards/my-cards`, {
+    const cardsRes = await fetch(`${API_BASE}/api/cards/my-cards?${params.toString()}`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     if (cardsRes.ok) {
@@ -212,8 +214,13 @@ async function loadUserCards() {
 }
 
 async function loadCardDetails(mongoId) {
+  const { token, email, userId } = getIdentity();
+  const params = new URLSearchParams();
+  if (email) params.set('email', email);
+  if (userId) params.set('userId', userId);
+
   try {
-    const res = await fetch(`${API_BASE}/api/cards/details/${mongoId}`, {
+    const res = await fetch(`${API_BASE}/api/cards/details/${mongoId}?${params.toString()}`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     const data = await res.json();
@@ -277,15 +284,19 @@ function toggleSecrets() {
   renderCardNumbers();
 }
 
+// Submit Card Request
 async function createCard() {
   if (!validateCardForm()) return;
 
+  const { token, email, userId } = getIdentity();
   const name_on_card = document.getElementById('nameOnCard').value.trim();
   const dateOfBirth = document.getElementById('dobInput').value.trim();
   const amount = Number(document.getElementById('initialAmountInput').value);
   const btn = document.getElementById('createBtn');
 
+  btn.dataset.submitting = 'true';
   btn.disabled = true;
+  btn.style.opacity = '0.6';
   btn.textContent = 'Submitting Request...';
 
   try {
@@ -295,25 +306,28 @@ async function createCard() {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ name_on_card, dateOfBirth, amount })
+      body: JSON.stringify({ name_on_card, dateOfBirth, amount, email, userId })
     });
+
     const data = await res.json();
 
-    if (data.success) {
-      showAlert(data.message, 'success');
+    if (res.ok && data.success) {
+      showAlert(data.message || 'Card request submitted! Waiting for Admin approval.', 'success');
       await loadUserCards();
     } else {
-      showAlert(data.message || 'Failed to submit request.', 'error');
+      showAlert(data.message || `Request failed (${res.status}).`, 'error');
     }
   } catch (err) {
-    showAlert('Network error while submitting request.', 'error');
+    showAlert('Network error: Could not reach server. Please check connection.', 'error');
   } finally {
+    btn.dataset.submitting = 'false';
     validateCardForm();
   }
 }
 
 async function fundCard() {
   if (!activeCardMongoId) return;
+  const { token, email, userId } = getIdentity();
   const amount = Number(document.getElementById('topupAmount').value);
   const btn = document.getElementById('topupBtn');
 
@@ -329,7 +343,7 @@ async function fundCard() {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ cardId: activeCardMongoId, amount })
+      body: JSON.stringify({ cardId: activeCardMongoId, amount, email, userId })
     });
     const data = await res.json();
 
@@ -347,14 +361,29 @@ async function fundCard() {
   }
 }
 
-// Attach listeners & Initialize
+// Expose globally & attach click listeners directly
+window.createCard = createCard;
+window.fundCard = fundCard;
+window.toggleSecrets = toggleSecrets;
+window.validateCardForm = validateCardForm;
+window.updateTopupCost = updateTopupCost;
+
 document.addEventListener('DOMContentLoaded', () => {
   const amtInput = document.getElementById('initialAmountInput');
+  const createBtn = document.getElementById('createBtn');
+
   if (amtInput) {
     amtInput.addEventListener('input', validateCardForm);
     amtInput.addEventListener('keyup', validateCardForm);
     amtInput.addEventListener('change', validateCardForm);
   }
+  if (createBtn) {
+    createBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      createCard();
+    });
+  }
+
   initFromLocalCache();
   updateTopupCost();
   loadUserCards();
