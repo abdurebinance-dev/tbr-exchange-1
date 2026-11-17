@@ -51,7 +51,7 @@ function validateCardForm() {
   if (!rawVal || isNaN(amt) || amt < 12) {
     amtInput.style.borderColor = '#F6465D';
     if (errorEl) {
-      errorEl.textContent = '⚠️ Minimum initial card balance is $12.00 USD.';
+      errorEl.textContent = '⚠️ Minimum amount is $12.00 USDT.';
       errorEl.style.display = 'block';
     }
     btn.disabled = true;
@@ -61,15 +61,11 @@ function validateCardForm() {
     return false;
   }
 
-  // Total cost including $1.00 + 5% issuance fee
-  const totalFee = 1.00 + (amt * 0.05);
-  const totalRequired = Number((amt + totalFee).toFixed(2));
-
-  // 2. Check if entered amount (or total with fee) exceeds Available TBR USDT Balance
-  if (amt > userWalletBalance || totalRequired > userWalletBalance) {
+  // 2. Check ONLY if entered amount exceeds Available TBR USDT Balance (Fee is deducted from entered amount)
+  if (amt > userWalletBalance) {
     amtInput.style.borderColor = '#F6465D';
     if (errorEl) {
-      errorEl.textContent = `⚠️ Insufficient balance! Total required is $${totalRequired.toFixed(2)} USDT (incl. fee), but your balance is $${userWalletBalance.toFixed(2)} USDT.`;
+      errorEl.textContent = `⚠️ Insufficient balance! Your available TBR Wallet balance is $${userWalletBalance.toFixed(2)} USDT.`;
       errorEl.style.display = 'block';
     }
     btn.disabled = true;
@@ -105,10 +101,8 @@ function updateTopupCost() {
   const btn = document.getElementById('topupBtn');
   if (!amtInput || !btn) return;
 
-  const amt = Number(amtInput.value) || 10;
-  const fee = 1.00 + (amt * 0.04);
-  const total = (amt + fee).toFixed(2);
-  btn.textContent = `Add Funds ($${total} USDT Total)`;
+  const amt = Number(amtInput.value) || 12;
+  btn.textContent = `Add Funds ($${amt.toFixed(2)} USDT)`;
 }
 
 function applyUserStateToUI(balanceVal, kycRaw, legalName) {
@@ -123,7 +117,7 @@ function applyUserStateToUI(balanceVal, kycRaw, legalName) {
 
   if (balEl) {
     balEl.textContent = `$${userWalletBalance.toFixed(2)} USDT`;
-    balEl.style.color = userWalletBalance >= 13.60 ? '#0ECB81' : '#F6465D';
+    balEl.style.color = userWalletBalance >= 12 ? '#0ECB81' : '#F6465D';
   }
 
   if (!isUserVerified) {
@@ -225,7 +219,7 @@ async function loadCardDetails(mongoId) {
     const data = await res.json();
 
     if (data.success && data.status === 'pending_approval') {
-      const reqAmt = Number(data.requested_amount_usd || 12).toFixed(2);
+      const reqAmt = Number(data.requested_amount_usd || 10.40).toFixed(2);
       document.getElementById('cardBalanceDisplay').textContent = `⏳ Pending Admin Approval ($${reqAmt})`;
       document.getElementById('cardHolderDisplay').textContent = data.name_on_card;
       document.getElementById('topupBox').style.display = 'none';
@@ -233,7 +227,7 @@ async function loadCardDetails(mongoId) {
     }
 
     if (data.success && data.status === 'rejected') {
-      const refAmt = Number(data.total_charged_tbr_usdt || 13.60).toFixed(2);
+      const refAmt = Number(data.total_charged_tbr_usdt || 12.00).toFixed(2);
       document.getElementById('cardBalanceDisplay').textContent = `❌ Rejected ($${refAmt} Refunded)`;
       document.getElementById('topupBox').style.display = 'none';
       return;
@@ -323,7 +317,7 @@ async function fundCard() {
   const amount = Number(document.getElementById('topupAmount').value);
   const btn = document.getElementById('topupBtn');
 
-  if (!amount || amount < 10) return showAlert('Minimum top-up amount is $10 USDT.', 'error');
+  if (!amount || amount < 12) return showAlert('Minimum top-up amount is $12 USDT.', 'error');
 
   btn.disabled = true;
   btn.textContent = 'Processing Top-up...';

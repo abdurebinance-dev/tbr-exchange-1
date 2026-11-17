@@ -5071,19 +5071,24 @@ app.get('/api/cards/my-cards', verifyCardAuth, async (req, res) => {
   }
 });
 
-// 2. User: Submit Card Request (Min $12.00 + Fee $1.00 + 5%)
+// 2. User: Submit Card Request (Inclusive Fee: Fee deducted from entered USDT amount)
 app.post('/api/cards/create', verifyCardAuth, async (req, res) => {
   try {
     const userId = req.user.id || req.user._id || req.user.userId;
     const { name_on_card, dateOfBirth, amount } = req.body;
-    const requestedUsd = Number(amount || 12);
+    const totalDeductUsdt = Number(amount || 12);
 
-    if (isNaN(requestedUsd) || requestedUsd < 12) {
-      return res.status(400).json({ success: false, message: 'Minimum initial card balance is $12.00 USD.' });
+    if (isNaN(totalDeductUsdt) || totalDeductUsdt < 12) {
+      return res.status(400).json({ success: false, message: 'Minimum amount is $12.00 USDT.' });
     }
 
-    const totalFee = Number((1.00 + requestedUsd * 0.05).toFixed(2));
-    const totalCostUsdt = Number((requestedUsd + totalFee).toFixed(2));
+    // Fee ($1.00 + 5%) is deducted FROM the entered USDT amount; remainder goes onto the card
+    const totalFee = Number((1.00 + totalDeductUsdt * 0.05).toFixed(2));
+    const netCardBalanceUsd = Number((totalDeductUsdt - totalFee).toFixed(2));
+
+    if (netCardBalanceUsd < 10) {
+      return res.status(400).json({ success: false, message: 'Minimum amount is $12.00 USDT.' });
+    }
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
@@ -5102,10 +5107,10 @@ app.post('/api/cards/create', verifyCardAuth, async (req, res) => {
     const balanceField = user.usdtBalance !== undefined ? 'usdtBalance' : 'balance';
     const currentBalance = Number(user[balanceField] || 0);
 
-    if (currentBalance < totalCostUsdt) {
+    if (totalDeductUsdt > currentBalance) {
       return res.status(400).json({
         success: false,
-        message: `Insufficient TBR USDT balance. Required: $${totalCostUsdt} USDT.`
+        message: `Insufficient TBR USDT balance. Available: $${currentBalance.toFixed(2)} USDT.`
       });
     }
 
@@ -5116,7 +5121,8 @@ app.post('/api/cards/create', verifyCardAuth, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Verified full name not found on your profile.' });
     }
 
-    user[balanceField] = Number((currentBalance - totalCostUsdt).toFixed(2));
+    // Deduct the exact entered USDT amount from wallet
+    user[balanceField] = Number((currentBalance - totalDeductUsdt).toFixed(2));
     await user.save();
 
     const newRequest = await VirtualCard.create({
@@ -5126,14 +5132,14 @@ app.post('/api/cards/create', verifyCardAuth, async (req, res) => {
       name_on_card: finalCardName,
       dateOfBirth: dateOfBirth || '1998-01-01',
       status: 'pending_approval',
-      requested_amount_usd: requestedUsd,
+      requested_amount_usd: netCardBalanceUsd,
       issuance_fee_usdt: totalFee,
-      total_charged_tbr_usdt: totalCostUsdt
+      total_charged_tbr_usdt: totalDeductUsdt
     });
 
     return res.json({
       success: true,
-      message: `Card request for $${requestedUsd.toFixed(2)} submitted ($${totalCostUsdt} USDT deducted). Waiting for Admin approval.`,
+      message: `Card request submitted! $${totalDeductUsdt.toFixed(2)} USDT deducted ($${netCardBalanceUsd.toFixed(2)} USD will load to card after Admin approval).`,
       card: newRequest
     });
   } catch (err) {
@@ -5141,15 +5147,15 @@ app.post('/api/cards/create', verifyCardAuth, async (req, res) => {
   }
 });
 
-// 3. User: Top-up Active Card (Exact Provider Fee Only: $1.00 + 4%)
+// 3. User: Top-up Active Card (Inclusive Provider Fee: $1.00 + 4% deducted from entered amount)
 app.post('/api/cards/fund', verifyCardAuth, async (req, res) => {
   try {
     const userId = req.user.id || req.user._id || req.user.userId;
     const { cardId, amount } = req.body;
-    const loadAmount = Number(amount);
+    const totalDeduct = Number(amount);
 
-    if (!loadAmount || loadAmount < 10) {
-      return res.status(400).json({ success: false, message: 'Minimum top-up amount is $10 USDT.' });
+    if (!totalDeduct || totalDeduct < 12) {
+      return res.status(400).json({ success: false, message: 'Minimum top-up amount is $12 USDT.' });
     }
 
     const card = await VirtualCard.findOne({ _id: cardId, userId, status: 'active' });
@@ -5161,15 +5167,15 @@ app.post('/api/cards/fund', verifyCardAuth, async (req, res) => {
     const balanceField = user.usdtBalance !== undefined ? 'usdtBalance' : 'balance';
     const currentBalance = Number(user[balanceField] || 0);
 
-    const providerFee = Number((1.00 + loadAmount * 0.04).toFixed(2));
-    const totalDeduct = Number((loadAmount + providerFee).toFixed(2));
-
-    if (currentBalance < totalDeduct) {
+    if (totalDeduct > currentBalance) {
       return res.status(400).json({
         success: false,
-        message: `Insufficient USDT. Required: $${totalDeduct} USDT.`
+        message: `Insufficient USDT. Available: $${currentBalance.toFixed(2)} USDT.`
       });
     }
+
+    const providerFee = Number((1.00 + totalDeduct * 0.04).toFixed(2));
+    const netLoadAmount = Number((totalDeduct - providerFee).toFixed(2));
 
     user[balanceField] = Number((currentBalance - totalDeduct).toFixed(2));
     await user.save();
@@ -5177,11 +5183,11 @@ app.post('/api/cards/fund', verifyCardAuth, async (req, res) => {
     const response = await axios.post(`${KRIPICARD_URL}/api/external/cards/fundcard`, {
       api_key: KRIPICARD_KEY,
       card_id: card.card_id,
-      amount: loadAmount
+      amount: netLoadAmount
     }, { validateStatus: (s) => s < 500 });
 
     if ((response.status === 200 || response.status === 202) && response.data.success) {
-      return res.json({ success: true, message: `$${loadAmount} added to your TBR Card!` });
+      return res.json({ success: true, message: `$${netLoadAmount.toFixed(2)} USD added to your TBR Card!` });
     }
 
     user[balanceField] = Number((user[balanceField] + totalDeduct).toFixed(2));
