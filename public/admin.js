@@ -1472,6 +1472,118 @@ async function openDevicesModal() {
     }
 }
 
+// ==========================================
+// TBR VIRTUAL CARDS ADMIN MANAGEMENT
+// ==========================================
+async function loadAdminCardRequests() {
+    const tbody = document.getElementById('cardsTableBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#848e9c;">Loading card requests...</td></tr>';
+
+    try {
+        const res = await fetch('/api/admin/card-requests');
+        const data = await res.json();
+
+        if (!data.success || !data.requests || data.requests.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#848e9c;">No virtual card requests found.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = data.requests.map(req => {
+            const dateStr = new Date(req.createdAt).toLocaleString();
+            const email = req.userEmail || (req.userId && req.userId.email) || 'N/A';
+            const reqUsd = Number(req.requested_amount_usd || 10).toFixed(2);
+            const feeUsdt = Number(req.issuance_fee_usdt || 1.50).toFixed(2);
+            const totalUsdt = Number(req.total_charged_tbr_usdt || 11.50).toFixed(2);
+
+            let statusBadge = '';
+            let actionButtons = '';
+
+            if (req.status === 'pending_approval') {
+                statusBadge = '<span class="badge-pending">⏳ Pending Approval</span>';
+                actionButtons = `
+                    <div style="display:flex; gap:6px;">
+                        <button class="btn btn-approve" onclick="approveCardRequest('${req._id}', this)">Approve & Issue</button>
+                        <button class="btn btn-reject" onclick="rejectCardRequest('${req._id}', this)">Reject & Refund</button>
+                    </div>
+                `;
+            } else if (req.status === 'active') {
+                statusBadge = `<span class="badge-approved">✅ Active (•••• ${req.last4 || '****'})</span>`;
+                actionButtons = '<span style="color:#0ecb81; font-size:12px; font-weight:bold;">Issued</span>';
+            } else if (req.status === 'pending') {
+                statusBadge = '<span class="badge-pending">🔄 Provider Issuing</span>';
+                actionButtons = '<span style="color:#f0b90b; font-size:12px;">Queued</span>';
+            } else {
+                statusBadge = '<span class="badge-rejected">❌ Rejected & Refunded</span>';
+                actionButtons = '<span style="color:#f6465d; font-size:12px;">Refunded</span>';
+            }
+
+            return `
+                <tr>
+                    <td style="font-size:12px; color:#848e9c;">${dateStr}</td>
+                    <td>
+                        <div style="font-weight:600; color:#fff;">${email}</div>
+                        <div style="font-size:11px; color:#848e9c;">DOB: ${req.dateOfBirth || 'N/A'} | BIN: ${req.bin || '537872'}</div>
+                    </td>
+                    <td style="font-weight:700; color:#d4af37; text-transform:uppercase;">${req.name_on_card}</td>
+                    <td style="font-weight:800; color:#0ecb81; font-size:14px;">$${reqUsd} USD</td>
+                    <td>
+                        <div style="font-weight:700; color:#fff;">$${totalUsdt} USDT</div>
+                        <div style="font-size:11px; color:#848e9c;">(Incl. $${feeUsdt} fee)</div>
+                    </td>
+                    <td>${statusBadge}</td>
+                    <td>${actionButtons}</td>
+                </tr>
+            `;
+        }).join('');
+    } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#f6465d;">Error loading card requests.</td></tr>';
+    }
+}
+
+async function approveCardRequest(id, btn) {
+    if (!confirm('Approve this request and issue the virtual card via Kripicard?')) return;
+    btn.disabled = true;
+    btn.textContent = 'Issuing...';
+
+    try {
+        const res = await fetch(`/api/admin/card-requests/${id}/approve`, { method: 'POST' });
+        const data = await res.json();
+        alert(data.message || (data.success ? 'Card issued!' : 'Failed to issue card.'));
+        loadAdminCardRequests();
+    } catch (err) {
+        alert('Server error while approving card.');
+        btn.disabled = false;
+        btn.textContent = 'Approve & Issue';
+    }
+}
+
+async function rejectCardRequest(id, btn) {
+    if (!confirm('Reject this request and refund the user\'s USDT?')) return;
+    btn.disabled = true;
+    btn.textContent = 'Refunding...';
+
+    try {
+        const res = await fetch(`/api/admin/card-requests/${id}/reject`, { method: 'POST' });
+        const data = await res.json();
+        alert(data.message || (data.success ? 'Rejected & refunded.' : 'Failed.'));
+        loadAdminCardRequests();
+    } catch (err) {
+        alert('Server error while rejecting.');
+        btn.disabled = false;
+        btn.textContent = 'Reject & Refund';
+    }
+}
+
+// Auto-load when "8. Cards" tab is clicked
+document.addEventListener('click', (e) => {
+    const tabBtn = e.target.closest('.nav-tab[data-target="cards"]');
+    if (tabBtn) {
+        loadAdminCardRequests();
+    }
+});
+
 async function removeAdminSession(sessionId) {
     try {
         await fetch(`${API_BASE}/api/admin/sessions/${encodeURIComponent(sessionId)}`, {

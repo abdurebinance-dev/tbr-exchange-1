@@ -17,7 +17,7 @@
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, sans-serif; }
     body { background: var(--bg-dark); color: var(--text-main); padding: 20px; }
-    .container { max-width: 520px; margin: 0 auto; }
+    .container { max-width: 520px; margin: 0 auto; padding-top: 10px; }
 
     /* Top Nav */
     .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
@@ -60,7 +60,7 @@
     }
 
     .card-middle { z-index: 2; }
-    .card-balance-badge { font-size: 12px; color: var(--gold); font-weight: 600; margin-bottom: 6px; }
+    .card-balance-badge { font-size: 13px; color: var(--gold); font-weight: 600; margin-bottom: 6px; }
     .card-number {
       font-size: 20px; font-weight: 700; letter-spacing: 2.5px;
       color: var(--gold); text-shadow: 0 2px 6px rgba(0,0,0,0.5);
@@ -149,31 +149,35 @@
       <h3>Top-up Card from TBR USDT Wallet</h3>
       <div class="info-list">
         • Funds are deducted directly from your TBR USDT balance.<br/>
-        • Minimum top-up: <b>$10.00 USDT</b> (+ $1 & 5% service fee).
+        • Minimum top-up: <b>$10.00 USDT</b> (Network fee: <b>$1.00 + 4%</b>, 0% TBR fee).
       </div>
       <div class="form-group">
         <label>Amount to Add (USD)</label>
-        <input type="number" id="topupAmount" class="form-control" value="10" min="10" />
+        <input type="number" id="topupAmount" class="form-control" value="10" min="10" oninput="updateTopupCost()" />
       </div>
-      <button class="btn-gold" id="topupBtn" onclick="fundCard()">Add Funds to Card</button>
+      <button class="btn-gold" id="topupBtn" onclick="fundCard()">Add Funds ($11.40 USDT Total)</button>
     </div>
 
     <!-- ISSUE NEW CARD BOX -->
     <div class="box" id="createBox">
-      <h3>Issue New TBR Card ($16.00 USDT)</h3>
+      <h3>Request New TBR Card</h3>
       <div class="info-list">
         • <b>Requirement 1:</b> Must be a Verified TBR Trader.<br/>
-        • <b>Requirement 2:</b> Minimum <b>$16.00 USDT</b> in TBR Wallet ($6.00 card fee + $10.00 loaded onto your card).
+        • <b>Requirement 2:</b> Minimum <b>$10.00</b> initial card balance (Issuance fee: <b>$1.00 + 5%</b>).
+      </div>
+      <div class="form-group">
+        <label>Initial Card Balance (USD — Min $10)</label>
+        <input type="number" id="initialAmountInput" class="form-control" value="10" min="10" oninput="updateTotalCost()" />
       </div>
       <div class="form-group">
         <label>Name on Card</label>
-        <input type="text" id="nameOnCard" class="form-control" placeholder="e.g. Fatuma Umer" /> 
+        <input type="text" id="nameOnCard" class="form-control" placeholder="e.g. Fatuma Umer" />
       </div>
       <div class="form-group">
         <label>Date of Birth (YYYY-MM-DD)</label>
         <input type="text" id="dobInput" class="form-control" value="1998-01-15" placeholder="YYYY-MM-DD" />
       </div>
-      <button class="btn-gold" id="createBtn" onclick="createCard()">Create TBR Card ($16 USDT)</button>
+      <button class="btn-gold" id="createBtn" onclick="createCard()">Request TBR Card ($11.50 USDT Total)</button>
     </div>
   </div>
 

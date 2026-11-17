@@ -117,6 +117,7 @@
             <button class="nav-tab" data-target="users"><i class="fa-solid fa-users"></i> 5. User Control & Ban</button>
             <button class="nav-tab" data-target="withdrawals"><i class="fa-solid fa-money-bill-transfer"></i> 6. Withdrawals</button>
             <button class="nav-tab" data-target="deposits"><i class="fa-solid fa-arrow-down"></i> 7. Deposits</button>
+            <button class="nav-tab" data-target="cards"><i class="fa-solid fa-credit-card"></i> 8. Cards</button>
         </div>
 
         <!-- TAB 1: OVERVIEW -->
@@ -364,6 +365,34 @@
                 </thead>
                 <tbody id="depositsTableBody">
                     <tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Loading deposits...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- TAB 8: VIRTUAL CARDS -->
+    <div id="tab-cards" class="tab-content">
+        <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
+            <span><i class="fa-solid fa-credit-card"></i> TBR Virtual Card Requests</span>
+            <button onclick="loadAdminCardRequests()" class="btn" style="background: rgba(212, 175, 55, 0.15); color: var(--accent-gold); border: 1px solid var(--accent-gold);">
+                <i class="fa-solid fa-rotate"></i> Refresh
+            </button>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>User Details & DOB</th>
+                        <th>Name on Card</th>
+                        <th>Requested Card Balance</th>
+                        <th>Total Paid (USDT)</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="cardsTableBody">
+                    <tr><td colspan="7" style="text-align:center; color:var(--text-muted);">Loading card requests...</td></tr>
                 </tbody>
             </table>
         </div>
