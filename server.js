@@ -5042,32 +5042,47 @@ function verifyCardAuth(req, res, next) {
   });
 }
 
-// 1. User: Get My Cards / Requests
+// 1. User: Get My Cards, Wallet Balance, KYC Status & Verified Name
 app.get('/api/cards/my-cards', verifyCardAuth, async (req, res) => {
   try {
     const userId = req.user.id || req.user._id || req.user.userId;
-    const cards = await VirtualCard.find({
-      userId,
-      status: { $nin: ['deleted', 'refunded'] }
-    }).sort({ createdAt: -1 });
-    res.json({ success: true, cards });
+    const [cards, user] = await Promise.all([
+      VirtualCard.find({
+        userId,
+        status: { $nin: ['deleted', 'refunded'] }
+      }).sort({ createdAt: -1 }),
+      User.findById(userId)
+    ]);
+
+    if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+
+    const walletBalance = Number((user.usdtBalance !== undefined ? user.usdtBalance : user.balance) || 0);
+    const isVerified = user.isVerified === true || user.kycStatus === 'verified' || user.kycStatus === 'approved';
+    const verifiedName = (user.fullName || user.kycFullName || user.legalName || user.name || '').trim();
+
+    res.json({
+      success: true,
+      cards,
+      walletBalance,
+      isVerified,
+      verifiedName
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Failed to load cards.' });
   }
 });
 
-// 2. User: Submit Card Request (Fee: $1.00 + 5% [4% Kripicard + 1% TBR])
+// 2. User: Submit Card Request (Min $12.00 + Fee $1.00 + 5%, Uses Verified Name)
 app.post('/api/cards/create', verifyCardAuth, async (req, res) => {
   try {
     const userId = req.user.id || req.user._id || req.user.userId;
     const { name_on_card, dateOfBirth, amount } = req.body;
-    const requestedUsd = Number(amount || 10);
+    const requestedUsd = Number(amount || 12);
 
-    if (isNaN(requestedUsd) || requestedUsd < 10) {
-      return res.status(400).json({ success: false, message: 'Minimum initial card balance is $10.00 USD.' });
+    if (isNaN(requestedUsd) || requestedUsd < 12) {
+      return res.status(400).json({ success: false, message: 'Minimum initial card balance is $12.00 USD.' });
     }
 
-    // Fee calculation: $1.00 fixed + 4% Kripicard + 1% TBR = $1.00 + 5%
     const totalFee = Number((1.00 + requestedUsd * 0.05).toFixed(2));
     const totalCostUsdt = Number((requestedUsd + totalFee).toFixed(2));
 
@@ -5076,7 +5091,7 @@ app.post('/api/cards/create', verifyCardAuth, async (req, res) => {
 
     const isUserVerified = user.isVerified === true || user.kycStatus === 'verified' || user.kycStatus === 'approved';
     if (!isUserVerified) {
-      return res.status(403).json({ success: false, message: 'Only Verified Traders can request a TBR Card.' });
+      return res.status(403).json({ success: false, message: 'Please verify your account first.' });
     }
 
     const existingPending = await VirtualCard.findOne({ userId, status: 'pending_approval' });
@@ -5090,15 +5105,18 @@ app.post('/api/cards/create', verifyCardAuth, async (req, res) => {
     if (currentBalance < totalCostUsdt) {
       return res.status(400).json({
         success: false,
-        message: `Insufficient TBR USDT balance. Required: $${totalCostUsdt} USDT ($${requestedUsd.toFixed(2)} card + $${totalFee} fee).`
+        message: `Insufficient TBR USDT balance. Required: $${totalCostUsdt} USDT.`
       });
     }
 
-    if (!name_on_card || name_on_card.trim().length < 2) {
-      return res.status(400).json({ success: false, message: 'Please enter a valid cardholder name.' });
+    // Enforce verified name from user record (fallback to input only if DB name is empty)
+    const dbVerifiedName = (user.fullName || user.kycFullName || user.legalName || user.name || '').trim();
+    const finalCardName = dbVerifiedName || (name_on_card ? name_on_card.trim() : '');
+
+    if (finalCardName.length < 2) {
+      return res.status(400).json({ success: false, message: 'Verified full name not found on your profile.' });
     }
 
-    // Deduct total USDT and hold until Admin approves
     user[balanceField] = Number((currentBalance - totalCostUsdt).toFixed(2));
     await user.save();
 
@@ -5106,7 +5124,7 @@ app.post('/api/cards/create', verifyCardAuth, async (req, res) => {
       userId: user._id,
       userEmail: user.email,
       bin: KRIPICARD_BIN,
-      name_on_card: name_on_card.trim(),
+      name_on_card: finalCardName,
       dateOfBirth: dateOfBirth || '1998-01-01',
       status: 'pending_approval',
       requested_amount_usd: requestedUsd,

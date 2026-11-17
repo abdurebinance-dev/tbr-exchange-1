@@ -6,6 +6,8 @@ if (!token) {
 let activeCardMongoId = null;
 let cardSecrets = null;
 let secretsVisible = false;
+let userWalletBalance = 0;
+let isUserVerified = false;
 
 function showAlert(msg, type = 'success') {
   const box = document.getElementById('alertBox');
@@ -15,14 +17,54 @@ function showAlert(msg, type = 'success') {
   setTimeout(() => { box.style.display = 'none'; }, 6000);
 }
 
-// 1. Update Total Cost on Create Card ($1.00 + 5% fee: 4% Kripicard + 1% TBR)
-function updateTotalCost() {
+// Validate Amount (>= $12 & <= Available TBR USDT Balance with fee) & Verified Name
+function validateCardForm() {
+  const amtInput = document.getElementById('initialAmountInput');
+  const nameInput = document.getElementById('nameOnCard');
+  const errorEl = document.getElementById('amountErrorMsg');
   const btn = document.getElementById('createBtn');
-  if (!btn) return;
+
+  if (!amtInput || !btn) return false;
+
   btn.textContent = 'Request TBR Card';
+  const rawVal = amtInput.value.trim();
+  const amt = Number(rawVal);
+  const nameVal = nameInput ? nameInput.value.trim() : '';
+
+  // Calculate total required including $1.00 + 5% issuance fee
+  const totalFee = 1.00 + (amt * 0.05);
+  const totalRequired = Number((amt + totalFee).toFixed(2));
+
+  if (!rawVal || isNaN(amt) || amt < 12) {
+    amtInput.classList.add('input-invalid');
+    errorEl.textContent = 'Minimum initial card balance is $12.00 USD.';
+    errorEl.style.display = 'block';
+    btn.disabled = true;
+    return false;
+  }
+
+  if (totalRequired > userWalletBalance) {
+    amtInput.classList.add('input-invalid');
+    errorEl.textContent = `Insufficient USDT balance! Need $${totalRequired.toFixed(2)} USDT (incl. fee), available: $${userWalletBalance.toFixed(2)} USDT.`;
+    errorEl.style.display = 'block';
+    btn.disabled = true;
+    return false;
+  }
+
+  // Valid amount
+  amtInput.classList.remove('input-invalid');
+  errorEl.style.display = 'none';
+
+  // Require valid verified name
+  if (nameVal.length < 2) {
+    btn.disabled = true;
+    return false;
+  }
+
+  btn.disabled = false;
+  return true;
 }
 
-// 2. Update Total Cost on Top-up ($1.00 + 4% network fee, 0% TBR markup)
 function updateTopupCost() {
   const amtInput = document.getElementById('topupAmount');
   const btn = document.getElementById('topupBtn');
@@ -34,7 +76,7 @@ function updateTopupCost() {
   btn.textContent = `Add Funds ($${total} USDT Total)`;
 }
 
-// 3. Load User's Cards or Requests
+// Load User's Cards, KYC Status, Verified Name & Wallet Balance
 async function loadUserCards() {
   try {
     const res = await fetch('/api/cards/my-cards', {
@@ -42,26 +84,64 @@ async function loadUserCards() {
     });
     const data = await res.json();
 
-    if (data.success && data.cards && data.cards.length > 0) {
-      const card = data.cards[0];
-      activeCardMongoId = card._id;
-      document.getElementById('cardHolderDisplay').textContent = card.name_on_card;
+    if (data.success) {
+      userWalletBalance = Number(data.walletBalance || 0);
+      isUserVerified = Boolean(data.isVerified);
 
-      if (card.status === 'active') {
-        document.getElementById('topupBox').style.display = 'block';
-        updateTopupCost();
+      const createBox = document.getElementById('createBox');
+      const unverifiedBox = document.getElementById('unverifiedBox');
+      const nameInput = document.getElementById('nameOnCard');
+
+      if (!isUserVerified) {
+        // Hide card request box & show "Please verify your account" link to profile.html
+        if (createBox) createBox.style.display = 'none';
+        if (unverifiedBox) unverifiedBox.style.display = 'block';
       } else {
-        document.getElementById('topupBox').style.display = 'none';
+        if (unverifiedBox) unverifiedBox.style.display = 'none';
+        if (createBox) createBox.style.display = 'block';
+
+        // Auto-fill verified name and keep locked
+        if (nameInput) {
+          if (data.verifiedName && data.verifiedName.length >= 2) {
+            nameInput.value = data.verifiedName;
+            nameInput.readOnly = true;
+            document.getElementById('cardHolderDisplay').textContent = data.verifiedName;
+          } else {
+            // Fallback if name wasn't stored on user doc
+            nameInput.readOnly = false;
+            nameInput.placeholder = 'Enter your full legal name';
+            nameInput.oninput = validateCardForm;
+          }
+        }
       }
 
-      await loadCardDetails(card._id);
+      const balEl = document.getElementById('availableWalletBalance');
+      if (balEl) {
+        balEl.textContent = `$${userWalletBalance.toFixed(2)} USDT`;
+        balEl.style.color = userWalletBalance >= 13.60 ? '#0ECB81' : '#F6465D';
+      }
+      validateCardForm();
+
+      if (data.cards && data.cards.length > 0) {
+        const card = data.cards[0];
+        activeCardMongoId = card._id;
+        document.getElementById('cardHolderDisplay').textContent = card.name_on_card;
+
+        if (card.status === 'active') {
+          document.getElementById('topupBox').style.display = 'block';
+          updateTopupCost();
+        } else {
+          document.getElementById('topupBox').style.display = 'none';
+        }
+
+        await loadCardDetails(card._id);
+      }
     }
   } catch (err) {
     console.error('Error loading cards:', err);
   }
 }
 
-// 4. Load Card Details or Approval Status
 async function loadCardDetails(mongoId) {
   try {
     const res = await fetch(`/api/cards/details/${mongoId}`, {
@@ -70,22 +150,22 @@ async function loadCardDetails(mongoId) {
     const data = await res.json();
 
     if (data.success && data.status === 'pending_approval') {
-      const reqAmt = Number(data.requested_amount_usd || 10).toFixed(2);
-      document.getElementById('cardBalanceDisplay').textContent = `Status: ⏳ Pending Admin Approval ($${reqAmt})`;
+      const reqAmt = Number(data.requested_amount_usd || 12).toFixed(2);
+      document.getElementById('cardBalanceDisplay').textContent = `⏳ Pending Admin Approval ($${reqAmt})`;
       document.getElementById('cardHolderDisplay').textContent = data.name_on_card;
       document.getElementById('topupBox').style.display = 'none';
       return;
     }
 
     if (data.success && data.status === 'rejected') {
-      const refAmt = Number(data.total_charged_tbr_usdt || 11.50).toFixed(2);
-      document.getElementById('cardBalanceDisplay').textContent = `Status: ❌ Rejected ($${refAmt} Refunded)`;
+      const refAmt = Number(data.total_charged_tbr_usdt || 13.60).toFixed(2);
+      document.getElementById('cardBalanceDisplay').textContent = `❌ Rejected ($${refAmt} Refunded)`;
       document.getElementById('topupBox').style.display = 'none';
       return;
     }
 
     if (data.success && data.status === 'pending') {
-      document.getElementById('cardBalanceDisplay').textContent = 'Status: Issuing (Pending)...';
+      document.getElementById('cardBalanceDisplay').textContent = 'Issuing (Pending)...';
       return;
     }
 
@@ -128,15 +208,13 @@ function toggleSecrets() {
   renderCardNumbers();
 }
 
-// 5. Submit New Card Request
 async function createCard() {
+  if (!validateCardForm()) return;
+
   const name_on_card = document.getElementById('nameOnCard').value.trim();
   const dateOfBirth = document.getElementById('dobInput').value.trim();
   const amount = Number(document.getElementById('initialAmountInput').value);
   const btn = document.getElementById('createBtn');
-
-  if (!amount || amount < 10) return showAlert('Minimum initial card balance is $10.00 USD.', 'error');
-  if (!name_on_card) return showAlert('Please enter the cardholder name.', 'error');
 
   btn.disabled = true;
   btn.textContent = 'Submitting Request...';
@@ -161,12 +239,10 @@ async function createCard() {
   } catch (err) {
     showAlert('Network error while submitting request.', 'error');
   } finally {
-    btn.disabled = false;
-    updateTotalCost();
+    validateCardForm();
   }
 }
 
-// 6. Top-up Active Card
 async function fundCard() {
   if (!activeCardMongoId) return;
   const amount = Number(document.getElementById('topupAmount').value);
@@ -190,7 +266,7 @@ async function fundCard() {
 
     if (data.success) {
       showAlert(data.message, 'success');
-      await loadCardDetails(activeCardMongoId);
+      await loadUserCards();
     } else {
       showAlert(data.message || 'Top-up failed.', 'error');
     }
@@ -203,6 +279,5 @@ async function fundCard() {
 }
 
 // Initialize
-updateTotalCost();
 updateTopupCost();
 loadUserCards();
