@@ -1,4 +1,6 @@
-const token = localStorage.getItem('token');
+const API_BASE = 'https://tbr-exchange-backend.onrender.com';
+const token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('jwt');
+
 if (!token) {
   window.location.href = 'index.html';
 }
@@ -73,48 +75,49 @@ function updateTopupCost() {
   btn.textContent = `Add Funds ($${total} USDT Total)`;
 }
 
-// Load User's Cards, KYC Status, Verified Name & Wallet Balance
+// Load User's Cards, KYC Status, Verified Name & Wallet Balance from Backend
 async function loadUserCards() {
   const createBox = document.getElementById('createBox');
   const unverifiedBox = document.getElementById('unverifiedBox');
   const nameInput = document.getElementById('nameOnCard');
+  const balEl = document.getElementById('availableWalletBalance');
 
   try {
-    const res = await fetch('/api/cards/my-cards', {
+    const res = await fetch(`${API_BASE}/api/cards/my-cards`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     const data = await res.json();
 
     if (data.success) {
       userWalletBalance = Number(data.walletBalance || 0);
-      // Only hide createBox if backend explicitly returns isVerified === false
       isUserVerified = data.isVerified !== false;
 
-      if (!isUserVerified) {
-        if (createBox) createBox.style.display = 'none';
-        if (unverifiedBox) unverifiedBox.style.display = 'block';
-      } else {
-        if (unverifiedBox) unverifiedBox.style.display = 'none';
-        if (createBox) createBox.style.display = 'block';
-
-        if (nameInput) {
-          if (data.verifiedName && data.verifiedName.length >= 2) {
-            nameInput.value = data.verifiedName;
-            nameInput.readOnly = true;
-            document.getElementById('cardHolderDisplay').textContent = data.verifiedName;
-          } else {
-            nameInput.readOnly = false;
-            nameInput.placeholder = 'Enter your full legal name';
-            nameInput.oninput = validateCardForm;
-          }
-        }
-      }
-
-      const balEl = document.getElementById('availableWalletBalance');
       if (balEl) {
         balEl.textContent = `$${userWalletBalance.toFixed(2)} USDT`;
         balEl.style.color = userWalletBalance >= 13.60 ? '#0ECB81' : '#F6465D';
       }
+
+      if (!isUserVerified) {
+        if (createBox) createBox.style.display = 'none';
+        if (unverifiedBox) unverifiedBox.style.display = 'block';
+        return;
+      }
+
+      if (unverifiedBox) unverifiedBox.style.display = 'none';
+      if (createBox) createBox.style.display = 'block';
+
+      if (nameInput) {
+        if (data.verifiedName && data.verifiedName.length >= 2) {
+          nameInput.value = data.verifiedName;
+          nameInput.readOnly = true;
+          document.getElementById('cardHolderDisplay').textContent = data.verifiedName;
+        } else {
+          nameInput.readOnly = false;
+          nameInput.placeholder = 'Enter your full legal name';
+          nameInput.oninput = validateCardForm;
+        }
+      }
+
       validateCardForm();
 
       if (data.cards && data.cards.length > 0) {
@@ -132,8 +135,7 @@ async function loadUserCards() {
         await loadCardDetails(card._id);
       }
     } else {
-      // Fallback: ensure createBox stays visible if API fails
-      if (createBox) createBox.style.display = 'block';
+      if (balEl) balEl.textContent = '$0.00 USDT';
       if (nameInput) {
         nameInput.readOnly = false;
         nameInput.placeholder = 'Enter your full legal name';
@@ -142,13 +144,18 @@ async function loadUserCards() {
     }
   } catch (err) {
     console.error('Error loading cards:', err);
-    if (createBox) createBox.style.display = 'block';
+    if (balEl) balEl.textContent = 'Error loading balance';
+    if (nameInput) {
+      nameInput.readOnly = false;
+      nameInput.placeholder = 'Enter your full legal name';
+      nameInput.oninput = validateCardForm;
+    }
   }
 }
 
 async function loadCardDetails(mongoId) {
   try {
-    const res = await fetch(`/api/cards/details/${mongoId}`, {
+    const res = await fetch(`${API_BASE}/api/cards/details/${mongoId}`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     const data = await res.json();
@@ -224,7 +231,7 @@ async function createCard() {
   btn.textContent = 'Submitting Request...';
 
   try {
-    const res = await fetch('/api/cards/create', {
+    const res = await fetch(`${API_BASE}/api/cards/create`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -258,7 +265,7 @@ async function fundCard() {
   btn.textContent = 'Processing Top-up...';
 
   try {
-    const res = await fetch('/api/cards/fund', {
+    const res = await fetch(`${API_BASE}/api/cards/fund`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
