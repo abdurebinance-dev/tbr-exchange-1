@@ -5023,9 +5023,7 @@ setInterval(async () => {
     }
 }, 30 * 1000); // በየ 30 ሰከንዱ ይሰራል
 
-// ==========================================
 // TBR VIRTUAL CARD ROUTES (ADMIN APPROVAL FLOW)
-// ==========================================
 const KRIPICARD_URL = process.env.KRIPICARD_BASE_URL || 'https://appapi.kripicard.com';
 const KRIPICARD_KEY = process.env.KRIPICARD_API_KEY || '2b24d03c41798f709f75201f9db80d68e6bc4456';
 const KRIPICARD_BIN = process.env.KRIPICARD_DEFAULT_BIN || '537872';
@@ -5057,7 +5055,8 @@ app.get('/api/cards/my-cards', verifyCardAuth, async (req, res) => {
     if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
 
     const walletBalance = Number((user.usdtBalance !== undefined ? user.usdtBalance : user.balance) || 0);
-    const isVerified = user.isVerified === true || user.kycStatus === 'verified' || user.kycStatus === 'approved';
+    const kycStr = String(user.kycStatus || '').toLowerCase();
+    const isVerified = user.isVerified === true || kycStr === 'verified' || kycStr === 'approved';
     const verifiedName = (user.fullName || user.kycFullName || user.legalName || user.name || '').trim();
 
     res.json({
@@ -5072,7 +5071,7 @@ app.get('/api/cards/my-cards', verifyCardAuth, async (req, res) => {
   }
 });
 
-// 2. User: Submit Card Request (Min $12.00 + Fee $1.00 + 5%, Uses Verified Name)
+// 2. User: Submit Card Request (Min $12.00 + Fee $1.00 + 5%)
 app.post('/api/cards/create', verifyCardAuth, async (req, res) => {
   try {
     const userId = req.user.id || req.user._id || req.user.userId;
@@ -5089,7 +5088,8 @@ app.post('/api/cards/create', verifyCardAuth, async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
 
-    const isUserVerified = user.isVerified === true || user.kycStatus === 'verified' || user.kycStatus === 'approved';
+    const kycStr = String(user.kycStatus || '').toLowerCase();
+    const isUserVerified = user.isVerified === true || kycStr === 'verified' || kycStr === 'approved';
     if (!isUserVerified) {
       return res.status(403).json({ success: false, message: 'Please verify your account first.' });
     }
@@ -5109,7 +5109,6 @@ app.post('/api/cards/create', verifyCardAuth, async (req, res) => {
       });
     }
 
-    // Enforce verified name from user record (fallback to input only if DB name is empty)
     const dbVerifiedName = (user.fullName || user.kycFullName || user.legalName || user.name || '').trim();
     const finalCardName = dbVerifiedName || (name_on_card ? name_on_card.trim() : '');
 
@@ -5142,7 +5141,7 @@ app.post('/api/cards/create', verifyCardAuth, async (req, res) => {
   }
 });
 
-// 3. User: Top-up Active Card (Exact Provider Fee Only: $1.00 + 4%, 0% TBR markup)
+// 3. User: Top-up Active Card (Exact Provider Fee Only: $1.00 + 4%)
 app.post('/api/cards/fund', verifyCardAuth, async (req, res) => {
   try {
     const userId = req.user.id || req.user._id || req.user.userId;
@@ -5162,14 +5161,13 @@ app.post('/api/cards/fund', verifyCardAuth, async (req, res) => {
     const balanceField = user.usdtBalance !== undefined ? 'usdtBalance' : 'balance';
     const currentBalance = Number(user[balanceField] || 0);
 
-    // Provider exact fee: $1.00 + 4% (No extra TBR fee)
     const providerFee = Number((1.00 + loadAmount * 0.04).toFixed(2));
     const totalDeduct = Number((loadAmount + providerFee).toFixed(2));
 
     if (currentBalance < totalDeduct) {
       return res.status(400).json({
         success: false,
-        message: `Insufficient USDT. Required: $${totalDeduct} USDT ($${loadAmount} load + $${providerFee} network fee).`
+        message: `Insufficient USDT. Required: $${totalDeduct} USDT.`
       });
     }
 
@@ -5259,10 +5257,6 @@ app.get('/api/cards/details/:id', verifyCardAuth, async (req, res) => {
   }
 });
 
-// ==========================================
-// ADMIN CARD REQUESTS MANAGEMENT
-// ==========================================
-
 // 5. Admin: List All Card Requests
 app.get('/api/admin/card-requests', async (req, res) => {
   try {
@@ -5285,7 +5279,7 @@ app.post('/api/admin/card-requests/:id/approve', async (req, res) => {
     }
 
     const user = await User.findById(cardReq.userId);
-    const loadAmount = Number(cardReq.requested_amount_usd || 10);
+    const loadAmount = Number(cardReq.requested_amount_usd || 12);
 
     const response = await axios.post(`${KRIPICARD_URL}/api/external/cards/createcard`, {
       api_key: KRIPICARD_KEY,
@@ -5329,7 +5323,7 @@ app.post('/api/admin/card-requests/:id/reject', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Already processed.' });
     }
 
-    const refundAmount = Number(cardReq.total_charged_tbr_usdt || 11.50);
+    const refundAmount = Number(cardReq.total_charged_tbr_usdt || 13.60);
     cardReq.status = 'rejected';
     await cardReq.save();
 

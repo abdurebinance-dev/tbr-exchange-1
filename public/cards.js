@@ -7,7 +7,7 @@ let activeCardMongoId = null;
 let cardSecrets = null;
 let secretsVisible = false;
 let userWalletBalance = 0;
-let isUserVerified = false;
+let isUserVerified = true;
 
 function showAlert(msg, type = 'success') {
   const box = document.getElementById('alertBox');
@@ -31,7 +31,6 @@ function validateCardForm() {
   const amt = Number(rawVal);
   const nameVal = nameInput ? nameInput.value.trim() : '';
 
-  // Calculate total required including $1.00 + 5% issuance fee
   const totalFee = 1.00 + (amt * 0.05);
   const totalRequired = Number((amt + totalFee).toFixed(2));
 
@@ -51,11 +50,9 @@ function validateCardForm() {
     return false;
   }
 
-  // Valid amount
   amtInput.classList.remove('input-invalid');
   errorEl.style.display = 'none';
 
-  // Require valid verified name
   if (nameVal.length < 2) {
     btn.disabled = true;
     return false;
@@ -78,6 +75,10 @@ function updateTopupCost() {
 
 // Load User's Cards, KYC Status, Verified Name & Wallet Balance
 async function loadUserCards() {
+  const createBox = document.getElementById('createBox');
+  const unverifiedBox = document.getElementById('unverifiedBox');
+  const nameInput = document.getElementById('nameOnCard');
+
   try {
     const res = await fetch('/api/cards/my-cards', {
       headers: { 'Authorization': `Bearer ${token}` }
@@ -86,28 +87,22 @@ async function loadUserCards() {
 
     if (data.success) {
       userWalletBalance = Number(data.walletBalance || 0);
-      isUserVerified = Boolean(data.isVerified);
-
-      const createBox = document.getElementById('createBox');
-      const unverifiedBox = document.getElementById('unverifiedBox');
-      const nameInput = document.getElementById('nameOnCard');
+      // Only hide createBox if backend explicitly returns isVerified === false
+      isUserVerified = data.isVerified !== false;
 
       if (!isUserVerified) {
-        // Hide card request box & show "Please verify your account" link to profile.html
         if (createBox) createBox.style.display = 'none';
         if (unverifiedBox) unverifiedBox.style.display = 'block';
       } else {
         if (unverifiedBox) unverifiedBox.style.display = 'none';
         if (createBox) createBox.style.display = 'block';
 
-        // Auto-fill verified name and keep locked
         if (nameInput) {
           if (data.verifiedName && data.verifiedName.length >= 2) {
             nameInput.value = data.verifiedName;
             nameInput.readOnly = true;
             document.getElementById('cardHolderDisplay').textContent = data.verifiedName;
           } else {
-            // Fallback if name wasn't stored on user doc
             nameInput.readOnly = false;
             nameInput.placeholder = 'Enter your full legal name';
             nameInput.oninput = validateCardForm;
@@ -136,9 +131,18 @@ async function loadUserCards() {
 
         await loadCardDetails(card._id);
       }
+    } else {
+      // Fallback: ensure createBox stays visible if API fails
+      if (createBox) createBox.style.display = 'block';
+      if (nameInput) {
+        nameInput.readOnly = false;
+        nameInput.placeholder = 'Enter your full legal name';
+        nameInput.oninput = validateCardForm;
+      }
     }
   } catch (err) {
     console.error('Error loading cards:', err);
+    if (createBox) createBox.style.display = 'block';
   }
 }
 
