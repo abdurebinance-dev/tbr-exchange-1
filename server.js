@@ -5023,7 +5023,310 @@ setInterval(async () => {
     }
 }, 30 * 1000); // በየ 30 ሰከንዱ ይሰራል
 
-TBR VIRTUAL CARD ROUTES (ADMIN APPROVAL FLOW)
+// ==========================================
+// TBR VIRTUAL CARD ROUTES (ADMIN APPROVAL FLOW)
+// ==========================================
+const KRIPICARD_URL = process.env.KRIPICARD_BASE_URL || 'https://appapi.kripicard.com';
+const KRIPICARD_KEY = process.env.KRIPICARD_API_KEY || '2b24d03c41798f709f75201f9db80d68e6bc4456';
+const KRIPICARD_BIN = process.env.KRIPICARD_DEFAULT_BIN || '537872';
+
+function verifyCardAuth(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  if (!token) return res.status(401).json({ success: false, message: 'Unauthorized.' });
+
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    if (err) return res.status(403).json({ success: false, message: 'Session expired.' });
+    req.user = decoded;
+    next();
+  });
+}
+
+// 1. User: Get My Cards / Requests
+app.get('/api/cards/my-cards', verifyCardAuth, async (req, res) => {
+  try {
+    const userId = req.user.id || req.user._id || req.user.userId;
+    const cards = await VirtualCard.find({
+      userId,
+      status: { $nin: ['deleted', 'refunded'] }
+    }).sort({ createdAt: -1 });
+    res.json({ success: true, cards });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to load cards.' });
+  }
+});
+
+// 2. User: Submit Card Request (Fee: $1.00 + 5% [4% Kripicard + 1% TBR])
+app.post('/api/cards/create', verifyCardAuth, async (req, res) => {
+  try {
+    const userId = req.user.id || req.user._id || req.user.userId;
+    const { name_on_card, dateOfBirth, amount } = req.body;
+    const requestedUsd = Number(amount || 10);
+
+    if (isNaN(requestedUsd) || requestedUsd < 10) {
+      return res.status(400).json({ success: false, message: 'Minimum initial card balance is $10.00 USD.' });
+    }
+
+    // Fee calculation: $1.00 fixed + 4% Kripicard + 1% TBR = $1.00 + 5%
+    const totalFee = Number((1.00 + requestedUsd * 0.05).toFixed(2));
+    const totalCostUsdt = Number((requestedUsd + totalFee).toFixed(2));
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+
+    const isUserVerified = user.isVerified === true || user.kycStatus === 'verified' || user.kycStatus === 'approved';
+    if (!isUserVerified) {
+      return res.status(403).json({ success: false, message: 'Only Verified Traders can request a TBR Card.' });
+    }
+
+    const existingPending = await VirtualCard.findOne({ userId, status: 'pending_approval' });
+    if (existingPending) {
+      return res.status(400).json({ success: false, message: 'You already have a pending card request waiting for Admin approval.' });
+    }
+
+    const balanceField = user.usdtBalance !== undefined ? 'usdtBalance' : 'balance';
+    const currentBalance = Number(user[balanceField] || 0);
+
+    if (currentBalance < totalCostUsdt) {
+      return res.status(400).json({
+        success: false,
+        message: `Insufficient TBR USDT balance. Required: $${totalCostUsdt} USDT ($${requestedUsd.toFixed(2)} card + $${totalFee} fee).`
+      });
+    }
+
+    if (!name_on_card || name_on_card.trim().length < 2) {
+      return res.status(400).json({ success: false, message: 'Please enter a valid cardholder name.' });
+    }
+
+    // Deduct total USDT and hold until Admin approves
+    user[balanceField] = Number((currentBalance - totalCostUsdt).toFixed(2));
+    await user.save();
+
+    const newRequest = await VirtualCard.create({
+      userId: user._id,
+      userEmail: user.email,
+      bin: KRIPICARD_BIN,
+      name_on_card: name_on_card.trim(),
+      dateOfBirth: dateOfBirth || '1998-01-01',
+      status: 'pending_approval',
+      requested_amount_usd: requestedUsd,
+      issuance_fee_usdt: totalFee,
+      total_charged_tbr_usdt: totalCostUsdt
+    });
+
+    return res.json({
+      success: true,
+      message: `Card request for $${requestedUsd.toFixed(2)} submitted ($${totalCostUsdt} USDT deducted). Waiting for Admin approval.`,
+      card: newRequest
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Server error submitting card request.' });
+  }
+});
+
+// 3. User: Top-up Active Card (Exact Provider Fee Only: $1.00 + 4%, 0% TBR markup)
+app.post('/api/cards/fund', verifyCardAuth, async (req, res) => {
+  try {
+    const userId = req.user.id || req.user._id || req.user.userId;
+    const { cardId, amount } = req.body;
+    const loadAmount = Number(amount);
+
+    if (!loadAmount || loadAmount < 10) {
+      return res.status(400).json({ success: false, message: 'Minimum top-up amount is $10 USDT.' });
+    }
+
+    const card = await VirtualCard.findOne({ _id: cardId, userId, status: 'active' });
+    if (!card || !card.card_id) {
+      return res.status(404).json({ success: false, message: 'Active card not found.' });
+    }
+
+    const user = await User.findById(userId);
+    const balanceField = user.usdtBalance !== undefined ? 'usdtBalance' : 'balance';
+    const currentBalance = Number(user[balanceField] || 0);
+
+    // Provider exact fee: $1.00 + 4% (No extra TBR fee)
+    const providerFee = Number((1.00 + loadAmount * 0.04).toFixed(2));
+    const totalDeduct = Number((loadAmount + providerFee).toFixed(2));
+
+    if (currentBalance < totalDeduct) {
+      return res.status(400).json({
+        success: false,
+        message: `Insufficient USDT. Required: $${totalDeduct} USDT ($${loadAmount} load + $${providerFee} network fee).`
+      });
+    }
+
+    user[balanceField] = Number((currentBalance - totalDeduct).toFixed(2));
+    await user.save();
+
+    const response = await axios.post(`${KRIPICARD_URL}/api/external/cards/fundcard`, {
+      api_key: KRIPICARD_KEY,
+      card_id: card.card_id,
+      amount: loadAmount
+    }, { validateStatus: (s) => s < 500 });
+
+    if ((response.status === 200 || response.status === 202) && response.data.success) {
+      return res.json({ success: true, message: `$${loadAmount} added to your TBR Card!` });
+    }
+
+    user[balanceField] = Number((user[balanceField] + totalDeduct).toFixed(2));
+    await user.save();
+    return res.status(400).json({ success: false, message: response.data.message || 'Top-up failed. Funds returned.' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Server error topping up card.' });
+  }
+});
+
+// 4. User: Get Card Details
+app.get('/api/cards/details/:id', verifyCardAuth, async (req, res) => {
+  try {
+    const userId = req.user.id || req.user._id || req.user.userId;
+    const card = await VirtualCard.findOne({ _id: req.params.id, userId });
+    if (!card) return res.status(404).json({ success: false, message: 'Card not found.' });
+
+    if (card.status === 'pending_approval') {
+      return res.json({
+        success: true,
+        status: 'pending_approval',
+        name_on_card: card.name_on_card,
+        requested_amount_usd: card.requested_amount_usd
+      });
+    }
+
+    if (card.status === 'rejected') {
+      return res.json({
+        success: true,
+        status: 'rejected',
+        name_on_card: card.name_on_card,
+        total_charged_tbr_usdt: card.total_charged_tbr_usdt
+      });
+    }
+
+    if (card.status === 'pending' && !card.card_id && card.order_id) {
+      const statusRes = await axios.post(`${KRIPICARD_URL}/api/external/cards/request-status`, {
+        api_key: KRIPICARD_KEY,
+        order_id: card.order_id
+      });
+      if (statusRes.data.status === 'completed' && statusRes.data.card_id) {
+        card.card_id = statusRes.data.card_id;
+        card.status = 'active';
+        await card.save();
+      } else {
+        return res.json({ success: true, status: 'pending', name_on_card: card.name_on_card });
+      }
+    }
+
+    const detailsRes = await axios.post(`${KRIPICARD_URL}/api/external/cards/carddetails`, {
+      api_key: KRIPICARD_KEY,
+      card_id: card.card_id
+    });
+
+    if (detailsRes.data.success) {
+      if (!card.last4 && detailsRes.data.card_number) {
+        card.last4 = detailsRes.data.card_number.slice(-4);
+        await card.save();
+      }
+      return res.json({
+        success: true,
+        name_on_card: card.name_on_card,
+        card_number: detailsRes.data.card_number,
+        expiry: detailsRes.data.expiry,
+        cvv: detailsRes.data.cvv,
+        balance: detailsRes.data.balance,
+        status: detailsRes.data.status
+      });
+    }
+    res.status(400).json({ success: false, message: 'Could not load card secrets.' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error fetching card details.' });
+  }
+});
+
+// ==========================================
+// ADMIN CARD REQUESTS MANAGEMENT
+// ==========================================
+
+// 5. Admin: List All Card Requests
+app.get('/api/admin/card-requests', async (req, res) => {
+  try {
+    const requests = await VirtualCard.find()
+      .populate('userId', 'fullName name email usdtBalance balance isVerified kycStatus')
+      .sort({ createdAt: -1 });
+    res.json({ success: true, requests });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to load card requests.' });
+  }
+});
+
+// 6. Admin: Approve & Issue Card with Requested Amount
+app.post('/api/admin/card-requests/:id/approve', async (req, res) => {
+  try {
+    const cardReq = await VirtualCard.findById(req.params.id);
+    if (!cardReq) return res.status(404).json({ success: false, message: 'Request not found.' });
+    if (cardReq.status !== 'pending_approval') {
+      return res.status(400).json({ success: false, message: 'This request is already processed.' });
+    }
+
+    const user = await User.findById(cardReq.userId);
+    const loadAmount = Number(cardReq.requested_amount_usd || 10);
+
+    const response = await axios.post(`${KRIPICARD_URL}/api/external/cards/createcard`, {
+      api_key: KRIPICARD_KEY,
+      bin: cardReq.bin || KRIPICARD_BIN,
+      amount: loadAmount,
+      name_on_card: cardReq.name_on_card,
+      email: cardReq.userEmail || (user && user.email) || 'user@tbrexchange.com',
+      dateOfBirth: cardReq.dateOfBirth || '1998-01-01'
+    }, { validateStatus: (s) => s < 500 });
+
+    const data = response.data;
+
+    if (response.status === 200 && data.success) {
+      cardReq.card_id = data.card_id;
+      cardReq.last4 = data.last_4;
+      cardReq.status = 'active';
+      await cardReq.save();
+      return res.json({ success: true, message: `Approved! $${loadAmount} virtual card issued to user.` });
+    }
+
+    if (response.status === 202 && data.pending) {
+      cardReq.order_id = data.order_id;
+      cardReq.reference = data.reference;
+      cardReq.status = 'pending';
+      await cardReq.save();
+      return res.json({ success: true, message: 'Approved! Card issuance is queued at provider.' });
+    }
+
+    return res.status(400).json({ success: false, message: data.message || 'Kripicard failed to issue card (check Kripicard balance).' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error approving card request.' });
+  }
+});
+
+// 7. Admin: Reject & Refund Exact Deducted Amount
+app.post('/api/admin/card-requests/:id/reject', async (req, res) => {
+  try {
+    const cardReq = await VirtualCard.findById(req.params.id);
+    if (!cardReq) return res.status(404).json({ success: false, message: 'Request not found.' });
+    if (cardReq.status !== 'pending_approval') {
+      return res.status(400).json({ success: false, message: 'Already processed.' });
+    }
+
+    const refundAmount = Number(cardReq.total_charged_tbr_usdt || 11.50);
+    cardReq.status = 'rejected';
+    await cardReq.save();
+
+    const user = await User.findById(cardReq.userId);
+    if (user) {
+      const balanceField = user.usdtBalance !== undefined ? 'usdtBalance' : 'balance';
+      user[balanceField] = Number(((user[balanceField] || 0) + refundAmount).toFixed(2));
+      await user.save();
+    }
+
+    res.json({ success: true, message: `Request rejected and $${refundAmount.toFixed(2)} USDT refunded to user.` });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error rejecting request.' });
+  }
+});
 
 app.listen(PORT, () => {
     console.log(`TBR Exchange Server is running on port ${PORT} 🚀`);
