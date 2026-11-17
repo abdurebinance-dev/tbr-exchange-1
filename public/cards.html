@@ -39,7 +39,7 @@
       flex-direction: column;
       justify-content: space-between;
       overflow: hidden;
-      margin-bottom: 20px;
+      margin-bottom: 14px;
     }
     .tbr-virtual-card::before {
       content: "";
@@ -53,20 +53,35 @@
     .brand-box { display: flex; align-items: center; gap: 10px; }
     .brand-logo { width: 32px; height: 32px; border-radius: 8px; object-fit: contain; }
     .brand-name { font-size: 19px; font-weight: 800; letter-spacing: 0.5px; color: #FFFFFF; }
-    .card-chip {
-      width: 40px; height: 28px; border-radius: 6px;
-      background: linear-gradient(135deg, #FCD535, #B8931F);
-      border: 1px solid rgba(255,255,255,0.3);
+
+    /* EMV Chip + Contactless Icon Group */
+    .chip-contactless-group {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      z-index: 2;
+    }
+    .emv-chip-svg {
+      width: 42px;
+      height: 30px;
+      border-radius: 5px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+      display: block;
+    }
+    .contactless-svg {
+      width: 20px;
+      height: 20px;
+      color: rgba(255, 255, 255, 0.75);
+      display: block;
     }
 
     .card-middle { z-index: 2; }
-    .card-balance-badge { font-size: 13px; color: var(--gold); font-weight: 600; margin-bottom: 5px; }
     .card-number {
-      font-size: 20px; font-weight: 700; letter-spacing: 2.2px;
+      font-size: 21px; font-weight: 700; letter-spacing: 2.3px;
       color: var(--gold); text-shadow: 0 2px 6px rgba(0,0,0,0.5);
       white-space: nowrap;
     }
-    .card-tag { font-size: 10px; color: var(--text-muted); letter-spacing: 1.5px; margin-top: 5px; }
+    .card-tag { font-size: 10px; color: var(--text-muted); letter-spacing: 1.5px; margin-top: 6px; }
 
     .card-footer {
       display: flex; justify-content: space-between; align-items: flex-end;
@@ -81,19 +96,45 @@
     }
     .network-logo { font-size: 17px; font-weight: 900; font-style: italic; color: #FFFFFF; opacity: 0.9; white-space: nowrap; flex-shrink: 0; }
 
+    /* External Balance Bar Below Card */
+    .external-balance-bar {
+      background: var(--card-bg);
+      border: 1px solid rgba(252, 213, 53, 0.25);
+      border-radius: 12px;
+      padding: 13px 18px;
+      margin-bottom: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .external-balance-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    .card-balance-badge {
+      font-size: 15px;
+      color: var(--gold);
+      font-weight: 800;
+      letter-spacing: 0.3px;
+    }
+
     /* Mobile Screen Adjustment (Phones < 460px) */
     @media (max-width: 460px) {
       .tbr-virtual-card { padding: 15px 16px; border-radius: 15px; }
       .brand-logo { width: 26px; height: 26px; }
       .brand-name { font-size: 16px; }
-      .card-chip { width: 32px; height: 22px; }
-      .card-balance-badge { font-size: 11.5px; margin-bottom: 3px; }
+      .chip-contactless-group { gap: 6px; }
+      .emv-chip-svg { width: 34px; height: 24px; }
+      .contactless-svg { width: 16px; height: 16px; }
       .card-number { font-size: 15.5px; letter-spacing: 1.4px; }
-      .card-tag { font-size: 8.5px; letter-spacing: 1px; margin-top: 3px; }
+      .card-tag { font-size: 8.5px; letter-spacing: 1px; margin-top: 4px; }
       .card-footer { gap: 8px; }
       .meta-group label { font-size: 7.5px; letter-spacing: 0.4px; margin-bottom: 2px; }
       .meta-group span { font-size: 10px; letter-spacing: 0.3px; }
       .network-logo { font-size: 13px; }
+      .external-balance-bar { padding: 11px 14px; }
+      .card-balance-badge { font-size: 13.5px; }
     }
 
     /* Action Boxes */
@@ -142,11 +183,37 @@
           <img src="icon-192.png" alt="TBR" class="brand-logo" />
           <span class="brand-name">TBr</span>
         </div>
-        <div class="card-chip"></div>
+
+        <!-- EMV Chip + Contactless Wave Icon -->
+        <div class="chip-contactless-group">
+          <svg class="emv-chip-svg" viewBox="0 0 50 36" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="goldChipGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#FFE680"/>
+                <stop offset="50%" stop-color="#E5B83B"/>
+                <stop offset="100%" stop-color="#A67C1E"/>
+              </linearGradient>
+            </defs>
+            <rect x="0.5" y="0.5" width="49" height="35" rx="5.5" fill="url(#goldChipGrad)" stroke="#7A5A12" stroke-width="1"/>
+            <line x1="17" y1="1" x2="17" y2="35" stroke="#7A5A12" stroke-width="1.1"/>
+            <line x1="33" y1="1" x2="33" y2="35" stroke="#7A5A12" stroke-width="1.1"/>
+            <line x1="1" y1="12" x2="17" y2="12" stroke="#7A5A12" stroke-width="1.1"/>
+            <line x1="1" y1="24" x2="17" y2="24" stroke="#7A5A12" stroke-width="1.1"/>
+            <line x1="33" y1="12" x2="49" y2="12" stroke="#7A5A12" stroke-width="1.1"/>
+            <line x1="33" y1="24" x2="49" y2="24" stroke="#7A5A12" stroke-width="1.1"/>
+            <rect x="17" y="10" width="16" height="16" rx="3" fill="none" stroke="#7A5A12" stroke-width="1.1"/>
+          </svg>
+
+          <svg class="contactless-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5.5 9.5C6.8 11.1 6.8 12.9 5.5 14.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M9 7.2C11.2 10.1 11.2 13.9 9 16.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M12.5 5C15.6 9.1 15.6 14.9 12.5 19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M16 2.8C20 8.1 20 15.9 16 21.2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
       </div>
 
       <div class="card-middle">
-        <div class="card-balance-badge" id="cardBalanceDisplay">Balance: $0.00 USD</div>
         <div class="card-number" id="cardNumberDisplay">5378 72•• •••• ••••</div>
         <div class="card-tag">VIRTUAL • TBR EXCHANGE</div>
       </div>
@@ -166,6 +233,12 @@
         </div>
         <div class="network-logo">Mastercard</div>
       </div>
+    </div>
+
+    <!-- CARD BALANCE OUTSIDE & BELOW CARD -->
+    <div class="external-balance-bar">
+      <span class="external-balance-label">Card Status / Balance</span>
+      <span class="card-balance-badge" id="cardBalanceDisplay">Balance: $0.00 USD</span>
     </div>
 
     <!-- TOP-UP BOX (Shows when user has an active card) -->
