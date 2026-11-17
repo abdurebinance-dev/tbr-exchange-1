@@ -5030,11 +5030,25 @@ const KRIPICARD_URL = process.env.KRIPICARD_BASE_URL || 'https://appapi.kripicar
 const KRIPICARD_KEY = process.env.KRIPICARD_API_KEY || '2b24d03c41798f709f75201f9db80d68e6bc4456';
 const KRIPICARD_BIN = process.env.KRIPICARD_DEFAULT_BIN || '537872';
 
+// Self-contained Auth Middleware for TBR Cards
+function verifyCardAuth(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  if (!token) return res.status(401).json({ success: false, message: 'Unauthorized: No token provided.' });
+
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    if (err) return res.status(403).json({ success: false, message: 'Invalid or expired session.' });
+    req.user = decoded;
+    next();
+  });
+}
+
 // 1. Get User's Virtual Cards
-app.get('/api/cards/my-cards', authenticateToken, async (req, res) => {
+app.get('/api/cards/my-cards', verifyCardAuth, async (req, res) => {
   try {
+    const userId = req.user.id || req.user._id || req.user.userId;
     const cards = await VirtualCard.find({
-      userId: req.user.id,
+      userId,
       status: { $nin: ['deleted', 'refunded'] }
     }).sort({ createdAt: -1 });
     res.json({ success: true, cards });
@@ -5044,15 +5058,16 @@ app.get('/api/cards/my-cards', authenticateToken, async (req, res) => {
 });
 
 // 2. Create Virtual Card ($16 USDT: $6 fee + $10 initial card balance)
-app.post('/api/cards/create', authenticateToken, async (req, res) => {
+app.post('/api/cards/create', verifyCardAuth, async (req, res) => {
   try {
+    const userId = req.user.id || req.user._id || req.user.userId;
     const { name_on_card, dateOfBirth } = req.body;
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(userId);
 
     if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
 
     // Rule 1: Verified Trader Only
-    const isUserVerified = user.isVerified === true || user.kycStatus === 'verified';
+    const isUserVerified = user.isVerified === true || user.kycStatus === 'verified' || user.kycStatus === 'approved';
     if (!isUserVerified) {
       return res.status(403).json({
         success: false,
@@ -5131,8 +5146,9 @@ app.post('/api/cards/create', authenticateToken, async (req, res) => {
 });
 
 // 3. Top-up Card from TBR USDT Wallet
-app.post('/api/cards/fund', authenticateToken, async (req, res) => {
+app.post('/api/cards/fund', verifyCardAuth, async (req, res) => {
   try {
+    const userId = req.user.id || req.user._id || req.user.userId;
     const { cardId, amount } = req.body;
     const loadAmount = Number(amount);
 
@@ -5140,12 +5156,12 @@ app.post('/api/cards/fund', authenticateToken, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Minimum top-up amount is $10 USDT.' });
     }
 
-    const card = await VirtualCard.findOne({ _id: cardId, userId: req.user.id });
+    const card = await VirtualCard.findOne({ _id: cardId, userId });
     if (!card || !card.card_id) {
       return res.status(404).json({ success: false, message: 'Active card not found.' });
     }
 
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(userId);
     const balanceField = user.usdtBalance !== undefined ? 'usdtBalance' : 'balance';
     const currentBalance = Number(user[balanceField] || 0);
 
@@ -5183,9 +5199,10 @@ app.post('/api/cards/fund', authenticateToken, async (req, res) => {
 });
 
 // 4. Get Live Card Details (Number, Expiry, CVV, Balance)
-app.get('/api/cards/details/:id', authenticateToken, async (req, res) => {
+app.get('/api/cards/details/:id', verifyCardAuth, async (req, res) => {
   try {
-    const card = await VirtualCard.findOne({ _id: req.params.id, userId: req.user.id });
+    const userId = req.user.id || req.user._id || req.user.userId;
+    const card = await VirtualCard.findOne({ _id: req.params.id, userId });
     if (!card) return res.status(404).json({ success: false, message: 'Card not found.' });
 
     if (card.status === 'pending' && !card.card_id && card.order_id) {
