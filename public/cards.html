@@ -150,8 +150,8 @@
     .inline-error-msg {
       display: none;
       color: #F6465D;
-      font-size: 11.5px;
-      font-weight: 600;
+      font-size: 12px;
+      font-weight: 700;
       margin-top: 6px;
     }
 
@@ -296,7 +296,7 @@
       </div>
       <div class="form-group">
         <label>Initial Card Balance (USD — Min $12)</label>
-        <input type="number" id="initialAmountInput" class="form-control" value="12" min="12" step="any" oninput="validateCardForm()" />
+        <input type="number" id="initialAmountInput" class="form-control" value="12" min="12" step="any" oninput="validateCardForm()" onkeyup="validateCardForm()" onchange="validateCardForm()" />
         <div class="wallet-balance-row">
           <span>Available TBR Wallet:</span>
           <span class="wallet-balance-val" id="availableWalletBalance">Loading...</span>
@@ -315,6 +315,6 @@
     </div>
   </div>
 
-  <script src="cards.js?v=3"></script>
+  <script src="cards.js?v=4"></script>
 </body>
 </html>

@@ -26,13 +26,14 @@ let isUserVerified = false;
 
 function showAlert(msg, type = 'success') {
   const box = document.getElementById('alertBox');
+  if (!box) return;
   box.textContent = msg;
   box.className = `alert ${type === 'success' ? 'alert-success' : 'alert-error'}`;
   box.style.display = 'block';
   setTimeout(() => { box.style.display = 'none'; }, 6000);
 }
 
-// Validate Amount (>= $12 & <= Available TBR USDT Balance with fee) & Verified Name
+// Strict Real-Time Validation (< $12 or > Available USDT Balance disables button & shows red error)
 function validateCardForm() {
   const amtInput = document.getElementById('initialAmountInput');
   const nameInput = document.getElementById('nameOnCard');
@@ -46,34 +47,56 @@ function validateCardForm() {
   const amt = Number(rawVal);
   const nameVal = nameInput ? nameInput.value.trim() : '';
 
+  // 1. Check empty or less than $12
+  if (!rawVal || isNaN(amt) || amt < 12) {
+    amtInput.style.borderColor = '#F6465D';
+    if (errorEl) {
+      errorEl.textContent = '⚠️ Minimum initial card balance is $12.00 USD.';
+      errorEl.style.display = 'block';
+    }
+    btn.disabled = true;
+    btn.style.opacity = '0.35';
+    btn.style.cursor = 'not-allowed';
+    btn.style.pointerEvents = 'none';
+    return false;
+  }
+
+  // Total cost including $1.00 + 5% issuance fee
   const totalFee = 1.00 + (amt * 0.05);
   const totalRequired = Number((amt + totalFee).toFixed(2));
 
-  if (!rawVal || isNaN(amt) || amt < 12) {
-    amtInput.classList.add('input-invalid');
-    errorEl.textContent = 'Minimum initial card balance is $12.00 USD.';
-    errorEl.style.display = 'block';
+  // 2. Check if entered amount (or total with fee) exceeds Available TBR USDT Balance
+  if (amt > userWalletBalance || totalRequired > userWalletBalance) {
+    amtInput.style.borderColor = '#F6465D';
+    if (errorEl) {
+      errorEl.textContent = `⚠️ Insufficient balance! Total required is $${totalRequired.toFixed(2)} USDT (incl. fee), but your balance is $${userWalletBalance.toFixed(2)} USDT.`;
+      errorEl.style.display = 'block';
+    }
     btn.disabled = true;
+    btn.style.opacity = '0.35';
+    btn.style.cursor = 'not-allowed';
+    btn.style.pointerEvents = 'none';
     return false;
   }
 
-  if (totalRequired > userWalletBalance) {
-    amtInput.classList.add('input-invalid');
-    errorEl.textContent = `Insufficient USDT balance! Need $${totalRequired.toFixed(2)} USDT (incl. fee), available: $${userWalletBalance.toFixed(2)} USDT.`;
-    errorEl.style.display = 'block';
-    btn.disabled = true;
-    return false;
-  }
-
-  amtInput.classList.remove('input-invalid');
-  errorEl.style.display = 'none';
-
+  // 3. Check if verified legal name exists
   if (nameVal.length < 2) {
+    amtInput.style.borderColor = '#2B3139';
+    if (errorEl) errorEl.style.display = 'none';
     btn.disabled = true;
+    btn.style.opacity = '0.35';
+    btn.style.cursor = 'not-allowed';
+    btn.style.pointerEvents = 'none';
     return false;
   }
 
+  // All valid -> Enable gold button
+  amtInput.style.borderColor = '#0ECB81';
+  if (errorEl) errorEl.style.display = 'none';
   btn.disabled = false;
+  btn.style.opacity = '1';
+  btn.style.cursor = 'pointer';
+  btn.style.pointerEvents = 'auto';
   return true;
 }
 
@@ -88,7 +111,6 @@ function updateTopupCost() {
   btn.textContent = `Add Funds ($${total} USDT Total)`;
 }
 
-// Apply User Profile (Balance, KYC Status, Verified Name) to UI
 function applyUserStateToUI(balanceVal, kycRaw, legalName) {
   const createBox = document.getElementById('createBox');
   const unverifiedBox = document.getElementById('unverifiedBox');
@@ -122,14 +144,13 @@ function applyUserStateToUI(balanceVal, kycRaw, legalName) {
     } else {
       nameInput.readOnly = false;
       nameInput.placeholder = 'Enter your verified full name';
-      nameInput.oninput = validateCardForm;
+      nameInput.addEventListener('input', validateCardForm);
     }
   }
 
   validateCardForm();
 }
 
-// Step 1: Instant paint from localStorage (Zero-second load just like dashboard.js)
 function initFromLocalCache() {
   const cachedBal = localStorage.getItem('user_balance_val') || localStorage.getItem('balance') || '0';
   const cachedKyc = localStorage.getItem('kycStatus') || 'not_submitted';
@@ -137,13 +158,11 @@ function initFromLocalCache() {
   applyUserStateToUI(cachedBal, cachedKyc, cachedName);
 }
 
-// Step 2: Sync live Profile & Cards from Backend
 async function loadUserCards() {
   const { token, email, userId } = getIdentity();
   if (!token) return;
 
   try {
-    // Fetch user profile using the exact same endpoint as dashboard.js
     const params = new URLSearchParams();
     if (email) params.set('email', email);
     if (userId) params.set('userId', userId);
@@ -173,7 +192,6 @@ async function loadUserCards() {
       }
     }
 
-    // Fetch existing virtual cards / pending requests
     const cardsRes = await fetch(`${API_BASE}/api/cards/my-cards`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
@@ -335,7 +353,15 @@ async function fundCard() {
   }
 }
 
-// Initialize
-initFromLocalCache();
-updateTopupCost();
-loadUserCards();
+// Attach listeners & Initialize
+document.addEventListener('DOMContentLoaded', () => {
+  const amtInput = document.getElementById('initialAmountInput');
+  if (amtInput) {
+    amtInput.addEventListener('input', validateCardForm);
+    amtInput.addEventListener('keyup', validateCardForm);
+    amtInput.addEventListener('change', validateCardForm);
+  }
+  initFromLocalCache();
+  updateTopupCost();
+  loadUserCards();
+});
