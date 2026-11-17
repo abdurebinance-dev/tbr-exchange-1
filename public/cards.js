@@ -1,15 +1,28 @@
-const API_BASE = 'https://tbr-exchange-backend.onrender.com';
-const token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('jwt');
+const API_BASE = window.location.hostname.includes('localhost')
+  ? ''
+  : 'https://tbr-exchange-backend.onrender.com';
 
+function getIdentity() {
+  let t = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
+  let email = localStorage.getItem('userEmail') || localStorage.getItem('email') || '';
+  let userId = localStorage.getItem('userId') || localStorage.getItem('tbr_resolved_uid') || '';
+  return {
+    token: t.replace(/^Bearer\s+/i, '').trim(),
+    email: email.trim(),
+    userId: userId.trim()
+  };
+}
+
+const { token } = getIdentity();
 if (!token) {
-  window.location.href = 'index.html';
+  window.location.replace('signin.html');
 }
 
 let activeCardMongoId = null;
 let cardSecrets = null;
 let secretsVisible = false;
-let userWalletBalance = 0;
-let isUserVerified = true;
+let userWalletBalance = Number(localStorage.getItem('user_balance_val') || localStorage.getItem('balance') || 0);
+let isUserVerified = false;
 
 function showAlert(msg, type = 'success') {
   const box = document.getElementById('alertBox');
@@ -75,52 +88,98 @@ function updateTopupCost() {
   btn.textContent = `Add Funds ($${total} USDT Total)`;
 }
 
-// Load User's Cards, KYC Status, Verified Name & Wallet Balance from Backend
-async function loadUserCards() {
+// Apply User Profile (Balance, KYC Status, Verified Name) to UI
+function applyUserStateToUI(balanceVal, kycRaw, legalName) {
   const createBox = document.getElementById('createBox');
   const unverifiedBox = document.getElementById('unverifiedBox');
   const nameInput = document.getElementById('nameOnCard');
   const balEl = document.getElementById('availableWalletBalance');
 
+  userWalletBalance = Number(balanceVal || 0);
+  const kycLower = String(kycRaw || '').toLowerCase();
+  isUserVerified = (kycLower === 'verified' || kycLower === 'approved' || kycLower === 'true');
+
+  if (balEl) {
+    balEl.textContent = `$${userWalletBalance.toFixed(2)} USDT`;
+    balEl.style.color = userWalletBalance >= 13.60 ? '#0ECB81' : '#F6465D';
+  }
+
+  if (!isUserVerified) {
+    if (createBox) createBox.style.display = 'none';
+    if (unverifiedBox) unverifiedBox.style.display = 'block';
+    return;
+  }
+
+  if (unverifiedBox) unverifiedBox.style.display = 'none';
+  if (createBox) createBox.style.display = 'block';
+
+  const cleanName = (legalName || '').trim();
+  if (nameInput) {
+    if (cleanName.length >= 2) {
+      nameInput.value = cleanName;
+      nameInput.readOnly = true;
+      document.getElementById('cardHolderDisplay').textContent = cleanName.toUpperCase();
+    } else {
+      nameInput.readOnly = false;
+      nameInput.placeholder = 'Enter your verified full name';
+      nameInput.oninput = validateCardForm;
+    }
+  }
+
+  validateCardForm();
+}
+
+// Step 1: Instant paint from localStorage (Zero-second load just like dashboard.js)
+function initFromLocalCache() {
+  const cachedBal = localStorage.getItem('user_balance_val') || localStorage.getItem('balance') || '0';
+  const cachedKyc = localStorage.getItem('kycStatus') || 'not_submitted';
+  const cachedName = localStorage.getItem('kycFullName') || localStorage.getItem('fullName') || localStorage.getItem('userName') || '';
+  applyUserStateToUI(cachedBal, cachedKyc, cachedName);
+}
+
+// Step 2: Sync live Profile & Cards from Backend
+async function loadUserCards() {
+  const { token, email, userId } = getIdentity();
+  if (!token) return;
+
   try {
-    const res = await fetch(`${API_BASE}/api/cards/my-cards`, {
+    // Fetch user profile using the exact same endpoint as dashboard.js
+    const params = new URLSearchParams();
+    if (email) params.set('email', email);
+    if (userId) params.set('userId', userId);
+
+    const profileRes = await fetch(`${API_BASE}/api/user/profile?${params.toString()}`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
-    const data = await res.json();
 
-    if (data.success) {
-      userWalletBalance = Number(data.walletBalance || 0);
-      isUserVerified = data.isVerified !== false;
-
-      if (balEl) {
-        balEl.textContent = `$${userWalletBalance.toFixed(2)} USDT`;
-        balEl.style.color = userWalletBalance >= 13.60 ? '#0ECB81' : '#F6465D';
-      }
-
-      if (!isUserVerified) {
-        if (createBox) createBox.style.display = 'none';
-        if (unverifiedBox) unverifiedBox.style.display = 'block';
-        return;
-      }
-
-      if (unverifiedBox) unverifiedBox.style.display = 'none';
-      if (createBox) createBox.style.display = 'block';
-
-      if (nameInput) {
-        if (data.verifiedName && data.verifiedName.length >= 2) {
-          nameInput.value = data.verifiedName;
-          nameInput.readOnly = true;
-          document.getElementById('cardHolderDisplay').textContent = data.verifiedName;
-        } else {
-          nameInput.readOnly = false;
-          nameInput.placeholder = 'Enter your full legal name';
-          nameInput.oninput = validateCardForm;
+    if (profileRes.ok) {
+      const pData = await profileRes.json();
+      const userObj = pData.user || pData.data || pData;
+      if (userObj) {
+        if (userObj._id) localStorage.setItem('userId', String(userObj._id));
+        if (userObj.email) localStorage.setItem('userEmail', userObj.email);
+        const fullName = (userObj.fullName || userObj.kycFullName || userObj.name || '').trim();
+        if (fullName) {
+          localStorage.setItem('userName', fullName);
+          localStorage.setItem('kycFullName', fullName);
         }
+        if (userObj.kycStatus) localStorage.setItem('kycStatus', userObj.kycStatus);
+        if (userObj.balance !== undefined && userObj.balance !== null) {
+          localStorage.setItem('user_balance_val', Number(userObj.balance).toFixed(2));
+        }
+
+        const kycVal = userObj.isVerified === true ? 'verified' : (userObj.kycStatus || localStorage.getItem('kycStatus'));
+        applyUserStateToUI(userObj.balance, kycVal, fullName);
       }
+    }
 
-      validateCardForm();
-
-      if (data.cards && data.cards.length > 0) {
+    // Fetch existing virtual cards / pending requests
+    const cardsRes = await fetch(`${API_BASE}/api/cards/my-cards`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (cardsRes.ok) {
+      const data = await cardsRes.json();
+      if (data.success && data.cards && data.cards.length > 0) {
         const card = data.cards[0];
         activeCardMongoId = card._id;
         document.getElementById('cardHolderDisplay').textContent = card.name_on_card;
@@ -134,22 +193,9 @@ async function loadUserCards() {
 
         await loadCardDetails(card._id);
       }
-    } else {
-      if (balEl) balEl.textContent = '$0.00 USDT';
-      if (nameInput) {
-        nameInput.readOnly = false;
-        nameInput.placeholder = 'Enter your full legal name';
-        nameInput.oninput = validateCardForm;
-      }
     }
   } catch (err) {
-    console.error('Error loading cards:', err);
-    if (balEl) balEl.textContent = 'Error loading balance';
-    if (nameInput) {
-      nameInput.readOnly = false;
-      nameInput.placeholder = 'Enter your full legal name';
-      nameInput.oninput = validateCardForm;
-    }
+    console.error('Error syncing card page:', err);
   }
 }
 
@@ -290,5 +336,6 @@ async function fundCard() {
 }
 
 // Initialize
+initFromLocalCache();
 updateTopupCost();
 loadUserCards();
