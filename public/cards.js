@@ -17,14 +17,9 @@ function showAlert(msg, type = 'success') {
 
 // 1. Update Total Cost on Create Card ($1.00 + 5% fee: 4% Kripicard + 1% TBR)
 function updateTotalCost() {
-  const amtInput = document.getElementById('initialAmountInput');
   const btn = document.getElementById('createBtn');
-  if (!amtInput || !btn) return;
-
-  const amt = Number(amtInput.value) || 10;
-  const fee = 1.00 + (amt * 0.05);
-  const total = (amt + fee).toFixed(2);
-  btn.textContent = `Request TBR Card ($${total} USDT Total)`;
+  if (!btn) return;
+  btn.textContent = 'Request TBR Card';
 }
 
 // 2. Update Total Cost on Top-up ($1.00 + 4% network fee, 0% TBR markup)
