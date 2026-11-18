@@ -1482,7 +1482,10 @@ async function loadAdminCardRequests() {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#848e9c;">Loading card requests...</td></tr>';
 
     try {
-        const res = await fetch('/api/admin/card-requests');
+        const res = await fetch(`${API_BASE}/api/admin/card-requests?t=${Date.now()}`, {
+            headers: { 'Authorization': 'Bearer ' + getToken() },
+            cache: 'no-store'
+        });
         const data = await res.json();
 
         if (!data.success || !data.requests || data.requests.length === 0) {
@@ -1493,9 +1496,9 @@ async function loadAdminCardRequests() {
         tbody.innerHTML = data.requests.map(req => {
             const dateStr = new Date(req.createdAt).toLocaleString();
             const email = req.userEmail || (req.userId && req.userId.email) || 'N/A';
-            const reqUsd = Number(req.requested_amount_usd || 10).toFixed(2);
-            const feeUsdt = Number(req.issuance_fee_usdt || 1.50).toFixed(2);
-            const totalUsdt = Number(req.total_charged_tbr_usdt || 11.50).toFixed(2);
+            const reqUsd = Number(req.requested_amount_usd || 10.40).toFixed(2);
+            const feeUsdt = Number(req.issuance_fee_usdt || 1.60).toFixed(2);
+            const totalUsdt = Number(req.total_charged_tbr_usdt || 12.00).toFixed(2);
 
             let statusBadge = '';
             let actionButtons = '';
@@ -1504,8 +1507,8 @@ async function loadAdminCardRequests() {
                 statusBadge = '<span class="badge-pending">⏳ Pending Approval</span>';
                 actionButtons = `
                     <div style="display:flex; gap:6px;">
-                        <button class="btn btn-approve" onclick="approveCardRequest('${req._id}', this)">Approve & Issue</button>
-                        <button class="btn btn-reject" onclick="rejectCardRequest('${req._id}', this)">Reject & Refund</button>
+                        <button type="button" class="btn btn-approve" data-action="approve-card" data-id="${req._id}">Approve & Issue</button>
+                        <button type="button" class="btn btn-reject" data-action="reject-card" data-id="${req._id}">Reject & Refund</button>
                     </div>
                 `;
             } else if (req.status === 'active') {
@@ -1544,45 +1547,91 @@ async function loadAdminCardRequests() {
 
 async function approveCardRequest(id, btn) {
     if (!confirm('Approve this request and issue the virtual card via Kripicard?')) return;
-    btn.disabled = true;
-    btn.textContent = 'Issuing...';
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Issuing...';
+    }
 
     try {
-        const res = await fetch(`/api/admin/card-requests/${id}/approve`, { method: 'POST' });
+        const res = await fetch(`${API_BASE}/api/admin/card-requests/${id}/approve`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + getToken()
+            }
+        });
         const data = await res.json();
-        alert(data.message || (data.success ? 'Card issued!' : 'Failed to issue card.'));
+        alert(data.message || (data.success ? '✅ Card issued successfully!' : '❌ Failed to issue card.'));
         loadAdminCardRequests();
     } catch (err) {
-        alert('Server error while approving card.');
-        btn.disabled = false;
-        btn.textContent = 'Approve & Issue';
+        alert('❌ Server error while approving card.');
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Approve & Issue';
+        }
     }
 }
 
 async function rejectCardRequest(id, btn) {
     if (!confirm('Reject this request and refund the user\'s USDT?')) return;
-    btn.disabled = true;
-    btn.textContent = 'Refunding...';
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Refunding...';
+    }
 
     try {
-        const res = await fetch(`/api/admin/card-requests/${id}/reject`, { method: 'POST' });
+        const res = await fetch(`${API_BASE}/api/admin/card-requests/${id}/reject`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + getToken()
+            }
+        });
         const data = await res.json();
-        alert(data.message || (data.success ? 'Rejected & refunded.' : 'Failed.'));
+        alert(data.message || (data.success ? '✅ Rejected & refunded.' : '❌ Failed.'));
         loadAdminCardRequests();
     } catch (err) {
-        alert('Server error while rejecting.');
-        btn.disabled = false;
-        btn.textContent = 'Reject & Refund';
+        alert('❌ Server error while rejecting.');
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Reject & Refund';
+        }
     }
 }
 
-// Auto-load when "8. Cards" tab is clicked
+// Handle "8. Cards" tab click, Refresh button, Approve & Reject buttons via delegation
 document.addEventListener('click', (e) => {
     const tabBtn = e.target.closest('.nav-tab[data-target="cards"]');
     if (tabBtn) {
         loadAdminCardRequests();
     }
+
+    const appCardBtn = e.target.closest('[data-action="approve-card"]');
+    if (appCardBtn) {
+        e.preventDefault();
+        approveCardRequest(appCardBtn.dataset.id, appCardBtn);
+    }
+
+    const rejCardBtn = e.target.closest('[data-action="reject-card"]');
+    if (rejCardBtn) {
+        e.preventDefault();
+        rejectCardRequest(rejCardBtn.dataset.id, rejCardBtn);
+    }
 });
+
+window.loadAdminCardRequests = loadAdminCardRequests;
+window.approveCardRequest = approveCardRequest;
+window.rejectCardRequest = rejectCardRequest;
+
+async function removeAdminSession(sessionId) {
+    try {
+        await fetch(`${API_BASE}/api/admin/sessions/${encodeURIComponent(sessionId)}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+        openDevicesModal();
+    } catch (e) {}
+}
 
 async function removeAdminSession(sessionId) {
     try {
