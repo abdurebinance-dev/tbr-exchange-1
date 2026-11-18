@@ -23,6 +23,7 @@ let cardSecrets = null;
 let secretsVisible = false;
 let userWalletBalance = Number(localStorage.getItem('user_balance_val') || localStorage.getItem('balance') || 0);
 let isUserVerified = false;
+let userHasCard = false;
 
 const EYE_OPEN_SVG = `
   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -126,6 +127,44 @@ function updateTopupCost() {
   btn.textContent = `Add Funds ($${amt.toFixed(2)} USDT)`;
 }
 
+function renderTransactionsTable(txList) {
+  const tbody = document.getElementById('txTableBody');
+  if (!tbody) return;
+
+  if (!Array.isArray(txList) || txList.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="tx-empty">No transactions found</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = txList.map(tx => {
+    const rawDate = tx.date || tx.created_at || tx.createdAt || tx.timestamp || '';
+    const dateStr = rawDate ? new Date(rawDate).toLocaleString() : '—';
+    const typeStr = String(tx.type || tx.transaction_type || 'CHARGE').toUpperCase();
+    const merchantStr = tx.merchant || tx.merchant_name || tx.description || '—';
+    const amtVal = Number(tx.amount || tx.usd_amount || 0).toFixed(2);
+    const statusRaw = String(tx.status || 'COMPLETED').toLowerCase();
+    const reasonStr = tx.reason || tx.decline_reason || tx.failure_reason || '—';
+
+    let badgeCls = 'tx-badge-success';
+    if (statusRaw.includes('fail') || statusRaw.includes('declin') || statusRaw.includes('reject')) {
+      badgeCls = 'tx-badge-failed';
+    } else if (statusRaw.includes('pend')) {
+      badgeCls = 'tx-badge-pending';
+    }
+
+    return `
+      <tr>
+        <td style="font-size:11px; color:#848E9C; white-space:nowrap;">${dateStr}</td>
+        <td style="font-weight:700;">${typeStr}</td>
+        <td>${merchantStr}</td>
+        <td style="font-weight:700; color:#FCD535;">$${amtVal}</td>
+        <td><span class="tx-badge ${badgeCls}">${statusRaw.toUpperCase()}</span></td>
+        <td style="font-size:11px; color:#848E9C;">${reasonStr}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
 function applyUserStateToUI(balanceVal, kycRaw, legalName) {
   const createBox = document.getElementById('createBox');
   const unverifiedBox = document.getElementById('unverifiedBox');
@@ -139,6 +178,13 @@ function applyUserStateToUI(balanceVal, kycRaw, legalName) {
   if (balEl) {
     balEl.textContent = `$${userWalletBalance.toFixed(2)} USDT`;
     balEl.style.color = userWalletBalance >= 12 ? '#0ECB81' : '#F6465D';
+  }
+
+  // If user already has an active or pending card, hide Request New TBR Card box
+  if (userHasCard) {
+    if (createBox) createBox.style.display = 'none';
+    if (unverifiedBox) unverifiedBox.style.display = 'none';
+    return;
   }
 
   if (!isUserVerified) {
@@ -186,6 +232,10 @@ async function loadUserCards() {
       headers: { 'Authorization': `Bearer ${token}` }
     });
 
+    let latestBal = userWalletBalance;
+    let latestKyc = localStorage.getItem('kycStatus') || 'not_submitted';
+    let latestName = localStorage.getItem('kycFullName') || localStorage.getItem('fullName') || '';
+
     if (profileRes.ok) {
       const pData = await profileRes.json();
       const userObj = pData.user || pData.data || pData;
@@ -194,39 +244,51 @@ async function loadUserCards() {
         if (userObj.email) localStorage.setItem('userEmail', userObj.email);
         const fullName = (userObj.fullName || userObj.kycFullName || userObj.name || '').trim();
         if (fullName) {
+          latestName = fullName;
           localStorage.setItem('userName', fullName);
           localStorage.setItem('kycFullName', fullName);
         }
         if (userObj.kycStatus) localStorage.setItem('kycStatus', userObj.kycStatus);
         if (userObj.balance !== undefined && userObj.balance !== null) {
-          localStorage.setItem('user_balance_val', Number(userObj.balance).toFixed(2));
+          latestBal = Number(userObj.balance);
+          localStorage.setItem('user_balance_val', latestBal.toFixed(2));
         }
-
-        const kycVal = userObj.isVerified === true ? 'verified' : (userObj.kycStatus || localStorage.getItem('kycStatus'));
-        applyUserStateToUI(userObj.balance, kycVal, fullName);
+        latestKyc = userObj.isVerified === true ? 'verified' : (userObj.kycStatus || latestKyc);
       }
     }
 
     const cardsRes = await fetch(`${API_BASE}/api/cards/my-cards?${params.toString()}`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
+
     if (cardsRes.ok) {
       const data = await cardsRes.json();
-      if (data.success && data.cards && data.cards.length > 0) {
-        const card = data.cards[0];
-        activeCardMongoId = card._id;
-        document.getElementById('cardHolderDisplay').textContent = card.name_on_card;
+      const activeOrPending = (data.cards || []).find(c => ['active', 'pending_approval', 'pending'].includes(c.status));
 
-        if (card.status === 'active') {
+      if (data.success && activeOrPending) {
+        userHasCard = true;
+        activeCardMongoId = activeOrPending._id;
+        document.getElementById('cardHolderDisplay').textContent = activeOrPending.name_on_card;
+        document.getElementById('createBox').style.display = 'none';
+
+        if (activeOrPending.status === 'active') {
           document.getElementById('topupBox').style.display = 'block';
+          document.getElementById('transactionsBox').style.display = 'block';
           updateTopupCost();
         } else {
           document.getElementById('topupBox').style.display = 'none';
+          document.getElementById('transactionsBox').style.display = 'none';
         }
 
-        await loadCardDetails(card._id);
+        await loadCardDetails(activeOrPending._id);
+      } else {
+        userHasCard = false;
+        document.getElementById('topupBox').style.display = 'none';
+        document.getElementById('transactionsBox').style.display = 'none';
       }
     }
+
+    applyUserStateToUI(latestBal, latestKyc, latestName);
   } catch (err) {
     console.error('Error syncing card page:', err);
   }
@@ -249,27 +311,36 @@ async function loadCardDetails(mongoId) {
       document.getElementById('cardBalanceDisplay').textContent = `⏳ Pending Admin Approval ($${reqAmt})`;
       document.getElementById('cardHolderDisplay').textContent = data.name_on_card;
       document.getElementById('topupBox').style.display = 'none';
+      document.getElementById('transactionsBox').style.display = 'none';
+      document.getElementById('createBox').style.display = 'none';
       return;
     }
 
     if (data.success && data.status === 'rejected') {
+      userHasCard = false;
       const refAmt = Number(data.total_charged_tbr_usdt || 12.00).toFixed(2);
       document.getElementById('cardBalanceDisplay').textContent = `❌ Rejected ($${refAmt} Refunded)`;
       document.getElementById('topupBox').style.display = 'none';
+      document.getElementById('transactionsBox').style.display = 'none';
       return;
     }
 
     if (data.success && data.status === 'pending') {
       document.getElementById('cardBalanceDisplay').textContent = 'Issuing (Pending)...';
+      document.getElementById('createBox').style.display = 'none';
       return;
     }
 
     if (data.success && data.card_number) {
+      userHasCard = true;
       cardSecrets = data;
       document.getElementById('cardBalanceDisplay').textContent = `Balance: $${Number(data.balance || 0).toFixed(2)} USD`;
       document.getElementById('cardHolderDisplay').textContent = data.name_on_card;
+      document.getElementById('createBox').style.display = 'none';
       document.getElementById('topupBox').style.display = 'block';
+      document.getElementById('transactionsBox').style.display = 'block';
       renderCardNumbers();
+      renderTransactionsTable(data.transactions || data.recent_transactions || []);
     }
   } catch (err) {
     console.error('Error fetching details:', err);
@@ -343,6 +414,14 @@ async function copyCardNumber() {
     document.body.removeChild(tmp);
     showAlert('Card number copied to clipboard!', 'success');
   }
+}
+
+async function refreshTransactions() {
+  if (!activeCardMongoId) return;
+  const btn = document.getElementById('refreshTxBtn');
+  if (btn) btn.classList.add('spinning');
+  await loadCardDetails(activeCardMongoId);
+  if (btn) setTimeout(() => btn.classList.remove('spinning'), 400);
 }
 
 // Submit Card Request
@@ -430,6 +509,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const createBtn = document.getElementById('createBtn');
   const revealBtn = document.getElementById('revealBtn');
   const copyCardBtn = document.getElementById('copyCardBtn');
+  const refreshTxBtn = document.getElementById('refreshTxBtn');
   const topupBtn = document.getElementById('topupBtn');
 
   if (amtInput) {
@@ -453,6 +533,12 @@ document.addEventListener('DOMContentLoaded', () => {
     copyCardBtn.addEventListener('click', (e) => {
       e.preventDefault();
       copyCardNumber();
+    });
+  }
+  if (refreshTxBtn) {
+    refreshTxBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      refreshTransactions();
     });
   }
   if (topupBtn) {
