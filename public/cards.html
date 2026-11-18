@@ -78,7 +78,7 @@
       display: block; font-size: 12.5px; font-weight: 700; letter-spacing: 0.6px;
       text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .network-logo { font-size: 17px; font-weight: 900; font-style: italic; color: #FFFFFF; opacity: 0.9; white-space: nowrap; flex-shrink: 0; }
+    .network-logo { font-size: 18px; font-weight: 900; font-style: italic; color: #FFFFFF; opacity: 0.95; white-space: nowrap; flex-shrink: 0; }
 
     /* External Balance Bar Below Card */
     .external-balance-bar {
@@ -107,7 +107,7 @@
       .card-footer { gap: 8px; }
       .meta-group label { font-size: 7.5px; letter-spacing: 0.4px; margin-bottom: 2px; }
       .meta-group span { font-size: 10px; letter-spacing: 0.3px; }
-      .network-logo { font-size: 13px; }
+      .network-logo { font-size: 14px; }
       .external-balance-bar { padding: 11px 14px; }
       .card-balance-badge { font-size: 13.5px; }
     }
@@ -127,7 +127,6 @@
       transition: border-color 0.2s;
     }
     .form-control:focus { border-color: var(--gold); }
-    .form-control.input-invalid { border-color: #F6465D !important; }
     .form-control[readonly] {
       background: #161A20;
       color: var(--gold);
@@ -196,7 +195,7 @@
     <div class="top-bar">
       <a href="dashboard.html" class="back-btn">← Back to Dashboard</a>
       <div class="page-title">TBR Virtual Card</div>
-      <button class="btn-outline" onclick="toggleSecrets()" id="revealBtn">Show CVV</button>
+      <button type="button" class="btn-outline" id="revealBtn">Show CVV</button>
     </div>
 
     <div id="alertBox" class="alert"></div>
@@ -278,13 +277,13 @@
       <h3>Top-up Card from TBR USDT Wallet</h3>
       <div class="info-list">
         • Funds are deducted directly from your TBR USDT balance.<br/>
-        • Minimum top-up: <b>$10.00 USDT</b> (Network fee: <b>$1.00 + 4%</b>, 0% TBR fee).
+        • Minimum top-up: <b>$12.00 USDT</b> (Network fee: <b>$1.00 + 4%</b> deducted from amount).
       </div>
       <div class="form-group">
-        <label>Amount to Add (USD)</label>
-        <input type="number" id="topupAmount" class="form-control" value="10" min="10" oninput="updateTopupCost()" />
+        <label>Amount to Deduct (USDT — Min $12)</label>
+        <input type="number" id="topupAmount" class="form-control" value="12" min="12" oninput="updateTopupCost()" />
       </div>
-      <button class="btn-gold" id="topupBtn" onclick="fundCard()">Add Funds ($11.40 USDT Total)</button>
+      <button type="button" class="btn-gold" id="topupBtn">Add Funds ($12.00 USDT)</button>
     </div>
 
     <!-- ISSUE NEW CARD BOX (Shown only if user IS verified) -->
@@ -292,10 +291,10 @@
       <h3>Request New TBR Card</h3>
       <div class="info-list">
         • <b>Requirement 1:</b> Verified TBR Trader Account.<br/>
-        • <b>Requirement 2:</b> Minimum <b>$12.00</b> initial card balance.
+        • <b>Requirement 2:</b> Minimum <b>$12.00</b> USDT amount.
       </div>
       <div class="form-group">
-        <label>Initial Card Balance (USD — Min $12)</label>
+        <label>Amount (USDT — Min $12)</label>
         <input type="number" id="initialAmountInput" class="form-control" value="12" min="12" step="any" oninput="validateCardForm()" onkeyup="validateCardForm()" onchange="validateCardForm()" />
         <div class="wallet-balance-row">
           <span>Available TBR Wallet:</span>
@@ -311,10 +310,10 @@
         <label>Date of Birth (YYYY-MM-DD)</label>
         <input type="text" id="dobInput" class="form-control" value="1998-01-15" placeholder="YYYY-MM-DD" />
       </div>
-      <button class="btn-gold" id="createBtn" onclick="createCard()" disabled>Request TBR Card</button>
+      <button type="button" class="btn-gold" id="createBtn" disabled>Request TBR Card</button>
     </div>
   </div>
 
-  <script src="cards.js?v=7"></script>
+  <script src="cards.js?v=9"></script>
 </body>
 </html>

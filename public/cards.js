@@ -268,19 +268,30 @@ function renderCardNumbers() {
     numEl.textContent = cardSecrets.card_number.replace(/(.{4})/g, '$1 ').trim();
     expEl.textContent = cardSecrets.expiry;
     cvvEl.textContent = cardSecrets.cvv;
-    btn.textContent = 'Hide CVV';
+    if (btn) btn.textContent = 'Hide CVV';
   } else {
     const first6 = cardSecrets.card_number.slice(0, 6).replace(/(.{4})/, '$1 ');
     const last4 = cardSecrets.card_number.slice(-4);
     numEl.textContent = `${first6}•• •••• ${last4}`;
     expEl.textContent = '••/••';
     cvvEl.textContent = '•••';
-    btn.textContent = 'Show CVV';
+    if (btn) btn.textContent = 'Show CVV';
   }
 }
 
-function toggleSecrets() {
-  if (!cardSecrets) return showAlert('No active card details loaded yet.', 'error');
+async function toggleSecrets() {
+  const btn = document.getElementById('revealBtn');
+
+  if (!cardSecrets && activeCardMongoId) {
+    if (btn) btn.textContent = 'Loading...';
+    await loadCardDetails(activeCardMongoId);
+  }
+
+  if (!cardSecrets || !cardSecrets.card_number) {
+    if (btn) btn.textContent = 'Show CVV';
+    return showAlert('Card details could not be loaded. Please refresh.', 'error');
+  }
+
   secretsVisible = !secretsVisible;
   renderCardNumbers();
 }
@@ -362,10 +373,6 @@ async function fundCard() {
   }
 }
 
-// Expose globally & attach click listeners directly
-window.createCard = createCard;
-window.fundCard = fundCard;
-window.toggleSecrets = toggleSecrets;
 window.validateCardForm = validateCardForm;
 window.updateTopupCost = updateTopupCost;
 
