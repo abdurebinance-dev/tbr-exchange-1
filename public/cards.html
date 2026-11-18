@@ -24,6 +24,7 @@
     .back-btn { color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 600; white-space: nowrap; }
     .back-btn:hover { color: var(--gold); }
     .page-title { font-size: 17px; font-weight: 700; text-align: center; }
+    .top-spacer { width: 95px; }
 
     /* TBR Custom Black & Gold Card Design */
     .tbr-virtual-card {
@@ -60,10 +61,44 @@
     .contactless-svg { width: 20px; height: 20px; color: rgba(255, 255, 255, 0.75); display: block; }
 
     .card-middle { z-index: 2; }
+    .card-number-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
     .card-number {
-      font-size: 21px; font-weight: 700; letter-spacing: 2.3px;
+      font-size: 20.5px; font-weight: 700; letter-spacing: 2.2px;
       color: var(--gold); text-shadow: 0 2px 6px rgba(0,0,0,0.5);
       white-space: nowrap;
+    }
+    .card-inline-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .icon-action-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      color: #A0AAB5;
+      width: 28px;
+      height: 28px;
+      border-radius: 7px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+    .icon-action-btn:hover {
+      background: rgba(252, 213, 53, 0.16);
+      border-color: rgba(252, 213, 53, 0.45);
+      color: var(--gold);
+    }
+    .icon-action-btn svg {
+      width: 15px;
+      height: 15px;
+      display: block;
     }
     .card-tag { font-size: 10px; color: var(--text-muted); letter-spacing: 1.5px; margin-top: 6px; }
 
@@ -96,13 +131,17 @@
 
     /* Mobile Screen Adjustment */
     @media (max-width: 460px) {
+      .top-spacer { width: 65px; }
       .tbr-virtual-card { padding: 15px 16px; border-radius: 15px; }
       .brand-logo { width: 26px; height: 26px; }
       .brand-name { font-size: 16px; }
       .chip-contactless-group { gap: 6px; }
       .emv-chip-svg { width: 34px; height: 24px; }
       .contactless-svg { width: 16px; height: 16px; }
-      .card-number { font-size: 15.5px; letter-spacing: 1.4px; }
+      .card-number-row { gap: 6px; }
+      .card-number { font-size: 14.5px; letter-spacing: 1.2px; }
+      .icon-action-btn { width: 24px; height: 24px; border-radius: 6px; }
+      .icon-action-btn svg { width: 13px; height: 13px; }
       .card-tag { font-size: 8.5px; letter-spacing: 1px; margin-top: 4px; }
       .card-footer { gap: 8px; }
       .meta-group label { font-size: 7.5px; letter-spacing: 0.4px; margin-bottom: 2px; }
@@ -181,10 +220,6 @@
       filter: grayscale(60%);
       cursor: not-allowed;
     }
-    .btn-outline {
-      background: transparent; border: 1px solid var(--gold); color: var(--gold);
-      padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;
-    }
     .alert { padding: 12px; border-radius: 10px; font-size: 13px; margin-bottom: 16px; display: none; }
     .alert-success { background: rgba(14, 203, 129, 0.15); border: 1px solid #0ECB81; color: #0ECB81; }
     .alert-error { background: rgba(246, 70, 93, 0.15); border: 1px solid #F6465D; color: #F6465D; }
@@ -195,7 +230,7 @@
     <div class="top-bar">
       <a href="dashboard.html" class="back-btn">← Back to Dashboard</a>
       <div class="page-title">TBR Virtual Card</div>
-      <button type="button" class="btn-outline" id="revealBtn">Show CVV</button>
+      <div class="top-spacer"></div>
     </div>
 
     <div id="alertBox" class="alert"></div>
@@ -238,7 +273,25 @@
       </div>
 
       <div class="card-middle">
-        <div class="card-number" id="cardNumberDisplay">4413 57•• •••• ••••</div>
+        <div class="card-number-row">
+          <div class="card-number" id="cardNumberDisplay">4413 57•• •••• ••••</div>
+          <div class="card-inline-actions">
+            <!-- Eye Show/Hide Button -->
+            <button type="button" class="icon-action-btn" id="revealBtn" title="Show/Hide Card Details" aria-label="Show or Hide Card Details">
+              <svg id="eyeIconSvg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+            <!-- Copy Card Number Button -->
+            <button type="button" class="icon-action-btn" id="copyCardBtn" title="Copy Card Number" aria-label="Copy Card Number">
+              <svg id="copyIconSvg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
         <div class="card-tag">VIRTUAL • TBR EXCHANGE</div>
       </div>
 
@@ -314,6 +367,6 @@
     </div>
   </div>
 
-  <script src="cards.js?v=9"></script>
+  <script src="cards.js?v=10"></script>
 </body>
 </html>

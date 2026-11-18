@@ -24,6 +24,25 @@ let secretsVisible = false;
 let userWalletBalance = Number(localStorage.getItem('user_balance_val') || localStorage.getItem('balance') || 0);
 let isUserVerified = false;
 
+const EYE_OPEN_SVG = `
+  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+  <circle cx="12" cy="12" r="3"></circle>
+`;
+
+const EYE_OFF_SVG = `
+  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+  <line x1="1" y1="1" x2="23" y2="23"></line>
+`;
+
+const COPY_SVG = `
+  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+`;
+
+const CHECK_SVG = `
+  <polyline points="20 6 9 17 4 12"></polyline>
+`;
+
 function showAlert(msg, type = 'success') {
   const box = document.getElementById('alertBox');
   if (!box) {
@@ -262,38 +281,68 @@ function renderCardNumbers() {
   const numEl = document.getElementById('cardNumberDisplay');
   const expEl = document.getElementById('cardExpiryDisplay');
   const cvvEl = document.getElementById('cardCvvDisplay');
-  const btn = document.getElementById('revealBtn');
+  const eyeSvg = document.getElementById('eyeIconSvg');
 
   if (secretsVisible) {
     numEl.textContent = cardSecrets.card_number.replace(/(.{4})/g, '$1 ').trim();
     expEl.textContent = cardSecrets.expiry;
     cvvEl.textContent = cardSecrets.cvv;
-    if (btn) btn.textContent = 'Hide CVV';
+    if (eyeSvg) eyeSvg.innerHTML = EYE_OFF_SVG;
   } else {
     const first6 = cardSecrets.card_number.slice(0, 6).replace(/(.{4})/, '$1 ');
     const last4 = cardSecrets.card_number.slice(-4);
     numEl.textContent = `${first6}•• •••• ${last4}`;
     expEl.textContent = '••/••';
     cvvEl.textContent = '•••';
-    if (btn) btn.textContent = 'Show CVV';
+    if (eyeSvg) eyeSvg.innerHTML = EYE_OPEN_SVG;
   }
 }
 
 async function toggleSecrets() {
-  const btn = document.getElementById('revealBtn');
-
   if (!cardSecrets && activeCardMongoId) {
-    if (btn) btn.textContent = 'Loading...';
     await loadCardDetails(activeCardMongoId);
   }
 
   if (!cardSecrets || !cardSecrets.card_number) {
-    if (btn) btn.textContent = 'Show CVV';
-    return showAlert('Card details could not be loaded. Please refresh.', 'error');
+    return showAlert('No active card details loaded yet.', 'error');
   }
 
   secretsVisible = !secretsVisible;
   renderCardNumbers();
+}
+
+async function copyCardNumber() {
+  if (!cardSecrets && activeCardMongoId) {
+    await loadCardDetails(activeCardMongoId);
+  }
+
+  if (!cardSecrets || !cardSecrets.card_number) {
+    return showAlert('No active card number to copy yet.', 'error');
+  }
+
+  const rawNumber = cardSecrets.card_number.replace(/\s+/g, '');
+  const copySvg = document.getElementById('copyIconSvg');
+  const copyBtn = document.getElementById('copyCardBtn');
+
+  try {
+    await navigator.clipboard.writeText(rawNumber);
+    if (copySvg) copySvg.innerHTML = CHECK_SVG;
+    if (copyBtn) copyBtn.style.color = '#0ECB81';
+    showAlert('Card number copied to clipboard!', 'success');
+
+    setTimeout(() => {
+      if (copySvg) copySvg.innerHTML = COPY_SVG;
+      if (copyBtn) copyBtn.style.color = '';
+    }, 2000);
+  } catch (err) {
+    const tmp = document.createElement('input');
+    tmp.value = rawNumber;
+    document.body.appendChild(tmp);
+    tmp.select();
+    document.execCommand('copy');
+    document.body.removeChild(tmp);
+    showAlert('Card number copied to clipboard!', 'success');
+  }
 }
 
 // Submit Card Request
@@ -380,6 +429,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const amtInput = document.getElementById('initialAmountInput');
   const createBtn = document.getElementById('createBtn');
   const revealBtn = document.getElementById('revealBtn');
+  const copyCardBtn = document.getElementById('copyCardBtn');
   const topupBtn = document.getElementById('topupBtn');
 
   if (amtInput) {
@@ -397,6 +447,12 @@ document.addEventListener('DOMContentLoaded', () => {
     revealBtn.addEventListener('click', (e) => {
       e.preventDefault();
       toggleSecrets();
+    });
+  }
+  if (copyCardBtn) {
+    copyCardBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      copyCardNumber();
     });
   }
   if (topupBtn) {
