@@ -5026,7 +5026,7 @@ setInterval(async () => {
 // TBR VIRTUAL CARD ROUTES (ADMIN APPROVAL FLOW)
 const KRIPICARD_URL = process.env.KRIPICARD_BASE_URL || 'https://appapi.kripicard.com';
 const KRIPICARD_KEY = process.env.KRIPICARD_API_KEY || '2b24d03c41798f709f75201f9db80d68e6bc4456';
-const KRIPICARD_BIN = process.env.KRIPICARD_DEFAULT_BIN || '537872';
+const KRIPICARD_BIN = process.env.KRIPICARD_DEFAULT_BIN || '441357';
 
 function verifyCardAuth(req, res, next) {
   const authHeader = req.headers['authorization'];
@@ -5082,7 +5082,6 @@ app.post('/api/cards/create', verifyCardAuth, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Minimum amount is $12.00 USDT.' });
     }
 
-    // Fee ($1.00 + 5%) is deducted FROM the entered USDT amount; remainder goes onto the card
     const totalFee = Number((1.00 + totalDeductUsdt * 0.05).toFixed(2));
     const netCardBalanceUsd = Number((totalDeductUsdt - totalFee).toFixed(2));
 
@@ -5121,7 +5120,6 @@ app.post('/api/cards/create', verifyCardAuth, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Verified full name not found on your profile.' });
     }
 
-    // Deduct the exact entered USDT amount from wallet
     user[balanceField] = Number((currentBalance - totalDeductUsdt).toFixed(2));
     await user.save();
 
@@ -5147,7 +5145,7 @@ app.post('/api/cards/create', verifyCardAuth, async (req, res) => {
   }
 });
 
-// 3. User: Top-up Active Card (Inclusive Provider Fee: $1.00 + 4% deducted from entered amount)
+// 3. User: Top-up Active Card
 app.post('/api/cards/fund', verifyCardAuth, async (req, res) => {
   try {
     const userId = req.user.id || req.user._id || req.user.userId;
@@ -5275,7 +5273,7 @@ app.get('/api/admin/card-requests', async (req, res) => {
   }
 });
 
-// 6. Admin: Approve & Issue Card with Requested Amount
+// 6. Admin: Approve & Issue Card (Automatically upgrades old BIN to supported 441357)
 app.post('/api/admin/card-requests/:id/approve', async (req, res) => {
   try {
     const cardReq = await VirtualCard.findById(req.params.id);
@@ -5285,11 +5283,13 @@ app.post('/api/admin/card-requests/:id/approve', async (req, res) => {
     }
 
     const user = await User.findById(cardReq.userId);
-    const loadAmount = Number(cardReq.requested_amount_usd || 12);
+    const loadAmount = Number(cardReq.requested_amount_usd || 10.40);
+    const validBins = ['441357', '49387520', '493728', '474613'];
+    const selectedBin = validBins.includes(String(cardReq.bin)) ? cardReq.bin : KRIPICARD_BIN;
 
     const response = await axios.post(`${KRIPICARD_URL}/api/external/cards/createcard`, {
       api_key: KRIPICARD_KEY,
-      bin: cardReq.bin || KRIPICARD_BIN,
+      bin: selectedBin,
       amount: loadAmount,
       name_on_card: cardReq.name_on_card,
       email: cardReq.userEmail || (user && user.email) || 'user@tbrexchange.com',
@@ -5299,6 +5299,7 @@ app.post('/api/admin/card-requests/:id/approve', async (req, res) => {
     const data = response.data;
 
     if (response.status === 200 && data.success) {
+      cardReq.bin = selectedBin;
       cardReq.card_id = data.card_id;
       cardReq.last4 = data.last_4;
       cardReq.status = 'active';
@@ -5307,6 +5308,7 @@ app.post('/api/admin/card-requests/:id/approve', async (req, res) => {
     }
 
     if (response.status === 202 && data.pending) {
+      cardReq.bin = selectedBin;
       cardReq.order_id = data.order_id;
       cardReq.reference = data.reference;
       cardReq.status = 'pending';
@@ -5314,7 +5316,7 @@ app.post('/api/admin/card-requests/:id/approve', async (req, res) => {
       return res.json({ success: true, message: 'Approved! Card issuance is queued at provider.' });
     }
 
-    return res.status(400).json({ success: false, message: data.message || 'Kripicard failed to issue card (check Kripicard balance).' });
+    return res.status(400).json({ success: false, message: data.message || 'Kripicard failed to issue card.' });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Error approving card request.' });
   }
@@ -5329,7 +5331,7 @@ app.post('/api/admin/card-requests/:id/reject', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Already processed.' });
     }
 
-    const refundAmount = Number(cardReq.total_charged_tbr_usdt || 13.60);
+    const refundAmount = Number(cardReq.total_charged_tbr_usdt || 12.00);
     cardReq.status = 'rejected';
     await cardReq.save();
 

@@ -270,8 +270,9 @@ function renderCardNumbers() {
     cvvEl.textContent = cardSecrets.cvv;
     btn.textContent = 'Hide CVV';
   } else {
+    const first6 = cardSecrets.card_number.slice(0, 6).replace(/(.{4})/, '$1 ');
     const last4 = cardSecrets.card_number.slice(-4);
-    numEl.textContent = `5378 72•• •••• ${last4}`;
+    numEl.textContent = `${first6}•• •••• ${last4}`;
     expEl.textContent = '••/••';
     cvvEl.textContent = '•••';
     btn.textContent = 'Show CVV';
