@@ -372,6 +372,8 @@ window.updateTopupCost = updateTopupCost;
 document.addEventListener('DOMContentLoaded', () => {
   const amtInput = document.getElementById('initialAmountInput');
   const createBtn = document.getElementById('createBtn');
+  const revealBtn = document.getElementById('revealBtn');
+  const topupBtn = document.getElementById('topupBtn');
 
   if (amtInput) {
     amtInput.addEventListener('input', validateCardForm);
@@ -382,6 +384,18 @@ document.addEventListener('DOMContentLoaded', () => {
     createBtn.addEventListener('click', (e) => {
       e.preventDefault();
       createCard();
+    });
+  }
+  if (revealBtn) {
+    revealBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      toggleSecrets();
+    });
+  }
+  if (topupBtn) {
+    topupBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      fundCard();
     });
   }
 
